@@ -534,7 +534,8 @@ def parser() -> argparse.ArgumentParser:
     ):
         command = commands.add_parser(name, help=text, description=text)
         command.add_argument("project", type=Path, help="folder holding coco.toml")
-        command.add_argument("--target", help="a [targets.<name>] table; default: the first")
+        default = "every target" if name == "check" else "the first"
+        command.add_argument("--target", help=f"a [targets.<name>] table; default: {default}")
         if name != "check":
             command.add_argument("--variant", default="", help="a [variants.<name>] build")
         if name == "snapshot":
