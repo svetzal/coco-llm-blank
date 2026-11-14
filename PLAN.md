@@ -199,6 +199,31 @@ rendering, and a reproduced multi-object example remain open. CoCo 1/2 adaptatio
 notes in a magazine do not establish runtime support. No new emulator or
 physical-machine result is claimed for this pass.
 
+### Parallel source and implementation validation
+
+Completed Matthews's October 1987 listing through PDF 47 and examined the
+MC6847/MC6847Y technical datasheet. Its RG6 tables resolve the chip's bit order.
+Board wiring and visible output still need separate checks. The generic
+non-SAM memory-access discussion must not become a CoCo screen-write restriction.
+
+Read Blochowiak's January 1988 SMOOTHY article and its April 1988 correction.
+It concerns CoCo 3 text scrolling, with distinct 128K and 512K requirements.
+No scrolling implementation or GIME register cross-check is claimed.
+
+The original [moving-object example](examples/moving-objects/README.md) implements
+full background redraw and ordered opaque objects. Thirteen frame checks pass
+on each defined non-T1 CoCo 1 and CoCo 2 configuration. They cover overlap,
+separation, changed scenery, complete-object bounds, and memory guards.
+A separate static review found the CI firmware-provisioning gap for CoCo 2;
+CI now provisions CoCo 2 alongside CoCo 3 before running pytest.
+The full suite passes: 133 tests with 93.99% combined coverage. Ruff checks pass.
+Visual output, timing, masks, clipping, and physical hardware remain unverified.
+
+A fresh Claude Code beginner trial is running independently against published
+main in the external `coco-starter-onboarding/claude-02` experiment folder.
+Its source-use audit and independent artifact assessment remain pending.
+The trial receives no implementation coaching from the example task.
+
 ### Next research passes
 
 1. Broaden magazine coverage to Hot CoCo, Color Computer Magazine, Undercolor,

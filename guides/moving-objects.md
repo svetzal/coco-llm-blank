@@ -2,7 +2,8 @@
 
 Read this when a moving character leaves holes in the scenery, or when drawing
 changes which objects collide. Rendering and collision need separate decisions.
-The sources below explain useful starting points, not a tested sprite engine.
+The sources below explain useful starting points. An original full-redraw
+example now checks a bounded implementation on two emulator configurations.
 
 ## Start with what the drawing routine overwrites
 
@@ -23,8 +24,9 @@ It does not provide a finished overlap-safe renderer or collision system.
 
 ## Choose how to restore the background
 
-The following designs are our proposed adaptations. We have not implemented or
-benchmarked them in this starter. Choose one deliberately before adding scenery.
+The following designs are our adaptations. The full-redraw example below has
+emulator checks. Saved-background and masked designs remain proposals.
+Choose a restoration strategy deliberately before adding scenery.
 
 For a uniform background, repainting the old rectangle may be enough.
 Check that no other object or trail occupies that rectangle.
@@ -111,6 +113,26 @@ Use expected world state independent of the rendering code.
 Then inspect the display for flicker and measure the work at the chosen clock.
 A byte-correct frame alone does not establish smooth animation.
 
+## Try the original full-redraw example
+
+The [moving-objects example](../examples/moving-objects/README.md) draws the
+current patterned background before two opaque, byte-aligned rectangles.
+Their overlap order changes, and the scenery changes while they move.
+This implements one restoration strategy without storing old background pixels.
+
+Its XRoar checks cover 13 completed frames for each defined CoCo 1 and CoCo 2
+configuration. They compare the entire framebuffer, positions, frame counter,
+and memory guards against independent expectations. The cases include overlap
+in both layer orders, separation, changed scenery, and boundary reversals.
+
+Both configurations use NTSC, 32 KiB, a normal-clock 6809, and the non-T1 MC6847.
+The CoCo 2 run selects its own firmware explicitly. This is not evidence for
+all CoCo 2 revisions. Read the example's complete machine contract before reuse.
+
+The example does not implement collision, masks, partial-byte placement, or
+independent vertical motion for the two objects. Visual appearance, frame rate,
+PAL, T1, and physical hardware remain unverified.
+
 ## Sources and limits
 
 - Don Inman, Kurt Inman with Dymax, *Assembly Language Graphics for the TRS-80
@@ -124,7 +146,8 @@ A byte-correct frame alone does not establish smooth animation.
 We examined the relevant page images and listing, but did not assemble the
 book example or run the BASIC game. No physical-machine, timing, or compatibility
 result follows from this guide. The restoration designs and test cases are
-our original proposals. See [research notes](../guidance/game-research.md#rendering-and-collision-pass)
+our original guidance. Only the bounded full-redraw example above has runtime
+evidence. See [research notes](../guidance/game-research.md#rendering-and-collision-pass)
 for rejected leads and the limited correction search.
 
 [graphics]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf#page=159>
