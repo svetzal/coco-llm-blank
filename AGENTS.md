@@ -11,7 +11,8 @@ reference. Paths in commands are relative to the repository root.
   and ask the owner to choose the target. Do not assume RAM or video standard.
 - Writing or testing CoCo code: read [development practice](guidance/development.md).
 - Building binaries, disks, or emulator tests: read [toolchain](guidance/toolchain.md).
-- Writing host-side scripts or asset tools: read [Python tools](guidance/python.md).
+- Writing host-side scripts, assets, or Python tests: read
+  [Python tools](guidance/python.md), including the co-located `*_spec.py` rules.
 - Downloading or converting books: read [references](guidance/references.md).
 - Looking up hardware or programming facts: read `local/INDEX.md`, then only the
   relevant pages. Cite the title and PDF page. Check ambiguous OCR and diagrams

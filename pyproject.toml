@@ -15,12 +15,30 @@ dependencies = [
 package = false
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["scripts"]
+python_files = ["*_spec.py"]
+python_classes = ["Describe*"]
+python_functions = ["should_*"]
 pythonpath = ["scripts"]
 markers = ["integration: real Docling pipeline; downloads model weights on first run"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["C90"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.coverage.run]
+source = ["scripts"]
+branch = true
+omit = ["scripts/*_spec.py", "scripts/conftest.py"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90
 
 [dependency-groups]
 dev = [

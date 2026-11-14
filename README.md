@@ -75,12 +75,14 @@ files. No skill system is required, including for microgentic.
 ```sh
 uv run pytest -m 'not integration'
 uv run pytest -m integration
+uv run pytest --cov
 uv run ruff check .
 uv run ruff format --check .
 ```
 
 Integration tests use an original scanned PDF and the real Docling pipeline.
-Their first run needs model downloads. Other tests cover local HTTP downloads,
+Their first run needs model downloads. Co-located `*_spec.py` files use
+`Describe*` / `should_*` pytest conventions. Other tests cover local HTTP downloads,
 cache and failure behavior, target preservation, and executable discovery.
 
 See [PLAN.md](PLAN.md) for scope and remaining work.

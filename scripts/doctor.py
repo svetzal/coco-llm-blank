@@ -13,14 +13,21 @@ TOOLS = {
 }
 
 
-def main(argv=None):
+class ExecutableGateway:
+    """Resolve explicit environment overrides or search PATH."""
+
+    def find(self, command: str, variable: str) -> str | None:
+        return shutil.which(os.environ.get(variable, command))
+
+
+def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args(argv)
+    executables = executables or ExecutableGateway()
     print(f"Python: {sys.executable}")
     missing = []
     for command, (variable, purpose) in TOOLS.items():
-        configured = os.environ.get(variable, command)
-        executable = shutil.which(configured)
+        executable = executables.find(command, variable)
         if executable:
             print(f"{command}: {executable} ({purpose})")
         else:

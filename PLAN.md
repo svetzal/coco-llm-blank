@@ -46,12 +46,17 @@ content, model weights, or virtual environment.
 
 ## Verification status
 
-Twelve tests pass on the development Mac. They cover real Docling OCR of an
-original image-only PDF, original PDF page provenance for a selected range,
-interruption and resume, converter-version cache separation, download failures,
-project-note preservation, and native executable discovery. Ruff checks pass.
+The co-located pytest specifications pass on the development Mac with combined
+statement and branch coverage above the 90% gate. They cover real Docling OCR
+of an original image-only PDF, original PDF page provenance for a selected range,
+interruption and resume, converter-version cache separation, invalid checkpoint
+rejection, download failures, project-note preservation, and native executable
+discovery. Ruff checks pass.
 The locked environment synchronizes successfully and package compatibility
-checks pass. Docling emits upstream deprecation warnings during conversion.
+checks pass. The audit of all locked dependency groups found no known
+vulnerabilities. Four newer transitive releases are excluded by current
+upstream constraints (huggingface-hub, mpmath, semchunk, and typer). Docling emits
+upstream deprecation warnings during conversion.
 
 PDF pages 10 through 12 of both archive books were converted with Docling.
 The graphics book now has paragraph structure, headings, and a Markdown table.
