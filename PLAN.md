@@ -108,8 +108,30 @@ press/hold/release fixtures, and an unreachable checkpoint. Its ordinary sample
 gap is 11 instructions; frame work increases that to 30. A separate one-second
 run completes 60 marker updates and bounds throughput at 15,360–15,616 samples.
 This establishes cooperative progress, not constant timing or audible quality.
-The fixture is not physical-input evidence. CoCo 2/3 runtime reproduction,
-CoCo 3 timer behaviour, and physical/display/audio checks remain open.
+The fixture is not physical-input evidence. CoCo 2 runtime reproduction and
+physical/display/audio checks remain open.
+The following pass adds CoCo 3 timer evidence.
+
+### CoCo 3 timer comparison
+
+Read Tepolt's interrupt chapter and checked its vector, acknowledgement, and
+mapping details against the CoCo 3 service manual. Converted PDF 48–53.
+Found a timer-clock discrepancy: the older books describe about 14 MHz;
+Kowalski's later reference and XRoar use about 3.58 MHz. The sound guide records
+this conflict and the GIME revision offsets explicitly.
+
+The original timer/cooperative comparison runs on the same slow-clock CoCo 3.
+Both emulated GIME revisions retain their predicted audio throughput during a
+full framebuffer clear. Foreground redraws fall from 27 to 2 per measured second.
+The cooperative comparison loses most of its audio throughput under that load.
+All DAC values and completed-frame memory are checked. A missing-acknowledgement
+negative control fails as expected. CI now provisions CoCo 3 firmware without
+changing its existing project target, so these checks do not silently skip.
+
+This establishes a tested scheduling choice, not a maximum performance claim.
+Per-sample jitter, audible quality, bank switching, analog input, and physical
+GIME timing remain unverified. Lower sample rates and leaner handlers are
+possible follow-up experiments, not measured improvements.
 
 ### Next research passes
 

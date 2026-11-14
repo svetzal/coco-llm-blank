@@ -62,10 +62,9 @@ CoCo 3 also has programmable interrupt facilities. Page 11 identifies timer
 input selection and timer IRQ/FIRQ enables. This creates another scheduling
 option, but it does not supply a complete audio driver.
 
-Before using timer audio, establish reload behaviour, interrupt acknowledgement,
-handler overhead, and memory visibility. Read Tepolt's interrupt discussion on
-PDF 60 alongside the timer registers. The current research has not reproduced
-a GIME timer sound routine or established a sample rate for it.
+The [timer experiment below](#coco-3-timer-experiment) now checks an original
+FIRQ player on both emulated GIME revisions. Tepolt PDF 47–53 and 60 explain
+interrupt handling and mapping. Physical-hardware timing remains unverified.
 
 ## What the magazines contribute
 
@@ -140,6 +139,70 @@ This demonstrates progress of the three tasks and the cost of extra work.
 It does not establish constant sample timing, good sound, physical controls,
 or CoCo 2/3 compatibility. A production player needs a tighter timing design.
 
+## CoCo 3 timer experiment
+
+### Resolve the clock discrepancy first
+
+Tandy's service manual, PDF 12, describes a 14 MHz timer clock.
+Tepolt, PDF 50, likewise describes about 70 ns per decrement.
+These values conflict with [John Kowalski's GIME reference][sock].
+Kowalski gives 279.365 ns and documents a revision-dependent reload offset:
+programmed value plus two for 1986, plus one for 1987.
+His reference also distinguishes writing the low byte from starting the timer
+with the high-byte write. Use this as an explicit correction, not an unnoticed
+substitution for the cited book.
+
+[XRoar 1.12.1 source][xroar-source], `src/tcc1014.c`, agrees with that later
+reference: `schedule_timer` uses the revision offset and four master-clock ticks
+per fast timer decrement. This establishes the emulator's intended behaviour.
+It does not replace a measurement on a physical GIME.
+
+### Compare audio and drawing under load
+
+The [original timer experiment](../examples/timer-sound/README.md) uses a
+510 reload value, a short FIRQ handler, and an unchanged foreground renderer.
+It acknowledges `$FF93`, preserves the registers it uses, and leaves mapping fixed.
+The cooperative build generates samples in the foreground instead.
+Both builds run on a slow-clock NTSC CoCo 3 with 128 KiB and a 6809.
+
+The heavy workload clears 6,144 bytes for every completed marker update.
+The light workload changes only the marker bytes. Results on XRoar 1.12.1:
+
+| Scheduler and GIME | Light: samples / redraws | Heavy: samples / redraws |
+| --- | ---: | ---: |
+| Cooperative, 1986 | 12,746 / 49 | 2,508 / 9 |
+| Timer FIRQ, 1986 | 6,992 / 27 | 6,992 / 2 |
+| Timer FIRQ, 1987 | 7,005 / 27 | 7,005 / 2 |
+
+Each column records one emulated second starting at the first sample checkpoint.
+These are counts, with start/end boundary uncertainty, not exact frequencies.
+The timer counts match the revision-specific prediction using the corrected clock.
+
+Compare the load change within each row. The cooperative loop has no fixed
+sample-rate target, so the rows are not equal-rate audio benchmarks.
+Timer audio retains its throughput under this drawing load, but the foreground
+gets fewer redraws. Lowering the sample rate or reducing handler work could
+release CPU time. Neither alternative has been measured here.
+
+A deliberately unacknowledged FIRQ fails to complete a frame in the test.
+Every successful run checks the DAC sequence and completed-frame memory.
+Average throughput does not prove evenly spaced samples, audio quality, or
+physical-hardware compatibility. No utilization percentage is claimed.
+
+### Source coverage and conversion
+
+Tepolt PDF 48–53 were converted with Docling: six pages, nine linked images,
+no sparse-page warnings. The original page images were inspected for vectors,
+acknowledgement, register saving, and interrupt initialization. Sparse flags do
+not identify the clock discrepancy. It is a source conflict, not an OCR error.
+
+Rick Adams's **GIME Power**, The Rainbow, March 1989, PDF 14, 18, and 24,
+provides a period explanation of background tasks and the programmable timer.
+Those pages were examined, including the title image on PDF 14.
+It is useful motivation, not the implementation authority. Its PDF 24 task-bit
+statement conflicts with the register table on PDF 18 and the hardware manual.
+This sampled issue remains outside the manifest. [Archive issue][notes].
+
 ## Obtain selected pages
 
 Use the project's existing target. Convert only the needed range:
@@ -148,6 +211,7 @@ Use the project's existing target. Convert only the needed range:
 uv run python scripts/setup.py --resource rainbow-1989-06 --pages 77:78
 uv run python scripts/setup.py --resource coco1-technical --pages 37:38
 uv run python scripts/setup.py --resource coco3-service --pages 42:43
+uv run python scripts/setup.py --resource tepolt-coco3 --pages 48:53
 ```
 
 Open the linked page PNG when a register or listing is unclear.
@@ -161,3 +225,6 @@ Keep downloaded issues, extracted text, and images in ignored `local/` storage.
 [barden]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2005%20No.%2008%20-%20March%201986.pdf
 [notes]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2008%20No.%2008%20-%20March%201989.pdf
 [assembly]: https://colorcomputerarchive.com/repo/Programming/Source/Assembly%20music/
+
+[sock]: https://www.6809.org.uk/twilight/sock/gime.html
+[xroar-source]: https://www.6809.org.uk/xroar/dl/xroar-1.12.1.tar.gz

@@ -27,7 +27,9 @@ jobs:
       - name: Install assembly and emulator tools
         run: uv run python scripts/native.py
       - name: Prepare local firmware for the emulator check
-        run: uv run python scripts/setup.py --target coco1 --roms-only
+        run: |
+          uv run python scripts/setup.py --target coco1 --roms-only
+          PYTHONPATH=scripts uv run python -c "from native import ROOT; from roms import provision; provision(ROOT, 'coco3')"
       - name: Test setup and real document conversion
         run: uv run pytest --cov
       - name: Initialize a project without downloaded books or ROMs
