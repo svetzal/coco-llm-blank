@@ -39,11 +39,46 @@ Its prose and listing disagree about a curve address. Read the listing image
 and reconcile the memory layout before adapting it. The starter's experiments
 use an original, simpler oscillator. They copy neither its player nor its score.
 
-Expansion hardware changes the problem. Gary W. Clemens describes separate
-processing and generators in **"Sounding Out Tandy's Sound/Speech Cartridge,"
-Hot CoCo, June 1985**, printed 73 / PDF 75 onward. Only PDF 75–76 were sampled.
-That review does not establish a tested game driver or command latency.
-It also does not describe stock-machine capability. [Clemens][cartridge]
+## Choose short effects or continuous music
+
+For an explosion or pickup sound, a small sample table is a useful starting
+point. Barden separates the table bounds, repeat count, and delay between
+samples. His envelope diagrams show how an effect can grow or fade.
+The published routine plays the whole effect before returning. It does not
+keep a game moving during playback. [Barden, PDF 248–251 and 255][barden]
+
+Our recommendation is to decide whether that pause is acceptable before
+choosing the player. For continuous movement, advance sound through a scheduler
+such as the experiments below. Give original sound assets an explicit format:
+Barden's ordinary 0–63 amplitude bytes need alignment for the DAC, while his
+cassette ROM example already contains aligned bytes. Applying both conversions
+would corrupt the values. [Barden, PDF 246 and 251][barden]
+
+ROM SOUND and PLAY calls can be convenient for a BASIC-hosted prototype.
+Nee's examples require particular workspace and register handling; his PLAY
+example saves the BASIC text pointer and runs from BASIC. They do not establish
+a portable standalone game interface. Verify the installed ROM and calling
+context before using any address, and measure the pause caused by each call.
+[Nee, March 1989, PDF 30–32][notes]
+
+## Treat cartridge sound as an optional target
+
+Clemens's complete review describes separate processing and generators in
+Tandy's Sound/Speech cartridge. It is an expansion choice, not stock-machine
+capability. [Hot CoCo, June 1985, printed 73–76 / PDF 75–78][cartridge]
+
+The primary manual exposes a practical trap. Before sending each byte to
+`$FF7E`, wait until status bit 7 is high. A byte sent while that bit is low is
+lost. Bits 6 and 5 report speech and sound activity, but are temporarily invalid
+after a command starts. An immediate "inactive" result is not evidence that
+playback finished. [Tandy cartridge manual, PDF 10–11][speechmanual]
+
+Our proposed game integration would preload effects and send commands in small
+steps as the cartridge becomes ready. It must track command acceptance separately
+from playback state. The manual gives no single startup delay for every command,
+so measure this on the chosen target before promising uninterrupted gameplay.
+Its timing also assumes the normal CoCo clock. No cartridge driver or latency
+test exists in this starter. [Tandy cartridge manual, PDF 8 and 11][speechmanual]
 
 ## Try cooperative scheduling for small tasks
 
@@ -146,8 +181,16 @@ For complete measurements and source exclusions, read the
   Played On." *The Rainbow*, June 1989, printed 68 / PDF 72; continuation
   PDF 76–79. Resource `rainbow-1989-06`. [Archive][nee]
 - Gary W. Clemens, "Sounding Out Tandy's Sound/Speech Cartridge." *Hot CoCo*,
-  June 1985, printed 73 / PDF 75; examined PDF 75–76 only.
+  June 1985, printed 73–76 / PDF 75–78; complete review examined.
   Resource `hotcoco-1985-06`. [Archive][cartridge]
+- William Barden Jr., "Listening to Your CoCo with Assembly Language."
+  *The Rainbow*, March 1986, printed 237–240, 244, 246, 248–249, 252–253;
+  PDF 239–242, 246, 248, 250–251, 254–255. Complete article read. [Archive][barden]
+- William P. Nee, "Machine Language Made BASIC, Part IX: Let There Be Music."
+  *The Rainbow*, March 1989, printed/PDF 30–32. Complete article read. [Archive][notes]
+- Tandy, *Color Computer Speech/Sound Cartridge*, archive copy,
+  PDF/printed 8–11 and 15. Selected interface reading; no driver validation.
+  [Archive][speechmanual]
 - John Kowalski (SockMaster), *GIME register reference*, register sections
   `$FF91`, `$FF94–$FF95`. Supplemental author reference outside the archive.
   [Author reference mirror][kowalski]
@@ -176,3 +219,9 @@ not reproductions of the magazine programs.
 [kowalski]: https://www.6809.org.uk/twilight/sock/gime.html
 
 [xroar]: https://www.6809.org.uk/xroar/dl/xroar-1.12.1.tar.gz
+
+[barden]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2005%20No.%2008%20-%20March%201986.pdf#page=248>
+
+[notes]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2008%20No.%2008%20-%20March%201989.pdf#page=30>
+
+[speechmanual]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Speech-Sound%20Cartridge%20(Tandy).pdf#page=10>

@@ -96,34 +96,102 @@ layout before attempting a port. The original six-voice program was not built.
 The searchable Rainbow index, PDF 65 and 72, lists this article without a
 correction note. That limited check does not establish that no errata exist.
 
-### Expansion sound is a separate research route
+### Short effects from sample tables
+
+William Barden Jr.'s **Listening to Your CoCo with Assembly Language**, The
+Rainbow, March 1986, occupies printed 237–240, 244, 246, 248–249, and 252–253
+(PDF 239–242, 246, 248, 250–251, and 254–255). The complete article, diagrams,
+assembly listing, and BASIC loader were read, including the separated
+continuations. [Archive issue][barden].
+
+The reusable idea is an effect descriptor: sample start, sample end, repeat
+count, and delay count. The table supplies amplitude; spacing and repetition
+control playback. The diagrams connect sample shapes to envelopes, including
+rising and falling effects. This helps design original game sounds without
+embedding the magazine's table or loader in the repository.
+
+The listing on PDF 251 is a blocking subroutine. It plays every requested
+repeat before returning to BASIC; the inner loop contains no game service.
+Its ordinary samples are 0–63 and are shifted left twice. Barden explicitly
+removes those shifts when using the already aligned cassette ROM samples.
+A raw DAC byte and an unshifted amplitude are different asset formats.
+
+Two source cautions matter. The PDF 251 prose names a BNE at the table-loop
+end, while the printed listing uses BLS. Derive bounds from the assembled
+instructions before adapting it. The routing setup is described as lasting
+for the program, but that assumes no later routine changes the shared mux.
+Neither the sample ROM addresses nor the program have been tested here
+against particular ROM revisions. No timing or audio-quality result is claimed.
+
+### ROM calls need an interpreter contract
+
+William P. Nee's **Machine Language Made BASIC, Part IX: Let There Be Music**,
+The Rainbow, March 1989, printed/PDF 30–32, was read completely, including
+all three routine listings and the assembled listing. [Archive issue][notes].
+
+Nee presents SOUND calls and PLAY strings from assembly. His warning that
+adding display work slows the tempo is consistent with a sequence of blocking
+calls, not a background scheduler. The PLAY example saves and restores the
+BASIC text pointer and must run from BASIC rather than ZBUG. The SOUND
+example identifies clobbered registers. These are calling-context requirements,
+not merely addresses to paste into a standalone game.
+
+The PDF 32 prose gives note-table addresses `$301D` and `$3056`; the printed
+assembled listing places NTAB1 at `$3019` and NTAB2 at `$3058`. This is a
+source discrepancy, not an OCR correction. Use labels and inspect the actual
+assembly. The article's entry points and workspaces have not been matched to
+specific BASIC/Extended BASIC ROM revisions, and its tunes were not reproduced.
+
+The searchable Rainbow index entries on PDF 34 and 135 (Barden), and 65, 72,
+75, and 90 (Nee), contain no correction note. This limited index check is not
+an exhaustive search of later issues or proof that no errata exist.
+
+### Expansion sound needs a byte handshake
 
 Gary W. Clemens's **Sounding Out Tandy's Sound/Speech Cartridge**, Hot CoCo,
-June 1985, begins on printed 73 (PDF 75). PDF 75–76 describe its processor,
-sound generators, buffers, and the reviewer's experience with game effects.
-Resource `hotcoco-1985-06`. [Archive issue][hotcoco].
+June 1985, occupies printed 73–76 / PDF 75–78. The whole review was read,
+including its final paragraph on PDF 78. Resource `hotcoco-1985-06`.
+[Archive issue][hotcoco]. It describes separate processing, generators, stored
+effects, and the difficulty of programming the command bytes. Its judgement
+about sound quality is the reviewer's experience, not a starter measurement.
 
-Those pages make the review useful for choosing an expansion target.
-They do not establish a tested command interface or bounded background latency.
-The review continues beyond the sampled pages. Consult the cartridge manual
-before writing a driver. No cartridge is required by the starter example.
-Docling converted PDF 75 with no sparse warning; its full-page image retains
-the review columns.
+Tandy's **Color Computer Speech/Sound Cartridge** manual supplies the useful
+interface detail. The archive copy has 54 PDF pages and typeset text; page
+numbers below refer to that copy. It differs in extent from the 56-page manual
+mentioned by Clemens. PDF/printed 8–11 were read for background and the complete
+status-byte discussion; PDF 15 was read for sound-event framing. The key status
+pages and event table were also checked as images. This is selected manual
+coverage, not a complete driver or command-reference audit. [Manual][speechmanual].
 
-### Useful leads that did not become implementation sources
+- `$FF7E` is the data-write/status-read address. Bit 7 is active-low BUSY.
+  Check it before each byte; writing while it is low loses data (PDF 10).
+- Bits 6 and 5 report speech and sound activity respectively, also active low.
+  They are not valid immediately after an execution command. Processing time
+  varies with the command, so immediate inactivity cannot prove completion
+  (PDF 10–11).
+- Sound-event groups have different lengths. `$FF` terminates a sequence only
+  where a new event may begin; inside an event it is data (PDF 15).
+- The manual's pitch and duration assume the normal .89 MHz CoCo clock and
+  the cartridge's doubled clock (PDF 8). Faster host operation needs a separate
+  timing check.
 
-- Barden's **Listening to Your CoCo with Assembly Language**, The Rainbow,
-  March 1986, PDF 239–241: DAC and waveform introduction. Sampled, not a
-  completed article review. The hardware manuals already establish the
-  register facts needed here. [Archive issue][barden].
-- Nee's **Let There Be Music**, The Rainbow, March 1989, PDF 30:
-  ROM SOUND/PLAY entry points and an explicit warning that integrating notes
-  with a display slows the tempo. Only the opening page was sampled.
-  ROM-version compatibility remains unchecked. [Archive issue][notes].
-- The archive's **Assembly music** directory: `country.asm` contains a
-  software mixing loop and masks interrupts. The inspected loop has no input
-  or animation service. Its credits are not license evidence. Published code
-  and melodies remain local reference material. [Archive directory][assembly].
+For a game, our proposed design is to load effects during setup, then advance
+a command sender only when the cartridge accepts another byte. Keep command
+acceptance separate from playback start and completion. That design still needs
+measured startup delays, error recovery, and target-specific tests. No cartridge
+driver, latency bound, Multi-Pak compatibility test, or physical listening test
+has been completed. The stock starter remains independent of this expansion.
+
+### Excluded implementation material
+
+The archive's **Assembly music** directory contains `country.asm`, whose
+inspected software-mixing loop masks interrupts and contains no input or
+animation service. Its credits are not license evidence. Published code and
+melodies remain local reference material. [Archive directory][assembly].
+
+Source PDFs, extracted passages, rendered pages, and URL/SHA-256 provenance
+for this follow-up remain under ignored `local/research/sound-followup/`.
+No magazine listings, sample tables, or scores were added to tracked files.
 
 ## Original experiment and evidence
 
@@ -229,3 +297,5 @@ Keep downloaded issues, extracted text, and images in ignored `local/` storage.
 
 [sock]: https://www.6809.org.uk/twilight/sock/gime.html
 [xroar-source]: https://www.6809.org.uk/xroar/dl/xroar-1.12.1.tar.gz
+
+[speechmanual]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Speech-Sound%20Cartridge%20(Tandy).pdf#page=8>
