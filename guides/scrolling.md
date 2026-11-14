@@ -82,8 +82,12 @@ text buffer at `$6C000`. [PDF 29][aliasing] [PDF 58][basic-map]
 Together, these sources explain why the original constants can reach the same
 RAM on 128K, while selecting different RAM on 512K. The correction adds
 `$60000`, changing those two upper address bits without changing the lower 17.
-This is our cross-source explanation of the published correction, not a new
-runtime result or a guarantee for every firmware version.
+This is our cross-source explanation of the published correction.
+The original [display-address probe](../examples/text-addressing/README.md) now
+checks this specific selection at an instrumented XRoar GIME fetch boundary.
+All eight memory-size/address combinations matched the predicted words.
+That result does not validate SMOOTHY, rendered appearance, timing, or
+physical hardware.
 
 For a new implementation, derive display addresses from the intended physical
 buffer. Do not rely on the 128K alias. Keep CPU mappings and display addresses
