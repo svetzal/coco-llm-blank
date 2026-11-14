@@ -28,9 +28,16 @@ def provide(root: Path, *names: str) -> None:
 
 
 class DescribeNativeInstallation:
-    def should_reuse_existing_tools_without_system_changes(self, isolated_tools: Path) -> None:
+    @pytest.mark.parametrize(
+        "system,machine", [("Darwin", "arm64"), ("Linux", "x86_64"), ("Linux", "aarch64")]
+    )
+    def should_reuse_existing_tools_without_system_changes(
+        self, isolated_tools: Path, system: str, machine: str
+    ) -> None:
         provide(isolated_tools, "lwasm", "lwlink", "xroar")
         host = Mock(spec=native.HostGateway)
+        host.system.return_value = system
+        host.machine.return_value = machine
         native.install(isolated_tools, host)
         host.run.assert_not_called()
         host.dependencies.assert_not_called()
@@ -39,6 +46,7 @@ class DescribeNativeInstallation:
         provide(isolated_tools, "xroar")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
         host.brew.return_value = "brew"
 
         def install(command: list[str]) -> None:
@@ -49,6 +57,26 @@ class DescribeNativeInstallation:
         native.install(isolated_tools, host)
         assert native.tool_path("lwasm", isolated_tools)
         assert native.tool_path("lwlink", isolated_tools)
+
+    @pytest.mark.parametrize("machine", ["x86_64", "i386", "unknown"])
+    @pytest.mark.parametrize("tools_present", [False, True])
+    def should_reject_non_arm64_macos_before_installation(
+        self, isolated_tools: Path, machine: str, tools_present: bool
+    ) -> None:
+        if tools_present:
+            provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Darwin"
+        host.machine.return_value = machine
+
+        with pytest.raises(ValueError, match="Intel Macs are unsupported"):
+            native.install(isolated_tools, host)
+
+        host.brew.assert_not_called()
+        host.run.assert_not_called()
+        host.download.assert_not_called()
+        host.dependencies.assert_not_called()
+        assert not (isolated_tools / "local/toolchain-sources").exists()
 
     def should_not_hide_a_broken_override(
         self, isolated_tools: Path, monkeypatch: pytest.MonkeyPatch
@@ -68,9 +96,25 @@ class DescribeNativeInstallation:
     def should_detect_an_install_that_did_not_supply_tools(self, isolated_tools: Path) -> None:
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
         host.brew.return_value = "brew"
         with pytest.raises(ValueError, match="not discoverable"):
             native.install(isolated_tools, host)
+
+    def should_report_unsupported_macos_through_the_entry_point(
+        self, monkeypatch: pytest.MonkeyPatch, capsys
+    ) -> None:
+        monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
+        monkeypatch.setattr(native.platform, "machine", lambda: "x86_64")
+        discovery = Mock(side_effect=AssertionError("host rejection must precede tool discovery"))
+        monkeypatch.setattr(native, "tool_path", discovery)
+
+        assert native.main() == 1
+
+        error = capsys.readouterr().err
+        assert "Intel Macs are unsupported" in error
+        assert "native arm64 terminal and Python" in error
+        discovery.assert_not_called()
 
     def should_report_permission_failure(self, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
         monkeypatch.setattr(

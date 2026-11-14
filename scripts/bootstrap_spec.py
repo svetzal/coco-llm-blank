@@ -26,6 +26,13 @@ def bootstrap_workspace(tmp_path: Path) -> tuple[Path, dict[str, str]]:
         executable = shutil.which(name)
         assert executable is not None
         (commands / name).symlink_to(executable)
+    uname = commands / "uname"
+    uname.write_text(
+        '#!/bin/sh\ncase "$1" in\n'
+        '-s) echo "${TEST_SYSTEM:-Linux}";;\n'
+        '-m) echo "${TEST_MACHINE:-x86_64}";;\nesac\n'
+    )
+    uname.chmod(0o755)
     home = tmp_path / "home"
     home.mkdir()
     env = {**os.environ, "PATH": str(commands), "HOME": str(home), "BOOTSTRAP_LOG": str(log)}
@@ -46,6 +53,49 @@ def run_bootstrap(
 
 
 class DescribeBootstrap:
+    @pytest.mark.parametrize("machine", ["x86_64", "i386", "unknown"])
+    @pytest.mark.parametrize("uv_present", [False, True])
+    def should_reject_non_arm64_macos_before_any_setup(
+        self, bootstrap_workspace: tuple[Path, dict[str, str]], machine: str, uv_present: bool
+    ) -> None:
+        project, env = bootstrap_workspace
+        env.update(TEST_SYSTEM="Darwin", TEST_MACHINE=machine)
+        commands = Path(env["PATH"])
+        for name in ("brew", "curl", "apt-get", "uv"):
+            if name == "uv" and not uv_present:
+                continue
+            shutil.copyfile(commands / "uv-template", commands / name)
+            (commands / name).chmod(0o755)
+
+        result = run_bootstrap(project, env, "coco1")
+
+        assert result.returncode == 1
+        assert "Intel Macs are unsupported" in result.stderr
+        assert "native arm64 terminal" in result.stderr
+        assert not Path(env["BOOTSTRAP_LOG"]).exists()
+        assert not (project / "local").exists()
+        assert not (project / ".venv").exists()
+
+    @pytest.mark.parametrize(
+        "system,machine", [("Darwin", "arm64"), ("Linux", "x86_64"), ("Linux", "aarch64")]
+    )
+    def should_continue_setup_on_supported_architectures(
+        self, bootstrap_workspace: tuple[Path, dict[str, str]], system: str, machine: str
+    ) -> None:
+        project, env = bootstrap_workspace
+        env.update(TEST_SYSTEM=system, TEST_MACHINE=machine)
+        commands = Path(env["PATH"])
+        shutil.copyfile(commands / "uv-template", commands / "uv")
+        (commands / "uv").chmod(0o755)
+
+        result = run_bootstrap(project, env, "coco1")
+
+        assert result.returncode == 0, result.stderr
+        assert (
+            "scripts/doctor.py --profile demo --target coco1"
+            in Path(env["BOOTSTRAP_LOG"]).read_text()
+        )
+
     def should_prepare_selected_target_firmware_without_book_conversion(
         self, bootstrap_workspace: tuple[Path, dict[str, str]]
     ) -> None:

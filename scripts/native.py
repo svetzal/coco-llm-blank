@@ -1,4 +1,4 @@
-"""Install the assembly and emulator tools for macOS or Ubuntu 24.04."""
+"""Install the assembly and emulator tools for Apple Silicon macOS or Ubuntu 24.04."""
 
 import hashlib
 import os
@@ -41,6 +41,9 @@ class HostGateway:
     def system(self) -> str:
         return platform.system()
 
+    def machine(self) -> str:
+        return platform.machine()
+
     def ubuntu_supported(self) -> bool:
         release = platform.freedesktop_os_release()
         return release.get("ID") == "ubuntu" and release.get("VERSION_ID") == "24.04"
@@ -65,7 +68,7 @@ class HostGateway:
                 "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh", script
             )
             self.run(["env", "NONINTERACTIVE=1", "/bin/bash", str(script)])
-        return "/opt/homebrew/bin/brew" if platform.machine() == "arm64" else "/usr/local/bin/brew"
+        return "/opt/homebrew/bin/brew"
 
     def dependencies(self) -> None:
         prefix = [] if os.geteuid() == 0 else ["sudo", "-n"]
@@ -123,6 +126,12 @@ def build_source(name: str, root: Path, host: HostGateway) -> None:
 
 def install(root: Path = ROOT, host: HostGateway | None = None) -> None:
     host = host or HostGateway()
+    if host.system() == "Darwin" and host.machine() != "arm64":
+        raise ValueError(
+            "macOS requires Apple Silicon (arm64); Intel Macs are unsupported. "
+            "Use a native arm64 terminal and Python on Apple Silicon, or Ubuntu 24.04. "
+            "See guidance/toolchain.md."
+        )
     missing = [name for name in ("lwasm", "lwlink", "xroar") if not tool_path(name, root)]
     if not missing:
         print("Assembly and emulator tools are already available.")
@@ -151,7 +160,7 @@ def install(root: Path = ROOT, host: HostGateway | None = None) -> None:
             build_source("xroar", root, host)
     else:
         raise ValueError(
-            "Automatic installation supports macOS and Ubuntu 24.04. See guidance/toolchain.md."
+            "Automatic installation supports Apple Silicon macOS and Ubuntu 24.04. See guidance/toolchain.md."
         )
     if any(not tool_path(name, root) for name in missing):
         raise ValueError(

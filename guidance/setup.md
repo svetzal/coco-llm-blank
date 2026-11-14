@@ -24,7 +24,7 @@ download books or conversion models.
 The final check requires the assembler, linker, emulator, and verified firmware.
 Missing tools
 produce a nonzero exit and installation guidance. Bootstrap installs missing
-native tools on macOS and Ubuntu 24.04.
+native tools on Apple Silicon macOS and Ubuntu 24.04.
 Use [toolchain.md](toolchain.md) if permissions or installation fail.
 ToolShed is optional for directly launched demos; disk projects still need it.
 Other Linux distributions still need manual native-tool installation.
@@ -100,9 +100,10 @@ reuse completed pages. A new range adds pages without losing earlier work.
 Read [reference conversion](references.md) for cache behavior and limits.
 OCR still needs checking, especially for assembly code and diagrams.
 
-The baseline targets Apple Silicon macOS and Linux. Intel macOS needs separate
-PyTorch compatibility work and is not covered by this environment. Linux still
-needs a clean-host verification. Archive availability does not change copyright
+The baseline targets Apple Silicon macOS and Linux. Intel Macs are unsupported.
+The [Linux onboarding report](linux-onboarding-validation.md) records tested
+Ubuntu container journeys; native desktop onboarding remains unverified.
+Archive availability does not change copyright
 or licensing; downloaded and derived content stays outside Git.
 
 ## Native CoCo tools

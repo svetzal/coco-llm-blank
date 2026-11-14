@@ -27,8 +27,16 @@ project build commands. Do not copy a developer's private paths into defaults.
 ## Installation sources
 
 Bootstrap runs `uv run python scripts/native.py` to install missing tools.
-On macOS it uses Homebrew, installing Homebrew from its official source if
-needed.
+macOS support is limited to Apple Silicon (arm64). Intel Macs are unsupported.
+Bootstrap and the native installer reject non-arm64 macOS before installing
+anything, even when tools are already present. On Apple Silicon, run a native
+arm64 terminal and Python rather than an x86-64 process under Rosetta.
+Use Ubuntu 24.04 for the supported Linux installation path; its architecture
+handling is unchanged.
+
+On Apple Silicon macOS it uses Homebrew, installing Homebrew from its official
+source if needed. Existing Homebrew discovery through PATH and known prefixes
+is preserved.
 System permissions may require the owner's help; failures stop with an
 explanation.
 Existing tools and explicit executable overrides are preserved.

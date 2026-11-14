@@ -68,7 +68,9 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
     print("Discovery and file checks do not prove boot. Run the selected example's check command.")
     if missing:
         print("Setup is incomplete. Ask your agent to install: " + ", ".join(missing))
-        print("On macOS, Homebrew provides assembly and emulator tools: brew install lwtools xroar")
+        print(
+            "On Apple Silicon macOS, Homebrew provides assembly and emulator tools: brew install lwtools xroar"
+        )
     print("Read guidance/toolchain.md for installation and verification.")
     return 1 if missing or not firmware_ok else 0
 
