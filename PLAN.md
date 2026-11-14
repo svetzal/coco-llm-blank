@@ -20,6 +20,8 @@ ignored local storage. Stacey requested public publication as
 - pytest and Ruff provide the development checks; pygame-ce and music21 are
   optional dependency groups for interactive and music work.
 - Setup selects CoCo 1, 2, or 3 and preserves local project notes.
+- `--roms-only` downloads checksum-pinned firmware for the selected target,
+  validates selected ZIP members, and stores it outside Git.
 - `AGENTS.md` routes tasks through ordinary Markdown files without agent skills.
 - Native-tool guidance and discovery cover LWTOOLS, ToolShed, and XRoar.
   Stacey selected assembly only; C compilation is outside the baseline.
@@ -31,12 +33,13 @@ ignored local storage. Stacey requested public publication as
 2. Add target-specific manuals and datasheets and select resource groups by
    target. The first books are shared 6809 and CoCo 1/2 background, not a
    complete CoCo 3 library.
-3. Automate native-tool installation where practical, configure ROM paths,
+3. Automate native-tool installation where practical,
    and add an original assembly program with disk and emulator checks.
 4. Verify on clean Linux and macOS hosts. The current environment targets
    Apple Silicon macOS and Linux; Intel Mac support needs separate dependency
    compatibility work.
-5. Gather feedback from the fresh `coco-lines` clone using microgentic.
+5. Run fresh-clone microgentic trials in a separate experiment directory.
+   Leave Stacey's `coco-lines` project untouched.
 
 ## Acceptance evidence
 

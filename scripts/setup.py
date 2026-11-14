@@ -18,6 +18,7 @@ from references import (
     convert,
     digest,
 )
+from roms import RomDownloadGateway, provision
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = {"coco1": "CoCo 1", "coco2": "CoCo 2", "coco3": "CoCo 3"}
@@ -27,6 +28,7 @@ class SetupOptions(BaseModel):
     model_config = ConfigDict(frozen=True)
     target: str | None = None
     guidance_only: bool = False
+    roms_only: bool = False
     pages: str | None = None
     list_resources: bool = Field(default=False, alias="list")
     resources: list[str] | None = Field(default=None, alias="resource")
@@ -89,16 +91,20 @@ class ProjectStore:
         validate_manifest(resources)
         return resources
 
-    def initialize(self, target: str | None, console: ConsoleGateway) -> None:
+    def initialize(self, target: str | None, console: ConsoleGateway) -> str:
         project = self.root / "local/PROJECT.md"
         if project.exists():
             if target and f"Target: {TARGETS[target]}\n" not in project.read_text():
                 raise ValueError(
                     "Existing local/PROJECT.md has a different target. Edit it deliberately before rerunning.",
                 )
-            return
+            for key, label in TARGETS.items():
+                if f"Target: {label}\n" in project.read_text():
+                    return key
+            raise ValueError("Set a recognized Target in local/PROJECT.md before rerunning")
         chosen = target or console.choose_target()
         atomic_text(project, project_notes(chosen))
+        return chosen
 
     def extraction_status(self, resource: Resource) -> str | None:
         directory = self.root / "local/references" / resource.id
@@ -185,7 +191,11 @@ def select_resources(resources: list[Resource], requested: list[str] | None) -> 
 def parse_options(argv: list[str] | None) -> SetupOptions:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", choices=TARGETS)
-    parser.add_argument("--guidance-only", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--guidance-only", action="store_true")
+    mode.add_argument(
+        "--roms-only", action="store_true", help="Download target ROMs without converting books"
+    )
     parser.add_argument(
         "--pages", help="Convert this inclusive PDF page range, e.g. 10:12; resume cached pages"
     )
@@ -223,6 +233,7 @@ def main(
     console: ConsoleGateway | None = None,
     downloads: DownloadGateway | None = None,
     documents: DoclingGateway | None = None,
+    rom_downloads: RomDownloadGateway | None = None,
 ) -> int:
     options = parse_options(argv)
     store = ProjectStore(root)
@@ -234,7 +245,11 @@ def main(
             return 0
         selected = select_resources(resources, options.resources)
         page_range = parse_page_range(options.pages)
-        store.initialize(options.target, console or ConsoleGateway())
+        target = store.initialize(options.target, console or ConsoleGateway())
+        if options.roms_only:
+            provision(root, target, rom_downloads)
+            store.write_index(resources)
+            return 0
         success = options.guidance_only or prepare_resources(
             selected,
             root,

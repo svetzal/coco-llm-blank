@@ -1,0 +1,102 @@
+"""Firmware acquisition with original fixture bytes, never copyrighted ROMs."""
+
+import hashlib
+import io
+import json
+from pathlib import Path
+from unittest.mock import Mock
+from zipfile import ZipFile
+
+import pytest
+import setup
+from roms import RomDownloadGateway, provision
+
+
+def fixture_archive(root: Path, *, name: str = "basic.rom", size: int = 8) -> Mock:
+    content = b"test ROM"
+    stream = io.BytesIO()
+    with ZipFile(stream, "w") as archive:
+        archive.writestr("basic.rom", content)
+        archive.writestr("../escape.rom", b"never extract unrelated members")
+    data = stream.getvalue()
+    profile = {
+        "url": "https://colorcomputerarchive.com/repo/ROMs/MAME-MESS/test.zip",
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "members": [{"name": name, "size": size, "sha256": hashlib.sha256(content).hexdigest()}],
+    }
+    (root / "roms.json").write_text(json.dumps({"coco1": profile}))
+    gateway = Mock(spec=RomDownloadGateway)
+    gateway.fetch.return_value = data
+    return gateway
+
+
+class DescribeFirmwareSetup:
+    def should_download_selected_roms_without_loading_document_models(self, project: Path) -> None:
+        gateway = fixture_archive(project)
+        assert setup.main(["--target", "coco1", "--roms-only"], project, rom_downloads=gateway) == 0
+        assert (project / "local/roms/coco1/basic.rom").read_bytes() == b"test ROM"
+        assert not (project / "local/references").exists()
+        assert not (project / "local/roms/escape.rom").exists()
+        gateway.fetch.side_effect = AssertionError("cache must work offline")
+        assert setup.main(["--roms-only"], project, rom_downloads=gateway) == 0
+
+    @pytest.mark.parametrize("damage", ["download", "cache", "member", "size", "missing", "zip"])
+    def should_reject_bad_firmware_without_publishing_roms(
+        self, project: Path, damage: str
+    ) -> None:
+        gateway = fixture_archive(project)
+        manifest = json.loads((project / "roms.json").read_text())
+        profile = manifest["coco1"]
+        if damage == "download":
+            gateway.fetch.return_value = b"server error"
+        elif damage == "cache":
+            cache = project / "local/roms/coco1/source.zip"
+            cache.parent.mkdir(parents=True)
+            cache.write_bytes(b"damaged")
+        elif damage == "member":
+            profile["members"][0]["sha256"] = "0" * 64
+        elif damage == "size":
+            profile["members"][0]["size"] = 9
+        elif damage == "missing":
+            profile["members"][0]["name"] = "missing.rom"
+        else:
+            gateway.fetch.return_value = b"not a zip"
+            profile["sha256"] = hashlib.sha256(b"not a zip").hexdigest()
+        (project / "roms.json").write_text(json.dumps(manifest))
+        assert setup.main(["--target", "coco1", "--roms-only"], project, rom_downloads=gateway) == 1
+        assert not list(project.glob("local/roms/**/*.rom"))
+
+    def should_preserve_an_existing_different_rom(self, project: Path) -> None:
+        gateway = fixture_archive(project)
+        path = project / "local/roms/coco1/basic.rom"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"owner firmware")
+        with pytest.raises(ValueError, match="existing ROM differs"):
+            provision(project, "coco1", gateway)
+        assert path.read_bytes() == b"owner firmware"
+
+    @pytest.mark.parametrize("name", ["../escape.rom", "/absolute.rom", "dir/nested.rom"])
+    def should_reject_unsafe_member_names(self, project: Path, name: str) -> None:
+        gateway = fixture_archive(project, name=name)
+        with pytest.raises(ValueError):
+            provision(project, "coco1", gateway)
+        assert not (project / "local").exists()
+
+    def should_explain_unknown_profiles_and_target_notes(self, project: Path) -> None:
+        gateway = fixture_archive(project)
+        with pytest.raises(ValueError, match="No ROM profile"):
+            provision(project, "coco2", gateway)
+        notes = project / "local/PROJECT.md"
+        notes.parent.mkdir()
+        notes.write_text("My notes without a target")
+        assert setup.main(["--roms-only"], project, rom_downloads=gateway) == 1
+        assert notes.read_text() == "My notes without a target"
+
+
+class DescribeRomTransport:
+    def should_fetch_bytes_through_http(self, pdf_server: str, pdf_bytes: bytes) -> None:
+        assert RomDownloadGateway().fetch(pdf_server) == pdf_bytes
+
+    def should_propagate_http_failure(self, pdf_server: str) -> None:
+        with pytest.raises(OSError):
+            RomDownloadGateway().fetch(pdf_server + "/missing")

@@ -43,8 +43,43 @@ small program, inspect its load address, then build and inspect its disk image.
 For Disk BASIC, use the DECB binary format and test `LOADM` from the disk.
 Read [development.md](development.md) for memory and evidence requirements.
 
-XRoar requires matching firmware. Keep ROMs in ignored local storage or use
-an explicit user-provided location. Record machine, RAM, video standard, CPU,
+## Firmware and launching
+
+XRoar requires matching firmware. Run setup with the selected target:
+
+```sh
+uv run python scripts/setup.py --target coco1 --roms-only
+```
+
+This downloads the manifest's ZIP from the
+[archive ROM directory](https://colorcomputerarchive.com/repo/ROMs/MAME-MESS/).
+It verifies ZIP and member checksums and extracts only named ROMs. It does not
+convert books. Reruns validate the cache; a mismatch stops without replacing
+existing firmware. Inspect a damaged file before removing it and retrying.
+
+| Target | Firmware directory | BASIC | Extended BASIC | Disk BASIC |
+| --- | --- | --- | --- | --- |
+| CoCo 1 | `local/roms/coco1/` | `bas11.rom` | `extbas10.rom` | `disk11.rom` |
+| CoCo 2 | `local/roms/coco2/` | `bas12.rom` | `extbas11.rom` | `disk11.rom` |
+| CoCo 3 | `local/roms/coco3/` | Combined in `coco3.rom` | `coco3.rom` | `disk11.rom` |
+
+For a CoCo 1 NTSC project targeting 32 KiB, a DECB binary can auto-run with:
+
+```sh
+xroar -machine cocous -ram 32 \
+  -bas local/roms/coco1/bas11.rom \
+  -extbas local/roms/coco1/extbas10.rom \
+  -no-cart -ratelimit -run build/demo.bin
+```
+
+Use the actual project's binary name and RAM requirement. For Disk BASIC,
+replace `-no-cart` with `-cart rsdos -cart-rom local/roms/coco1/disk11.rom`.
+Direct binary auto-run is not evidence that a disk boots or that `LOADM` works.
+Do not require ToolShed for a direct DECB binary launch; it is needed for disk
+work. Read the installed XRoar help for other machine profiles and ROM options.
+
+Keep ROMs in ignored local storage or use an explicit user-provided location.
+Record machine, RAM, video standard, CPU,
 and ROM selection in the project configuration before running. A CPU simulator
 cannot validate keyboard, graphics, disk, or ROM behavior. Emulator results do
 not establish physical hardware timing.

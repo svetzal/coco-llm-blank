@@ -34,6 +34,18 @@ Use `--list` to list resources. Repeat `--resource ID` to select several books.
 Existing project notes are preserved. Change the target deliberately in
 `local/PROJECT.md` before requesting a different target.
 
+Download the selected machine's firmware without starting book conversion:
+
+```sh
+uv run python scripts/setup.py --target coco1 --roms-only
+```
+
+`roms.json` identifies archive ZIPs and selected ROM members by SHA-256 and
+size. Setup verifies cached files too, preserves different existing firmware,
+and writes only selected members to ignored `local/roms/TARGET/`.
+The manifest uses the archive's MAME-MESS area. No ROM bytes ship in Git.
+See [toolchain](guidance/toolchain.md#firmware-and-launching) for launch options.
+
 The Python baseline includes Docling/RapidOCR, NumPy, Pillow, pytest, and Ruff.
 Optional groups cover interactive prototypes and music analysis. Read
 [Python tools](guidance/python.md) for their purpose and commands.
