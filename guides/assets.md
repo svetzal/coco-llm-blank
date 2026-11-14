@@ -2,7 +2,9 @@
 
 Read this when deciding how a game's artwork becomes reusable drawing data.
 The examined sources are CoCo 3 community articles. The original proposals
-below are untested. Their general data-design ideas can inform CoCo 1/2 work,
+have a bounded [host preparation check](../guidance/asset-validation.md)
+with 33 passing cases. Target integration and banked storage remain untested.
+Their general data-design ideas can inform CoCo 1/2 work,
 but neither source establishes a CoCo 1/2 implementation.
 
 Use [animation storage](animation.md) for packed-size calculations and
@@ -136,9 +138,9 @@ No checks in this table were executed in this source-only pass.
   error midway through loading and check restoration and guards.
 
 Keep host-format tests, target assembly, emulator execution, framebuffer,
-rendered output and physical-machine evidence separate. Link tracked original
-experiment code when these proposals are implemented. There is no such asset
-experiment from this pass.
+rendered output and physical-machine evidence separate. The tracked
+[host experiment](../experiments/assets/README.md) checks fixed RG6 preparation
+and publication. Target loading and banked-storage checks remain proposals.
 
 The [research record](../guidance/community-game-research.md) holds exact hashes,
 complete reading ranges, corrections, rejected leads and license boundaries.

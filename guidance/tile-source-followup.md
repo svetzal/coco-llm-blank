@@ -382,12 +382,12 @@ root = Path("local/research/tile-source-followup")
 with ZipFile(root / "SR3.zip") as archive:
     disk = archive.read("SR3.DSK")
 assert len(disk) == 35 * 18 * 256
-fat = disk[17 * 4608 + 256:17 * 4608 + 512]
-directory = disk[17 * 4608 + 512:18 * 4608]
+fat = disk[17 * 4608 + 256 : 17 * 4608 + 512]
+directory = disk[17 * 4608 + 512 : 18 * 4608]
 output = root / "text/SR3"
 output.mkdir(parents=True, exist_ok=True)
 for offset in range(0, len(directory), 32):
-    entry = directory[offset:offset + 32]
+    entry = directory[offset : offset + 32]
     if entry[0] == 255:
         break
     if entry[0] == 0 or entry[8:11] != b"TXT":
@@ -402,14 +402,14 @@ for offset in range(0, len(directory), 32):
         start = track * 4608 + (granule % 2) * 2304
         following = fat[granule]
         if following < 68:
-            parts.append(disk[start:start + 2304])
+            parts.append(disk[start : start + 2304])
             granule = following
             continue
         assert 0xC1 <= following <= 0xC9
         final_bytes = int.from_bytes(entry[14:16], "big")
         assert 0 < final_bytes <= 256
         length = (following - 0xC1) * 256 + final_bytes
-        parts.append(disk[start:start + length])
+        parts.append(disk[start : start + length])
         break
     raw = b"".join(parts)
     text = raw.decode("latin1").replace("\r\n", "\n").replace("\r", "\n")
