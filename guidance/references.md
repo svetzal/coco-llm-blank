@@ -24,6 +24,30 @@ For graphics, search terms can include the mode name, `PMODE`, `semigraphics`,
 its table, figure, and nearby definitions. Do not infer a complete mode setup
 from a search hit or a contents entry.
 
+For the manifest's graphics book, these PDF page ranges locate useful sections:
+
+| Topic | PDF pages |
+| --- | --- |
+| Contents and chapter locations | 4–7 |
+| SAM/VDG selection and four-colour mode tables | 79–81 |
+| Two-colour resolution, byte layout, and mode selection | 106–108 |
+
+These are navigation hints, not a substitute for reading the source. For a
+CoCo 1/2 two-colour task, convert 106–108 first, then 79–81 for the SAM register
+explanation. PDF page 106's table identifies the highest two-colour resolution;
+check it before accepting a requested pixel count. The book's printed pages
+are nine lower than the PDF page numbers in these ranges.
+
+```sh
+uv run python scripts/setup.py --target coco1 \
+  --resource assembly-graphics --pages 106:108
+```
+
+The current converter merges some instruction-table cells on PDF page 108.
+Read its full-page PNG before using that table. Do not copy OCR assembly as
+working code. The examples also depend on earlier machine state; read the
+surrounding setup before treating a short mode-selection listing as complete.
+
 ## Find the relevant passage
 
 1. Read `local/INDEX.md` to choose a book and check converted-page coverage.
