@@ -70,5 +70,23 @@
     "title": "The Rainbow Vol. 12 No. 03 - October 1992",
     "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2012%20No.%2003%20-%20October%201992.pdf",
     "sha256": "b325270e224c2472db534022eac9a21638407e4d2fcaa008d7fca0cddfcf40ad"
+  },
+  {
+    "id": "mc6847",
+    "title": "MC6847/MC6847Y Video Display Generator (Motorola, 1984 DS9823-R1)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf",
+    "sha256": "2d4586d2fd3c82c60071bbe4cc3930e561c00dce1e43245b0c7ffd5e081fe88c"
+  },
+  {
+    "id": "rainbow-1988-01",
+    "title": "The Rainbow Vol. 07 No. 06 - January 1988",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2006%20-%20January%201988.pdf",
+    "sha256": "c4d4f4d96fe5fde98cb62c3214919bd3d0a42c95a1185a5192197b6707d00aed"
+  },
+  {
+    "id": "rainbow-1988-04",
+    "title": "The Rainbow Vol. 07 No. 09 - April 1988",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2009%20-%20April%201988.pdf",
+    "sha256": "4bdda1acc48f53132be0a0b69ca84466b09ceb74f187a42132b446c1654d6e56"
   }
 ]

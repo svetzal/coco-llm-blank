@@ -30,6 +30,41 @@ Tepolt's advanced graphics discussion also describes colour blending.
 Treat the resulting appearance as display-dependent. Do not count it as extra
 independently addressable palette entries. [Tepolt, PDF 59][tepolt]
 
+## Check pixel order before interpreting colour
+
+Motorola's **MC6847/MC6847Y Video Display Generator** datasheet gives direct
+pixel-order evidence. Table 3 on printed/PDF 19 maps the RG6 display from
+`L7` at the left to `L0` at the right. Figure 22 on printed/PDF 21 identifies
+the corresponding byte positions as `D7` through `D0`. Thus the chip's RG6
+format places the most significant bit at the left. [Motorola][mc6847-pixels]
+
+This is chip-level evidence for MC6847/MC6847Y, not a complete CoCo setup.
+Check the board's data wiring and selected mode before applying it.
+It does not establish MC6847T1, PAL adaptations, or native CoCo 3 GIME behaviour.
+An asymmetric pattern remains useful to check the complete emulator or display path.
+
+Do not confuse pixel order with artifact colour. The datasheet's mode and
+encoding tables describe nominal pixel values. Actual composite appearance also
+depends on the board's video circuitry and display, as the CoCo 2 manual explains.
+
+## Treat sync timing as a hardware contract
+
+The same datasheet distinguishes active display, borders, and synchronization.
+PDF 8 specifies a field-sync pulse lasting 32 line periods. PDF 13 associates
+its falling edge with the end of the active area. These are chip signals,
+not measured deadlines for a CoCo drawing routine. [Motorola, PDF 8 and 13][mc6847-sync]
+
+PDF 22 first describes a system without the MC6883, then discusses the SAM's
+transparent memory access separately. Do not turn the generic system's update
+window into a rule that a CoCo can write screen RAM only during that interval.
+Memory access and visually clean animation are different requirements.
+[Motorola, PDF 22][mc6847-system]
+
+For a new synchronization routine, check the CoCo board's signal routing and
+PIA interrupt handling. Measure the drawing time at the selected CPU clock.
+The datasheet alone does not prove that a page change or redraw finishes without
+tearing.
+
 ## Make a display test before making the art
 
 This procedure is our proposed validation method. We have not tested it
@@ -59,6 +94,11 @@ A RAM snapshot establishes the stored values, not their visible colour.
 - Laurence A. Tepolt, *Assembly Language Programming for the CoCo3* (1987),
   PDF 59. Resource `tepolt-coco3`. [Archive][tepolt]
 
+- Motorola, *MC6847/MC6847Y Video Display Generator*, 1984, DS9823-R1,
+  printed/PDF 8, 13, 19, 21–22. Technical pages 1–23 examined as images.
+  Resource `mc6847`. Archive filename: *MC6847 MOS Video Display Generator
+  (Motorola)*. [Archive][mc6847-pixels]
+
 These source pages were examined as images. We have not compared colours across
 physical displays. The
 [research notes](../guidance/game-research.md#coco-2-display-differences)
@@ -69,3 +109,9 @@ record the narrower board scope and conversion limitations.
 [coco3]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf#page=17>
 
 [tepolt]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=59>
+
+[mc6847-pixels]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=19>
+
+[mc6847-sync]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=8>
+
+[mc6847-system]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=22>

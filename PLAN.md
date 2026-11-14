@@ -209,6 +209,12 @@ non-SAM memory-access discussion must not become a CoCo screen-write restriction
 Read Blochowiak's January 1988 SMOOTHY article and its April 1988 correction.
 It concerns CoCo 3 text scrolling, with distinct 128K and 512K requirements.
 No scrolling implementation or GIME register cross-check is claimed.
+The datasheet and paired article/correction are now checksum-pinned resources.
+Converted MC6847 PDF 19–22, January PDF 80/82, April PDF 14, and Matthews PDF 47.
+Exported images were checked. Sideways tables and dense listings still need
+image-first reading. Sixty-one setup/reference specifications pass.
+October pages 44/46 were read as source images but remain outside the active
+converter profile. Their older checkpoints do not establish current Markdown coverage.
 
 The original [moving-object example](examples/moving-objects/README.md) implements
 full background redraw and ordered opaque objects. Thirteen frame checks pass

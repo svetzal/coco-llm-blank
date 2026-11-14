@@ -15,7 +15,7 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Need | Start with | Evidence and limits |
 | --- | --- | --- |
 | Small animated objects | Polsz, `rainbow-1986-10`, PDF 118–119 | Examined text and figure. Compact GET/PUT storage; BASIC-specific. |
-| Alternate prepared frames | Matthews, `rainbow-1987-10`, PDF 44 and 46 | Examined explanation and listing. Hidden drawing screen versus visible screen. |
+| Alternate prepared frames | Matthews, `rainbow-1987-10`, PDF 44 and 46–47 | Examined explanation and listing. Hidden drawing screen versus visible screen. |
 | Smooth horizontal scrolling on CoCo 3 | Tepolt, `tepolt-coco3`, PDF 59 | Examined page image. Pre-shifted buffers trade memory for motion granularity. |
 | Banked assets with interrupts on CoCo 3 | Tepolt, `tepolt-coco3`, PDF 59–60 | Examined page images. Keep interrupt tables and handlers accessible. |
 | Match CoCo 2 artifact colours | Tandy, `coco2-service`, PDF 31–33 | Examined hardware discussion. Specific NTSC models, not all CoCo 2 variants. |
@@ -50,12 +50,15 @@ a native CoCo 3 graphics or hardware-sprite technique.
 
 Becky F. Matthews's **Electrifying Graphics Using PMODE Power**, The Rainbow,
 October 1987, printed/PDF pages 44 and 46–47, explains two prepared pictures
-and alternating displays. The examined explanation is on pages 44 and 46.
-The remainder of the listing on page 47 still needs inspection.
+and alternating displays. The explanation and complete listing on pages 44
+and 46–47 were examined.
+Page 47 completes the hydroelectric and solar sequences.
 [Archive issue][rainbow-1987-10].
 
-The useful distinction is between the screen being drawn and the screen being
-shown. Apply that idea to short animation cycles, title screens, and scene
+The hydroelectric listing copies common mountains and sky to its second
+picture before changing the moving parts. The useful distinction is between
+the screen being drawn and the screen being shown. Apply that idea to short animation
+cycles, title screens, and scene
 transitions. This article shows fixed prepared frames. It does not
 establish a general real-time renderer, vertical-sync discipline, or collision
 system. Its BASIC delays are not an assembly timing contract.
@@ -128,12 +131,12 @@ These sources were downloaded and sampled but are not manifest additions:
   printed page 26 is PDF page 25 in this scan. The examined article describes
   scrolling a completed picture off-screen. Keep it for transitions, not as
   evidence for a bidirectional scrolling game engine. [Archive issue][rainbow-1987-10].
-- **MC6847 MOS Video Display Generator**, Motorola: downloaded, but technical
-  pages have not been examined. Do not cite it yet for pixel order or timing.
-  [Archive datasheet][mc6847].
+- **MC6847 MOS Video Display Generator**, Motorola: technical pages now examined
+  in the focused follow-up below. Promote its chip-level facts only within
+  the named MC6847/MC6847Y scope. [Archive datasheet][mc6847].
 
-The two books and three magazine issues inspected here do not represent the
-whole archive. Other magazines and later community source releases remain
+The sampled books and magazine issues do not represent the whole archive. Other
+magazines and later community source releases remain
 part of the research scope.
 
 ## Magazine discovery and corrections
@@ -141,8 +144,25 @@ part of the research scope.
 [The Rainbow searchable index][rainbow-index] is a locator, not hardware
 reference material. Its PDF page 56 points to John Blochowiak's **A Smooth
 Operator**, January 1988, printed page 78, and a correction in April 1988,
-printed page 14. The index describes 40-column scrolling. Neither article nor
-correction has been examined yet. Do not label it a graphics scrolling engine.
+printed page 14. Both are now examined as page images, including the listing's
+continuation. The January article occupies printed 78 and 80 / PDF 80 and 82.
+The April correction is printed/PDF 14. Do not label it a graphics scrolling engine.
+
+Blochowiak's SMOOTHY changes the 128K CoCo 3's 40-column text scrolling.
+It applies to BASIC output such as `LIST`, `DIR`, and `PRINT`.
+The article contrasts an eight-pixel character-row jump with one-pixel steps.
+It names the scan-line offset and screen-start registers as the mechanism.
+This is a useful source for text transitions or a scrolling credits proposal.
+It does not establish scrolling terrain, sprites, or a bitmap camera.
+Resource `rainbow-1988-01`. [January article][rainbow-1988-01].
+
+The April notice reports that the original fails on 512K CoCo 3 machines.
+It changes the value 25 to 217 in BASIC line 170, and 24 to 216 in line 220.
+Both lines occur on January printed 80 / PDF 82.
+Treat memory configuration as part of this example's requirements.
+No version has been reproduced here, and the register setup has not been
+cross-checked against the GIME hardware documentation.
+Resource `rainbow-1988-04`. [April correction][rainbow-1988-04].
 
 Search titles, authors, and synonyms. A search for `sprite` alone misses useful
 articles about `GET`, `PUT`, animation, and graphics storage. Distinguish product
@@ -152,10 +172,69 @@ Confirm the issue date on the scan. Confirm each PDF page against its printed
 page. The October 1987 scan already shows why a single offset is unsafe.
 Check corrections and continuation pages before relying on an article.
 
+## Animation and VDG source follow-up
+
+Matthews's **Electrifying Graphics Using PMODE Power**, October 1987 Rainbow,
+printed/PDF 44 and 46–47, is now read through the final listing page.
+The three examples alternate two prepared PMODE 1 pictures. The hydroelectric
+example shares its static background through page copies. The listing's BASIC
+delay loops do not establish a stable frame rate or synchronized display change.
+No listing was run. [Archive issue][rainbow-1987-10].
+
+Motorola's **MC6847/MC6847Y Video Display Generator**, 1984 DS9823-R1,
+printed/PDF 1–23, was examined as page images. The archive filename omits the
+MC6847Y name, but the document explicitly covers both non-interlaced and
+interlaced versions. It is not the separate MC6847T1 datasheet.
+Resource `mc6847`. [Archive datasheet][mc6847].
+
+Useful passages for an agent:
+
+- PDF 12 explains display-address progression from left to right and top to bottom.
+- PDF 19, Table 3, maps RG6 screen positions `L7` through `L0` left to right.
+  PDF 21, Figure 22, supplies the corresponding `D7` through `D0` byte layout.
+  This resolves the chip's bit order, not every board's wiring or emulator output.
+- PDF 8 and 13 define the field-sync interval and its relation to active display.
+  PDF 11 separates the 192 active lines from borders and retrace.
+- PDF 22 distinguishes the generic non-SAM system from the MC6883 system.
+  A generic blanking-time memory-access restriction is not a CoCo programming rule.
+
+PDF 20 contains an apparent typo: the RG6 paragraph opens with 256×193,
+while its heading, following dimensions, and tables on PDF 14, 18, and 19
+consistently specify 256×192. The guide uses the consistent table evidence.
+No board timing, physical display, or PAL/GIME compatibility test was performed.
+The [colour guide](../guides/colour.md) now routes pixel-order and timing questions
+to these passages rather than treating the datasheet as unread.
+
+### Converted coverage for this source pass
+
+The local `mc6847` conversion covers PDF 19–22. Original page images, examined
+separately, support the reading of PDF 1–23. A later agent must convert other
+cited pages before relying on local Markdown coverage.
+
+The exported full-page images for PDF 19, 21, and 22 were checked against the
+source. PDF 19 retains the sideways table, but its OCR merges columns and
+misreads bit labels. PDF 21 retains the diagrams as images; its table headers
+also contain OCR errors. Read the images for bit positions and signal labels.
+These pages were not flagged as sparse, which shows that coverage is not accuracy.
+
+The January issue conversion covers PDF 80 and 82. Both full-page PNGs were
+checked. PDF 80 mixes the neighbouring COLORMIX listing into SMOOTHY's text;
+PDF 82 reorders DATA lines and separates the listing's columns.
+The April issue conversion covers PDF 14. Its exported full-page image was
+checked; the correction's line numbers and replacement values match the OCR.
+This is a targeted check, not a claim that the whole page's OCR is accurate.
+
+The October issue's active conversion covers PDF 47. Its full-page PNG was
+checked. OCR reorders several BASIC lines and misreads zeros and NEXT tokens.
+Earlier PDF 44 and 46 checkpoints belong to another converter profile and
+remain on disk, but are not in the active Markdown. Convert those pages again
+when needed. Their source images were examined for the article findings above.
+
 ## Rendering and collision pass
 
 The [moving-object guide](../guides/moving-objects.md) turns this pass into
-practical advice. [Animation storage](../guides/animation.md#precompute-geometry-when-pictures-cost-too-much-memory)
+practical advice. [Animation
+storage](../guides/animation.md#precompute-geometry-when-pictures-cost-too-much-memory)
 now also covers precomputed coordinates. These are examined sources with
 proposed adaptations, not newly reproduced programs.
 
@@ -318,3 +397,6 @@ PDFs, extracted text, and images stay under ignored `local/`.
 [rainbow-1992-10]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2012%20No.%2003%20-%20October%201992.pdf>
 
 [undercolor-01]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n01%20%281984%29%28ColorPlus%20Inc%29.pdf>
+
+[rainbow-1988-01]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2006%20-%20January%201988.pdf#page=80
+[rainbow-1988-04]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2009%20-%20April%201988.pdf#page=14

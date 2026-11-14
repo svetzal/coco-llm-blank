@@ -42,8 +42,13 @@ Before implementing the format:
 
 Becky F. Matthews explains two prepared pictures and alternating displays in
 **"Electrifying Graphics Using PMODE Power," The Rainbow, October 1987**.
-We examined printed/PDF 44 and 46. The listing continues on page 47, which
-has not been examined. The article labels its example 16K ECB. [Matthews][matthews]
+We examined printed/PDF 44 and 46–47, including the complete listing.
+The article labels its example 16K ECB. [Matthews][matthews]
+
+The three examples prepare two PMODE 1 pictures, then alternate their display.
+The hydroelectric example copies its shared mountains and sky before adding
+the different moving parts. The final page completes that example and the
+solar sequence. [Matthews, PDF 46–47][matthews-ending]
 
 The distinction between the picture being drawn and the picture being shown
 is useful for short cycles and transitions. The examined example does not
@@ -103,7 +108,7 @@ another storage and display contract.
 - Polsz, Steven R. "Optimum Animation." *The Rainbow*, October 1986,
   printed 116–117, PDF 118–119. Resource `rainbow-1986-10`. [Archive][polsz]
 - Matthews, Becky F. "Electrifying Graphics Using PMODE Power." *The Rainbow*,
-  October 1987, printed/PDF 44, 46–47. Examined 44 and 46 only.
+  October 1987, printed/PDF 44, 46–47. Explanation and complete listing examined.
   Resource `rainbow-1987-10`. [Archive][matthews]
 
 - Pendell, Joseph. "Zippy Animation in BASIC?" *The Rainbow*, October 1992,
@@ -111,7 +116,7 @@ another storage and display contract.
   [Archive][pendell]
 
 The format calculations and proposed checks are original guidance.
-Neither article's listing has been reproduced here. See the
+None of these article listings has been reproduced here. See the
 [research notes](../guidance/game-research.md#coco-1-and-coco-2-animation)
 for selection limits.
 
@@ -120,3 +125,5 @@ for selection limits.
 [matthews]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf#page=44>
 
 [pendell]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2012%20No.%2003%20-%20October%201992.pdf#page=3>
+
+[matthews-ending]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf#page=47>

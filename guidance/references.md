@@ -92,6 +92,47 @@ The magazine's dense listings need image checks. Its cover contains an unrelated
 random-number article as well as the game introduction. A search hit on the cover
 does not identify which article supplies a claim.
 
+## Pixel order, timing, and prepared-frame animation
+
+| Resource | PDF pages | Use and limits |
+| --- | --- | --- |
+| `mc6847` | 19–22 | RG6 pixel order and formats; MC6847/MC6847Y chip scope. |
+| `mc6847` | 8, 12–14 | Sync timing, display-address progression, and mode definitions. |
+| `rainbow-1987-10` | 44, 46–47 | Matthews's complete prepared-frame animation article and listing. |
+
+Read the [colour guide](../guides/colour.md) before applying chip timing to a
+CoCo board. Read [animation](../guides/animation.md) for the prepared-frame technique.
+Convert the needed range using the project's existing target:
+
+```sh
+uv run python scripts/setup.py --resource mc6847 --pages 19:22
+```
+
+The checked conversion of PDF 19 merges table columns and misreads bit labels.
+Use its full-page PNG for the mode table, even when a text search finds a row.
+The table is sideways in the source; rotate the view when needed.
+
+## CoCo 3 text scrolling and its correction
+
+Treat these two resources as a pair:
+
+| Resource | PDF pages | Use and limits |
+| --- | --- | --- |
+| `rainbow-1988-01` | 80, 82 | Blochowiak's SMOOTHY, printed 78 and 80; 128K CoCo 3, 40-column BASIC text. |
+| `rainbow-1988-04` | 14 | Correction for 512K machines; read before adapting SMOOTHY. |
+
+Convert pages 80 and 82 separately to skip the intervening advertisement.
+The correction changes constants in the listing on PDF 82.
+The [research notes](game-research.md#magazine-discovery-and-corrections)
+record the exact changes and the limits of this reading.
+Neither source establishes a bitmap scrolling engine.
+
+PDF 80 also contains an unrelated colour-blending article. Its converted
+Markdown places that article's listing inside SMOOTHY's explanation and turns
+SMOOTHY's opening lines into a broken table. Use the full-page image to separate
+the articles and inspect code. PDF 82 reorders DATA lines and separates the
+right column from the left. Its full-page image preserves the listing order.
+
 ## Find the relevant passage
 
 1. Read `local/INDEX.md` to choose a book and check converted-page coverage.
