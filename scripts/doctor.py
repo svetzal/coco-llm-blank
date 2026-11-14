@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 
+import instrumented_xroar
 from native import ROOT, tool_path
 from roms import verify_installed
 
@@ -54,6 +55,10 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
                 print("  Optional for this demo; only needed to build disk images.")
             else:
                 missing.append(command)
+    print(
+        "Instrumented XRoar (optional; screen, key and sound capture): "
+        + instrumented_xroar.status(ROOT)
+    )
     firmware_ok = True
     if options.target:
         try:

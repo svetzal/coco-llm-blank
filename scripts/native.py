@@ -9,6 +9,7 @@ import sys
 import tarfile
 import tempfile
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,7 +96,8 @@ class HostGateway:
         )
 
 
-def build_source(name: str, root: Path, host: HostGateway) -> None:
+def cached_source(name: str, root: Path, download: Callable[[str, Path], None]) -> Path:
+    """Return the pinned release archive, downloading it once; its bytes must match the pin."""
     version, url, checksum = SOURCES[name]
     cache = root / "local/toolchain-sources"
     cache.mkdir(parents=True, exist_ok=True)
@@ -103,12 +105,19 @@ def build_source(name: str, root: Path, host: HostGateway) -> None:
     if not archive.exists():
         with tempfile.TemporaryDirectory(dir=cache) as directory:
             temporary = Path(directory) / "download"
-            host.download(url, temporary)
+            download(url, temporary)
             if hashlib.sha256(temporary.read_bytes()).hexdigest() != checksum:
                 raise ValueError(f"{name}: source checksum mismatch")
             temporary.replace(archive)
     if hashlib.sha256(archive.read_bytes()).hexdigest() != checksum:
         raise ValueError(f"{name}: cached source checksum mismatch; inspect {archive}")
+    return archive
+
+
+def build_source(name: str, root: Path, host: HostGateway) -> None:
+    version = SOURCES[name][0]
+    archive = cached_source(name, root, host.download)
+    cache = archive.parent
     prefix = root / "local/toolchain"
     with tempfile.TemporaryDirectory(dir=cache) as directory:
         with tarfile.open(archive) as source:

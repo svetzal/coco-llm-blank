@@ -101,3 +101,13 @@ class DescribeToolchainDoctor:
         rom.write_bytes(b"x" * len(data))
         assert doctor.main(["--profile", "demo", "--target", "coco2"]) == 1
         assert "checksum mismatch" in capsys.readouterr().out
+
+    def should_report_the_optional_instrumented_xroar_without_failing(
+        self, tool_directory: Path, monkeypatch: pytest.MonkeyPatch, capsys
+    ) -> None:
+        monkeypatch.setattr(doctor, "ROOT", tool_directory)
+
+        assert doctor.main(["--profile", "demo"]) == 0
+
+        line = next(text for text in capsys.readouterr().out.splitlines() if "Instrumented" in text)
+        assert "not built yet" in line and "missing cc, make" in line
