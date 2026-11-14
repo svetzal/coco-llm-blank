@@ -13,10 +13,11 @@ reference. Paths in commands are relative to the repository root.
 - Building binaries, disks, or emulator tests: read [toolchain](guidance/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read
   [Python tools](guidance/python.md), including the co-located `*_spec.py` rules.
-- Downloading or converting books: read [references](guidance/references.md).
-- Looking up hardware or programming facts: read `local/INDEX.md`, then only the
-  relevant pages. Cite the title and PDF page. Check ambiguous OCR and diagrams
-  against the original PDF.
+- Downloading, converting, or searching books: read
+  [reference lookup](guidance/references.md), then `local/INDEX.md`. Search for
+  the topic and load only matching page sections. Open linked figure PNGs with
+  an image-viewing tool; use the full-page PNG for context or uncertain OCR.
+  Cite the title and PDF page.
 - Reviewing scope or unfinished work: read [PLAN.md](PLAN.md).
 
 ## Repository boundaries

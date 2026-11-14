@@ -14,6 +14,8 @@ at Stacey's request.
 - Docling provides layout analysis, RapidOCR, and table recognition.
 - Per-page checkpoints preserve completed work across ranges and interruptions.
 - Conversion records preserve source hashes, versions, and PDF provenance.
+- Figure crops and full-page PNGs are linked from page sections, with image
+  checksums and recovery when an image is missing or damaged.
 - NumPy and Pillow support reference models, assets, and test vectors.
 - pytest and Ruff provide the development checks; pygame-ce and music21 are
   optional dependency groups for interactive and music work.
@@ -62,7 +64,10 @@ PDF pages 10 through 12 of both archive books were converted with Docling.
 The graphics book now has paragraph structure, headings, and a Markdown table.
 Some OCR remains garbled; the 6809 book's contents pages have awkward table
 structure. These are useful samples, not evidence of reliable whole-book OCR.
-Pictures remain placeholders with the original PDF available for inspection.
+Figure crops and full-page PNGs are now exported. The graphics-book sample's
+bit/byte and processor/memory diagrams were visually checked against the full
+page; labels are readable. Agents can inspect these PNGs directly. The source
+PDF remains available when the rendered images are insufficient.
 
 LWTOOLS and XRoar are discoverable on this Mac. ToolShed's `decb` is not on PATH;
 the original project uses an explicit private path that this template does not

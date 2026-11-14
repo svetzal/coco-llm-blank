@@ -1,7 +1,9 @@
 """Executable behavior for resumable local references."""
 
 import hashlib
+import io
 import json
+import re
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -17,6 +19,7 @@ from references import (
     Resource,
     conversion_profile,
     convert,
+    export_page,
 )
 
 
@@ -180,6 +183,72 @@ class DescribeReferenceConversion:
 
         assert (book / "text.md").read_bytes() == saved
 
+    @pytest.mark.parametrize("damage", ["missing", "changed"])
+    def should_repair_missing_or_changed_images_without_reconverting_other_pages(
+        self,
+        resource: Resource,
+        book: Path,
+        document_gateway: Mock,
+        damage: str,
+    ) -> None:
+        image = Image.new("RGB", (12, 12), "red")
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        name = "page-00001-figure-001.png"
+        page = ConvertedPage(
+            markdown=f"![Figure](images/{name})",
+            document={},
+            images={name: buffer.getvalue()},
+        )
+        document_gateway.convert_page.side_effect = [
+            page,
+            ConvertedPage(markdown="Page two", document={}),
+        ]
+        convert(resource, book, documents=document_gateway)
+        text = (book / "text.md").read_text()
+        image_path = book / re.search(r"!\[Figure\]\(([^)]+)\)", text).group(1)
+        assert image_path.read_bytes() == buffer.getvalue()
+        with Image.open(image_path) as saved:
+            assert saved.getpixel((0, 0)) == (255, 0, 0)
+        if damage == "missing":
+            image_path.unlink()
+        else:
+            image_path.write_bytes(b"damaged")
+        document_gateway.convert_page.side_effect = [page]
+
+        convert(resource, book, documents=document_gateway)
+
+        assert image_path.read_bytes() == buffer.getvalue()
+        assert "Page two" in (book / "text.md").read_text()
+        document_gateway.convert_page.side_effect = ConversionError("offline")
+        convert(resource, book, documents=document_gateway)
+        assert (book / "text.md").read_text() == text
+
+    def should_not_commit_a_checkpoint_when_image_storage_fails(
+        self,
+        resource: Resource,
+        book: Path,
+        document_gateway: Mock,
+    ) -> None:
+        from references import ConversionIdentity
+
+        identity = ConversionIdentity(sha256=resource.sha256, profile=document_gateway.profile())
+        directory = book / "docling-pages" / identity.checkpoint_key()
+        directory.mkdir(parents=True)
+        (directory / "images").write_text("a file blocks the image directory")
+        (book / "text.md").write_text("previous output")
+        document_gateway.convert_page.return_value = ConvertedPage(
+            markdown="figure",
+            document={},
+            images={"page-00001-full.png": b"image"},
+        )
+
+        with pytest.raises(OSError):
+            convert(resource, book, (1, 1), documents=document_gateway)
+
+        assert not (directory / "00001.json").exists()
+        assert (book / "text.md").read_text() == "previous output"
+
     @pytest.mark.integration
     def should_report_a_real_pdf_backend_failure(self, tmp_path: Path) -> None:
         source = tmp_path / "broken.pdf"
@@ -226,3 +295,59 @@ class DescribeReferenceConversion:
         assert "## PDF page 2" in text
         checkpoint = json.loads(next((directory / "docling-pages").rglob("00002.json")).read_text())
         assert checkpoint["document"]["texts"][0]["prov"][0]["page_no"] == 2
+        full_page = re.search(r"\[View full PDF page 2\]\(([^)]+)\)", text)
+        assert full_page is not None
+        with Image.open(directory / full_page.group(1)) as rendered:
+            assert rendered.width > 850
+            assert rendered.height > 1100
+        assert "data:image" not in json.dumps(checkpoint)
+        assert checkpoint["image_hashes"]
+
+
+class DescribeDoclingImageExport:
+    def should_export_figures_and_page_context_as_png_links(self) -> None:
+        from docling_core.types.doc import DoclingDocument, ImageRef, Size
+
+        document = DoclingDocument(name="Original diagram")
+        document.add_page(
+            page_no=7,
+            size=Size(width=200, height=200),
+            image=ImageRef.from_pil(Image.new("RGB", (400, 400), "white"), dpi=144),
+        )
+        document.add_picture(
+            image=ImageRef.from_pil(Image.new("RGB", (100, 80), "red"), dpi=144),
+        )
+
+        converted = export_page(document, 7)
+
+        assert "![" in converted.markdown
+        assert "](images/page-00007-figure-001.png)" in converted.markdown
+        assert "[View full PDF page 7](images/page-00007-full.png)" in converted.markdown
+        with Image.open(io.BytesIO(converted.images["page-00007-figure-001.png"])) as image:
+            assert image.size == (100, 80)
+            assert image.getpixel((0, 0)) == (255, 0, 0)
+        assert "data:image" not in json.dumps(converted.document)
+        assert "images" not in converted.model_dump()
+
+    def should_report_a_missing_rendered_page(self) -> None:
+        from docling_core.types.doc import DoclingDocument, Size
+
+        document = DoclingDocument(name="No page raster")
+        document.add_page(page_no=1, size=Size(width=200, height=200))
+
+        with pytest.raises(ConversionError, match="Missing rendered image"):
+            export_page(document, 1)
+
+    def should_report_a_missing_figure_crop(self) -> None:
+        from docling_core.types.doc import DoclingDocument, ImageRef, Size
+
+        document = DoclingDocument(name="No figure raster")
+        document.add_page(
+            page_no=1,
+            size=Size(width=200, height=200),
+            image=ImageRef.from_pil(Image.new("RGB", (400, 400), "white"), dpi=144),
+        )
+        document.add_picture()
+
+        with pytest.raises(ConversionError, match="Missing figure"):
+            export_page(document, 1)

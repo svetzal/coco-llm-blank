@@ -45,7 +45,8 @@ It processes layout, OCR, and tables locally. The first conversion downloads
 model weights. Poppler and the Tesseract executable are no longer required.
 
 Results live in ignored `local/`: source PDFs, page-numbered Markdown,
-structured page records, and an index that reports completed pages. Reruns
+structured page records, figure and full-page PNGs, and an index that reports
+completed pages. The Markdown links images for direct multimodal inspection. Reruns
 reuse completed pages. A new range adds pages without losing earlier work.
 Read [reference conversion](guidance/references.md) for cache behavior and limits.
 OCR still needs checking, especially for assembly code and diagrams.
