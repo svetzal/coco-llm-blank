@@ -1,107 +1,129 @@
-# coco-llm-blank
+# Build something for the Color Computer
 
-A starting repository for agent-assisted Tandy Color Computer projects.
-Choose a machine target, prepare local references, and use Python support tools
-alongside the CoCo assembler, disk utilities, and emulator. No books or ROMs
-ship in this repository.
+Make a game, animation, or experiment for the Tandy Color Computer with your
+coding agent. This starter gives your agent project guidance, tools, and access
+to original reference books. You bring the idea.
 
-## Setup
+You do not need to know assembly language or prepare a development environment
+before you start. Ask your agent to handle setup as part of building your project.
+You can try the result on your current computer using XRoar, an emulator that
+acts like a Color Computer. You do not need the original hardware.
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+## Start with your agent
 
-```sh
-uv sync --locked
-uv run python scripts/setup.py
+Open Claude Code, Codex, OpenCode, or another coding agent that can work with
+files and run programs on your computer. A chat window without those abilities
+cannot do the setup for you.
+
+Copy this prompt into your agent. Replace the last line with your own idea,
+or keep it for a first project:
+
+```text
+Help me make a Tandy Color Computer project using this starter:
+https://github.com/svetzal/coco-llm-blank
+
+I'm a beginner. Handle cloning, setup, building, and testing for me.
+Create a new project folder without changing my existing projects.
+Read AGENTS.md in the cloned repository before starting work.
+
+Check my computer and install the tools this project needs.
+Use the repository's setup scripts and guidance.
+Ask me only for choices or system permissions you cannot handle yourself.
+Explain those questions in plain language.
+
+Download the relevant reference books and firmware from the archive.
+Convert only the reference pages needed for this project at first.
+Use those references to check hardware facts before writing code.
+Keep downloaded books and firmware out of Git.
+
+Build a small working version first. Test it in XRoar.
+Give me an easy way to launch it again, and explain what you tested.
+Do not call it finished just because it assembles.
+
+My idea: a CoCo 1 animation with bouncing lines and a ten-line trail.
+Use the 256x192 two-colour display.
 ```
 
-uv creates a real `.venv` using the Python version in `.python-version` and the
-packages pinned by `uv.lock`. Setup asks for CoCo 1, 2, or 3, downloads the
-reference manifest, and converts it with Docling. Full-book conversion is slow;
-start with a few pages to inspect the output:
+The repository address is enough for your agent to find the starter. You do not
+need to download this repository yourself or type its setup commands.
+Your agent may ask where to put your project or request permission to install tools.
 
-```sh
-uv run python scripts/setup.py --target coco2 \
-  --resource assembly-graphics --pages 10:12
-```
+Already have this starter open in your agent? Ask it to use the current folder
+instead of making another copy.
 
-To initialize project notes without downloading books or loading models:
+## Describe what you want to make
 
-```sh
-uv run python scripts/setup.py --target coco3 --guidance-only
-```
+Start with what you want to see or do. For example:
 
-Use `--list` to list resources. Repeat `--resource ID` to select several books.
-Existing project notes are preserved. Change the target deliberately in
-`local/PROJECT.md` before requesting a different target.
+- "Make a game where I move a paddle to keep a ball on the screen."
+- "Draw a colourful pattern that changes when I press a key."
+- "Help me learn how to draw a sprite, one small step at a time."
 
-Download the selected machine's firmware without starting book conversion:
+Name your Color Computer model if you know it. The starter supports selecting
+CoCo 1, 2, or 3. Its initial reference collection mainly covers CoCo 1 and 2.
+Your agent may need more references for a CoCo 3 project.
 
-```sh
-uv run python scripts/setup.py --target coco1 --roms-only
-```
+If you are unsure, ask for a CoCo 1 project in the emulator. The agent has
+starting defaults for that choice. Tell it if you want to use a real machine.
+Its memory and equipment affect what the project can run.
 
-`roms.json` identifies archive ZIPs and selected ROM members by SHA-256 and
-size. Setup verifies cached files too, preserves different existing firmware,
-and writes only selected members to ignored `local/roms/TARGET/`.
-The manifest uses the archive's MAME-MESS area. No ROM bytes ship in Git.
-See [toolchain](guidance/toolchain.md#firmware-and-launching) for launch options.
+## What happens next
 
-The Python baseline includes Docling/RapidOCR, NumPy, Pillow, pytest, and Ruff.
-Optional groups cover interactive prototypes and music analysis. Read
-[Python tools](guidance/python.md) for their purpose and commands.
+Your agent makes a project folder and checks the tools on your computer.
+It downloads the references and firmware needed for your chosen machine.
+Firmware is the original software the emulator needs to start the machine.
 
-## Reference conversion
+The first setup can take a while. Reference conversion also downloads software
+models that help read the scanned books. Later work reuses completed downloads
+and converted pages.
 
-Docling replaces the original plain text and Tesseract conversion path.
-It processes layout, OCR, and tables locally. The first conversion downloads
-model weights. Poppler and the Tesseract executable are no longer required.
+Ask your agent to show you a small working result before adding more features.
+Once it runs, describe what you want to change:
 
-Results live in ignored `local/`: source PDFs, page-numbered Markdown,
-structured page records, figure and full-page PNGs, and an index that reports
-completed pages. The Markdown links images for direct multimodal inspection. Reruns
-reuse completed pages. A new range adds pages without losing earlier work.
-Read [reference conversion](guidance/references.md) for cache behavior and limits.
-OCR still needs checking, especially for assembly code and diagrams.
+> Make the lines move more slowly. Keep a longer trail. Show me how to run it again.
 
-The baseline targets Apple Silicon macOS and Linux. Intel macOS needs separate
-PyTorch compatibility work and is not covered by this environment. Linux still
-needs a clean-host verification. Archive availability does not change copyright
-or licensing; downloaded and derived content stays outside Git.
+Keep working in the same project folder. Your agent can reuse the project notes
+and references instead of starting setup again.
 
-## Native CoCo tools
+## What to expect today
 
-LWTOOLS, ToolShed, and XRoar are separate host installations:
+This is an early starter, not a finished game or a guarantee that an agent will
+get every program right. The guidance asks agents to check original sources and
+test their work. Scanned books can still contain conversion errors.
 
-```sh
-uv run python scripts/doctor.py
-```
+Apple Silicon Macs are the tested starting point. Linux is a target, but setup
+on a fresh Linux computer still needs testing. Intel Macs need more compatibility
+work. Windows setup is not covered yet.
 
-Read [toolchain](guidance/toolchain.md) for executable overrides, installation
-sources, firmware requirements, and build verification. This starter currently
-uses assembly; a C compiler is not part of the baseline.
+Your agent can handle setup commands when its permissions allow them. Some
+installs need your approval or a password that only you can enter. Native-tool
+installation is agent-led today. The starter has no single installer for everything.
+You do not need to prepare those tools before giving your agent the prompt.
 
-## Agent entry point and checks
+Projects currently use 6809 assembly, the Color Computer's machine-level
+programming language. Your agent writes that code for you. C development is
+not included yet.
 
-Agents start at [AGENTS.md](AGENTS.md). It routes each task to ordinary Markdown
-files. No skill system is required, including for microgentic.
+## Look inside when you are ready
 
-```sh
-uv run pytest -m 'not integration'
-uv run pytest -m integration
-uv run pytest --cov
-uv run ruff check .
-uv run ruff format --check .
-```
+You can start without reading these guides. They are here for your agent and
+for anyone who wants to understand or troubleshoot the setup.
 
-Integration tests use an original scanned PDF and the real Docling pipeline.
-Their first run needs model downloads. Co-located `*_spec.py` files use
-`Describe*` / `should_*` pytest conventions. Other tests cover local HTTP downloads,
-cache and failure behavior, target preservation, and executable discovery.
+- [Agent instructions](AGENTS.md): where your agent starts.
+- [Manual setup](guidance/setup.md): commands for setup and checks.
+- [Reference books](guidance/references.md): finding pages and checking diagrams.
+- [Build and emulator tools](guidance/toolchain.md): assembling and running programs.
+- [Development practice](guidance/development.md): checking hardware facts and behaviour.
+- [Python tools](guidance/python.md): scripts that support development.
+- [Project status](PLAN.md): what works and what still needs testing.
 
-See [PLAN.md](PLAN.md) for scope and remaining work.
+## Books, firmware, and licensing
 
-## License
+The starter downloads reference books and firmware from the
+[Color Computer Archive](https://colorcomputerarchive.com/). It keeps those files
+on your computer, outside the files Git tracks. The repository does not include
+copies of the books or firmware.
 
-The starter code and original guidance use the [MIT license](LICENSE).
-Downloaded reference works and their derived text or images retain their own
-copyright and licensing; the starter's license does not apply to them.
+The starter's code and original guidance use the [MIT license](LICENSE).
+That license does not cover downloaded books, firmware, or converted pages.
+Those materials retain their own copyright and licensing.
