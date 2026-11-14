@@ -4,7 +4,149 @@ Read this report when assessing the current bootstrap and firmware changes on
 Linux. This experiment uses the current working tree, including uncommitted
 changes. It does not establish support for every Linux host.
 
-## Environment and snapshot
+## Full corrected-bootstrap validation
+
+The final November 14, 2026 run tests the corrected bootstrap from a fresh
+Ubuntu 24.04 ARM64 container through the CoCo 2 moving-object check and a
+bootstrap rerun with edited project notes. The earlier experiments below remain
+as evidence of the original failure, recovery behavior, and isolated curl fix.
+
+### Exact input and environment
+
+The parent fetched main before dispatch. At capture, main's head was
+`6a865c1adcdd4422f69ecb7fecc8472821f8bc15`, containing the curl prerequisite fix.
+The snapshot includes 76 tracked files from the working tree; only AGENTS.md
+was dirty. All tar member hashes were checked against the snapshot manifest.
+No later concurrent edits form part of this run's evidence.
+
+- Snapshot tar SHA-256:
+  `52fa6f2fa60197589833a4f15d5bd3a0dec3e38a75b27a5d66448fd996666d6e`.
+- Captured `git diff HEAD` SHA-256:
+  `8169e43bb4a82122a3105209b1144e4900a9af1a83687c2ae02a3583c03175ab`.
+- Executed bootstrap SHA-256:
+  `ec1057fe000fbd957891c4563e6ed7d74600c59765b7cc945935883e5530fa44`.
+- Cached Ubuntu image digest:
+  `sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5`.
+
+Docker engine 29.8.2 created a new root container with `--platform linux/arm64`.
+It reported Ubuntu 24.04.5 LTS and `aarch64`. Existing Docker image layers
+were reused. No host mounts, Python environment, native tools, ROMs, or package
+cache were supplied. The snapshot excludes `.git/`, `.venv/`, `local/`, and
+`build/`. Bootstrap itself installs curl and CA certificates, then real uv;
+no installer wrapper or substitute executable is used in this run.
+
+### Measured result
+
+The full corrected journey passed. No prerequisite was manually installed.
+
+| Check | Exit | Measured result |
+| --- | --- | --- |
+| First bootstrap | 0 | 796.40 seconds; tools and firmware ready |
+| Moving-object check | 0 | 8.02 seconds; all 13 frames passed |
+| Bootstrap rerun | 0 | 1.06 seconds; tools and firmware reused |
+| Edited project notes | 0 | `cmp` equal; CoCo 2 target and sentinel preserved |
+| Final target-aware doctor | 0 | All three firmware members verified |
+| Collection and cleanup | 0 | Both copies and container removal completed |
+
+The installed versions were uv 0.13.8, Python 3.13.18, LWTOOLS 4.25, and
+XRoar 1.12.1. uv reported preparing 130 packages in 11 minutes 45 seconds.
+The container's uv cache occupied 5.9 GiB after setup. These times describe this
+run and network; they are not performance guarantees. ToolShed was absent and
+reported as optional for the direct demo.
+
+The checked configuration is `cocous`, explicit non-T1 `6847`, 6809, 32 KiB,
+NTSC, normal emulated clock, CoCo 2 BASIC/Extended BASIC firmware, and direct
+DECB loading. These are the existing experiment's choices, not newly supplied
+owner requirements. Bootstrap's project notes keep unspecified application
+choices unresolved. The headless runner uses null video and audio output.
+
+Frames 1, 15, 16, 17, 31, 32, 46, 64, 65, 185, 186, 369, and 370 passed
+frame-counter, position, guard-byte, and complete 6,144-byte framebuffer
+checks. Thirteen 32,768-byte RAM captures were collected. The unreachable
+checkpoint produced no capture. This proves assembly and completed-frame
+execution against the existing runner's independent oracle. This run did not
+repeat the earlier missing/corrupt-ROM injection checks below.
+
+Both edited project-note copies have SHA-256
+`64b004ff4cb30ae7556736ec55d56ba475b813873cf41ff13ae642353e4931d1`.
+The CoCo 2 ZIP was fetched from
+<https://colorcomputerarchive.com/repo/ROMs/MAME-MESS/coco2.zip>.
+Its SHA-256 is
+`b091bb40fa2fd7ce9be2d72346039894d1bff88243d03d3092746939bf60db38`.
+All extracted member hashes match `roms.json`; the collected ZIP and native
+source archives were independently rehashed after copying back to the host.
+`build/linux-onboarding-final/artifact-hashes.json` retains those hashes plus
+hashes of the collected build evidence. Native archive sources and expected
+hashes are in the captured `scripts/native.py`.
+
+### Reproduction and evidence
+
+From the repository root, create a tar containing only tracked working-tree
+files. Record its SHA-256 and per-file hashes before starting Docker. The
+retained `snapshot.tar` is the exact input for this run. Run:
+
+```sh
+docker create --platform linux/arm64 \
+  --name coco-linux-onboarding-final-20261114 \
+  --workdir /work ubuntu:24.04 sleep 7200
+docker cp local/research/linux-onboarding-final/snapshot.tar \
+  coco-linux-onboarding-final-20261114:/snapshot.tar
+docker start coco-linux-onboarding-final-20261114
+docker exec coco-linux-onboarding-final-20261114 \
+  sh -c 'tar xf /snapshot.tar -C /work'
+docker exec coco-linux-onboarding-final-20261114 \
+  sh -c 'timeout 1800 sh scripts/bootstrap.sh coco2'
+docker exec coco-linux-onboarding-final-20261114 \
+  sh -c 'timeout 840 /root/.local/bin/uv run python \
+    scripts/moving_objects.py check --target coco2'
+```
+
+Inside `/work` in that container, preserve an edited copy before rerunning:
+
+```sh
+mkdir -p build/linux-onboarding-final
+printf '\n## Onboarding preservation sentinel\n\n%s\n' \
+  'Owner-edit test: preserve this CoCo 2 project note exactly.' >> local/PROJECT.md
+cp local/PROJECT.md build/linux-onboarding-final/PROJECT-before.md
+PATH=/root/.local/bin:$PATH timeout 300 sh scripts/bootstrap.sh coco2
+cmp local/PROJECT.md build/linux-onboarding-final/PROJECT-before.md
+cp local/PROJECT.md build/linux-onboarding-final/PROJECT-after.md
+/root/.local/bin/uv run python scripts/doctor.py --profile demo --target coco2
+```
+
+The sentinel simulates an owner's edit; it is not an owner requirement.
+The rerun reuses this container's own package, native-source, and firmware
+caches. Network access is available; upstream HTTP caching was not measured.
+
+Collect evidence before removing only this named container:
+
+```sh
+docker cp coco-linux-onboarding-final-20261114:/work/build/. \
+  build/linux-onboarding-final/container-build
+docker cp coco-linux-onboarding-final-20261114:/work/local/. \
+  local/research/linux-onboarding-final/container-local
+docker rm -f coco-linux-onboarding-final-20261114
+```
+
+`build/linux-onboarding-final/commands.json` records every command, exit code,
+and elapsed time. Adjacent logs retain bootstrap, rerun, versions, doctor,
+notes, and hashes. `container-build/moving-objects/` holds the assembled binary,
+symbols, RAM captures, logs, and result JSON. The ignored
+`local/research/linux-onboarding-final/` folder holds the source snapshot,
+manifest, dirty diff, orchestration driver, and collected local artifacts.
+The commands above contain the experiment logic; reproducing the test does
+not depend on retaining the ignored driver.
+
+This run measures onboarding and the existing original moving-object
+experiment. It introduces no hardware-source facts or new adaptation of a book
+program. The existing example's source analysis is separate from this runtime
+check. RAM evidence does not establish rendered appearance, audible output,
+physical hardware, PAL, T1, CoCo 3, disk loading, x86-64 Linux, or non-root sudo.
+The expensive full suite and document conversion were not rerun.
+Scoped `markdownlint --fix`, `markdownlint`, and `git diff --check` passed for
+this report. No production code was changed, committed, or pushed in this run.
+
+## Earlier environment and snapshot
 
 The November 14, 2026 experiment runs in a fresh Ubuntu 24.04 container on the
 existing Docker Desktop engine. The host is Darwin ARM64; the container is
@@ -40,9 +182,10 @@ With no `local/` or `.venv/`, this command failed before uv installation:
 sh scripts/bootstrap.sh coco2
 ```
 
-The error was `scripts/bootstrap.sh: 29: curl: not found`. Bootstrap assumes
-curl is installed before it can install uv. This is a concrete onboarding gap
-on the bare Ubuntu image. No production script was changed for this experiment.
+The error was `scripts/bootstrap.sh: 29: curl: not found`. That bootstrap assumed
+curl was installed before it could install uv. This exposed an onboarding gap
+on the bare Ubuntu image, corrected and fully retested above. No production
+script was changed for that first experiment.
 
 The continuation explicitly installs prerequisites inside the container:
 
@@ -201,9 +344,11 @@ command recorded `sync --locked` and deliberately exited 86. Bootstrap stopped
 there without claiming readiness. The harness asserted these outcomes and
 exited 0. This proves the corrected bootstrap reaches real uv installation on
 a bare root Ubuntu ARM64 container. It does not repeat Python synchronization,
-native builds, firmware installation, or emulator validation. Those results
-remain covered only by the earlier experiment. Non-root sudo behavior is
-covered by shell-boundary tests, not by this root container.
+native builds, firmware installation, or emulator validation. At that stage
+those results were covered only by the earlier experiment. The full corrected
+bootstrap run above now covers them without manually installed prerequisites.
+Non-root sudo behavior is covered by shell-boundary tests, not by this root
+container.
 
 No host packages were installed, no project dependencies changed, and the
 5.9 GiB observation did not trigger dependency work. There were no host bind
