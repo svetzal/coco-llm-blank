@@ -70,4 +70,4 @@ and physical-machine behaviour as separate evidence.
 For source selection, rejected matches, and open questions, read the
 [game research notes](research/README.md) or
 [sound research notes](research/sound.md).
-The [plan](../../PLAN.md#permanent-technique-guides) defines how this collection grows.
+The [plan](../../PLAN.md#guide-contract) defines what each guide contains.

@@ -137,29 +137,31 @@ reference
 text or write project notes and build outputs. Keep those paths ignored. Check
 that a write succeeded before relying on the recorded project contract.
 
-## Quality standards
+## How this starter grows
 
-Maintain quality standards when researching and distilling good practices for
-effective CoCo development.
+Research, experiments and validation runs are temporary working material. Do
+them in ignored `local/lab/<topic>/`, never in tracked folders. A finished topic
+leaves only:
 
-- Cite all sources unambiguously when researching so that future agents can
-  review the research and compare against new sources.
-- When validating suggestions and ideas from sources, ensure you have locally
-  documented the distilled technique with code examples, and cited the sources
-  clearly so that your validations can be verified or even challenged.
-- Finish useful research with a task-focused guide, not only a source list.
-  Explain what a game or demo builder can do, the tradeoffs, and where the
-  technique applies. Follow the [guide requirements](PLAN.md#permanent-technique-guides).
-- Distinguish source statements, our deductions, original adaptations, and
-  measured results. Preserve contradictions and failed experiments; do not
-  strengthen a claim merely because it appears in our own earlier notes.
-- Make measured claims reproducible from tracked original code and instructions.
-  Record the exact target, source provenance, checks and limitations. Keep
-  downloads and generated evidence ignored; essential experiment logic must
-  not exist only in a private working directory.
-- Require meaningful failure controls and expectations independent of the
-  implementation. Report assembly, execution, framebuffer, rendered display,
-  audible output and physical-hardware evidence separately.
-- Keep the starter useful to beginners and ordinary Markdown-based agents.
-  Add context only where a task needs it, maintain equal research attention to
-  CoCo 1/2/3, and state uneven evidence without implying universal support.
+- a technique guide in `guidance/techniques/`, citing primary sources inline:
+  author, title, PDF page and resource ID;
+- an example in `examples/<name>/` (`main.asm`, `coco.toml`, `expected.py`,
+  `README.md`) whose `scripts/coco.py check` reproduces the evidence;
+- a tested `scripts/coco.py` ability, when other projects will need the same
+  equipment.
+
+Then delete the lab folder. Do not add research notes, validation reports or
+experiment packages. A result that cannot be rerun cheaply gets one paragraph
+in its guide naming the commit that holds the full record. The existing
+`experiments/`, `guidance/techniques/research/` and `validation/` folders are
+being folded into guides and examples; do not add to them.
+Follow the [guide contract](PLAN.md#guide-contract).
+
+Keep the evidence honest while distilling it:
+
+- Cite only passages you read; state which claims are source statements, our
+  deductions, original adaptations or measured results.
+- Keep expectations independent of the implementation, with a failure control.
+- Report assembly, execution, memory, rendered display, sound and physical
+  hardware as separate evidence.
+- Give CoCo 1, 2 and 3 equal research attention; state uneven evidence plainly.

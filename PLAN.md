@@ -8,13 +8,9 @@ dispatched.
 ## Continue from here
 
 Read [AGENTS.md](AGENTS.md), then choose one open item below. Use the
-[guidance index](guidance/README.md) for source and validation records and the
-[experiment index](experiments/README.md) for reproduction commands. The
-[validation command](guidance/starter/python.md#repository-validation-cli) lists scopes;
-root tests do not replace experiment suites. No prior batch worker needs resuming.
+[guidance index](guidance/README.md) for the current guides.
 
-Preserve ignored `local/`, `build/`, experiment `.work/` evidence and the prepared
-`.venv`. Do not treat a previous report as a new validation run. The repository
+Preserve ignored `local/`, `build/` and the prepared `.venv`. Do not treat a previous report as a new validation run. The repository
 is public, uses `main`, and remains unregistered with Foundry. Leave the separate
 `coco-lines` project and its processes untouched. Start no new beginner-agent
 trial without a new request; the completed Claude 03 assessment is under
@@ -22,6 +18,15 @@ trial without a new request; the completed Claude 03 assessment is under
 
 ## Open work
 
+- Reduce the repository to its distilled results, in order:
+  1. Move the experiments' reusable equipment into `scripts/coco.py`: rendered
+     screen capture, scripted keyboard input and sound capture from one shared
+     instrumented XRoar build.
+  2. Move the useful assembly programs from `experiments/` into `examples/`, and
+     fold research notes and validation reports into the guides and example
+     READMEs. Then delete `experiments/`, `guidance/techniques/research/` and
+     both `validation/` folders; move setup checks into the `scripts/` suite.
+  3. Add a size check to CI so growth is a deliberate decision.
 - Clean Apple Silicon host and native Linux desktop onboarding, including
   x86-64 Linux. Intel Mac support is excluded. Current container and configured
   host results do not establish these journeys.
@@ -39,35 +44,22 @@ trial without a new request; the completed Claude 03 assessment is under
 The historical tile-source hunt remains stopped unless a substantive new lead
 meets its documented boundary. Intel Mac support is excluded.
 
-## Permanent technique guides
+## Guide contract
 
-This anchor remains the guide contract until it is relocated and its callers
-are updated. Use the [technique index](guidance/techniques/README.md) to find a guide.
-Research notes preserve source selection and uncertainty; guides explain how
-to apply findings; original examples supply bounded implementation evidence.
-A source list alone does not complete a research pass.
+A technique guide tells an agent how to achieve an effect on the CoCo. Keep it
+in ordinary Markdown in `guidance/techniques/`, under about 200 lines. Each
+guide states:
 
-Keep task-focused guides under `guidance/techniques/` in ordinary Markdown,
-with their research in `research/` and measured results in `validation/` beneath it. Each needs:
+- The task, the machines and configurations it applies to, and their limits.
+- Practical steps, memory and timing tradeoffs, and likely failure cases.
+- Inline citations beside sourced claims: author, title, edition or issue,
+  PDF page (printed page when known) and resource ID. Cite only read passages;
+  inspect diagrams and listings as images when conversion is uncertain.
+- Which claims are published explanations, our adaptations, derived
+  calculations, measured results or untested proposals.
+- The example that demonstrates it, and what that example's check proves.
+- Unresolved conflicts and the evidence that would settle them.
 
-- The task, applicable machines and configuration limits.
-- Practical steps, memory or timing tradeoffs, and likely failure cases.
-- Citations beside sourced claims: author, title, edition or issue, exact PDF
-  pages, printed pages when known, archive URL and resource ID.
-- Separate attribution for published explanations, our adaptations, derived
-  calculations, measured results and untested proposals.
-- Links to original examples and checks where implementation evidence exists.
-- Unresolved conflicts and the evidence needed to settle them.
-
-Credit examined authors without claiming they invented a technique. Cite only
-read passages, including necessary continuations; inspect diagrams and listings
-as images when conversion is uncertain. Keep copyrighted source content in
-ignored storage and publish original explanations and source metadata.
-
-Examined techniques may precede reproduction if procedures remain labelled
-proposals. Only measured claims gain tested status. Keep assembly, execution,
-framebuffer, rendered display, timing, audible output and physical-hardware
-results separate; test every claimed target. Require independent expectations
-and meaningful failure controls. Update the relevant guide and navigation,
-check citations and runnable commands, and rerun affected checks before
-calling a pass complete.
+Credit examined authors without claiming they invented a technique. Keep
+copyrighted source content in ignored storage; publish original explanations
+and source metadata only.
