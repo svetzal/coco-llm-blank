@@ -7,11 +7,13 @@ Keep full redraw available for invalid state and large changes.
 
 This guide distils source reading of John Kowalski's *Gloom 3-D V1.2* (1996)
 and Robert Gault's *Symmetry* (1993), both CoCo 3 sources. Our procedures and
-pseudocode are original, untested adaptations. Neither historical program was
-built or run for this work. No timing, framebuffer, visible-display or physical
-hardware result is claimed, and no CoCo 1/2 compatibility is established.
-Minimum RAM, ROM and assembler requirements remain unresolved; this is an
-algorithm guide, not a machine setup recipe.
+pseudocode are original adaptations. A [bounded experiment](../guidance/selective-redraw-validation.md)
+checks retained descriptions and full-region repainting in two 640-byte RAM
+windows on explicit 128/512 KiB CoCo 3 configurations. Selective and full redraw
+match an independent pixel oracle at 12 checkpoints per build and target.
+Neither historical program was built or run. Timing, rendered display, physical
+hardware and CoCo 1/2 compatibility remain unverified. This is an algorithm
+guide; use the experiment's documented configuration for its narrower result.
 
 ## Compare descriptions, not just positions
 
@@ -97,8 +99,9 @@ Before adopting the adaptation, compare its framebuffer bytes against an
 independent full redraw. Include first use, unchanged frames, colour-only and
 world-only changes, growth, shrinkage, alternating buffers and external writes.
 Measure both elapsed time and writes on a stated machine configuration before
-choosing the more complicated path. These are proposed checks, not completed
-tests. Visible output needs its own check.
+choosing the more complicated path. The linked experiment completes bounded
+RAM comparisons and write counts. Elapsed-time comparisons and visible output
+remain unverified; repeat the checks for your own scene and configuration.
 
 For exact download hashes, citation conventions, source limitations and reuse
 terms, read the [source research and provenance][research]. Assembly citations

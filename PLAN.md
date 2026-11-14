@@ -134,12 +134,17 @@ runtime coverage remains open.
 reports 26 host cases for bounded logical-input and collision policies. It
 supplies no keyboard-driver, 6809 execution, timing or hardware evidence.
 [Game-state validation](guidance/game-state-validation.md) now reports 60 host
-cases. [Selective redraw](guidance/selective-redraw-validation.md) checks two
-bounded RAM windows on CoCo 3 at 128 and 512 KiB, not rendered output.
-Animation and target asset integration remain pending validation.
-[Asset guidance](guides/assets.md) draws on
-[examined CoCo 3 community sources](guidance/community-game-research.md), not
-measured asset loading or compression.
+cases for bounded commands, journeys, phases and menu transitions, without
+CoCo execution. [Selective redraw](guidance/selective-redraw-validation.md)
+passes 12 checkpoints for each selective and full-region build on explicit
+NTSC CoCo 3 configurations at 128 and 512 KiB. It checks two bounded RAM
+windows and failure controls, not rendered output or speed.
+[Asset validation](guidance/asset-validation.md) reports 33 host cases for
+original RG6 packing, scene composition and publication.
+[Asset guidance](guides/assets.md) distinguishes that adaptation from its
+[examined CoCo 3 community sources](guidance/community-game-research.md).
+Target asset loading, banked storage, compression and animation cadence remain
+unverified.
 
 For each later pass, update the relevant guide and navigation before calling
 the pass complete. Check citations, relative links, Markdown, and runnable
@@ -331,10 +336,22 @@ and Symmetry; [expanded legacy research](guidance/legacy-tile-research.md#three-
 assesses Droid War, Dunkey Munkey and Sea Quest. Useful findings are linked
 through the technique guides. These source-only passes did not run the historical
 programs or validate the proposed adaptations. They broaden selected coverage;
-the archive survey and historical CoCo 1/2 tile-ID renderer search remain open.
+the archive survey remains incomplete.
 The [bounded tile-source follow-up](guidance/tile-source-followup.md) inspected
-three further packages without finding the required CoCo 1/2 grid-to-tile-ID
-bitmap renderer. This does not establish an archive-wide absence.
+three further packages, then Rat Maze and its bounded correction leads. None
+established the required CoCo 1/2 grid-to-tile-ID bitmap renderer. Rat Maze
+supplies passage topology and procedural walls instead. The historical source
+gap remains unresolved, but this hunt is stopped pending a substantive new
+lead identifying a plausible legacy bitmap tile-ID drawing chain. No further
+candidate search is queued. This does not establish an archive-wide absence.
+
+The published [Color Computer Magazine research](guidance/color-computer-magazine-research.md)
+examines four articles across March through June 1983: Field of Honor,
+The Sorcerer's Puzzles, and both parts of Color Animation. It also records
+Ramella's June correction. The [game-loop guide](guides/game-loop.md) now
+explains preparation, playback and return-to-play contracts. Its original
+pseudocode remains untested; these readings establish neither later-machine
+compatibility nor measured responsiveness.
 
 [Conversion-quality inspection](guidance/conversion-quality.md) now covers six
 difficult pages and all eleven exported images. Tables, diagrams and listing
@@ -344,17 +361,18 @@ shared Matthews conversion coverage.
 
 ### Next research passes
 
-1. Continue beyond the selected Hot CoCo, Undercolor and CoCoNutz articles
-   into Color Computer Magazine and other community publications. Follow
-   unresolved errata and sample early and late periods for each machine;
-   selected readings do not complete publication coverage.
+1. Continue beyond the published Hot CoCo, Undercolor, CoCoNutz and four
+   Color Computer Magazine article readings when a specific technique warrants
+   another source. Follow unresolved errata and sample early and late periods
+   for each machine; selected readings do not complete publication coverage.
 2. Investigate sound alongside animation and controls. Distinguish the stock
    DAC, one-bit output, cassette audio, and expansion hardware. Check timing
    costs and interference with input rather than assuming simultaneous playback.
-3. Keep the historical CoCo 1/2 bitmap tile-ID renderer search open. Use the
-   published full-redraw examples as correctness baselines before testing
-   selective redraw, restoration or scrolling. Memory and frame-time comparisons
-   across targets remain to be measured.
+3. Keep the historical CoCo 1/2 bitmap tile-ID source hunt stopped unless a
+   substantive new lead meets the boundary above. Use published full-redraw
+   examples as correctness baselines for implementation work. The bounded
+   CoCo 3 selective-redraw RAM result does not establish displayed restoration,
+   scrolling or cross-target memory and frame-time comparisons.
 4. Inspect published game/demo source and companion magazine disks. Record
    licenses separately from archive availability. Do not redistribute code or
    assets merely because they are downloadable.
@@ -367,6 +385,48 @@ shared Matthews conversion coverage.
 Each pass should produce a few examined references and their usable guide text.
 Update existing guides when a finding changes their advice. Review topic and
 machine gaps after every pass.
+
+### Current dispatched batch: in progress
+
+The following work is dispatched, not completed. These are narrow acceptance
+contracts; no future worker file, test count or result is evidence yet. Integrate
+only after reading each delivered record and its reproducible checks.
+
+- Keyboard input. Declare one target and scan policy; check press, hold,
+  release, repress and simultaneous-key handling through the actual adapter,
+  including rejection and return to play. Logical host events alone do not
+  establish keyboard scanning, physical debounce or all-model support.
+- Target assets. Consume the published host converter's original output on an
+  explicitly configured target; compare placement, packed bytes and guards with
+  independent expectations and a damaged-input/output control. The 33 host
+  cases do not establish target loading, banked storage or compression.
+- CoCo 3 state subset. Declare the implemented subset, integer bounds and RAM
+  layout; check accepted transitions, unchanged state on rejection, slot reuse
+  and phase order against independent vectors. The 60 host cases remain
+  separate; a subset cannot validate the whole host model, display or input.
+- CoCo 2 sound. Declare the CoCo 2 profile, firmware and clock; check a bounded
+  DAC sequence with foreground progress and a meaningful failure control. CoCo
+  1/3 results do not transfer; execution does not establish listening quality
+  or worst-case timing.
+- Animation cadence. Declare sequence, dwell units, timing source and wrap
+  policy; measure a finite sequence including return/repeat and delayed work,
+  with an incorrect-cadence control. Static frames do not establish cadence;
+  finite-window timing is not physical-display or worst-case evidence.
+- Input source crosscheck. Read the relevant primary text and diagrams to
+  reconcile the documented keyboard discrepancies; cite exact passages and
+  preserve unresolved conflicts. Source interpretation alone is not an executed
+  keyboard driver or a claim of archive-wide errata coverage.
+- Denied sudo. Exercise present-but-denied noninteractive sudo as an ordinary
+  user in an isolated Ubuntu case; require nonzero exit, actionable diagnostics
+  and no false readiness. The published missing-sudo control is different;
+  neither case proves interactive password handling or native desktop
+  onboarding.
+
+Retain original code and reproduction instructions in Git; keep downloads and
+generated evidence ignored. Before any worker emulator run, verify ROM bytes
+and declare an isolated machine configuration. Report assembly, execution,
+framebuffer, rendered output, audio and hardware evidence separately. This
+plan/index update performs no runtime work and adds no runtime result.
 
 ## Next increments
 
