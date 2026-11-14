@@ -2,7 +2,7 @@
 
 This bounded original adaptation of `examples/sound-slots/main.asm` checks
 samples, logical input, drawing and actual modeled DAC write times together.
-Read [the findings](../../guidance/sound-coco2-validation.md) for directly
+Read [the findings](../../guidance/techniques/validation/sound-coco2.md) for directly
 examined sources, results and limits. Existing examples and scripts are inputs;
 this package does not alter them.
 
@@ -11,7 +11,7 @@ this package does not alter them.
 Run from the repository root with its locked Python environment, LWTOOLS,
 C compiler, make, patch and the XRoar build prerequisites already available.
 For a fresh checkout, use `uv sync --locked` and the
-[toolchain instructions](../../guidance/toolchain.md). In a shared checkout,
+[toolchain instructions](../../guidance/starter/toolchain.md). In a shared checkout,
 use the existing environment without synchronizing it. There are no global
 installs, GUI launches or changes to the shared project target here.
 
@@ -37,7 +37,7 @@ ROM paths. Its `contract.json` records the isolated target before execution.
 
 Use a fresh `local/research/sound-coco2/` source directory for the following
 build. The patch is the retained original instrumentation from
-[audio timing](../../guidance/audio-timing-validation.md). It logs the PIA DAC
+[audio timing](../../guidance/techniques/validation/audio-timing.md). It logs the PIA DAC
 callback's event tick, PC, output value, control and direction registers.
 It does not alter emulated instructions or advance the clock. The CoCo 3
 addition in that existing patch is unused by this experiment.
@@ -60,7 +60,7 @@ if (work / 'xroar-1.12.1').exists():
     raise SystemExit('Use a fresh source directory; do not patch twice')
 with tarfile.open(archive) as source:
     source.extractall(work, filter='data')
-note = Path('guidance/audio-timing-validation.md').read_text()
+note = Path('guidance/techniques/validation/audio-timing.md').read_text()
 patch = note.split('```diff\n', 1)[1].split('\n```', 1)[0] + '\n'
 (work / 'dac.patch').write_text(patch)
 PY
@@ -93,8 +93,8 @@ COVERAGE_FILE=build/sound-coco2/.coverage PYTHONDONTWRITEBYTECODE=1 \
   --cov-report=term-missing -ra
 uv run --no-sync ruff check experiments/sound-coco2
 uv run --no-sync ruff format --check experiments/sound-coco2
-markdownlint --fix experiments/sound-coco2/README.md guidance/sound-coco2-validation.md
-markdownlint experiments/sound-coco2/README.md guidance/sound-coco2-validation.md
+markdownlint --fix experiments/sound-coco2/README.md guidance/techniques/validation/sound-coco2.md
+markdownlint experiments/sound-coco2/README.md guidance/techniques/validation/sound-coco2.md
 ```
 
 The runner refuses existing output. Use `--output build/sound-coco2/another-run`

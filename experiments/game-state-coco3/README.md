@@ -46,13 +46,13 @@ COVERAGE_FILE=build/game-state-coco3/.coverage uv run --no-sync pytest \
 uv run --no-sync ruff check experiments/game-state-coco3
 uv run --no-sync ruff format --check experiments/game-state-coco3
 markdownlint --fix experiments/game-state-coco3/README.md \
-  guidance/game-state-coco3-validation.md
+  guidance/techniques/validation/game-state-coco3.md
 markdownlint experiments/game-state-coco3/README.md \
-  guidance/game-state-coco3-validation.md
+  guidance/techniques/validation/game-state-coco3.md
 ```
 
 The runner verifies the installed ROM immediately before launch, uses its
 absolute path and `-c /dev/null`, creates isolated files under ignored
 `build/game-state-coco3/`, removes stale captures, and bounds emulator runtime.
-It never starts a GUI. See the [validation note](../../guidance/game-state-coco3-validation.md)
+It never starts a GUI. See the [validation note](../../guidance/techniques/validation/game-state-coco3.md)
 for sources, byte layout, evidence and limitations.

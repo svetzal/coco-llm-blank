@@ -19,7 +19,7 @@ limits separately from its instructions for playing.
 
 Each example names its own target and reproduction procedure. A result on one
 emulator configuration does not establish another model or physical hardware.
-Use the [technique guides](../guides/README.md) to understand the design and its
+Use the [technique guides](../guidance/techniques/README.md) to understand the design and its
 sources before adapting a program.
 
 ## Examples and experiments
@@ -40,4 +40,4 @@ Experiment specs are separate and require explicit selection. Follow
 [the suite boundaries](../experiments/README.md#choose-the-right-test-suite)
 and each example's README for prerequisites and scoped commands.
 For setup and contributor instructions, use the
-[operational guidance](../guidance/README.md#operational-guidance).
+[operational guidance](../guidance/README.md#using-the-starter).

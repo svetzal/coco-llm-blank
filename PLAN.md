@@ -10,7 +10,7 @@ dispatched.
 Read [AGENTS.md](AGENTS.md), then choose one open item below. Use the
 [guidance index](guidance/README.md) for source and validation records and the
 [experiment index](experiments/README.md) for reproduction commands. The
-[validation command](guidance/python.md#repository-validation-cli) lists scopes;
+[validation command](guidance/starter/python.md#repository-validation-cli) lists scopes;
 root tests do not replace experiment suites. No prior batch worker needs resuming.
 
 Preserve ignored `local/`, `build/`, experiment `.work/` evidence and the prepared
@@ -42,12 +42,13 @@ meets its documented boundary. Intel Mac support is excluded.
 ## Permanent technique guides
 
 This anchor remains the guide contract until it is relocated and its callers
-are updated. Use the [technique index](guides/README.md) to find a guide.
+are updated. Use the [technique index](guidance/techniques/README.md) to find a guide.
 Research notes preserve source selection and uncertainty; guides explain how
 to apply findings; original examples supply bounded implementation evidence.
 A source list alone does not complete a research pass.
 
-Keep task-focused guides under `guides/` in ordinary Markdown. Each needs:
+Keep task-focused guides under `guidance/techniques/` in ordinary Markdown,
+with their research in `research/` and measured results in `validation/` beneath it. Each needs:
 
 - The task, applicable machines and configuration limits.
 - Practical steps, memory or timing tradeoffs, and likely failure cases.

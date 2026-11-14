@@ -1,7 +1,7 @@
 # A small room with persistent map state
 
 This original demo implements the fixed-room proposal in
-[Build a room from tiles](../../guides/tile-maps.md). It is an adaptation of
+[Build a room from tiles](../../guidance/techniques/tile-maps.md). It is an adaptation of
 that guide's design, not a historical reproduction or a PacDude port.
 All code, map data, and byte-aligned artwork here are original.
 
@@ -124,7 +124,7 @@ SHA-256 values identify the exact locally examined PDFs.
 The guide's PacDude source reading motivated the separation of map addressing,
 display addressing and movement rules. This example does not reimplement its
 renderer or diagonal-path collision. Its archive citations remain in the
-[guide's reading record](../../guides/tile-maps.md#source-and-reading-record).
+[guide's reading record](../../guidance/techniques/tile-maps.md#source-and-reading-record).
 
 ## Evidence and limits
 

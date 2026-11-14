@@ -7,7 +7,7 @@ transformations and comparisons. It uses the repository's original first-screen
 and moving-objects assembly without editing them. No upstream source bodies,
 ROMs, binaries or rendered assets belong in this directory.
 
-Read [the evidence boundary](../../guidance/display-validation.md) before using
+Read [the evidence boundary](../../guidance/techniques/validation/display.md) before using
 the results. Static software-renderer samples do not establish animation cadence,
 tearing, physical display appearance or keyboard play-testing.
 
@@ -17,7 +17,7 @@ Run from the repository root. You need Git, uv, Python 3.13, a working C compile
 make, pkg-config and LWTOOLS `lwasm`. On macOS the XRoar configure script also
 uses the Apple command-line development tools and framework headers. On Linux,
 use the native build prerequisites in
-[toolchain guidance](../../guidance/toolchain.md). The private configure step
+[toolchain guidance](../../guidance/starter/toolchain.md). The private configure step
 records the host libraries it discovers. No GUI is launched. The experiment
 never installs tools, runs `make install`, or changes the project target.
 
@@ -113,8 +113,8 @@ COVERAGE_FILE=build/display-validation-reproduction/.coverage \
   --cov-report=term-missing -ra
 uv run --locked ruff check experiments/display-validation
 uv run --locked ruff format --check experiments/display-validation
-markdownlint --fix experiments/display-validation/README.md guidance/display-validation.md
-markdownlint experiments/display-validation/README.md guidance/display-validation.md
+markdownlint --fix experiments/display-validation/README.md guidance/techniques/validation/display.md
+markdownlint experiments/display-validation/README.md guidance/techniques/validation/display.md
 ```
 
 The coverage gate is 90% combined statements and branches for the experimental

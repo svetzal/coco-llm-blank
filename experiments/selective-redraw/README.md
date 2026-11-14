@@ -1,9 +1,9 @@
 # Bounded retained-description redraw
 
 This is original 6809 experiment code adapted from the procedure in
-[selective redraw](../../guides/selective-redraw.md). It does not port Gloom,
+[selective redraw](../../guidance/techniques/selective-redraw.md). It does not port Gloom,
 use its assets, or implement a game. Read the
-[validation and examined sources](../../guidance/selective-redraw-validation.md)
+[validation and examined sources](../../guidance/techniques/validation/selective-redraw.md)
 for evidence and limits.
 
 ## Target and memory contract
@@ -85,7 +85,7 @@ uv run pytest experiments/selective-redraw \
 uv run ruff check experiments/selective-redraw
 uv run ruff format --check experiments/selective-redraw
 markdownlint experiments/selective-redraw/README.md \
-  guidance/selective-redraw-validation.md
+  guidance/techniques/validation/selective-redraw.md
 ```
 
 `--help` and argument rejection have no build or emulator side effects.

@@ -48,9 +48,9 @@ PDF pages are one-based positions in the linked files.
   one selects output. The scanner initializes rows as inputs and columns
   as outputs, then restores all columns high after every sample.
 
-The repository's [controls guide](../../guides/controls-and-collision.md),
-[assets guide](../../guides/assets.md) and
-[sound guide](../../guides/sound.md) informed the separation of input, state,
+The repository's [controls guide](../../guidance/techniques/controls-and-collision.md),
+[assets guide](../../guidance/techniques/assets.md) and
+[sound guide](../../guidance/techniques/sound.md) informed the separation of input, state,
 art and output. Game rules, assembly, actor, lettering and effects are original
 adaptations. No historical game listing, artwork or music is copied.
 
@@ -68,7 +68,7 @@ both ROM files before launch and ignores personal XRoar configuration.
 
 To use or check both targets, provision both firmware profiles without changing
 `local/PROJECT.md`. Do not rerun project setup with a different target.
-This is the [complete validation environment procedure](../../guidance/python.md#complete-starter-validation-environment),
+This is the [complete validation environment procedure](../../guidance/starter/python.md#complete-starter-validation-environment),
 limited to the two targets this example uses:
 
 ```sh

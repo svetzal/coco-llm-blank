@@ -136,7 +136,7 @@ def install(root: Path = ROOT, host: HostGateway | None = None) -> None:
         raise ValueError(
             "macOS requires Apple Silicon (arm64); Intel Macs are unsupported. "
             "Use a native arm64 terminal and Python on Apple Silicon, or Ubuntu 24.04. "
-            "See guidance/toolchain.md."
+            "See guidance/starter/toolchain.md."
         )
     missing = [name for name in ("lwasm", "lwlink", "xroar") if not tool_path(name, root)]
     if not missing:
@@ -166,11 +166,11 @@ def install(root: Path = ROOT, host: HostGateway | None = None) -> None:
             build_source("xroar", root, host)
     else:
         raise ValueError(
-            "Automatic installation supports Apple Silicon macOS and Ubuntu 24.04. See guidance/toolchain.md."
+            "Automatic installation supports Apple Silicon macOS and Ubuntu 24.04. See guidance/starter/toolchain.md."
         )
     if any(not tool_path(name, root) for name in missing):
         raise ValueError(
-            "Installation finished but tools are not discoverable. See guidance/toolchain.md."
+            "Installation finished but tools are not discoverable. See guidance/starter/toolchain.md."
         )
 
 

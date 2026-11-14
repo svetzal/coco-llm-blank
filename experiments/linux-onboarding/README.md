@@ -72,7 +72,7 @@ internal artifacts are not copied; diagnose from the retained command logs.
 An externally killed host orchestrator can prevent cleanup. Remove only the
 specific container name recorded in that run's `commands.json` in that case.
 
-Read [the validation report](../../guidance/linux-onboarding-validation.md)
+Read [the validation report](../../guidance/starter/validation/linux-onboarding.md)
 for measured results. These checks do not prove native desktop onboarding,
 x86-64, GUI appearance, audio, physical hardware, PAL, T1, disk loading, or the
 complete starter test suite. They do not convert books or download OCR models.

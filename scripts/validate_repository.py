@@ -17,7 +17,10 @@ SCOPES = {
     "asset-loading": (("loading",), "native tools, CoCo 1/2 ROMs, headless execution"),
     "assets": (("prepare",), ""),
     "audio-output": (("experiments/audio-output",), "AUDIO_ARCHIVE, AUDIO_XROAR, ROMs, C build"),
-    "audio-timing": (None, "fresh measurement evidence; see guidance/audio-timing-validation.md"),
+    "audio-timing": (
+        None,
+        "fresh measurement evidence; see guidance/techniques/validation/audio-timing.md",
+    ),
     "clean-animation": (("experiments/clean-animation",), "private XRoar download/build, ROMs"),
     "clean-animation-coco3": (("experiments/clean-animation-coco3",), "XRoar build, CoCo 3 ROM"),
     "collect-room-output": (

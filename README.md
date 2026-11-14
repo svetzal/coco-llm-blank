@@ -84,8 +84,8 @@ You can start without reading these pages. Choose one when you need it:
 - [Play collect-room](examples/collect-room/README.md), a complete small game
   for the documented CoCo 1 and CoCo 2B emulator configurations.
 - [Examples](examples/README.md) for smaller programs to build and study.
-- [Game and demo techniques](guides/README.md) for approaches and tested limits.
-- [Setup, research and validation](guidance/README.md) for agents and contributors.
+- [Agent guidance](guidance/README.md): how your agent uses this starter, and the
+  game and demo techniques it draws on.
 - [Experiments](experiments/README.md) for reproducing individual measurements.
 - [Agent instructions](AGENTS.md) for starting work; [PLAN.md](PLAN.md) for
   outstanding work.

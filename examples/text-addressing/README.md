@@ -5,7 +5,7 @@ CoCo 3 can select different memory on a 512 KiB CoCo 3. Read it when choosing
 physical display addresses. It is a research experiment, not a scrolling demo.
 
 The result supports the address explanation in the
-[scrolling guide](../../guides/scrolling.md#understand-the-512k-correction).
+[scrolling guide](../../guidance/techniques/scrolling.md#understand-the-512k-correction).
 It does not reproduce Blochowiak's SMOOTHY program or validate its BASIC hooks.
 
 ## What was measured

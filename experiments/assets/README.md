@@ -23,7 +23,7 @@ COVERAGE_FILE=build/assets/.coverage uv run --no-sync pytest \
   --cov-config=experiments/assets/coverage.ini --cov-report=term-missing
 uv run --no-sync ruff check experiments/assets
 uv run --no-sync ruff format --check experiments/assets
-markdownlint experiments/assets/README.md guidance/asset-validation.md
+markdownlint experiments/assets/README.md guidance/techniques/validation/assets.md
 ```
 
 `uv sync` is for setup. The `--no-sync` checks avoid changing a shared environment
@@ -98,5 +98,5 @@ filesystem fault injection and hostile filesystem links are not validated.
 A killed process can leave a hidden temporary file; that is never the published
 bundle. There is no multi-file publication transaction or target consumer.
 
-See [validation and provenance](../../guidance/asset-validation.md) for the
+See [validation and provenance](../../guidance/techniques/validation/assets.md) for the
 independent expectations, executed evidence and exact limits.

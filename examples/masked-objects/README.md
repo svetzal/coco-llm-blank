@@ -13,7 +13,7 @@ Every scene redraws the current checker background before drawing the objects.
 This restores old positions and handles overlap by composing both objects again
 in the requested order. It needs no saved-background storage. This is a bounded
 full-redraw design, not an implementation of GrafExpress's restoration buffers
-or Dunkey Munkey's renderer. The [source review](../../guidance/rendering-sources.md)
+or Dunkey Munkey's renderer. The [source review](../../guidance/techniques/research/rendering-sources.md)
 explains what those historical sources actually establish.
 
 ## Run and check

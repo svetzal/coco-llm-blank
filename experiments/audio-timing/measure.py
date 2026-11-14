@@ -1,4 +1,4 @@
-"""Reproduce the eleven bounded DAC timing cases; see guidance/audio-timing-validation.md."""
+"""Reproduce the eleven bounded DAC timing cases; see guidance/techniques/validation/audio-timing.md."""
 
 import argparse
 import collections

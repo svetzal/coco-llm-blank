@@ -4,7 +4,7 @@ Use this experiment to distinguish completed assembly redraws from consecutive
 software-video frames. It uses the existing original moving-objects example.
 It does not launch a GUI or measure a physical display.
 
-Read [the findings](../../guidance/animation-cadence-validation.md) for the
+Read [the findings](../../guidance/techniques/validation/animation-cadence.md) for the
 measurement boundary, primary sources and limitations.
 
 ## Reproduce
@@ -62,9 +62,9 @@ COVERAGE_FILE=build/animation-cadence/.coverage \
 uv run --no-sync ruff check experiments/animation-cadence
 uv run --no-sync ruff format --check experiments/animation-cadence
 markdownlint --fix experiments/animation-cadence/README.md \
-  guidance/animation-cadence-validation.md
+  guidance/techniques/validation/animation-cadence.md
 markdownlint experiments/animation-cadence/README.md \
-  guidance/animation-cadence-validation.md
+  guidance/techniques/validation/animation-cadence.md
 ```
 
 The capture format is a decimal ASCII header `sequence tick width height` plus

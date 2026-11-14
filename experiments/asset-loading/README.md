@@ -13,7 +13,7 @@ asset format. No existing example or production script is changed.
 ## Run from a fresh clone
 
 From the repository root, prepare the locked Python environment and have
-LWTOOLS and XRoar available. See [toolchain setup](../../guidance/toolchain.md)
+LWTOOLS and XRoar available. See [toolchain setup](../../guidance/starter/toolchain.md)
 if they are absent. These commands do not install global native tools or launch
 a GUI. Firmware setup writes only ignored local storage and does not convert
 books or change an existing project contract.
@@ -43,9 +43,9 @@ COVERAGE_FILE=build/asset-loading/.coverage uv run --no-sync pytest \
 uv run --no-sync ruff check experiments/asset-loading
 uv run --no-sync ruff format --check experiments/asset-loading
 markdownlint --fix experiments/asset-loading/README.md \
-  guidance/asset-loading-validation.md
+  guidance/techniques/validation/asset-loading.md
 markdownlint experiments/asset-loading/README.md \
-  guidance/asset-loading-validation.md
+  guidance/techniques/validation/asset-loading.md
 ```
 
 The executable search honors the repository's `LWASM` and `XROAR` overrides
@@ -156,7 +156,7 @@ oracle mismatch. Snapshot controls alter the completion marker, last framebuffer
 byte, an asset guard, art and room data, and truncate the capture. A real
 unreachable checkpoint run must remove its stale snapshot and produce no new one.
 
-See [source readings and results](../../guidance/asset-loading-validation.md).
+See [source readings and results](../../guidance/techniques/validation/asset-loading.md).
 Headless RAM checks establish execution and memory contents. They do not establish
 rendered appearance, physical hardware, disk loading, PAL/T1 behavior, CoCo 3,
 controls, audio, frame rate or runtime parsing of damaged binary data.

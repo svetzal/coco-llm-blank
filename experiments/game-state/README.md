@@ -1,9 +1,9 @@
 # Bounded game-state reference model
 
 This original Python experiment makes the proposals in
-[Schedule turns and menu transitions](../../guides/game-state.md) executable.
+[Schedule turns and menu transitions](../../guidance/techniques/game-state.md) executable.
 It is host-side evidence only. It is neither a BASIC port nor a CoCo program.
-Read the [validation and source record](../../guidance/game-state-validation.md)
+Read the [validation and source record](../../guidance/techniques/validation/game-state.md)
 for examined passages, measured results and remaining adapter work.
 
 ## Reproduce from a fresh clone
@@ -21,7 +21,7 @@ COVERAGE_FILE=build/game-state/.coverage uv run --no-sync pytest \
   --junitxml=build/game-state/results.xml -q
 uv run --no-sync ruff check experiments/game-state
 uv run --no-sync ruff format --check experiments/game-state
-markdownlint experiments/game-state/README.md guidance/game-state-validation.md
+markdownlint experiments/game-state/README.md guidance/techniques/validation/game-state.md
 ```
 
 No ROMs, source downloads, emulator, graphics window or model weights are

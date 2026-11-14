@@ -10,7 +10,7 @@ A beginner can arrive with only the repository URL and an idea. Handle setup
 and implementation; do not ask them to translate tool errors into instructions.
 Use a new folder for a new project and preserve existing projects.
 
-Read [the contract checklist](guidance/development.md#establish-the-contract)
+Read [the contract checklist](guidance/starter/development.md#establish-the-contract)
 to establish the target before implementation.
 Run `sh scripts/bootstrap.sh coco1` for a CoCo 1 project, or use the chosen
 target.
@@ -18,7 +18,7 @@ This prepares Python, project notes, native tools, and checksum-verified
 firmware.
 Bootstrap must finish successfully before an emulator launch. A tool-only check
 does not establish that ROMs are installed.
-If tools are missing, read [toolchain](guidance/toolchain.md), install what the
+If tools are missing, read [toolchain](guidance/starter/toolchain.md), install what the
 host needs, and rerun the check. Ask only for unresolved choices or permissions
 that require the owner. Explain those questions without assuming tool knowledge.
 
@@ -48,7 +48,7 @@ Use an existing checked runner when possible. For a new runner, call
 `roms.verify_installed` before starting XRoar, and pass its absolute ROM paths
 with `-bas` and `-extbas` as required by the selected machine.
 Do not rely on XRoar's default ROM search or a bare `xroar -run` command.
-Read [firmware and launching](guidance/toolchain.md#firmware-and-launching).
+Read [firmware and launching](guidance/starter/toolchain.md#firmware-and-launching).
 
 If XRoar shows only a checkerboard or never reaches the expected screen, stop
 launching copies. Check the selected machine, actual ROM checksums and command
@@ -67,7 +67,7 @@ pixel packing, palettes, ROM calls, and instruction behavior or timing.
 
 For graphics, start with
 `local/references/assembly-graphics/text.md`, using the
-[reference lookup procedure](guidance/references.md). Read the relevant table
+[reference lookup procedure](guidance/starter/references.md). Read the relevant table
 or diagram as an image when OCR leaves any doubt. Before implementation, state
 the facts you will rely on with book title and PDF page citations. Reuse facts
 already checked in this session; do not invent page numbers or cite unread text.
@@ -75,7 +75,7 @@ already checked in this session; do not invent page numbers or cite unread text.
 If the needed pages are missing, obtain or convert them first. If the source
 covers a different machine or remains ambiguous, leave the claim unresolved
 and defer the code that depends on it. Never substitute a confident recollection
-for missing evidence. Follow the [graphics checks](guidance/development.md#graphics-before-code)
+for missing evidence. Follow the [graphics checks](guidance/starter/development.md#graphics-before-code)
 before choosing a mode or writing display setup, including setup copied from
 an example. Read its cited primary passages; the example is not a substitute.
 
@@ -85,24 +85,24 @@ an example. Read its cited primary passages; the example is not a substitute.
   If it is missing, use the target already named in the request, for example
   `uv run python scripts/setup.py --target coco1 --guidance-only`.
   Ask for the target only when it is unspecified. Use the documented emulator
-  defaults in [development practice](guidance/development.md#establish-the-contract)
+  defaults in [development practice](guidance/starter/development.md#establish-the-contract)
   where applicable, and record them as defaults rather than owner choices.
-- Choosing game or demo techniques: read the [technique index](guides/README.md),
+- Choosing game or demo techniques: read the [technique index](guidance/techniques/README.md),
   then only the relevant guide. Separate published facts, our adaptations, and
   measured results. Use its cited pages before hardware-dependent
   implementation.
-  [Research notes](guidance/game-research.md) retain source selection and open questions.
-- Writing CoCo code: read [development practice](guidance/development.md).
+  [Research notes](guidance/techniques/research/README.md) retain source selection and open questions.
+- Writing CoCo code: read [development practice](guidance/starter/development.md).
 - Testing controls, sound or artwork: use the task-specific
-  [evidence checks](guidance/development.md#check-the-feature-you-claim), which
+  [evidence checks](guidance/starter/development.md#check-the-feature-you-claim), which
   link existing keyboard, audio and artwork experiment methods.
-- Building binaries, disks, or emulator tests: read [toolchain](guidance/toolchain.md).
+- Building binaries, disks, or emulator tests: read [toolchain](guidance/starter/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read
-  [Python tools](guidance/python.md), including the co-located `*_spec.py` rules.
+  [Python tools](guidance/starter/python.md), including the co-located `*_spec.py` rules.
   For the full starter suite, prepare the
-  [complete validation environment](guidance/python.md#complete-starter-validation-environment).
+  [complete validation environment](guidance/starter/python.md#complete-starter-validation-environment).
 - Downloading, converting, or searching books: read
-  [reference lookup](guidance/references.md), then `local/INDEX.md`. Search for
+  [reference lookup](guidance/starter/references.md), then `local/INDEX.md`. Search for
   the topic and load only matching page sections. Open linked figure PNGs with
   an image-viewing tool; use the full-page PNG for context or uncertain OCR.
   Cite the title and PDF page.

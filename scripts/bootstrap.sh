@@ -16,7 +16,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 if [ "$(uname -s)" = Darwin ] && [ "$(uname -m)" != arm64 ]; then
-    echo 'macOS requires Apple Silicon (arm64); Intel Macs are unsupported. Use a native arm64 terminal on Apple Silicon, or Ubuntu 24.04. See guidance/toolchain.md.' >&2
+    echo 'macOS requires Apple Silicon (arm64); Intel Macs are unsupported. Use a native arm64 terminal on Apple Silicon, or Ubuntu 24.04. See guidance/starter/toolchain.md.' >&2
     exit 1
 fi
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)

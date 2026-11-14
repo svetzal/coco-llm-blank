@@ -164,9 +164,9 @@ Controls: not selected
 Loading method: not selected
 
 Complete these choices from the owner's request and the documented emulator
-defaults in guidance/development.md before implementation. Label defaults as
+defaults in guidance/starter/development.md before implementation. Label defaults as
 defaults; ask about unresolved physical-machine requirements or conflicts.
-Read `guidance/development.md` and `local/INDEX.md` from the repository root.
+Read `guidance/starter/development.md` and `local/INDEX.md` from the repository root.
 This file is yours to edit. Setup preserves it on subsequent runs.
 """
 

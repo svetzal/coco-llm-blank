@@ -87,7 +87,7 @@ can prevent cleanup. Names and labels are retained in `commands.json` for that
 case. Cleanup failures record their own stage and retain any preceding failure
 separately.
 
-Read [the validation report](../../guidance/sudo-policy-validation.md) for actual
+Read [the validation report](../../guidance/starter/validation/sudo-policy.md) for actual
 results and limitations. This is Linux ARM64 container evidence. It is not native
 desktop, x86-64, Apple Silicon macOS, GUI, listening, or physical-hardware evidence.
 Intel Mac support is outside the project scope and is not a queued validation.
@@ -101,6 +101,6 @@ uv run --no-sync pytest experiments/sudo-policy/sudo_policy_spec.py \
   scripts/bootstrap_spec.py -o cache_dir=build/sudo-policy/pytest-cache -q
 uv run --no-sync ruff check experiments/sudo-policy
 uv run --no-sync ruff format --check experiments/sudo-policy
-markdownlint --fix experiments/sudo-policy/README.md guidance/sudo-policy-validation.md
-markdownlint experiments/sudo-policy/README.md guidance/sudo-policy-validation.md
+markdownlint --fix experiments/sudo-policy/README.md guidance/starter/validation/sudo-policy.md
+markdownlint experiments/sudo-policy/README.md guidance/starter/validation/sudo-policy.md
 ```

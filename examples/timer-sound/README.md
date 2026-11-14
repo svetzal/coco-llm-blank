@@ -47,7 +47,7 @@ This experiment does not synchronize drawing to vertical blanking or prevent tea
 
 ## Interrupt and memory contract
 
-Read the [timer findings](../../guidance/sound-research.md#coco-3-timer-experiment)
+Read the [timer findings](../../guidance/techniques/research/sound.md#coco-3-timer-experiment)
 before changing register values.
 
 - Tepolt, **Assembly Language Programming for the CoCo3**, PDF 47–53:

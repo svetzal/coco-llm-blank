@@ -5,7 +5,7 @@ rectangles in a defined order. It asks whether objects can cross, separate,
 reach the edges, and leave the current scenery intact.
 
 It implements the full-redraw proposal in
-[Move objects without losing the world](../../guides/moving-objects.md).
+[Move objects without losing the world](../../guidance/techniques/moving-objects.md).
 It does not implement masks, saved-background rectangles, clipping, or collision.
 The assembly and scene design are original work, not a copied book program.
 

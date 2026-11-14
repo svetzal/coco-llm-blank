@@ -1,6 +1,6 @@
 * Original CoCo 2 adaptation of examples/sound-slots/main.asm.
 * NTSC 26-3134/26-3136 hardware contract; 64 KiB, stock 6809, non-T1.
-* See guidance/sound-coco2-validation.md for examined sources and limits.
+* See guidance/techniques/validation/sound-coco2.md for examined sources and limits.
 * Screen $0400-$1BFF, code/state $3000+, stack $7E00-$7EFF.
         org $3000
 start   orcc #$50

@@ -1,6 +1,6 @@
 # Capture XRoar mixer output
 
-Read [the findings](../../guidance/audio-output-validation.md) for the boundary,
+Read [the findings](../../guidance/techniques/validation/audio-output.md) for the boundary,
 primary sources, expectations and limits. This original instrumentation captures
 real XRoar output buffers. It never constructs samples from the phase oracle or
 DAC timestamps. Existing assembly and production runners remain unchanged.
@@ -8,7 +8,7 @@ DAC timestamps. Existing assembly and production runners remain unchanged.
 ## Prepare a private build
 
 Use the project's existing locked Python environment, C compiler, make and
-LWTOOLS. See [toolchain](../../guidance/toolchain.md) for first-time setup.
+LWTOOLS. See [toolchain](../../guidance/starter/toolchain.md) for first-time setup.
 Do not synchronize a shared environment or run `make install` for this experiment.
 Run the target-specific doctor checks before launching:
 
@@ -69,8 +69,8 @@ PYTHONDONTWRITEBYTECODE=1 uv run --no-sync pytest experiments/audio-output \
   --cov-config=experiments/audio-output/coverage.ini --cov-report=term-missing
 uv run --no-sync ruff check experiments/audio-output
 uv run --no-sync ruff format --check experiments/audio-output
-markdownlint --fix experiments/audio-output/README.md guidance/audio-output-validation.md
-markdownlint experiments/audio-output/README.md guidance/audio-output-validation.md
+markdownlint --fix experiments/audio-output/README.md guidance/techniques/validation/audio-output.md
+markdownlint experiments/audio-output/README.md guidance/techniques/validation/audio-output.md
 ```
 
 `AUDIO_ARCHIVE` must identify the pinned archive used for the build.

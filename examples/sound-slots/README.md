@@ -38,7 +38,7 @@ analog joystick axes. The fire button is a digital input.
 
 ## Source facts
 
-The [sound research guide](../../guidance/sound-research.md) links the archive
+The [sound research guide](../../guidance/techniques/research/sound.md) links the archive
 sources and separates the three machines.
 
 - Tandy, **Color Computer Technical Reference Manual**, PDF 13–14:

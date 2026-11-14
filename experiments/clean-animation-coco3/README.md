@@ -11,7 +11,7 @@ nonzero initial RAM, and direct DECB loading. There are no controls or audio.
 The two capacities use the same low physical display pages. This is a bounded
 five-position sequence, not a general animation engine.
 
-Read the [validation note](../../guidance/clean-animation-coco3-validation.md)
+Read the [validation note](../../guidance/techniques/validation/clean-animation-coco3.md)
 for primary citations, the physical/CPU address distinction, and the unresolved
 hardware timing contract. Passing this experiment proves the tested emulator
 model. It does not establish physical tear-free switching.
@@ -76,9 +76,9 @@ COVERAGE_FILE=build/clean-animation-coco3/.coverage \
 uv run ruff check experiments/clean-animation-coco3
 uv run ruff format --check experiments/clean-animation-coco3
 markdownlint --fix experiments/clean-animation-coco3/README.md \
-  guidance/clean-animation-coco3-validation.md
+  guidance/techniques/validation/clean-animation-coco3.md
 markdownlint experiments/clean-animation-coco3/README.md \
-  guidance/clean-animation-coco3-validation.md
+  guidance/techniques/validation/clean-animation-coco3.md
 ```
 
 The real-emulator specifications build a fresh private XRoar, run the six cases,

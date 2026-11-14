@@ -1,6 +1,6 @@
 # Collect room output experiment
 
-Read [the findings](../../guidance/collect-room-output-validation.md) for the
+Read [the findings](../../guidance/techniques/validation/collect-room-output.md) for the
 measurement boundary and limitations. Run from the repository root with its
 existing Python environment, compiler, make, LWASM and verified firmware.
 Nothing is installed globally. All generated artifacts stay in ignored `.work/`.
@@ -77,9 +77,9 @@ PYTHONDONTWRITEBYTECODE=1 uv run --no-sync pytest \
 uv run --no-sync ruff check experiments/collect-room-output
 uv run --no-sync ruff format --check experiments/collect-room-output
 markdownlint --fix experiments/collect-room-output/README.md \
-  guidance/collect-room-output-validation.md
+  guidance/techniques/validation/collect-room-output.md
 markdownlint experiments/collect-room-output/README.md \
-  guidance/collect-room-output-validation.md
+  guidance/techniques/validation/collect-room-output.md
 ```
 
 Set `COLLECT_ARCHIVE` to use another verified archive path for tests.

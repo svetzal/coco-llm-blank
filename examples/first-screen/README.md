@@ -57,6 +57,6 @@ The SAM mode bits are V2..V0 = 110. The PIA high nibble is 1111, CSS is zero,
 and the program preserves the low three data bits. The display offset is two
 512-byte units. Read the tables and diagrams before changing those values.
 
-Use [reference lookup](../../guidance/references.md) to download and inspect
+Use [reference lookup](../../guidance/starter/references.md) to download and inspect
 those pages. No book pages, converted text, or firmware are included here.
 Build outputs and snapshots stay in ignored `build/first-screen/`.

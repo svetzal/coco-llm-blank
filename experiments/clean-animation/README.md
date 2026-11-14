@@ -3,7 +3,7 @@
 This original CoCo 1/2 experiment adapts the moving-objects renderer to draw
 into a hidden screen and publish it after drawing, at a fresh field boundary.
 The [moving-objects baseline](../../examples/moving-objects/main.asm) is unchanged.
-Read [the validation note](../../guidance/clean-animation-validation.md) for
+Read [the validation note](../../guidance/techniques/validation/clean-animation.md) for
 source facts, evidence and limits.
 
 ## Reproduce
@@ -107,9 +107,9 @@ COVERAGE_FILE=build/clean-animation/.coverage \
 uv run --no-sync ruff check experiments/clean-animation
 uv run --no-sync ruff format --check experiments/clean-animation
 markdownlint --fix experiments/clean-animation/README.md \
-  guidance/clean-animation-validation.md
+  guidance/techniques/validation/clean-animation.md
 markdownlint experiments/clean-animation/README.md \
-  guidance/clean-animation-validation.md
+  guidance/techniques/validation/clean-animation.md
 ```
 
 The suite builds a fresh private emulator and runs the real matrix. It also

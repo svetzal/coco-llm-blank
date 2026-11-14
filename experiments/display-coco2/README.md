@@ -3,13 +3,13 @@
 This original experiment freezes selected completed scenes from the repository's
 original tile-room and masked-object examples. It reuses the guarded private
 XRoar build and software-renderer capture in `../display-validation/` without
-editing that package. Read the [findings and limits](../../guidance/display-coco2-validation.md).
+editing that package. Read the [findings and limits](../../guidance/techniques/validation/display-coco2.md).
 
 ## Reproduce
 
 Run from the repository root. The prerequisites are uv, the locked Python
 environment, LWASM, a C compiler, make, pkg-config and the platform build
-headers described in [toolchain guidance](../../guidance/toolchain.md).
+headers described in [toolchain guidance](../../guidance/starter/toolchain.md).
 No global install or GUI launch is performed. Prepare Python with
 `uv sync --locked`. Provision firmware without changing the shared target:
 
@@ -90,8 +90,8 @@ COVERAGE_FILE=build/display-coco2/.coverage \
   --cov-report=term-missing -ra
 uv run --locked ruff check experiments/display-coco2
 uv run --locked ruff format --check experiments/display-coco2
-markdownlint --fix experiments/display-coco2/README.md guidance/display-coco2-validation.md
-markdownlint experiments/display-coco2/README.md guidance/display-coco2-validation.md
+markdownlint --fix experiments/display-coco2/README.md guidance/techniques/validation/display-coco2.md
+markdownlint experiments/display-coco2/README.md guidance/techniques/validation/display-coco2.md
 ```
 
 The scoped coverage gate is 90% statements and branches of this package.
