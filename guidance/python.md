@@ -57,6 +57,49 @@ Run `uv run pytest --cov` before completing a change. Combined statement and
 branch coverage must reach 90%, but the threshold does not replace checking the
 behavior changed. The coverage report includes production scripts and excludes
 specs and fixtures.
+
+### Complete starter validation environment
+
+Selected-target setup prepares the demo, not the whole starter test suite.
+The suite also runs CoCo 1, CoCo 2, and CoCo 3 emulator checks. Install native
+tools using [toolchain.md](toolchain.md), then provision all three ROM profiles
+without rerunning project setup or changing `local/PROJECT.md`:
+
+```sh
+uv sync --locked
+uv run python - <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path("scripts").resolve()))
+from roms import provision, verify_installed
+
+root = Path.cwd()
+for target in ("coco1", "coco2", "coco3"):
+    provision(root, target)
+    verify_installed(root, target)
+PY
+```
+
+Stop if provisioning fails. This uses `roms.json` checksums and keeps firmware
+under ignored `local/roms/`; it does not change the application's target.
+Then run:
+
+```sh
+uv run python scripts/doctor.py --profile demo --target coco1 &&
+uv run python scripts/doctor.py --profile demo --target coco2 &&
+uv run python scripts/doctor.py --profile demo --target coco3 &&
+uv run pytest --cov -ra
+```
+
+The full run includes real Docling conversion; its first run can download model
+weights. Inspect the exit status, coverage result, and skip reasons. Passing
+tests with missing-machine integrations skipped do not establish a complete
+validation pass. Keep the 90% gate and the full measured scope; provisioning
+removes an environment gap but does not guarantee sufficient coverage.
+
+### Other checks
+
 Ruff enforces a maximum function complexity of 10. Keep larger workflows readable
 by separating validation, decisions, and external operations.
 

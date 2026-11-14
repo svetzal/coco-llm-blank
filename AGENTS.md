@@ -93,6 +93,8 @@ before choosing a mode or writing display setup.
 - Building binaries, disks, or emulator tests: read [toolchain](guidance/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read
   [Python tools](guidance/python.md), including the co-located `*_spec.py` rules.
+  For the full starter suite, prepare the
+  [complete validation environment](guidance/python.md#complete-starter-validation-environment).
 - Downloading, converting, or searching books: read
   [reference lookup](guidance/references.md), then `local/INDEX.md`. Search for
   the topic and load only matching page sections. Open linked figure PNGs with
@@ -123,3 +125,13 @@ exists but a file tool rejects it, use an available shell to read local
 reference
 text or write project notes and build outputs. Keep those paths ignored. Check
 that a write succeeded before relying on the recorded project contract.
+
+## Quality Standards
+
+Maintain quality standards when researching and distilling good practices for
+effective CoCo development.
+
+- Cite all sources unambiguously when researching so that future agents can
+  review the research and compare against new sources
+- When validating suggestions and ideas from sources locally, ensure you have
+  run them on Xroar

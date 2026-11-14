@@ -2,8 +2,10 @@
 
 ## Establish the contract
 
-Record the CoCo model, RAM, CPU, video standard, clock, controls, and loader
-before writing hardware-dependent code. Setup selects a starting target;
+Record the CoCo model/revision, XRoar machine profile, RAM, CPU, video standard,
+clock, controls, and loader in `local/PROJECT.md` before writing
+hardware-dependent code. Read the file back to verify the write succeeded.
+Setup selects a starting target;
 it does not establish that an application supports it. Keep unknowns explicit.
 Do not silently enable a 6309, more RAM, or a faster clock to pass a test.
 
@@ -14,6 +16,11 @@ owner; do not claim the owner confirmed them. An animation needs no controls
 unless requested. These defaults let the first prototype proceed. Explicit
 requirements and existing project notes take precedence; ask when a physical
 machine's configuration or a conflicting requirement must be resolved.
+
+These are CoCo 1 defaults, not CoCo 2 defaults. For each configuration choice,
+distinguish an owner requirement, a documented default applicable to that model,
+and an agent-selected prototype choice. Cite the applicable guidance for a
+default; state agent-selected choices to the owner without attributing consent.
 
 ## Graphics before code
 
@@ -39,6 +46,10 @@ what was verified, the book title and PDF page, and the values derived from it.
 Inspect table and diagram PNGs for bit ordering and labels; OCR of a register
 value or bit pattern is not sufficient when its interpretation is uncertain.
 If the book does not cover the target, find a source that does before proceeding.
+For a physical model or board revision, read the passage or schematic that
+supports that revision's register behavior. A contents entry or shared chip
+names do not establish compatibility. An emulator check supports the tested
+profile, not every physical revision bearing the same CoCo model name.
 
 Derive expected test bytes from the sourced layout, independently of the packing
 code. Check boundary pixels, row transitions, and framebuffer limits. Then use
@@ -75,6 +86,20 @@ A process exiting is not proof of a successful boot. Check a meaningful
 program state. Directly loading a binary is not proof that a disk image works;
 test `LOADM` from the disk. Report minimum RAM and loading instructions with
 any distributable artifact.
+
+## Reusable launchers
+
+Parse arguments before setup, downloads, builds, or emulator calls. `--help`
+must print usage and exit successfully without those side effects; reject
+unknown arguments with a nonzero exit. Probe these paths with a recording
+process substitute so a help check cannot accidentally open XRoar.
+
+Before launch, call `roms.verify_installed` for every ROM required by the chosen
+machine and loader, then pass its returned absolute paths to XRoar. Checking
+only the BASIC ROM's existence misses a missing Extended BASIC ROM. Use the
+existing provisioner for recovery and verify again before launch; stop on
+validation failure. Test the partially installed case as well as missing and
+corrupt firmware. Do not duplicate ROM validation in a shell wrapper.
 
 ## Learn from evidence
 
