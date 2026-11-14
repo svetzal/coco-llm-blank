@@ -47,8 +47,11 @@ ignored local storage. Stacey requested public publication as
    installed prerequisites: bootstrap took 796.40 seconds, all 13 CoCo 2
    moving-object frames passed, and a 1.06-second rerun preserved edited notes.
    These are measured run times, not guarantees. Native desktop, x86-64,
-   non-root sudo and GUI onboarding remain unverified by this run. It supplies
-   no visual, audible or physical-machine evidence.
+   and GUI onboarding remain unverified by this run. A separate
+   [nonroot sudo run](guidance/linux-onboarding-validation.md#nonroot-sudo-validation)
+   passed bootstrap, all 13 CoCo 2 frames and note preservation. Its no-sudo
+   control failed actionably. Password-required or denied sudo remains untested.
+   Neither run supplies visual, audible or physical-machine evidence.
 
 ## Game and demo research
 
@@ -130,8 +133,11 @@ runtime coverage remains open.
 [Controls and collision validation](guidance/controls-collision-validation.md)
 reports 26 host cases for bounded logical-input and collision policies. It
 supplies no keyboard-driver, 6809 execution, timing or hardware evidence.
-Game-state, selective-redraw, animation and asset adaptations remain pending
-validation. [Asset guidance](guides/assets.md) draws on
+[Game-state validation](guidance/game-state-validation.md) now reports 60 host
+cases. [Selective redraw](guidance/selective-redraw-validation.md) checks two
+bounded RAM windows on CoCo 3 at 128 and 512 KiB, not rendered output.
+Animation and target asset integration remain pending validation.
+[Asset guidance](guides/assets.md) draws on
 [examined CoCo 3 community sources](guidance/community-game-research.md), not
 measured asset loading or compression.
 
@@ -353,9 +359,10 @@ shared Matthews conversion coverage.
    licenses separately from archive availability. Do not redistribute code or
    assets merely because they are downloadable.
 5. Extend the host controls model with a target-specific input adapter and
-   execution checks. Validate pending game-state, animation, selective-redraw
-   and asset proposals with small original examples. Keep CoCo 3 implementation
-   evidence alongside CoCo 1/2 work before claiming broad coverage.
+   execution checks. Extend host game-state evidence to target execution, and
+   validate animation and asset integration with small original examples. Keep
+   CoCo 3 implementation evidence alongside CoCo 1/2 work before claiming broad
+   coverage.
 
 Each pass should produce a few examined references and their usable guide text.
 Update existing guides when a finding changes their advice. Review topic and
@@ -371,8 +378,9 @@ machine gaps after every pass.
    complete CoCo 3 library.
 3. Extend native-tool installation to other Linux distributions and disk tools.
    The original first-screen example now supplies an assembly and emulator baseline.
-4. Extend host evidence beyond the completed Ubuntu ARM64 root-container run
-   to native desktop, non-root and GUI journeys, and clean macOS onboarding.
+4. Extend host evidence beyond completed Ubuntu ARM64 root and passwordless-sudo
+   container runs to native desktop, denied/password-required sudo, GUI journeys
+   and clean macOS onboarding.
    x86-64 Linux and Intel Mac compatibility need separate checks.
 5. Extend beginner trials after addressing observed failures. The first Claude
    Code trial built a demo and passed runtime checks; Claude 02 now has an

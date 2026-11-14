@@ -4,6 +4,148 @@ Read this report when assessing the current bootstrap and firmware changes on
 Linux. This experiment uses the current working tree, including uncommitted
 changes. It does not establish support for every Linux host.
 
+## Nonroot sudo validation
+
+Publication review found that the harness inspected the pinned image before
+Docker could fetch it. The retained run used a cached image and remains valid.
+The harness now pulls before inspection. Two process-boundary regression cases
+with a fixture Docker executable check acquisition from an absent-image state
+and retention of a failed pull diagnostic. They do not establish an uncached
+registry download or repeat the complete onboarding run.
+
+The November 14, 2026 follow-up uses the tracked original harness in
+[experiments/linux-onboarding](../experiments/linux-onboarding/README.md).
+It asks whether the complete corrected bootstrap works as an ordinary user
+with explicit noninteractive sudo, and whether missing sudo fails before
+readiness. The earlier root runs below remain separate evidence.
+
+### Nonroot host precondition
+
+A fresh Ubuntu 24.04 ARM64 container uses the existing Docker engine and cached
+image layers. The container administrator creates `learner`, installs only
+`sudo` with `--no-install-recommends`, grants that account `NOPASSWD` access,
+and assigns the unpacked source checkout to it. This is an explicit disposable
+host assumption. Bootstrap does not create the account or grant sudo access.
+
+Preflight reports UID/GID 1001, Ubuntu 24.04.5 LTS, and `aarch64`. It verifies
+that curl, uv, Python, LWASM, XRoar, CA bundle, `.venv`, and `local` are absent,
+and that `sudo -n` succeeds. Bootstrap must install curl and certificates,
+then uv/Python, locked packages, native tools, and firmware. No host mounts,
+virtual environment, tools, ROMs, source archives, or package caches are copied.
+Only the checkout snapshot enters the container.
+
+### Nonroot source provenance
+
+Main's head at capture was the parent-supplied revision
+`974d86c0c2f708e10dbf2baee4cdc079117612ff`. The tar contains 88 tracked
+working-tree and experiment files. All tar member bytes were independently
+checked against its SHA-256 manifest. Later concurrent edits are outside this
+run. The snapshot is not claimed to be an atomic view of concurrent edits.
+
+- Input tar SHA-256:
+  `159669eb7cc185bbb020fb634552df029b420f26a843d3e4c58a96777f560ae3`.
+- Bootstrap SHA-256:
+  `ec1057fe000fbd957891c4563e6ed7d74600c59765b7cc945935883e5530fa44`.
+- Lockfile SHA-256:
+  `a7203eb44883bbee9776ffd5eda312c918c30c55fc1f664b997a9c72b662d975`.
+- Ubuntu image digest:
+  `sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5`.
+
+The exact input and downloads live under ignored
+`local/research/linux-onboarding/nonroot-1794677060331912000/`.
+Commands, statuses, timings, and collected results live under ignored
+`build/linux-onboarding/nonroot-1794677060331912000/`.
+The snapshot includes the executed harness; its only later executable edit
+replaces `dict(...)` with an equivalent dictionary literal for Ruff. The README
+was added after capture. Reproduction logic is retained in the tracked harness,
+not only in ignored evidence. Apt repositories and the uv installer remain
+network-dependent inputs; their content is not pinned by this experiment.
+Native source archives and firmware are checksum-verified by production setup.
+
+### Independent no-sudo control
+
+A separate fresh container receives only the account and source snapshot.
+It has no sudo executable or granted privilege. Running the actual bootstrap
+as UID 1001 exits 1 in 0.08 seconds. The message tells the caller that curl
+installation requires root or noninteractive sudo, asks for administrator
+installation of curl and certificates, and says to rerun bootstrap.
+No readiness message, `.venv`, `local`, or uv executable is produced. The
+harness asserts all these outcomes and removes only its named control container.
+A present sudo executable with denied/password-required policy was not tested
+in this container control.
+
+### Nonroot measured result and limits
+
+The complete nonroot path passed on Docker engine 29.8.2. Every bootstrap,
+example, rerun, and doctor command used `docker exec --user learner` with its
+own home and PATH. Root was used only for the stated host precondition.
+
+| Check | Exit | Result |
+| --- | --- | --- |
+| First nonroot bootstrap | 0 | 1,138.06 seconds; tools and firmware ready |
+| Real CoCo 2 moving-object check | 0 | 6.45 seconds; all 13 frames passed |
+| Bootstrap rerun | 0 | 0.87 seconds; edited project notes preserved |
+| Notes and doctor | 0 | Bytes equal; all three ROM members verified |
+| Collection and cleanup | 0 | Artifacts copied; both containers removed |
+
+Versions were uv 0.13.8, Python 3.13.18, LWTOOLS 4.25, and XRoar 1.12.1.
+uv prepared 130 packages in 15 minutes 25 seconds and installed them in
+11.53 seconds. Its container-local cache occupied 5.9 GiB. These measurements
+include the unchanged lockfile's CUDA packages. They describe this run's cost,
+not guaranteed performance or a dependency-change recommendation. ToolShed
+remained absent and was correctly reported as optional for this direct demo.
+
+The runtime results identify `cocous`, explicit non-T1 `6847`, 6809, 32 KiB,
+NTSC, normal emulated clock, CoCo 2 BASIC/Extended BASIC, and direct DECB loading.
+Frames 1, 15, 16, 17, 31, 32, 46, 64, 65, 185, 186, 369, and 370 pass exact
+state, guard-byte, and 6,144-byte framebuffer checks. The unreachable checkpoint
+passes its no-capture control. These are real assembly and bounded headless
+execution results, not rendered-display evidence.
+
+Both project-note copies have SHA-256
+`ff7b13abaf554905fe163ee19af9e16d0ae4ebe7c0d54f26211089f872105a0a`.
+The note sentinel simulates an owner edit. The whole file comparison, not just
+presence of the sentinel, establishes preservation. Reruns reuse only this
+container's own caches. Network access remains available; upstream cache use
+was not measured.
+
+After collection, native archive SHA-256 values match the captured
+`scripts/native.py`: LWTOOLS
+`9bb97e987d486d7abd85d04cb98a53f666f02785c108647b795c4a111c5eb09f`
+and XRoar
+`ba525225fbd732c4dbf2cbb571dc9d2810fd9dcedf0482133cf637e2eef61f88`.
+The downloaded CoCo 2 ZIP matches `roms.json` with SHA-256
+`b091bb40fa2fd7ce9be2d72346039894d1bff88243d03d3092746939bf60db38`.
+The run's `artifact-hashes.json` retains hashes of all collected files.
+Downloaded sources and firmware remain ignored.
+
+The tracked harness has passed its real Docker boundary checks. The existing
+21 bootstrap specifications also passed in 5.90 seconds. Scoped Ruff check and
+format check, Markdown lint, and whitespace checks passed. No production defect
+was found in this tested journey, and no production code was edited.
+
+This establishes the explicit passwordless-sudo container case only. A native
+desktop, x86-64, denied/password-required sudo policy, GUI, audible output,
+physical hardware, PAL, T1, disk loading, other CoCo targets, book conversion,
+and the complete starter suite remain outside this run. Missing/corrupt-ROM
+injections were not repeated; their earlier results below remain distinct.
+The harness is original reproducible logic, and earlier failed controls remain
+in this report. Parent integration must update any shared plan claims about
+nonroot coverage; this task does not edit that plan.
+
+### Examined sources and attribution
+
+This is an original onboarding validation, not a hardware technique adaptation.
+The directly examined primary implementation passages are
+[bootstrap's missing-curl privilege branch and final readiness sequence](../scripts/bootstrap.sh),
+[HostGateway.dependencies and checksum-verified native source builds](../scripts/native.py),
+and [the moving-object runner's emulator, verify_ram and capture functions](../scripts/moving_objects.py).
+The latter checks real assembled output against a closed-form trajectory and
+pixel-level framebuffer oracle, with an unreachable checkpoint control.
+The [example contract](../examples/moving-objects/README.md#machine-contract)
+defines the tested CoCo 2 configuration. This follow-up adds no hardware facts
+and does not claim fresh examination of the example's cited book pages.
+
 ## Full corrected-bootstrap validation
 
 The final November 14, 2026 run tests the corrected bootstrap from a fresh
