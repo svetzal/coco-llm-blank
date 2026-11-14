@@ -1,0 +1,952 @@
+{
+  "base_revision": "974d86c0c2f708e10dbf2baee4cdc079117612ff",
+  "revision_meaning": "HEAD; working input hashes below",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+  "inputs_sha256": {
+    ".python-version": "02e735b3dfe1c32833eb550b7ff8ffa17f5f2bc3fa1e7bae61a8f5a3883ce398",
+    "examples/first-screen/main.asm": "cf57eeffa0f27e4fd24e56433913d85cc4439625188a4922549c9ae141b18a12",
+    "examples/moving-objects/main.asm": "5dbd9405a0fae62c2573deac127c37591f27886af71bb37db5fc5c28fb1ec703",
+    "experiments/display-validation/cases.py": "a3be855fea2b307aa0b85ec1ff85052fdd4ff603b9ff15a0b1f6035c4c5e28b2",
+    "experiments/display-validation/conftest.py": "77a7cd67a809567f75e97bdd11e5ce409ed97035f1a4b74a303625fb73e2228b",
+    "experiments/display-validation/instrument.py": "60312c732f4e82973ed520add62b2fb6422586109bad18a12aa9c2af8d659993",
+    "experiments/display-validation/reproduce.py": "0577a7c3fba7e3067d0c8486a158027a54fa27c17b93cac49190e54a34323518",
+    "experiments/display-validation/reproduce_spec.py": "100fc71137ca5b360d8a1ec534908f45648909225440574809f66a4dc80ec04d",
+    "pyproject.toml": "af0d1dce7f3569a3f6ea1bc45721dea31ad90688d8b1b176800e444700ba46be",
+    "roms.json": "1bb8365269cc2867d02b020ff7814df9f3729635922e543aba7b027edb754921",
+    "scripts/first_screen.py": "685a9745636755b2c0928bc7f256b8f0db787e68b07d8e1d55e3993bf1b7890d",
+    "scripts/native.py": "8256e172615ce66eda51468e489ae59cad212b453fdc4372ddc919881e6a0f82",
+    "scripts/references.py": "ec8583e28d2900de1eee52a91d669c26744dc2cd6504502cd53bd0d4c5fa6302",
+    "scripts/roms.py": "4f5b57ec44392c8b3037029cae15adf6b084854e1832dff744bfb7778aa9ac28",
+    "uv.lock": "a7203eb44883bbee9776ffd5eda312c918c30c55fc1f664b997a9c72b662d975",
+    "examples/tile-room/main.asm": "f512f3fe1f36722a32718925e28b2473281093ab71fdd4e0408053b40763ff46",
+    "examples/masked-objects/main.asm": "69cf62b6452e8761e2ebbc6b382d6be0db5f2d81e38e2e6454f9eedd3f1e4a20",
+    "scripts/tile_room.py": "94c7fcaf802f50ade31b596f293c1186677de2a94372666af62d0afa834e556f",
+    "scripts/masked_objects.py": "8710ccc74a28ce2f73380634f8299f346d147cbfe29d981aba5ca2a5d0d5827b",
+    "experiments/display-coco2/conftest.py": "eee9de16cc0b9b7bba116b3a5aeb5f7a69394c68622eae8573538fc6400b8c74",
+    "experiments/display-coco2/coco2_spec.py": "fa0460a0f7615ea353fe83408335e037683ec32a11e633abe6df0ecde3e770a2",
+    "experiments/display-coco2/coco2.py": "84b58fc55badf01f5bac798b25f317db313cd88ddd908a4bb5ff8b378028eec4"
+  },
+  "roms_sha256": {
+    "bas12.rom": "40413d0f8bc1bb345ffe49404b3bf645a5417b02f32266536f6566dbf9ca70fb",
+    "extbas11.rom": "a18f270d3495d82b9f515de049f46253a623a2d9b1bb226c9ad338508344c5ee"
+  },
+  "archive": {
+    "url": "https://www.6809.org.uk/xroar/dl/xroar-1.12.1.tar.gz",
+    "sha256": "ba525225fbd732c4dbf2cbb571dc9d2810fd9dcedf0482133cf637e2eef61f88"
+  },
+  "assembler": {
+    "path": "/opt/homebrew/bin/lwasm",
+    "sha256": "d5e7afdf331a6ad3d48ef3e296be0ca39dcaeadcca61079b319f7281a9fb0418",
+    "version": "lwasm from lwtools 4.25"
+  },
+  "profile": {
+    "target": "coco2",
+    "machine": "cocous",
+    "tv": "ntsc",
+    "vdg": "6847 (non-T1)",
+    "cpu": "6809",
+    "ram_kib": 32,
+    "clock": "normal",
+    "loader": "direct DECB",
+    "display": "S-video, ccr none, zoomed RGBA8 software renderer"
+  },
+  "passed": true,
+  "build": {
+    "configure": [
+      "./configure",
+      "--without-gtk2",
+      "--without-gtk3",
+      "--without-sdl3",
+      "--without-sdl2"
+    ],
+    "make": [
+      "make",
+      "-j2"
+    ],
+    "pristine_ui_sha256": "b813f70b890375c467dc1c7135e4172884ee659c1e6f63ef058f929d83cca85c",
+    "instrumented_ui_sha256": "ce4379af1df829f0c0eab25fdc3979da963e9169ca0304ae4976fb518aae48c9",
+    "config_status_sha256": "b25fd733a64edb738d18198342f2c6ce435c9b2eb640a6d5d481f61020cd8574",
+    "config_log_sha256": "785b468543d4c0a4ca18f8db2f75c84e85905dfab557c97c094928d07398aff0",
+    "config_h_sha256": "1e6e6e7d4890fa18bc74a247ff59ddcac7f4436f4d27119648830d690c13319a",
+    "executable_sha256": "67fad917b7371bf642ed5dbef04040556613efdf99dc63eca2304003cff8a115"
+  },
+  "cases": [
+    {
+      "name": "asymmetric",
+      "checkpoint": {
+        "symbol": "ready",
+        "address": 12456
+      },
+      "source_sha256": "179604542850da6f4a278d97196b77681ddc3e25dece25bc8ea30686cf552722",
+      "binary_sha256": "c912aaaf79a016077d1bffc5ca3f74a982b4bccc2fa81870312a127b539a1d6c",
+      "symbols_sha256": "c8603bc1009810e6cc5f9e3dfbb9cf5e1fd5baeb17ebb6e87fd33c12a9825c65",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "marker": "A5 at 2FFF"
+          },
+          "capture_sha256": "9bc238edfa8f42b33c26d1a7903866b4421b7f8e394b479a505a86183d8374e2",
+          "ram_sha256": "ffadef54d729726de4fb03c166d9f89b425ecf99ee9e21964c12c5dda64098a5",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "marker": "A5 at 2FFF"
+          },
+          "capture_sha256": "9bc238edfa8f42b33c26d1a7903866b4421b7f8e394b479a505a86183d8374e2",
+          "ram_sha256": "ffadef54d729726de4fb03c166d9f89b425ecf99ee9e21964c12c5dda64098a5",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "wrong-sam",
+      "checkpoint": {
+        "symbol": "ready",
+        "address": 12456
+      },
+      "source_sha256": "c365e3b1b72efa14fde112a427b922058571bbc3f67f974459ea2e5a1848a560",
+      "binary_sha256": "caf7cfdb48a2e4405dde8256d396e36ad4427b9e8b65d00116a8d40ef3b7cf6d",
+      "symbols_sha256": "c8603bc1009810e6cc5f9e3dfbb9cf5e1fd5baeb17ebb6e87fd33c12a9825c65",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "marker": "A5 at 2FFF"
+          },
+          "capture_sha256": "56317e6c892e94b479ab1d5f39cb5add4013e704fb769bd87261456b34ddd7bd",
+          "ram_sha256": "5e3ab194d5598dbb2f46d78a0d61b73ae4ec90dac3e37ef8de75cf82e8e6f104",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 3040
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "marker": "A5 at 2FFF"
+          },
+          "capture_sha256": "56317e6c892e94b479ab1d5f39cb5add4013e704fb769bd87261456b34ddd7bd",
+          "ram_sha256": "5e3ab194d5598dbb2f46d78a0d61b73ae4ec90dac3e37ef8de75cf82e8e6f104",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 3040
+        }
+      ]
+    },
+    {
+      "name": "tile-room-0",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12406
+      },
+      "source_sha256": "761e9a66b5347522894885d6a1e4af0529b4fc186292f442960e99c9d0a57e82",
+      "binary_sha256": "24cc4cb766bc545b4f5d6276ddc9e4f46a70b0033ce6042d1abe48051ffefafc",
+      "symbols_sha256": "f590c9110d41fd534a7aa60d166f956dd624f2907d992fa1741a33e8f19eac07",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "step": 0,
+            "actor": [
+              0,
+              0
+            ]
+          },
+          "capture_sha256": "d7197df418024f0327a8017555395327301443173598800bcf238e1f7e6ddd95",
+          "ram_sha256": "43dd862dd07aa8b77d35c491c0c5dda14bc43f0328c04e6ddaf0ac2b92b8b22d",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "step": 0,
+            "actor": [
+              0,
+              0
+            ]
+          },
+          "capture_sha256": "d7197df418024f0327a8017555395327301443173598800bcf238e1f7e6ddd95",
+          "ram_sha256": "43dd862dd07aa8b77d35c491c0c5dda14bc43f0328c04e6ddaf0ac2b92b8b22d",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "tile-room-5",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12406
+      },
+      "source_sha256": "93674d6a43782b0938ac38e34fad043f5184e1bbd083b4c5886e235624e9aaed",
+      "binary_sha256": "80e9b3ccf9352e2227e1679f4b8801911162e889a03a19e0061d7568a10ad479",
+      "symbols_sha256": "f590c9110d41fd534a7aa60d166f956dd624f2907d992fa1741a33e8f19eac07",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "step": 5,
+            "actor": [
+              1,
+              1
+            ]
+          },
+          "capture_sha256": "cce0b50e41959e72ce45b2b03b6a30ed35c179d1ee2e3a1ef0373882525276c0",
+          "ram_sha256": "7dff4fe11d253b2591a983519a71b91aee63cc3b3cbf50543cc8fd6f5953734c",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "step": 5,
+            "actor": [
+              1,
+              1
+            ]
+          },
+          "capture_sha256": "cce0b50e41959e72ce45b2b03b6a30ed35c179d1ee2e3a1ef0373882525276c0",
+          "ram_sha256": "7dff4fe11d253b2591a983519a71b91aee63cc3b3cbf50543cc8fd6f5953734c",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "tile-room-39",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12406
+      },
+      "source_sha256": "9c44d1d2774eeff509b06e17bb23c807930d9295bdb5287ac2bb2db8a14e2106",
+      "binary_sha256": "9f7d054fdf4fb66a75ee2619db832655b5dd9e164b5ab38dff922347737a98fe",
+      "symbols_sha256": "f590c9110d41fd534a7aa60d166f956dd624f2907d992fa1741a33e8f19eac07",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "step": 39,
+            "actor": [
+              1,
+              1
+            ]
+          },
+          "capture_sha256": "cce0b50e41959e72ce45b2b03b6a30ed35c179d1ee2e3a1ef0373882525276c0",
+          "ram_sha256": "6e2f72c4192ecf301dd0524915a4c0e7328f9fb2c812dd3c820b8db3f5bca376",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "step": 39,
+            "actor": [
+              1,
+              1
+            ]
+          },
+          "capture_sha256": "cce0b50e41959e72ce45b2b03b6a30ed35c179d1ee2e3a1ef0373882525276c0",
+          "ram_sha256": "6e2f72c4192ecf301dd0524915a4c0e7328f9fb2c812dd3c820b8db3f5bca376",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "tile-room-41",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12406
+      },
+      "source_sha256": "20a65520d5976b78262ac3e3b4d66ebd24e832b5f54b616f6bd8a37c1e7fa322",
+      "binary_sha256": "d869cdee2cdab7529364afca9d671029480f7960f37e1cdf919f6bf81be7b52d",
+      "symbols_sha256": "f590c9110d41fd534a7aa60d166f956dd624f2907d992fa1741a33e8f19eac07",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "step": 41,
+            "actor": [
+              1,
+              1
+            ]
+          },
+          "capture_sha256": "cce0b50e41959e72ce45b2b03b6a30ed35c179d1ee2e3a1ef0373882525276c0",
+          "ram_sha256": "c215be0f6e9a3979499d74dc53bab00f71edfd582c3a70611ecdd597614c2975",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "step": 41,
+            "actor": [
+              1,
+              1
+            ]
+          },
+          "capture_sha256": "cce0b50e41959e72ce45b2b03b6a30ed35c179d1ee2e3a1ef0373882525276c0",
+          "ram_sha256": "c215be0f6e9a3979499d74dc53bab00f71edfd582c3a70611ecdd597614c2975",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "masked-objects-0",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12414
+      },
+      "source_sha256": "1379965c4e2c34ec526acefbddc25b17ec3b8959c115bb1c12df99330bc0125c",
+      "binary_sha256": "d440563a05d25010e1d9f3f53299fa9eaa93e07c27d4dfad634359f0232655c6",
+      "symbols_sha256": "1c8189ee2c741f7ca869cc450ecb06ebc2fcbd8c8bb8c7cdd4b8496d4de8fea4",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "scene": 0
+          },
+          "capture_sha256": "99090fbfddd307255ff8b98fe56ecac035a898b73c6efb24559ec831597071f2",
+          "ram_sha256": "8eddf101268c8207ea42abe20661a65d360bc7006ef9ac6ae23e9d0d37527607",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "scene": 0
+          },
+          "capture_sha256": "99090fbfddd307255ff8b98fe56ecac035a898b73c6efb24559ec831597071f2",
+          "ram_sha256": "8eddf101268c8207ea42abe20661a65d360bc7006ef9ac6ae23e9d0d37527607",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "masked-objects-2",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12414
+      },
+      "source_sha256": "1ac14d7b558760c076ef50a82fa39a3e581d4b5316e5df52e38465df71695396",
+      "binary_sha256": "459ce6a388fdd276f15fbeaa87432cdf3ee557718150a627e92decf91120c0c0",
+      "symbols_sha256": "1c8189ee2c741f7ca869cc450ecb06ebc2fcbd8c8bb8c7cdd4b8496d4de8fea4",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "scene": 2
+          },
+          "capture_sha256": "3439f52c9f33b9172193213e5dc692e517d296b8725daa3ee648762e6d01d466",
+          "ram_sha256": "eb54cb6083cac7f4209921dfe61f02ae04fcad229b916c190d17b2e1d19a61eb",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "scene": 2
+          },
+          "capture_sha256": "3439f52c9f33b9172193213e5dc692e517d296b8725daa3ee648762e6d01d466",
+          "ram_sha256": "eb54cb6083cac7f4209921dfe61f02ae04fcad229b916c190d17b2e1d19a61eb",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "masked-objects-3",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12414
+      },
+      "source_sha256": "cd16cf6bfaa276a35c7a5779da6826ec6b4b23cde04c4107552d1a89f90cb976",
+      "binary_sha256": "f12dadb8649d714e814b823784c94899ceee54d4e4b86e4c958b0eed0618db6b",
+      "symbols_sha256": "1c8189ee2c741f7ca869cc450ecb06ebc2fcbd8c8bb8c7cdd4b8496d4de8fea4",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "scene": 3
+          },
+          "capture_sha256": "1c4181ef9c7d11a43f8e40b67c8cca27280460c7851ef9a7b2cee4ea25a0b916",
+          "ram_sha256": "3e774a600626f6431973eec83b31192bc749de834d8d7f58b375718985a93197",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "scene": 3
+          },
+          "capture_sha256": "1c4181ef9c7d11a43f8e40b67c8cca27280460c7851ef9a7b2cee4ea25a0b916",
+          "ram_sha256": "3e774a600626f6431973eec83b31192bc749de834d8d7f58b375718985a93197",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "masked-objects-8",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12414
+      },
+      "source_sha256": "f026c8ef092b2c3eb955917875f391ec62245ab12ed2f6093ab4ab7e29edfe38",
+      "binary_sha256": "f3a027586a44d3ad5766ff9b72c8609b5d4f73726a09c544616a09d007020361",
+      "symbols_sha256": "1c8189ee2c741f7ca869cc450ecb06ebc2fcbd8c8bb8c7cdd4b8496d4de8fea4",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "scene": 8
+          },
+          "capture_sha256": "eef19468a00fa82ae526912069df4c8e42f5ae635a95939a6be3d382f8e0b974",
+          "ram_sha256": "1894a4a74f229167a0971e46c05fa1ae8b034752af2896ed482c4c355e82d2d7",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "scene": 8
+          },
+          "capture_sha256": "eef19468a00fa82ae526912069df4c8e42f5ae635a95939a6be3d382f8e0b974",
+          "ram_sha256": "1894a4a74f229167a0971e46c05fa1ae8b034752af2896ed482c4c355e82d2d7",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "masked-objects-9",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12414
+      },
+      "source_sha256": "019383eecdfec6c43dfc9c63fd2b3610236536f06d6bd3d74a4d871734325ab6",
+      "binary_sha256": "c808a1c32703e6867b50f4ba82804df1b011824c4170745bc81df8b7b9150aba",
+      "symbols_sha256": "1c8189ee2c741f7ca869cc450ecb06ebc2fcbd8c8bb8c7cdd4b8496d4de8fea4",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "scene": 9
+          },
+          "capture_sha256": "2a6a378dbadb2f73c51faf50c420b538525f9427f37bfca5d3633fb5e827fa29",
+          "ram_sha256": "2c7abe2e39ed7c77742b1b1ed84c020034624585d671411e74f51e02543986c9",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "scene": 9
+          },
+          "capture_sha256": "2a6a378dbadb2f73c51faf50c420b538525f9427f37bfca5d3633fb5e827fa29",
+          "ram_sha256": "2c7abe2e39ed7c77742b1b1ed84c020034624585d671411e74f51e02543986c9",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "masked-objects-10",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12414
+      },
+      "source_sha256": "21cc7f3479692b9ce08cfb0a1de6e6b1aaf30dec7606b7056cdc5dd0758e2f7e",
+      "binary_sha256": "fa690a9ef0b3f6647d73048a2827e9bf37c569436adda473e0708c24f40bba82",
+      "symbols_sha256": "1c8189ee2c741f7ca869cc450ecb06ebc2fcbd8c8bb8c7cdd4b8496d4de8fea4",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "scene": 10
+          },
+          "capture_sha256": "fa6b4a0a2f649c232b21eaaa7aeab83c9210bf9abff2947a07b3d6bd7a7f4bb1",
+          "ram_sha256": "530aef0b8a13638841be1b291bba29c5598279c939999fed9354830d2adf9a97",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "scene": 10
+          },
+          "capture_sha256": "fa6b4a0a2f649c232b21eaaa7aeab83c9210bf9abff2947a07b3d6bd7a7f4bb1",
+          "ram_sha256": "530aef0b8a13638841be1b291bba29c5598279c939999fed9354830d2adf9a97",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    },
+    {
+      "name": "masked-objects-11",
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12414
+      },
+      "source_sha256": "47e20f8ed4d166e3530d461989c4c0f1892bf857e5380b1a87eb039cc502338c",
+      "binary_sha256": "9b52ba1aeecc821191b5e6a61a351ef2a15ec9b29d555e6d3d06259a82533f2e",
+      "symbols_sha256": "1c8189ee2c741f7ca869cc450ecb06ebc2fcbd8c8bb8c7cdd4b8496d4de8fea4",
+      "captures": [
+        {
+          "delay": "0.5",
+          "state": {
+            "scene": 11
+          },
+          "capture_sha256": "2ba417bca0cd534bd43616bd1bd4c1fc39b7c6b830a4a60ec2df334e6485fb8d",
+          "ram_sha256": "1a72e11b6e134d67a9d43f8d865b4ee48eb7c73cbcc41a7f1ffc4d7a6a566190",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        },
+        {
+          "delay": "1.0",
+          "state": {
+            "scene": 11
+          },
+          "capture_sha256": "2ba417bca0cd534bd43616bd1bd4c1fc39b7c6b830a4a60ec2df334e6485fb8d",
+          "ram_sha256": "1a72e11b6e134d67a9d43f8d865b4ee48eb7c73cbcc41a7f1ffc4d7a6a566190",
+          "size": [
+            512,
+            192
+          ],
+          "colours": [
+            [
+              0,
+              31,
+              0
+            ],
+            [
+              46,
+              188,
+              36
+            ]
+          ],
+          "ram_matches": true,
+          "pixel_mismatches": 0
+        }
+      ]
+    }
+  ],
+  "unreachable": {
+    "returncode": 0,
+    "snapshot_exists": false,
+    "capture_exists": true
+  },
+  "evidence_run": "build/display-coco2/spec-3b745cba441b",
+  "validation": {
+    "scoped_tests": 13,
+    "coverage_percent": 94.16,
+    "ruff": "passed",
+    "markdownlint": "passed"
+  }
+}
