@@ -52,5 +52,17 @@
     "title": "The Rainbow - Text Searchable Index",
     "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20-%20Text%20Searchable%20Index/The%20Rainbow%20-%20Text%20Searchable%20Index.pdf",
     "sha256": "59765bca1b2f87e01556b01a27d6fa3f3e4cc48140fc289f81bf070b49ea2b5b"
+  },
+  {
+    "id": "rainbow-1989-06",
+    "title": "The Rainbow Vol. 08 No. 11 - June 1989",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2008%20No.%2011%20-%20June%201989.pdf",
+    "sha256": "66e7839d7e12be05185314161e7267b98965b7c562c4a39a36b8824cc101fa1e"
+  },
+  {
+    "id": "hotcoco-1985-06",
+    "title": "HotCoCo-1985-06",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Hot%20Coco%20(OCR)/HotCoCo-1985-06.pdf",
+    "sha256": "9aa0d517b1afa1d6f834e9a4763f61ec8ab34b5b9e82548a083ef07443b1403b"
   }
 ]

@@ -2,7 +2,7 @@
 
 Load this guide when choosing techniques or references for a game or demo.
 Use [reference lookup](references.md) to obtain and inspect the selected pages.
-This guide records a first research batch, not a complete survey or tested engine.
+This guide records selected research batches, not a complete survey or tested engine.
 
 Stacey requested equal attention to CoCo 1, CoCo 2, and CoCo 3. Select by
 reusable techniques rather than a preferred game genre. Assembly remains the
@@ -19,10 +19,12 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Banked assets with interrupts on CoCo 3 | Tepolt, `tepolt-coco3`, PDF 59–60 | Examined page images. Keep interrupt tables and handlers accessible. |
 | Match CoCo 2 artifact colours | Tandy, `coco2-service`, PDF 31–33 | Examined hardware discussion. Specific NTSC models, not all CoCo 2 variants. |
 | Choose CoCo 3 colours for a display | Tandy, `coco3-service`, PDF 17 | Examined palette tables. RGB and composite encodings differ; PAL caveat applies. |
+| Sound alongside animation and controls | [Sound research](sound-research.md) | Examined hardware for all three models; original CoCo 1 scheduling experiment. |
 | Find more magazine techniques | `rainbow-index` | Discovery only. Find the issue, then inspect the actual article and corrections. |
 
-These are source-backed reading recommendations. None of the newly selected
-techniques has been implemented or benchmarked in this research batch.
+These are source-backed reading recommendations. The graphics techniques below
+remain examined, not reproduced. The sound guide links a bounded original
+experiment and reports its emulator evidence separately.
 
 ## CoCo 1 and CoCo 2 animation
 

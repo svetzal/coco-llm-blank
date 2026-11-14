@@ -92,6 +92,25 @@ No new game technique is reproduced or benchmarked yet. Shared CoCo 1/2 articles
 need separate compatibility checks. The specific CoCo 2 service manual does
 not establish every board revision.
 
+### Sound research pass
+
+Examined sound/input hardware in the CoCo 1 technical manual, the named CoCo 2
+NTSC service manual, and the CoCo 3 service manual. Read the six-voice Rainbow
+player and sampled Hot CoCo's Sound/Speech cartridge review. Added these two
+issues to the download manifest. The [sound guide](guidance/sound-research.md)
+records exact pages, narrower uses, source inconsistencies, and untested claims.
+Converted Rainbow PDF 77–78 and Hot CoCo PDF 75. Their exported page images
+retain the source content; listing OCR still needs comparison with those images.
+
+An original CoCo 1 experiment interleaves DAC samples, marker movement, and
+fire-button reads. XRoar checks exact sample sequences, framebuffer contents,
+press/hold/release fixtures, and an unreachable checkpoint. Its ordinary sample
+gap is 11 instructions; frame work increases that to 30. A separate one-second
+run completes 60 marker updates and bounds throughput at 15,360–15,616 samples.
+This establishes cooperative progress, not constant timing or audible quality.
+The fixture is not physical-input evidence. CoCo 2/3 runtime reproduction,
+CoCo 3 timer behaviour, and physical/display/audio checks remain open.
+
 ### Next research passes
 
 1. Broaden magazine coverage to Hot CoCo, Color Computer Magazine, Undercolor,
