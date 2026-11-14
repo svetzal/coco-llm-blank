@@ -13,7 +13,8 @@ RAM, video standard, or firmware from whatever happens to be installed.
 | XRoar | `xroar` | CoCo machine emulation |
 
 These are host executables, separate from the uv Python environment. Check
-availability with `uv run python scripts/doctor.py`.
+availability with `uv run python scripts/doctor.py`. For a directly launched
+emulator demo, use `--profile demo`; this treats ToolShed as optional.
 The check reports paths, returns nonzero for missing executables, and does not
 launch XRoar or modify a disk. Set `LWASM`, `LWLINK`, `DECB`, or `XROAR`
 to a particular executable path when needed. Use those same resolved paths in

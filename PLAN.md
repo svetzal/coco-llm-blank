@@ -27,6 +27,18 @@ ignored local storage. Stacey requested public publication as
 - Native-tool guidance and discovery cover LWTOOLS, ToolShed, and XRoar.
   Stacey selected assembly only; C compilation is outside the baseline.
 
+## Beginner onboarding priorities
+
+1. Keep the starting prompt short. README now asks only for the repository,
+   agent-led setup, and the project idea. AGENTS.md owns the setup procedure.
+2. Reduce setup work. `scripts/bootstrap.sh` prepares uv, Python, and project
+   notes. The demo check no longer treats optional disk tools as blockers.
+   Native-tool installation remains the next missing part of this path.
+3. Establish platform evidence. GitHub Actions now defines Ubuntu and Apple
+   Silicon macOS jobs for locked setup, specifications, real Docling conversion,
+   and project initialization. The first remote results are still pending.
+   These jobs do not prove native emulator installation or a working game.
+
 ## Next increments
 
 1. Evaluate Docling output across assembly listings, tables, and diagrams before

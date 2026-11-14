@@ -19,29 +19,10 @@ Copy this prompt into your agent. Replace the last line with your own idea,
 or keep it for a first project:
 
 ```text
-Help me make a Tandy Color Computer project using this starter:
-https://github.com/svetzal/coco-llm-blank
+Start a new project from https://github.com/svetzal/coco-llm-blank.
+Read its AGENTS.md and handle setup for me. I'm a beginner.
 
-I'm a beginner. Handle cloning, setup, building, and testing for me.
-Create a new project folder without changing my existing projects.
-Read AGENTS.md in the cloned repository before starting work.
-
-Check my computer and install the tools this project needs.
-Use the repository's setup scripts and guidance.
-Ask me only for choices or system permissions you cannot handle yourself.
-Explain those questions in plain language.
-
-Download the relevant reference books and firmware from the archive.
-Convert only the reference pages needed for this project at first.
-Use those references to check hardware facts before writing code.
-Keep downloaded books and firmware out of Git.
-
-Build a small working version first. Test it in XRoar.
-Give me an easy way to launch it again, and explain what you tested.
-Do not call it finished just because it assembles.
-
-My idea: a CoCo 1 animation with bouncing lines and a ten-line trail.
-Use the 256x192 two-colour display.
+Build a CoCo 1 animation with bouncing lines and a ten-line trail.
 ```
 
 The repository address is enough for your agent to find the starter. You do not

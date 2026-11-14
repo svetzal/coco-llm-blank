@@ -4,6 +4,26 @@ Use this guide if you want to run setup yourself or diagnose a setup problem.
 For an agent-led start, use the [README](../README.md).
 Run all commands from the project folder.
 
+## Agent setup entry point
+
+For a new project, the agent can run:
+
+```sh
+sh scripts/bootstrap.sh coco1
+```
+
+Use the selected machine target. This installs missing uv through Homebrew when
+available, or through the [official uv installer](https://docs.astral.sh/uv/getting-started/installation/).
+Use the printed uv path if the current agent cannot find `uv` after installation.
+It prepares the locked Python environment and preserves existing project notes.
+It does not download books, firmware, or conversion models.
+
+The final check requires the assembler, linker, and emulator. Missing tools
+produce a nonzero exit and installation guidance. The agent must finish native
+tool installation using [toolchain.md](toolchain.md), then rerun the check.
+ToolShed is optional for directly launched demos; disk projects still need it.
+This entry point does not yet install native tools automatically.
+
 ## Setup
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:

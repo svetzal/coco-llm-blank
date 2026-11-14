@@ -4,6 +4,27 @@ This file is the agent entry point. No agent skills or vendor-specific loader
 are required. Follow the links for the current task instead of loading every
 reference. Paths in commands are relative to the repository root.
 
+## Take responsibility for the first run
+
+A beginner can arrive with only the repository URL and an idea. Handle setup
+and implementation; do not ask them to translate tool errors into instructions.
+Use a new folder for a new project and preserve existing projects.
+
+Read [development practice](guidance/development.md) to establish the target.
+Run `sh scripts/bootstrap.sh coco1` for a CoCo 1 project, or use the chosen target.
+This prepares Python and project notes, then checks tools for a direct demo.
+If tools are missing, read [toolchain](guidance/toolchain.md), install what the
+host needs, and rerun the check. Ask only for unresolved choices or permissions
+that require the owner. Explain those questions without assuming tool knowledge.
+
+Complete `local/PROJECT.md` from the request and documented defaults. Download
+firmware with `--roms-only`, then convert only reference pages needed for the
+first feature. Build a small complete increment and test it in XRoar. Provide
+a reusable launch command or script and explain how to run it in plain language.
+Separate build, runtime, and visual evidence. Never call a build alone a working
+project. Keep downloads outside Git and do not publish the owner's project
+unless requested.
+
 ## Verify CoCo specifics before using them
 
 Model memory is a search hint, not evidence about CoCo hardware. Before writing

@@ -57,3 +57,19 @@ class DescribeToolchainDoctor:
 
         assert result.returncode == 0
         assert str(tool_directory / "xroar") in result.stdout
+
+    def should_not_require_disk_tools_for_a_direct_demo(
+        self, tool_directory: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        (tool_directory / "decb").unlink()
+
+        assert doctor.main(["--profile", "demo"]) == 0
+        assert "Optional for this demo" in capsys.readouterr().out
+
+    def should_explain_missing_required_demo_tools(
+        self, tool_directory: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        (tool_directory / "lwasm").unlink()
+
+        assert doctor.main(["--profile", "demo"]) == 1
+        assert "Setup is incomplete. Ask your agent to install: lwasm" in capsys.readouterr().out
