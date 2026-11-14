@@ -4,6 +4,9 @@ Load this file when obtaining, converting, or searching reference documents.
 For available local sources and page coverage, read [the index](../local/INDEX.md)
 after setup. A missing index means setup has not run.
 
+For game and demo techniques, start with [the research guide](game-research.md).
+It separates examined sources from discovery leads and records machine limits.
+
 ## Choose a source before making a hardware claim
 
 Reference lookup is required before relying on a CoCo-specific fact. A familiar

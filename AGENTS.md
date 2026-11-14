@@ -58,6 +58,7 @@ before choosing a mode or writing display setup.
   Ask for the target only when it is unspecified. Use the documented emulator
   defaults in [development practice](guidance/development.md#establish-the-contract)
   where applicable, and record them as defaults rather than owner choices.
+- Choosing game or demo techniques: read [game research](guidance/game-research.md).
 - Writing or testing CoCo code: read [development practice](guidance/development.md).
 - Building binaries, disks, or emulator tests: read [toolchain](guidance/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read

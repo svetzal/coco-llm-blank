@@ -41,6 +41,78 @@ ignored local storage. Stacey requested public publication as
    The native installer and first-screen memory check also passed in a clean
    Ubuntu 24.04 container. Visual and physical-machine checks remain separate.
 
+## Game and demo research
+
+Stacey requested a methodical archive survey, with equal attention to CoCo 1,
+CoCo 2, and CoCo 3. No preferred games or genres define the selection.
+[The research guide](guidance/game-research.md) holds the findings and source
+judgements. Update these living documents as research proceeds.
+
+### Method
+
+1. Map books, magazine indexes, manuals, datasheets, and published source.
+   Use colorcomputerarchive.com as the primary collection.
+2. Search by technique and synonyms. Include animation, scrolling, collision,
+   controls, audio, timing, memory, asset formats, and game-state design.
+3. Download promising sources into ignored local storage. Record the exact
+   archive URL, SHA-256, edition or issue, and PDF page count.
+4. Read the actual section, including figures, listings, and continuation pages.
+   Check magazine corrections. A contents entry remains a discovery lead.
+5. Record machine, RAM, video standard, display path, language, and dependencies
+   where the source establishes them. Mark missing details as unresolved.
+6. Select sources that explain a reusable technique, expose a useful tradeoff,
+   or resolve a hardware question. Keep reasons for exclusions and narrower uses.
+7. Add selected sources to the manifest and page-level navigation guide.
+   Test selected-page conversion. Check difficult output against page images.
+8. Reproduce a small example before promoting a technique to implementation
+   guidance. Record build, runtime, visual, and hardware evidence separately.
+
+For each technique, distinguish **discovered**, **examined**, and **reproduced**.
+Examined means the relevant source was read; it does not mean its code works.
+Do not rank by nostalgia, impressive titles, or the number of pages collected.
+A BASIC tutorial can explain an algorithm without being a usable assembly driver.
+
+### First batch
+
+Archive directories mapped: books, magazines, articles, hardware manuals,
+datasheets, and programming source. Nine PDFs downloaded locally: two books,
+two service manuals, a datasheet, a magazine index, and three Rainbow issues.
+Six selected sources added to the manifest. Others remain optional background,
+rejected matches, or unexamined candidates in the research guide.
+
+Examined topics include compact object storage, prepared-frame animation,
+CoCo 2 artifact circuitry, CoCo 3 scrolling, palette interpretation, and
+interrupt visibility during memory remapping. Thirteen selected pages were
+converted. CoCo 3 manual pages 16–18 have empty
+OCR, and the exported page-17 PNG is blank. Direct PDFium rendering is readable.
+Tepolt page 59 has damaged text without a sparse flag. No new technique is
+reproduced or benchmarked yet. Shared CoCo 1/2 articles need separate
+compatibility checks;
+the specific CoCo 2 service manual does not establish every board revision.
+
+### Next research passes
+
+First resolve the CoCo 3 manual rendering discrepancy, or retain the documented
+direct-render fallback. Do not describe its blank Docling outputs as usable.
+
+1. Broaden magazine coverage to Hot CoCo, Color Computer Magazine, Undercolor,
+   and later community publications. Read original articles and their errata,
+   not only Rainbow's index. Sample early and late periods for each machine.
+2. Investigate sound alongside animation and controls. Distinguish the stock
+   DAC, one-bit output, cassette audio, and expansion hardware. Check timing
+   costs and interference with input rather than assuming simultaneous playback.
+3. Examine reusable rendering and game techniques: masked objects, background
+   restoration, collision, tile maps, scrolling, text/adventure state, and
+   deterministic movement. Compare memory and frame-time costs on each target.
+4. Inspect published game/demo source and companion magazine disks. Record
+   licenses separately from archive availability. Do not redistribute code or
+   assets merely because they are downloadable.
+5. Reproduce selected small techniques with original implementations and tests.
+   Choose examples across all three machines before claiming broad coverage.
+
+Each pass should produce a few examined, usable references rather than a large
+unread library. Review topic and machine gaps after every pass.
+
 ## Next increments
 
 1. Evaluate Docling output across assembly listings, tables, and diagrams before
@@ -53,7 +125,8 @@ ignored local storage. Stacey requested public publication as
 4. Verify on clean Linux and macOS hosts. The current environment targets
    Apple Silicon macOS and Linux; Intel Mac support needs separate dependency
    compatibility work.
-5. Test the beginner prompt with Claude Code in an isolated project.
+5. Extend beginner trials after addressing observed failures. The first Claude
+   Code trial built a demo and passed runtime checks; visual evidence is incomplete.
    Leave Stacey's `coco-lines` project untouched.
 
 ## Acceptance evidence
@@ -94,7 +167,7 @@ column labels. Reference guidance identifies these limitations and page ranges.
 
 LWTOOLS and XRoar are discoverable on this Mac. ToolShed's `decb` is not on PATH;
 the original project uses an explicit private path that this template does not
-inherit. Full-book quality and clean Linux execution remain unverified.
+inherit. Full-book conversion quality remains unverified.
 
 The original first-screen example passes complete framebuffer checks and an
 unreachable-checkpoint negative control in XRoar on macOS and Ubuntu 24.04.
