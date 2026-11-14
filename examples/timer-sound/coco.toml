@@ -1,0 +1,44 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# NTSC CoCo 3, 128 KiB, 6809 at the slow clock. The two tables differ only in
+# the emulated GIME revision; the first is the default for run.
+[targets.coco3-1986]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"
+
+[targets.coco3-1987]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1987"
+ram_kib = 128
+extended = "coco3.rom"
+
+[memory]
+at = { start = 0x3000 }
+below = { state_end = 0x7E00 }
+
+# The plain build is cooperative with a light redraw.
+[variants.heavy]
+defines = ["HEAVY"]
+
+[variants.timer]
+defines = ["TIMER"]
+
+[variants.timer-heavy]
+defines = ["TIMER", "HEAVY"]
+
+[check]
+checkpoint = "frame_ready"   # reached after each completed redraw
+frames = [1, 2, 3]
+unreachable = "state"        # a data label: executing it is a fault
+# The 128 KiB snapshot holds executive pages $38-$3F in its upper 64 KiB.
+screen = 0x10400
+emulated_seconds = 8

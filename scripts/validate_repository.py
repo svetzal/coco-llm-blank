@@ -12,7 +12,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 # name: (coverage targets; None means no coverage gate, prerequisites/heavy reason)
 SCOPES = {
-    "root": (("scripts",), "full integrations, Docling models, native tools/all ROM profiles"),
+    "root": (
+        ("scripts", "examples"),
+        "full integrations, Docling models, native tools/all ROM profiles",
+    ),
     "animation-cadence": (("experiments/animation-cadence",), "private XRoar download/build, ROMs"),
     "asset-loading": (("loading",), "native tools, CoCo 1/2 ROMs, headless execution"),
     "assets": (("prepare",), ""),
@@ -23,6 +26,10 @@ SCOPES = {
     ),
     "clean-animation": (("experiments/clean-animation",), "private XRoar download/build, ROMs"),
     "clean-animation-coco3": (("experiments/clean-animation-coco3",), "XRoar build, CoCo 3 ROM"),
+    "collect-room-journey": (
+        ("experiments/collect-room-journey",),
+        "pinned XRoar download and C build, CoCo 1/2 ROMs",
+    ),
     "collect-room-output": (
         ("experiments/collect-room-output",),
         "cached COLLECT_ARCHIVE, C build, CoCo 1/2 ROMs",
@@ -37,20 +44,21 @@ SCOPES = {
     "macos-onboarding": (None, "installed lwasm; current-host boundary tests only"),
     "selective-redraw": (("experiments/selective-redraw",), "native tools, CoCo 3 ROM"),
     "sound-coco2": (("experiments/sound-coco2",), "prepared private XRoar, CoCo 2 ROMs"),
+    "sound-throughput": (("experiments/sound-throughput",), "native tools, CoCo 1/3 ROMs"),
     "sudo-policy": (None, ""),
 }
 
 
 def commands(scope: str, output: Path) -> list[list[str]]:
     """Use each scope's coverage configuration without merging collections."""
-    path = "scripts" if scope == "root" else f"experiments/{scope}"
-    config = ROOT / path / "coverage.ini"
+    paths = ["scripts", "examples"] if scope == "root" else [f"experiments/{scope}"]
+    config = ROOT / paths[0] / "coverage.ini"
     targets = SCOPES[scope][0]
     pytest = [
         sys.executable,
         "-m",
         "pytest",
-        path,
+        *paths,
         "-ra",
         "-p",
         "no:cacheprovider",
@@ -67,8 +75,8 @@ def commands(scope: str, output: Path) -> list[list[str]]:
         ]
     return [
         pytest,
-        [sys.executable, "-m", "ruff", "check", path],
-        [sys.executable, "-m", "ruff", "format", "--check", path],
+        [sys.executable, "-m", "ruff", "check", *paths],
+        [sys.executable, "-m", "ruff", "format", "--check", *paths],
     ]
 
 

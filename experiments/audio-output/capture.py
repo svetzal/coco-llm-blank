@@ -15,9 +15,12 @@ from build_capture import verify_build
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
+from coco import load_expected
 from native import tool_path
 from roms import verify_installed
-from sound_slots import verify_ram
+
+ORACLE = ROOT / "examples/sound-slots/expected.py"
+SOUND_SLOTS = load_expected(ORACLE.parent)
 
 RATE = 44100
 TICK_RATE = 14318180
@@ -200,7 +203,7 @@ def run_case(xroar: Path, output: Path, target: str, mode: str) -> dict:
         "runner_sha256": digest(Path(__file__)),
         "instrumentation_sha256": digest(Path(__file__).with_name("instrument.py")),
         "verified_build": provenance,
-        "ram_oracle_sha256": digest(ROOT / "scripts/sound_slots.py"),
+        "ram_oracle_sha256": digest(ORACLE),
         "gain_db": -3,
         "rate": RATE,
         "format": "S16_LE mono",
@@ -217,7 +220,7 @@ def run_case(xroar: Path, output: Path, target: str, mode: str) -> dict:
     ram = (output / "final.ram").read_bytes()
     if len(ram) != (32768 if target == "coco1" else 65536):
         raise ValueError("RAM size mismatch")
-    verify_ram(ram[:32768], syms, 64, mode == "scripted")
+    SOUND_SLOTS.verify_ram(ram[:32768], syms, 64, "scripted" if mode == "scripted" else "")
     raw = (output / "output.pcm").read_bytes()
     # 32 phase steps per low-pitch cycle; 16 at doubled pitch. Inner loop
     # costs 57 slow cycles, plus amortized foreground work. Independent of PCM.

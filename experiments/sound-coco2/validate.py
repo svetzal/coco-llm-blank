@@ -12,9 +12,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
+from coco import load_expected
 from native import tool_path
 from roms import verify_installed
-from sound_slots import expected_samples, verify_ram
+
+ORACLE = ROOT / "examples/sound-slots/expected.py"
+SOUND_SLOTS = load_expected(ORACLE.parent)
 
 HERE = Path(__file__).resolve().parent
 FRAMES = (1, 16, 17, 32, 33, 63, 64)
@@ -118,9 +121,12 @@ def analyze(
     assert not negative, "unreachable trap fired"
     assert len(ram) == 65536, "missing or truncated RAM"
     # Independent existing phase/button/framebuffer oracle, not assembly table data.
-    verify_ram(ram[:32768], syms, frame, scripted)
+    variant = "scripted" if scripted else ""
+    SOUND_SLOTS.verify_ram(ram[:32768], syms, frame, variant)
     records = samples(log, syms["sample"])
-    assert [v for _, v in records] == expected_samples(scripted)[: frame * 256], "DAC sequence"
+    assert [v for _, v in records] == SOUND_SLOTS.expected_samples(variant)[: frame * 256], (
+        "DAC sequence"
+    )
     gaps = [(b[0] - a[0]) & 0xFFFFFFFF for a, b in itertools.pairwise(records)]
     assert all(g > 0 and g % 16 == 0 for g in gaps), "tick intervals"
     return {
@@ -186,7 +192,7 @@ def run(xroar: Path, output: Path) -> dict:
         "xroar_sha256": digest(xroar),
         "assembly_sha256": digest(HERE / "main.asm"),
         "runner_sha256": digest(Path(__file__)),
-        "oracle_sha256": digest(ROOT / "scripts/sound_slots.py"),
+        "oracle_sha256": digest(ORACLE),
         "lock_sha256": digest(ROOT / "uv.lock"),
     }
     (output / "contract.json").write_text(json.dumps(provenance, indent=2) + "\n")

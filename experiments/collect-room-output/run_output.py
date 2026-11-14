@@ -10,9 +10,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from collect_room import audio_evidence, build, capture_command, journey, verify_ram
+sys.path.insert(0, str(ROOT / "experiments/collect-room-journey"))
+from coco import Host, build, load_expected, load_project
+from journey import EXAMPLE, audio_evidence, capture_command
 from measure_output import audio_measure, rows, timeline, video_measure
 from prepare_output import digest, verify
+
+MODEL = load_expected(EXAMPLE)
 
 
 def write(path: Path, value: dict) -> None:
@@ -28,7 +32,7 @@ def inspect(output: Path, labels: dict, cases: list) -> dict:
     if [(r[0], r[1]) for r in keys] != list(enumerate(expected)):
         raise ValueError("Keyboard injection sequence missing or different")
     for i, (key, state) in enumerate(cases):
-        verify_ram((output / f"frame-{i}.ram").read_bytes(), labels, key, state)
+        MODEL.verify_journey_frame((output / f"frame-{i}.ram").read_bytes(), labels, key, state)
     result["routing"] = audio_evidence(log, labels, 5)
     result["video"] = video_measure(output / "output.rgb", log, cases)
     result["audio"] = audio_measure(raw, log, cases)
@@ -40,11 +44,12 @@ def inspect(output: Path, labels: dict, cases: list) -> dict:
 
 def execute(xroar: Path, output: Path, target: str, control: str) -> dict:
     provenance = verify(xroar)
-    binary, labels = build(output)
-    cases = journey()[:43]
+    built = build(load_project(EXAMPLE), Host())
+    binary, labels = built.binary, built.symbols
+    cases = MODEL.journey()[:43]
     (output / "events.txt").write_text("\n".join(k for k, _ in cases) + "\n")
     write(output / "labels.json", labels)
-    command = capture_command(target, xroar, binary, labels, output, len(cases), False)
+    command = capture_command(Host(), target, xroar, binary, labels, output, len(cases), False)
     command[command.index("-no-ratelimit")] = "-ratelimit"
     command += [
         "-tv-input",
@@ -78,7 +83,11 @@ def execute(xroar: Path, output: Path, target: str, control: str) -> dict:
     if control == "video":
         env["BROKEN_VIDEO"] = "1"
     inputs = [
-        "scripts/collect_room.py",
+        "scripts/coco.py",
+        "examples/collect-room/coco.toml",
+        "examples/collect-room/expected.py",
+        "examples/collect-room/assets.py",
+        "experiments/collect-room-journey/journey.py",
         "examples/collect-room/main.asm",
         "examples/collect-room/journey.txt",
         "examples/collect-room/letters.json",
@@ -100,7 +109,7 @@ def execute(xroar: Path, output: Path, target: str, control: str) -> dict:
             "input_sha256": {p: digest(ROOT / p) for p in inputs},
             "rom_sha256": {p.name: digest(p) for p in rom_paths},
             "binary_sha256": digest(binary),
-            "symbols_sha256": digest(output / "game.sym"),
+            "symbols_sha256": digest(binary.with_suffix(".sym")),
             "checkpoints": 43,
             "capture_environment": {
                 k: v

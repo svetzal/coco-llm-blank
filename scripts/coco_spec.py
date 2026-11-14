@@ -82,7 +82,7 @@ def emulated(ram: bytes | None = None, unreachable: bool = False, trace: str = "
     host.executable.side_effect = lambda name: f"/tools/{name}"
     host.firmware.side_effect = lambda profile, names: {n: Path("/roms") / n for n in names}
 
-    def run(command, log, timeout, cwd=None):
+    def run(command, log, timeout, cwd=None, env=None):
         log.write_text(trace)
         if "--6809" in command:
             symbols = next(arg for arg in command if arg.startswith("--symbol-dump="))
@@ -375,6 +375,7 @@ class DescribeCheck:
         record = coco.check_target(project, emulated(ram=bytes(32768), trace="a\nb\n"), "coco1")
 
         assert record["variants"]["fast"]["trace"] == {"lines": 2, "variant": "fast"}
+        assert "Trace (fast)" in "\n".join(coco.report(project, record))
         assert record["variants"]["main"]["screen_bytes_each"] == 0
 
 

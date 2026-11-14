@@ -142,11 +142,19 @@ class Host:
     def firmware(self, profile: str, names: tuple[str, ...]) -> dict[str, Path]:
         return verify_installed(ROOT, profile, names)
 
-    def run(self, command: list[str], log: Path, timeout: float, cwd: Path | None = None) -> None:
+    def run(
+        self,
+        command: list[str],
+        log: Path,
+        timeout: float,
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
+    ) -> None:
         with log.open("w") as stream:
             subprocess.run(
                 command,
                 cwd=cwd,
+                env=env,
                 stdout=stream,
                 stderr=subprocess.STDOUT,
                 check=True,
@@ -501,6 +509,9 @@ def report(project: Project, record: dict[str, object]) -> list[str]:
         lines.append(f"Memory: {detail}the model's state checks matched at every checkpoint.")
     else:
         lines.append(f"Memory: not compared; add {MODEL} with an independent model.")
+    for variant, evidence in record["variants"].items():
+        if "trace" in evidence:
+            lines.append(f"Trace ({variant}): the model accepted it: {evidence['trace']}")
     lines.append("Visual: not inspected. Use the run command and look at the XRoar window.")
     return lines
 

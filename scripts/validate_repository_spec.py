@@ -82,14 +82,15 @@ class DescribeValidationCLI:
         command = json.loads(records(checkout)[0].read_text())["command"]
         assert "-m" not in command[3:]
         assert not any(arg.startswith("--ignore") for arg in command)
-        assert "--cov=scripts" in command
+        assert "--cov=scripts" in command and "--cov=examples" in command
+        assert command[3:5] == ["scripts", "examples"]
         assert f"--cov-config={checkout / 'pyproject.toml'}" in command
 
     def should_run_all_experiments_separately_when_opted_in(self, checkout):
         assert validation.main(["run", "all", "--heavy"]) == 0
 
         saved = records(checkout)
-        assert len(saved) == 19 * 3
+        assert len(saved) == 21 * 3
         assert "root" not in {p.parent.name for p in saved}
         commands = [json.loads(p.read_text())["command"] for p in saved if p.name == "1.json"]
         assert all(len([a for a in c if a.startswith("experiments/")]) == 1 for c in commands)

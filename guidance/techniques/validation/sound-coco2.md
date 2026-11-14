@@ -99,7 +99,7 @@ application updates. Screen `$0400–$1BFF`, guards `$03FF/$1C00`, code/state
 The runner rejects code/state reaching `$4000`. It initializes all state.
 
 The existing independently expressed Python phase, button and framebuffer
-oracle in `scripts/sound_slots.py` is reused unchanged. It computes every
+oracle in `examples/sound-slots/expected.py` is reused unchanged. It computes every
 expected sample, exact sample/frame counts, button and pitch, zero phase at
 block boundaries, marker position and all 6,144 framebuffer bytes. Expectations
 are not derived from captured RAM, output logs or assembly tables.

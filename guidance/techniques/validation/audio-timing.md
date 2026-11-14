@@ -303,7 +303,8 @@ configure DAC bits as outputs, and match the complete six-bit sample sequence.
 There must be more than 256 writes. Adjacent unsigned 32-bit tick differences
 must be positive multiples of 16. No interval is inferred at a window edge.
 The CoCo 1 snapshot checks size, framebuffer guards and marker. CoCo 3 reuses
-`timer_sound.verify_frame`, including completed-frame, phase and state checks.
+`verify_frame` from `examples/timer-sound/expected.py`, including
+completed-frame, phase and state checks.
 
 The NOP control must shift both minimum and maximum by two slow cycles. The
 masked maximum must exceed the unmodified heavy timer maximum by more than

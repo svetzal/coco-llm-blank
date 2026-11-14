@@ -14,9 +14,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
+from coco import load_expected
 from native import tool_path
 from roms import verify_installed
-from timer_sound import verify_frame
+
+verify_frame = load_expected(ROOT / "examples/timer-sound").verify_frame
 
 OUT = ROOT / "build/audio-timing-reproduction"
 SRC = ROOT / "local/research/audio-timing-reproduction"
@@ -248,7 +250,7 @@ def main() -> None:
                 xroar,
                 Path(lwasm),
                 ROOT / "uv.lock",
-                ROOT / "scripts/timer_sound.py",
+                ROOT / "examples/timer-sound/expected.py",
                 ROOT / "scripts/roms.py",
                 ROOT / "examples/sound-slots/main.asm",
                 ROOT / "examples/timer-sound/main.asm",

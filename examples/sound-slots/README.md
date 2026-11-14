@@ -13,10 +13,11 @@ This is a scheduling experiment, not a complete music engine or game.
 Use the starter's CoCo 1 setup first. From the repository root, run:
 
 ```sh
-uv run python scripts/sound_slots.py run
+uv run python scripts/coco.py run examples/sound-slots
 ```
 
-Close XRoar to stop it. The runner rebuilds before each launch.
+Close XRoar to stop it. The command rebuilds before each launch. Add
+`--variant scripted` to launch the test-only input fixture instead.
 The target is CoCo 1, NTSC, 32 KiB, normal-clock 6809, and direct DECB loading.
 It uses Color BASIC 1.1 and Extended Color BASIC 1.0 firmware.
 It does not return to BASIC or provide a disk loader.
@@ -65,15 +66,23 @@ Setup preserves unrelated PIA control fields.
 ## Repeat the checks
 
 ```sh
-uv run python scripts/sound_slots.py check
+uv run python scripts/coco.py check examples/sound-slots
+uv run python experiments/sound-throughput/throughput.py check
 ```
+
+[coco.toml](coco.toml) declares the machine, the checkpoint frames, the
+`scripted` variant and the trace. [expected.py](expected.py) is the
+independent phase, input and marker model, specified by
+[sound_slots_spec.py](sound_slots_spec.py). The second command is the
+one-second throughput measurement in
+[the sound-throughput experiment](../../experiments/sound-throughput/README.md).
 
 The check assembles two binaries: normal input and a test-only input fixture.
 Both run real 6809 code in XRoar with nonzero startup RAM.
 The fixture substitutes released/pressed input after the actual PIA read.
 It holds each value for sixteen frames. It does not simulate a physical button.
 
-The runner checks frames 1, 16, 17, 32, 33, 63, and 64.
+The check snapshots frames 1, 16, 17, 32, 33, 63, and 64.
 These cover movement, wrap, press, hold, and release. Each checkpoint checks
 all 6,144 screen bytes, framebuffer guards, sample count, pitch, and input state.
 An unreachable checkpoint must not create a snapshot.
@@ -82,7 +91,7 @@ For each binary, the instruction trace checks 16,384 consecutive DAC writes
 against an independent Python phase model. The trace also measures the number
 of instructions between writes. This is a work count, not a cycle count.
 
-A separate run stops one emulated second after the first sample checkpoint.
+A separate measurement stops one emulated second after the first sample checkpoint.
 It saves each completed frame and uses the last snapshot to bound throughput.
 The incomplete final frame accounts for the 256-sample uncertainty.
 Host acceleration changes test duration, not the selected CoCo clock.
@@ -94,9 +103,11 @@ Results on XRoar 1.12.1 on Apple Silicon macOS:
 - Normal input: 60 complete marker updates in one emulated second.
 - Normal input: 15,360–15,616 samples in that second.
 
-Generated binaries, symbols, RAM snapshots, traces, and `results.json` remain
-under ignored `build/sound-slots/`. Only the final checkpoint run's trace is
-retained for each binary. The runner stops on missing or inconsistent evidence.
+Generated binaries, symbols, RAM snapshots, traces, and `coco1-results.json`
+remain under ignored `build/sound-slots/`; the throughput result is in
+`build/sound-throughput/results.json`. Each checkpoint run keeps its own log;
+the frame-64 log holds the verified trace. The check stops on missing or
+inconsistent evidence.
 
 ## Limits
 

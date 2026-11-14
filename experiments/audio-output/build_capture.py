@@ -56,7 +56,7 @@ def verify_build(executable: Path) -> dict:
         "instrumentation_sha256": digest(HERE / "instrument.py"),
         "builder_sha256": digest(Path(__file__)),
         "configure": CONFIGURE,
-        "ram_oracle_sha256": digest(HERE.parents[1] / "scripts/sound_slots.py"),
+        "ram_oracle_sha256": digest(HERE.parents[1] / "examples/sound-slots/expected.py"),
     }
     if any(manifest.get(key) != value for key, value in expected.items()):
         raise ValueError("Build provenance mismatch")
@@ -83,7 +83,7 @@ def build(archive: Path, output: Path) -> Path:
         "executable_sha256": digest(executable),
         "instrumentation_sha256": digest(HERE / "instrument.py"),
         "builder_sha256": digest(Path(__file__)),
-        "ram_oracle_sha256": digest(HERE.parents[1] / "scripts/sound_slots.py"),
+        "ram_oracle_sha256": digest(HERE.parents[1] / "examples/sound-slots/expected.py"),
         "configure": CONFIGURE,
         "make": ["make", "-j4"],
         "source_sha256": {name: hashlib.sha256(data).hexdigest() for name, data in inputs.items()},

@@ -134,11 +134,12 @@ uv run --locked --no-sync python scripts/validate_repository.py run assets game-
 ```
 
 Each selection runs pytest, Ruff, and Ruff's format check in separate processes
-from the repository root. Root selects the complete `scripts` suite, including
-integrations, and requires `--heavy`. It preserves the full starter coverage
-gate rather than presenting a partial run as root validation. Experiment names
-select only that experiment. Coverage uses its `coverage.ini` where present,
-otherwise the root configuration with the documented module targets.
+from the repository root. Root selects the complete `scripts` and `examples`
+suites, including integrations, and requires `--heavy`. It preserves the full
+starter coverage gate rather than presenting a partial run as root validation.
+Experiment names select only that experiment. Coverage uses its `coverage.ini`
+where present, otherwise the root configuration with the documented module
+targets.
 
 The light experiment scopes are `assets`, `controls-collision`, `game-state`,
 `linux-onboarding`, and `sudo-policy`. The last two run host specifications with
@@ -166,6 +167,9 @@ pinned XRoar sources and compile private emulators. Native runs require the
 assembler, build tools, and verified ROMs for their documented machines.
 `macos-onboarding` requires installed `lwasm`; it checks current-host recovery
 with fixture firmware and a recording launcher, not clean-host installation.
+`collect-room-journey` downloads the pinned XRoar release, builds it with the
+example's keyboard and audio hooks, and requires CoCo 1/2 ROMs.
+`sound-throughput` requires native tools and CoCo 1/3 ROMs.
 `collect-room-output` builds a private emulator from `COLLECT_ARCHIVE` (default
 `local/research/audio-timing/xroar-1.12.1.tar.gz`) and requires CoCo 1/2 ROMs.
 `keyboard-controls` and `sound-coco2` require their prepared private emulator.

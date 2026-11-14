@@ -89,8 +89,8 @@ NTSC, 32 KiB, and normal-clock 6809. It masks interrupts and avoids analog axes.
 After the CoCo 1 setup, run from the repository root:
 
 ```sh
-uv run python scripts/sound_slots.py check
-uv run python scripts/sound_slots.py run
+uv run python scripts/coco.py check examples/sound-slots
+uv run python scripts/coco.py run examples/sound-slots
 ```
 
 The XRoar checks compare sample values, screen memory, and scripted button
@@ -141,9 +141,11 @@ a slow-clock 6809, and a fixed memory mapping.
 Read that example's setup and memory contract before running it:
 
 ```sh
-uv run python scripts/timer_sound.py check
-uv run python scripts/timer_sound.py run
-uv run python scripts/timer_sound.py run --heavy --revision 1987
+uv run python scripts/coco.py check examples/timer-sound
+uv run python experiments/sound-throughput/throughput.py check
+uv run python scripts/coco.py run examples/timer-sound --variant timer
+uv run python scripts/coco.py run examples/timer-sound --variant timer-heavy \
+  --target coco3-1987
 ```
 
 Under a full-screen clear, both tested GIME revisions retain their predicted

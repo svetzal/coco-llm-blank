@@ -14,6 +14,7 @@ The links below describe existing work; they do not claim a new validation run.
 
 | Task | Code and procedure | Validation report |
 | --- | --- | --- |
+| Play the collection game with injected keys | [collect-room-journey](collect-room-journey/README.md) | [Collect room evidence](../examples/collect-room/README.md) |
 | Check a collection-game output journey | [collect-room-output](collect-room-output/README.md) | [Evidence and limits](../guidance/techniques/validation/collect-room-output.md) |
 | Pack original artwork | [assets](assets/README.md) | [Evidence and limits](../guidance/techniques/validation/assets.md) |
 | Consume prepared artwork on CoCo 1/2 | [asset-loading](asset-loading/README.md) | [Evidence and limits](../guidance/techniques/validation/asset-loading.md) |
@@ -28,6 +29,7 @@ The links below describe existing work; they do not claim a new validation run.
 | Check CoCo 1/2 hidden-buffer publication | [clean-animation](clean-animation/README.md) | [Evidence and limits](../guidance/techniques/validation/clean-animation.md) |
 | Check native CoCo 3 hidden-buffer publication | [clean-animation-coco3](clean-animation-coco3/README.md) | [Evidence and limits](../guidance/techniques/validation/clean-animation-coco3.md) |
 | Measure modeled DAC write intervals | [audio-timing](audio-timing/) | [Evidence and limits](../guidance/techniques/validation/audio-timing.md) |
+| Measure sound throughput in one emulated second | [sound-throughput](sound-throughput/README.md) | [Timer-sound evidence](../examples/timer-sound/README.md) |
 | Check CoCo 2 sound scheduling | [sound-coco2](sound-coco2/README.md) | [Evidence and limits](../guidance/techniques/validation/sound-coco2.md) |
 | Capture XRoar mixer PCM | [audio-output](audio-output/README.md) | [Evidence and limits](../guidance/techniques/validation/audio-output.md) |
 | Check current-host macOS recovery | [macos-onboarding](macos-onboarding/) | [Evidence and limits](../guidance/starter/validation/macos-onboarding.md) |
@@ -40,9 +42,10 @@ Use the [validation command](../guidance/starter/python.md#repository-validation
 to list scopes and run selected suites separately. `root --heavy` runs the full
 starter suite; named experiments retain their own coverage and prerequisites.
 
-The root [pytest configuration](../pyproject.toml) selects `scripts/` and
-co-located `*_spec.py` files. A root `uv run pytest --cov` checks starter scripts
-and their integrations. It does not automatically collect `experiments/`.
+The root [pytest configuration](../pyproject.toml) selects `scripts/`,
+`examples/` and their co-located `*_spec.py` files. A root
+`uv run pytest --cov` checks starter scripts, the example models and their
+integrations. It does not automatically collect `experiments/`.
 Prepare the [complete starter validation environment](../guidance/starter/python.md#complete-starter-validation-environment)
 before that full run; selected-target setup alone is insufficient.
 

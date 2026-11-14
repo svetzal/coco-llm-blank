@@ -1,0 +1,38 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+prepare = "assets.py"   # writes assets.inc into the build folder first
+
+# NTSC machines with explicit 6809, 6847 VDG, keyboard layout and firmware.
+[targets.coco1]
+machine = "cocous"
+cpu = "6809"
+keyboard = "coco"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas11.rom"
+extended = "extbas10.rom"
+
+[targets.coco2]
+machine = "coco2bus"
+cpu = "6809"
+keyboard = "coco"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
+[memory]
+at = { start = 0x3000 }
+below = { program_end = 0x7E00 }   # the stack is reserved from $7E00
+
+# Without injected keys the game must stay on its title screen. The keyboard
+# journey, audio and mutation controls need an instrumented emulator; see
+# experiments/collect-room-journey.
+[check]
+checkpoint = "frame_ready"
+frames = ["1-3", 16, 48, 95]
+unreachable = "room"               # a data label: executing it is a fault
+screen = 0x0400
+emulated_seconds = 15

@@ -63,7 +63,7 @@ adaptations. No historical game listing, artwork or music is copied.
 ## Build and play
 
 Run these commands from the repository root after the starter's setup has
-prepared `uv`, LWTOOLS, XRoar and the selected firmware. The runner verifies
+prepared `uv`, LWTOOLS, XRoar and the selected firmware. `scripts/coco.py` verifies
 both ROM files before launch and ignores personal XRoar configuration.
 
 To use or check both targets, provision both firmware profiles without changing
@@ -89,15 +89,16 @@ PYROM
 Stop if provisioning fails. Then build or launch:
 
 ```sh
-uv run python scripts/collect_room.py --help
-uv run python scripts/collect_room.py build
-uv run python scripts/collect_room.py run --target coco1
-uv run python scripts/collect_room.py run --target coco2
+uv run python scripts/coco.py build examples/collect-room
+uv run python scripts/coco.py run examples/collect-room --target coco1
+uv run python scripts/coco.py run examples/collect-room --target coco2
 ```
 
 The last two commands open XRoar for play. Close that window to stop.
-The game does not return to BASIC. The output is
-`build/collect-room/play/game.bin`, a DECB binary with entry `$3000`.
+The game does not return to BASIC. Before assembling, the tool runs
+[assets.py](assets.py), named in [coco.toml](coco.toml), to write the art
+include. The output is `build/collect-room/main.bin`, a DECB binary with entry
+`$3000`.
 It is not a disk image. Do not infer a tested disk-loading path from it.
 
 Press and release Space, then use the arrows. The solid character is yours;
@@ -109,18 +110,24 @@ Down twice, Right twice, Down, Right twice (second star), Down, Right (exit).
 ## Repeat the checks without opening a window
 
 ```sh
-uv run python scripts/collect_room.py prepare-check
-uv run python scripts/collect_room.py check --target coco1
-uv run python scripts/collect_room.py check --target coco2
-uv run pytest scripts/collect_room_spec.py --cov=collect_room
-uv run ruff check scripts/collect_room.py scripts/collect_room_spec.py
-uv run ruff format --check scripts/collect_room.py scripts/collect_room_spec.py
+uv run python scripts/coco.py check examples/collect-room
+uv run python experiments/collect-room-journey/journey.py prepare
+uv run python experiments/collect-room-journey/journey.py check --target coco1
+uv run python experiments/collect-room-journey/journey.py check --target coco2
+uv run --locked --no-sync python scripts/validate_repository.py run \
+  collect-room-journey --heavy
 markdownlint --fix examples/collect-room/README.md
 markdownlint examples/collect-room/README.md
 ```
 
-`prepare-check` downloads the SHA-256-pinned XRoar 1.12.1 release and builds
-an isolated headless executable under `build/collect-room/instrumented`.
+The first command uses stock XRoar, which cannot press keys. It checks that,
+with no input, the game stays on its title screen: every screen byte, the
+state, the room and the guards, against [expected.py](expected.py). The
+keyboard journey, audio and mutation controls need an instrumented emulator
+and live in [the journey experiment](../../experiments/collect-room-journey/README.md).
+
+`prepare` downloads the SHA-256-pinned XRoar 1.12.1 release and builds
+an isolated headless executable under `build/collect-room-journey/instrumented`.
 A C compiler and `make` are needed; this command installs nothing globally.
 The archive digest is
 `ba525225fbd732c4dbf2cbb571dc9d2810fd9dcedf0482133cf637e2eef61f88`.
@@ -157,9 +164,9 @@ asset expectations and cached emulator provenance. A failed rerun replaces
 its result status and removes the previous case's snapshots first.
 
 Generated commands, binaries, symbols, logs, RAM and result JSON files stay
-under ignored `build/collect-room`. Game source, artwork specifications,
-instrumentation, expectations and reproduction commands remain tracked.
-No downloads or generated evidence belong in Git.
+under ignored `build/collect-room` and `build/collect-room-journey`. Game
+source, artwork specifications, instrumentation, expectations and reproduction
+commands remain tracked. No downloads or generated evidence belong in Git.
 
 ## Memory and scheduling
 
@@ -217,8 +224,8 @@ location with the same remaining count; both machine runs reject it.
 
 The revised macOS run passed 33 tests with 94.17% combined statement/branch
 coverage. Both targets passed all 95 checkpoints, three wins, and the original
-four mutation controls. Each positive journey produced 384 DAC writes in
-12 effects. Exact measurements are in `build/collect-room/coco1-check.json`
+four mutation controls. Each positive journey produced 384 DAC writes in 12
+effects. Exact measurements are in `build/collect-room-journey/coco1-check.json`
 and `coco2-check.json`; this still establishes RAM and DAC callback behavior,
 not renderer output, listening quality or physical hardware.
 

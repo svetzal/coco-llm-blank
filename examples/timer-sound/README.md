@@ -20,12 +20,15 @@ Project notes keep their existing target.
 From the repository root:
 
 ```sh
-uv run python scripts/timer_sound.py check
-uv run python scripts/timer_sound.py run
-uv run python scripts/timer_sound.py run --heavy --revision 1987
+uv run python scripts/coco.py check examples/timer-sound
+uv run python experiments/sound-throughput/throughput.py check
+uv run python scripts/coco.py run examples/timer-sound --variant timer
+uv run python scripts/coco.py run examples/timer-sound --variant timer-heavy \
+  --target coco3-1987
 ```
 
-The run command defaults to the 1986 GIME model. Close XRoar to stop it.
+The run command defaults to the 1986 GIME model, the first target in
+[coco.toml](coco.toml). Without `--variant` it runs the cooperative light build. Close XRoar to stop it.
 It uses direct DECB loading, not a disk or a BASIC-returning routine.
 The visible marker is eight pixels wide and one row high.
 There are no controls in this experiment.
@@ -82,11 +85,17 @@ CPU framebuffer addresses are `$0400–$1BFF`, with guards at `$03FF` and `$1C00
 Code and initialized state start at `$3000`. Symbols record their exact extent.
 The reserved stack is `$7E00–$7EFF`, growing down from `$7F00`.
 In the tested 128 KiB mapping, these CPU addresses occupy the upper 64 KiB
-of the raw XRoar RAM dump. The runner accounts for that offset.
+of the raw XRoar RAM dump. The `screen = 0x10400` setting in `coco.toml` and
+the model in `expected.py` account for that offset.
 
 ## Measurement and checks
 
-The check runs six cases: cooperative light/heavy, and timer light/heavy on
+`scripts/coco.py check` assembles all four builds for both GIME revisions and
+compares completed redraws 1-3 with the independent model in
+[expected.py](expected.py): marker position, all framebuffer bytes, guards,
+and phase/counter consistency. The timing claims come from
+[the sound-throughput experiment](../../experiments/sound-throughput/README.md),
+which runs six cases: cooperative light/heavy, and timer light/heavy on
 both GIME revisions. Each measurement lasts one emulated second from its first
 sample checkpoint. Host acceleration does not change the selected CPU clock.
 
@@ -95,11 +104,11 @@ The latest completed-frame snapshot checks marker position, all framebuffer
 bytes, guards, and phase/counter consistency. An unreachable checkpoint must
 not produce a snapshot. Missing samples or completed frames fail the check.
 
-The specifications also remove interrupt acknowledgement in a test-only build.
+The throughput check also removes interrupt acknowledgement in a test-only build.
 That build fails the completed-frame check. This negative control shows
 why acknowledging a request is part of making progress.
 
-The measured results are recorded in `build/timer-sound/results.json`.
+The measured results are recorded in `build/sound-throughput/results.json`.
 Traces, symbols, and snapshots stay beside it, outside Git.
 See the research guide for the recorded comparison and its interpretation.
 

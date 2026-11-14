@@ -39,10 +39,10 @@ directory. Configure and make logs remain beside the private source.
 
 Before each capture, verification compares the actual C/header/build-template
 inputs with the pinned archive plus the current exact patch, and checks the
-executable, builder, instrumenter and reused `scripts/sound_slots.py` hashes
-against the build record. Thus changing a source file and its manifest hash
-together still fails. An ordinary executable has no valid build record, and a
-substituted executable fails its hash check before capture starts.
+executable, builder, instrumenter and reused `examples/sound-slots/expected.py`
+oracle hashes against the build record. Thus changing a source file and its
+manifest hash together still fails. An ordinary executable has no valid build
+record, and a substituted executable fails its hash check before capture starts.
 
 This is local provenance, not a signed or hermetic attestation. The compiler,
 linked system libraries, generated configure outputs and host are trusted.

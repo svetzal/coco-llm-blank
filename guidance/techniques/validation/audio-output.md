@@ -58,7 +58,7 @@ is explicitly `-ao-gain -3`. No installed emulator is modified or launched as
 an interactive window. Host acceleration does not change modeled clock speed.
 
 Each run stops at the 64th application update. These are not VDG frames.
-The existing independent `sound_slots.verify_ram` oracle checks final sample
+The existing independent sound-slots `verify_ram` oracle checks final sample
 count, phase, pitch, button, framebuffer and guards. An unreachable data-label
 trap must produce no snapshot. This establishes program execution separately
 from the PCM checks. Scripted input substitutes a value after the real PIA
@@ -112,11 +112,11 @@ matching callback rows, and keep only the last 46,080 frames. All are rejected.
 
 The tracked `build_capture.py` verifies the archive, patches pristine source,
 builds in a new directory and records source, executable, instrumenter, builder
-and reused `scripts/sound_slots.py` hashes. Before capture, actual source inputs
-are compared against archive bytes plus the exact patch, not merely their
-manifest entries. The executable and tool hashes must also match the build
-record. Tests replace the executable, change source and its manifest together,
-and supply missing or mismatched provenance.
+and reused `examples/sound-slots/expected.py` hashes. Before capture, actual
+source inputs are compared against archive bytes plus the exact patch, not
+merely their manifest entries. The executable and tool hashes must also match
+the build record. Tests replace the executable, change source and its manifest
+together, and supply missing or mismatched provenance.
 
 This is a reproducible local procedure, not a signed or hermetic attestation.
 The compiler, linked system libraries, configure-generated files and host are

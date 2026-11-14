@@ -6,12 +6,12 @@ Does the existing Collect room keyboard API journey produce the independently
 expected scenes and real mixer PCM through one complete game and restart on
 explicit CoCo 1 and CoCo 2 profiles?
 
-The [tracked experiment](../../../experiments/collect-room-output/README.md) combines
-the existing Collect room keyboard and DAC hooks with the display-validation
-renderer and audio-output mixer instrumentation in a new private XRoar build.
-It does not change `scripts/collect_room.py`, game assembly, ROMs or another
-experiment's executable. Original instrumentation is loaded from tracked files;
-no downloaded emulator source is committed.
+The [tracked experiment](../../../experiments/collect-room-output/README.md)
+combines the existing Collect room keyboard and DAC hooks with the
+display-validation renderer and audio-output mixer instrumentation in a new
+private XRoar build. It does not change the journey harness, the example model,
+game assembly, ROMs or another experiment's executable. Original instrumentation
+is loaded from tracked files; no downloaded emulator source is committed.
 
 The bounded fixture is the first 43 rows of the original hand-authored
 `examples/collect-room/journey.txt`. It includes title, startup-held Space,

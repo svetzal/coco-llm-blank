@@ -6,10 +6,9 @@ import shutil
 from pathlib import Path
 
 import pytest
-from collect_room import journey
 from measure_output import FRAME_BYTES, audio_measure, only, rows, timeline, video_measure
 from prepare_output import ROOT, build, patched, replace, verify
-from run_output import run
+from run_output import MODEL, run
 
 
 @pytest.fixture(scope="module")
@@ -139,8 +138,8 @@ class DescribeCompleteness:
     def should_reject_silent_and_wrong_pitch_pcm(self, evidence):
         _, raw, log = evidence
         with pytest.raises(ValueError, match="PCM effect"):
-            audio_measure(bytes(len(raw)), log, journey()[:43])
-        wrong = journey()[:43]
+            audio_measure(bytes(len(raw)), log, MODEL.journey()[:43])
+        wrong = MODEL.journey()[:43]
         key, state = wrong[4]
         wrong[4] = key, (*state[:7], 2, state[8])
         with pytest.raises(ValueError, match="PCM effect"):
@@ -148,7 +147,7 @@ class DescribeCompleteness:
 
     def should_reject_wrong_scene_independent_of_remaining_count(self, evidence):
         output, _, log = evidence
-        wrong = journey()[:43]
+        wrong = MODEL.journey()[:43]
         key, state = wrong[14]
         wrong[14] = key, (*state[:8], 2)
         with pytest.raises(ValueError, match="Rendered scene differs"):

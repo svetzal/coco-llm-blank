@@ -305,14 +305,14 @@ class Experiment:
         self.shell(
             name,
             f"{name}-game-prepare",
-            "uv run python scripts/collect_room.py prepare-check",
+            "uv run python experiments/collect-room-journey/journey.py prepare",
             "learner",
             timeout=900,
         )
         self.shell(
             name,
             f"{name}-game-check",
-            "uv run python scripts/collect_room.py check --target coco2",
+            "uv run python experiments/collect-room-journey/journey.py check --target coco2",
             "learner",
             timeout=900,
         )
@@ -336,7 +336,7 @@ class Experiment:
             [
                 "docker",
                 "cp",
-                f"{name}:/work/build/collect-room",
+                f"{name}:/work/build/collect-room-journey",
                 str(self.output / f"{name}-collect-room"),
             ],
         )

@@ -3,8 +3,9 @@
 from pathlib import Path
 
 import numpy as np
-from collect_room import expected_screen
+from coco import load_expected
 
+MODEL = load_expected(Path(__file__).resolve().parents[2] / "examples/collect-room")
 TICKS = 14318180
 RATE = 44100
 FRAME_TICKS = 912 * 262
@@ -97,7 +98,7 @@ def video_measure(path: Path, log: str, cases: list) -> dict:
         eligible = [i for i, r in enumerate(video) if begin <= r[1] < end]
         if not eligible:
             raise ValueError(f"No complete stable rendered frame at checkpoint {index}")
-        bits = np.unpackbits(np.frombuffer(expected_screen(state), dtype=np.uint8))
+        bits = np.unpackbits(np.frombuffer(MODEL.screen_for_state(state), dtype=np.uint8))
         bits = np.repeat(bits.reshape(192, 256), 2, axis=1)
         expected = np.where(bits[..., None], [46, 188, 36], [0, 31, 0])
         for frame in eligible:

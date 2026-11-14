@@ -1,0 +1,98 @@
+"""Independent model of Collect room: hand-transcribed art, map rules and a scripted journey.
+
+Nothing here is derived from the assembly, the asset converter or captured RAM.
+"""
+
+import json
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+MESSAGES = ("SPACE TO START", "COLLECT BOTH THEN EXIT", "YOU WIN SPACE RESTART")
+ACTOR = bytes.fromhex("183c7edbff242466")
+# Hand-transcribed original art rows, independent of converter/assembly output.
+ART = tuple(
+    bytes.fromhex(s)
+    for s in ("0000200000000000", "ff80b8a0ae8280fd", "2070f87020000200", "e080a0a4be8480c1")
+) + (ACTOR,)
+ROOM = ("..#.....", ".*#..#..", "..#.....", "....##..", ".#...*..", "......E.")
+FIELDS = ("phase", "xpos", "ypos", "remaining", "accepted", "starts", "effects", "last_effect")
+# Title screen with nothing pressed: the state every idle frame must keep.
+TITLE = (0, 0, 0, 2, 0, 0, 0, 0, 0)
+
+
+def journey() -> list[tuple[str, tuple[int, ...]]]:
+    """Read hand-authored expectations, never derive them from observed RAM."""
+    return [
+        (parts[0], tuple(map(int, parts[1:])))
+        for line in (HERE / "journey.txt").read_text().splitlines()
+        if (parts := line.split()) and not line.startswith("#")
+    ]
+
+
+def expected_room(collected: int) -> bytes:
+    cells = bytearray(".#*E".index(c) for row in ROOM for c in row)
+    if collected & 1:
+        cells[9] = 0
+    if collected & 2:
+        cells[37] = 0
+    return bytes(cells)
+
+
+def expected_pixel(x: int, y: int, cells: bytes, actor: tuple[int, int]) -> int:
+    if not (64 <= x < 192 and 48 <= y < 144):
+        return 0
+    cx, cy = (x - 64) // 16, (y - 48) // 16
+    tile = 4 if (cx, cy) == actor else cells[cy * 8 + cx]
+    return ART[tile][((y - 48) % 16) // 2] & (128 >> (((x - 64) % 16) // 2))
+
+
+def screen_for_state(state: tuple[int, ...]) -> bytes:
+    """Independent per-pixel oracle, without expanded assets or packed headers."""
+    phase, actor_x, actor_y, *_ = state
+    cells = expected_room(state[8])
+    font = json.loads((HERE / "letters.json").read_text())
+    screen = bytearray(6144)
+    for y in range(192):
+        for x in range(256):
+            bit = expected_pixel(x, y, cells, (actor_x, actor_y))
+            column, subpixel = divmod(x - 16, 6)
+            if 16 <= y < 23 and 0 <= column < len(MESSAGES[phase]) and subpixel < 5:
+                bit = font[MESSAGES[phase][column]][y - 16] & (16 >> subpixel)
+            if bit:
+                screen[y * 32 + x // 8] |= 128 >> (x % 8)
+    return bytes(screen)
+
+
+def verify_journey_frame(
+    ram: bytes, labels: dict[str, int], keys: str, state: tuple[int, ...]
+) -> None:
+    """Guards, game state, keyboard history, room, sound burst and the whole screen."""
+    if len(ram) not in (32768, 65536):
+        raise ValueError("Missing/truncated RAM")
+    guards = [0x3FF, 0x1C00, 0x7E00] + [
+        labels[n]
+        for n in ("map_guard_before", "map_guard_after", "asset_guard_before", "asset_guard_after")
+    ]
+    if any(ram[a] != 0xA5 for a in guards):
+        raise ValueError("Memory guard damaged")
+    if tuple(ram[labels[n]] for n in FIELDS) != state[:8]:
+        raise ValueError(f"Game state differs: {tuple(ram[labels[n]] for n in FIELDS)} != {state}")
+    held = sum(bit for char, bit in zip("UDLRF", (1, 2, 4, 8, 16)) if char in keys)
+    if ram[labels["held"]] != held or ram[labels["previous"]] != held:
+        raise ValueError("Keyboard/history differs")
+    if ram[labels["room"] : labels["room"] + 48] != expected_room(state[8]):
+        raise ValueError("Room lifecycle differs")
+    samples = int.from_bytes(ram[labels["sample_count"] : labels["sample_count"] + 2], "big")
+    if samples != state[6] * 32 or ram[labels["sound_count"]] != 0:
+        raise ValueError("Sound burst did not finish")
+    if ram[0x400:0x1C00] != screen_for_state(state):
+        raise ValueError("Complete framebuffer differs")
+
+
+def expected_screen(frame: int) -> bytes:
+    """Without injected keys, every frame stays on the title screen."""
+    return screen_for_state(TITLE)
+
+
+def verify_ram(ram: bytes, symbols: dict[str, int], frame: int) -> None:
+    verify_journey_frame(ram, symbols, "-", TITLE)
