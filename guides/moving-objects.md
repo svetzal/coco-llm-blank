@@ -27,7 +27,8 @@ It does not provide a finished overlap-safe renderer or collision system.
 
 The full-redraw example below has emulator checks. Historical sources also
 describe two background-restoration methods. Applying those methods to a new
-starter renderer remains untested; masked drawing remains a proposal.
+starter renderer remains untested. The original masked example below uses
+full-background redraw instead.
 Choose a restoration strategy deliberately before adding scenery.
 
 For a uniform background, repainting the old rectangle may be enough.
@@ -200,6 +201,19 @@ The example does not implement collision, masks, partial-byte placement, or
 independent vertical motion for the two objects. Visual appearance, frame rate,
 PAL, T1, and physical hardware remain unverified.
 
+## Try masked objects
+
+The [masked-object example](../examples/masked-objects/README.md) draws hollow
+objects with transparent holes and opaque black and green pixels. Each scene
+restores the complete background, then combines objects in the chosen order
+with `(destination AND preserve_mask) OR ink`.
+
+Twelve scenes on each defined CoCo 1/2 configuration check every framebuffer
+byte, guards, corners, overlap order, removal and changed scenery. The oracle
+uses independent pixel geometry. Origins must be byte-aligned and the entire
+object must fit on screen. This example adds no clipping or collision system.
+Emulator display appearance, timing and physical hardware remain untested.
+
 ## Sources and limits
 
 - Don Inman, Kurt Inman with Dymax, *Assembly Language Graphics for the TRS-80
@@ -222,7 +236,7 @@ book example or run the BASIC game. No physical-machine, timing, or
 compatibility
 result follows from this guide. The adaptation designs and test cases are
 our original guidance; the cited historical methods remain untested here. Only
-the bounded full-redraw example above has runtime
+the bounded full-redraw and masked-object examples above have runtime
 evidence. See [research notes](../guidance/game-research.md#rendering-and-collision-pass)
 for earlier rejected leads and the limited correction search.
 [Rendering source notes](../guidance/rendering-sources.md) record the later
