@@ -4,7 +4,10 @@ Read this when building a turn-based strategy game with journeys that take
 several turns, or a menu operated by one switch. Keep world state, pending
 commands and presentation state separate. A redraw must not advance a turn.
 
-All pseudocode and design rules below are original, untested adaptations.
+The pseudocode and design rules below are original adaptations. A bounded
+[host reference model](../guidance/game-state-validation.md) now checks 60
+scenarios for commands, journeys, phases and menu transitions. This is not
+CoCo execution evidence.
 They can inform CoCo 1, 2 or 3 projects, but establish no machine compatibility,
 RAM budget or timing result. The sources use contemporary BASIC; *Conqueror!*
 also requires an external assembly screen expander and does not state its RAM
