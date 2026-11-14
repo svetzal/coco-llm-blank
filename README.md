@@ -101,24 +101,37 @@ makes stay in your copy of the starter unless you choose to share them.
 
 ## What to expect today
 
-This is an early starter, not a finished game or a guarantee that an agent will
-get every program right. The guidance asks agents to check original sources and
-test their work. Scanned books can still contain conversion errors.
+This is a concept in development, the idea of having a repository like this
+that guides an agent to help you in different ways at different times.
 
-Apple Silicon Macs and Ubuntu 24.04 have automated checks. The Ubuntu tool
-installation and emulator memory check also pass in a clean container.
-macOS support means Apple Silicon; Intel Macs are outside scope.
-Windows setup is not covered yet.
+Building games and demos for the CoCo is in some ways an arcane art. In the
+1980s and 1990s we had various magazines and books that helped explain the
+hardware and capabilities, brought us games and various techniques for
+building better games. But a lot of this knowledge is very hard to find,
+or was never published, and there are still new things to discover as we use
+these computers in a modern context.
 
-Your agent can handle setup commands when its permissions allow them. Some
-installs need your approval or a password that only you can enter.
-The setup entry point installs assembly and emulator tools on macOS and
-Ubuntu 24.04. Other Linux distributions still need agent-led installation.
-You do not need to prepare those tools before giving your agent the prompt.
+The quality of the games or demos you produce is going to hinge on guides
+already in this repository that are being built up over time, or starting a lab
+and having the agent help you research around your problem - which may come up
+with new books or blogs or articles that may help you find a solution. Or the
+agent may just have to put its head down and try to solve the problem itself.
 
-Projects currently use 6809 assembly, the Color Computer's machine-level
-programming language. Your agent writes that code for you. C development is
-not included yet.
+Your attention to detail, your diligence in playability and user experience
+will have far more impact on the quality of the game it produces than the agent
+technology itself.
+
+There will be problems you can't solve (I mean, it's a 40 year old computer),
+there will be problems you might find a brand new solution to that nobody has
+found before, there will be problems that someone else has published a solution
+to, and there will be problems already solved by guides here in this repo.
+
+Most importantly, have fun! And if you have trouble with it, drop me a line.
+My goal is to enable, 40 years later, people to have the same sense of learning
+and exploration that I and many others remember from our youth with these old
+computers. There are fewer and fewer places to go to learn so deeply about
+computing technology than these computers that inspired and drove our entire
+personal computing field.
 
 ## Look inside when you are ready
 
