@@ -5,6 +5,21 @@ criteria are met and its report is available; keep evidence in the relevant
 guide or validation record. The items below are open; they are not currently
 dispatched.
 
+## Continue from here
+
+Read [AGENTS.md](AGENTS.md), then choose one open item below. Use the
+[guidance index](guidance/README.md) for source and validation records and the
+[experiment index](experiments/README.md) for reproduction commands. The
+[validation command](guidance/python.md#repository-validation-cli) lists scopes;
+root tests do not replace experiment suites. No prior batch worker needs resuming.
+
+Preserve ignored `local/`, `build/`, experiment `.work/` evidence and the prepared
+`.venv`. Do not treat a previous report as a new validation run. The repository
+is public, uses `main`, and remains unregistered with Foundry. Leave the separate
+`coco-lines` project and its processes untouched. Start no new beginner-agent
+trial without a new request; the completed Claude 03 assessment is under
+`/Users/svetzal/Work/Experiments/coco-starter-onboarding/claude-03-evaluation.json`.
+
 ## Open work
 
 - Clean Apple Silicon host and native Linux desktop onboarding, including
