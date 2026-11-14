@@ -47,6 +47,7 @@ of your environment. Reproduction code is indexed under
 
 ### Setup and permissions
 
+- [Apple Silicon current-host onboarding audit](macos-onboarding-validation.md).
 - [Ubuntu onboarding validation](linux-onboarding-validation.md).
 - [Sudo policy validation](sudo-policy-validation.md).
 

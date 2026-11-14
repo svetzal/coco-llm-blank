@@ -39,7 +39,9 @@ source if needed. Existing Homebrew discovery through PATH and known prefixes
 is preserved.
 System permissions may require the owner's help; failures stop with an
 explanation.
-Existing tools and explicit executable overrides are preserved.
+Existing tools and explicit executable overrides are preserved. On native
+Apple Silicon macOS, tool discovery also checks `/opt/homebrew/bin` when PATH
+does not include it, after checking overrides, project-local tools and PATH.
 
 On Ubuntu 24.04, it installs build dependencies with apt and builds verified
 LWTOOLS and XRoar release archives into `local/toolchain/`. A non-root account

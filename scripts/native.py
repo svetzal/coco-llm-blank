@@ -12,6 +12,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+HOMEBREW_BIN = Path("/opt/homebrew/bin")
 SOURCES = {
     "lwtools": (
         "4.25",
@@ -27,12 +28,17 @@ SOURCES = {
 
 
 def tool_path(name: str, root: Path = ROOT) -> str | None:
-    """Honor explicit overrides, then the project's installation, then PATH."""
+    """Honor overrides, project tools, PATH, then Apple Silicon Homebrew."""
     variable = {"lwasm": "LWASM", "lwlink": "LWLINK", "xroar": "XROAR"}[name]
     if variable in os.environ:
         return shutil.which(os.environ[variable])
     local = root / "local/toolchain/bin" / name
-    return shutil.which(str(local)) or shutil.which(name)
+    found = shutil.which(str(local)) or shutil.which(name)
+    if found:
+        return found
+    if platform.system() == "Darwin" and platform.machine() == "arm64":
+        return shutil.which(str(HOMEBREW_BIN / name))
+    return None
 
 
 class HostGateway:

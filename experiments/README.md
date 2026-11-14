@@ -29,6 +29,7 @@ The links below describe existing work; they do not claim a new validation run.
 | Measure modeled DAC write intervals | [audio-timing](audio-timing/) | [Evidence and limits](../guidance/audio-timing-validation.md) |
 | Check CoCo 2 sound scheduling | [sound-coco2](sound-coco2/README.md) | [Evidence and limits](../guidance/sound-coco2-validation.md) |
 | Capture XRoar mixer PCM | [audio-output](audio-output/README.md) | [Evidence and limits](../guidance/audio-output-validation.md) |
+| Check current-host macOS recovery | [macos-onboarding](macos-onboarding/) | [Evidence and limits](../guidance/macos-onboarding-validation.md) |
 | Reproduce nonroot Ubuntu onboarding | [linux-onboarding](linux-onboarding/README.md) | [Evidence and limits](../guidance/linux-onboarding-validation.md) |
 | Check sudo failure and recovery | [sudo-policy](sudo-policy/README.md) | [Evidence and limits](../guidance/sudo-policy-validation.md) |
 

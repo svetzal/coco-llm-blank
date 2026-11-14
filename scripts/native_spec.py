@@ -14,6 +14,7 @@ import pytest
 @pytest.fixture
 def isolated_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("PATH", str(tmp_path / "bin"))
+    monkeypatch.setattr(native, "HOMEBREW_BIN", tmp_path / "brew/bin")
     for variable in ("LWASM", "LWLINK", "XROAR"):
         monkeypatch.delenv(variable, raising=False)
     return tmp_path
@@ -215,3 +216,41 @@ class DescribeHostGateway:
         with pytest.raises(subprocess.CalledProcessError):
             host.dependencies()
         assert host.run.call_args_list[-1].args[0][: len(prefix)] == prefix
+
+
+class DescribeHomebrewDiscovery:
+    def should_discover_new_homebrew_tools_without_shell_reload(self, isolated_tools, monkeypatch):
+        monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
+        monkeypatch.setattr(native.platform, "machine", lambda: "arm64")
+        assert native.tool_path("lwasm", isolated_tools) is None
+        native.HOMEBREW_BIN.mkdir(parents=True)
+        for name in ("lwasm", "lwlink", "xroar"):
+            executable = native.HOMEBREW_BIN / name
+            executable.write_text("#!/bin/sh\nexit 0\n")
+            executable.chmod(0o755)
+            assert native.tool_path(name, isolated_tools) == str(executable)
+            subprocess.run([native.tool_path(name, isolated_tools)], check=True)
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
+        native.install(isolated_tools, host)
+        host.run.assert_not_called()
+        host.brew.assert_not_called()
+        provide(isolated_tools, "lwasm")
+        assert native.tool_path("lwasm", isolated_tools) == str(
+            isolated_tools / "local/toolchain/bin/lwasm"
+        )
+        monkeypatch.setenv("LWASM", "/missing/explicit")
+        assert native.tool_path("lwasm", isolated_tools) is None
+
+    @pytest.mark.parametrize("system,machine", [("Linux", "aarch64"), ("Darwin", "x86_64")])
+    def should_not_use_apple_silicon_prefix_on_other_hosts(
+        self, isolated_tools, monkeypatch, system, machine
+    ):
+        monkeypatch.setattr(native.platform, "system", lambda: system)
+        monkeypatch.setattr(native.platform, "machine", lambda: machine)
+        native.HOMEBREW_BIN.mkdir(parents=True)
+        executable = native.HOMEBREW_BIN / "lwasm"
+        executable.write_text("#!/bin/sh\nexit 0\n")
+        executable.chmod(0o755)
+        assert native.tool_path("lwasm", isolated_tools) is None

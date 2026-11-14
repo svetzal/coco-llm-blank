@@ -29,10 +29,6 @@ complete. Dependencies describe integration order, not additional tasks.
    check after the permitted recovery; verify reruns preserve edited project
    notes. Record the exact host/container and privilege conditions. Container
    evidence does not establish native desktop or GUI onboarding.
-4. **Apple Silicon onboarding audit.** Distinguish checks in an isolated
-   workspace on this configured Mac from evidence on a clean host. Record
-   actual first-run and recovery behavior without claiming clean-host proof
-   unless that environment was tested.
 
 Finish integration after the worker reports arrive: reconcile changed
 interfaces, run the applicable combined checks, and record actual results and
