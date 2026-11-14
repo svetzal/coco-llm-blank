@@ -52,17 +52,52 @@ Its memory and equipment affect what the project can run.
 
 Your agent checks the tools and downloads the references and firmware needed
 for your machine. The first setup can take a while; later work reuses downloads.
-Your agent works in two modes and starts each reply by naming the current one.
-In BUILD mode it makes your game or demo from the starter's guides and examples.
-If you hit a technical problem, such as crackly sound or slow graphics, ask it
-to open a lab: in LAB mode it investigates that one problem, improves the
-starter's guides and examples with the answer, then returns to building.
-
 Your agent names your project and keeps it in its own folder, such as
 `projects/bouncing-lines`. That folder's README says what you asked for and how
 to run it. Ask for a small working result before adding more features, then
 describe what you want to change. Keep working in the same starter folder so
 your agent can reuse your projects and the references.
+
+## Building, and solving problems in a lab
+
+Your agent works in one of two modes. The first line of each reply tells you
+which, for example:
+
+```text
+BUILD · bouncing-lines
+LAB · crackly-sound (from bouncing-lines)
+```
+
+**Building** is where you spend most of your time. You describe your game or
+demo, and the agent makes it from the starter's guides and examples. Your
+project stays in its own folder and grows as you ask for changes.
+
+Sometimes a problem has no ready answer: the sound crackles, the graphics are
+too slow, or a key press is missed. Then the agent can open a **lab**: a
+separate session focused on that one problem. In a lab the agent:
+
+1. writes down the question, such as "why does the sound crackle while the
+   screen redraws?";
+2. reads the original books and manuals, and tries small test programs until
+   it finds an answer that works;
+3. explains what it found in plain words;
+4. adds the answer to the starter's guides or examples, so this and later
+   projects can use it;
+5. cleans up its test programs and returns to your project to apply the fix.
+
+The agent may suggest a lab when it gets stuck, but it waits for you to agree.
+You can also ask for one yourself:
+
+> Open a lab: the sound crackles whenever the ball moves.
+
+A lab can take longer than a normal change, because it tests ideas before
+settling on one. You can stop it at any time:
+
+> Close the lab and go back to building.
+
+If you stop partway, your project notes record the open lab. Next time the
+agent asks whether to continue it or carry on building. The improvements a lab
+makes stay in your copy of the starter unless you choose to share them.
 
 ## What to expect today
 
