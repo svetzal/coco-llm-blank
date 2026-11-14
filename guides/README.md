@@ -23,25 +23,18 @@ CoCo 1, 2, and 3 all belong in this collection. Evidence is uneven today.
 A shared hardware description does not establish that an example runs on
 another model. Each guide names its narrower scope.
 
-The [prior batch](../PLAN.md#prior-dispatched-batch-completed-within-recorded-bounds)
-is complete within its linked evidence limits. In the
-[current batch](../PLAN.md#current-bounded-batch-completed-within-recorded-bounds),
-reviewed audio
-output fixes and [frame-publication research](../guidance/frame-publication-research.md)
-and both hidden-buffer animation implementations are published on `main`.
-[Collect-room](../examples/collect-room/README.md#review-corrections) fixes pass
-33 scoped tests and 95 checkpoints per profile. Full root integration passed
-274 tests with 95.06% coverage; the game is published on `main`. Claude 03
-assessment is complete in the external record linked from the plan, with input,
-sound, display and source-reading limits recorded there.
+## Put a technique to work
 
-For setup evidence, the [nonroot Ubuntu record](../guidance/linux-onboarding-validation.md#nonroot-sudo-validation)
-reports passwordless-sudo bootstrap, 13 CoCo 2 moving-object frames and
-preserved
-notes on rerun. Separate [sudo-policy checks](../guidance/sudo-policy-validation.md)
-cover denied/password-required failures and prerequisite recovery. This is
-ARM64 container evidence, not a native desktop,
-GUI, audible-output or physical-machine check.
+For a complete playable example, start with
+[collect-room](../examples/collect-room/README.md). Its instructions cover play,
+reproduction checks and the limits of its evidence. For smaller building blocks,
+use the [example index](../examples/README.md).
+
+To reproduce a measurement or inspect its failure controls, use the
+[experiment index](../experiments/README.md). For setup instructions, source
+research and validation reports, use the separate sections of the
+[guidance index](../guidance/README.md).
+See [PLAN.md](../PLAN.md) for outstanding work.
 
 ## Read the evidence correctly
 

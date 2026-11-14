@@ -50,21 +50,11 @@ Its memory and equipment affect what the project can run.
 
 ## What happens next
 
-Your agent makes a project folder and checks the tools on your computer.
-It downloads the references and firmware needed for your chosen machine.
-Firmware is the original software the emulator needs to start the machine.
-
-The first setup can take a while. Reference conversion also downloads software
-models that help read the scanned books. Later work reuses completed downloads
-and converted pages.
-
-Ask your agent to show you a small working result before adding more features.
-Once it runs, describe what you want to change:
-
-> Make the lines move more slowly. Keep a longer trail. Show me how to run it again.
-
-Keep working in the same project folder. Your agent can reuse the project notes
-and references instead of starting setup again.
+Your agent checks the tools and downloads the references and firmware needed
+for your machine. The first setup can take a while; later work reuses downloads.
+Ask for a small working result before adding more features, then describe what
+you want to change. Keep working in the same folder so your agent can reuse the
+project notes and references.
 
 ## What to expect today
 
@@ -74,7 +64,8 @@ test their work. Scanned books can still contain conversion errors.
 
 Apple Silicon Macs and Ubuntu 24.04 have automated checks. The Ubuntu tool
 installation and emulator memory check also pass in a clean container.
-Intel Macs need more compatibility work. Windows setup is not covered yet.
+macOS support means Apple Silicon; Intel Macs are outside scope.
+Windows setup is not covered yet.
 
 Your agent can handle setup commands when its permissions allow them. Some
 installs need your approval or a password that only you can enter.
@@ -88,18 +79,16 @@ not included yet.
 
 ## Look inside when you are ready
 
-You can start without reading these guides. They are here for your agent and
-for anyone who wants to understand or troubleshoot the setup.
+You can start without reading these pages. Choose one when you need it:
 
-- [Game and demo techniques](guides/README.md): animation, scrolling, colours,
-  and sound.
-- [Agent instructions](AGENTS.md): where your agent starts.
-- [Manual setup](guidance/setup.md): commands for setup and checks.
-- [Reference books](guidance/references.md): finding pages and checking diagrams.
-- [Build and emulator tools](guidance/toolchain.md): assembling and running programs.
-- [Development practice](guidance/development.md): checking hardware facts and behaviour.
-- [Python tools](guidance/python.md): scripts that support development.
-- [Project status](PLAN.md): what works and what still needs testing.
+- [Play collect-room](examples/collect-room/README.md), a complete small game
+  for the documented CoCo 1 and CoCo 2B emulator configurations.
+- [Examples](examples/README.md) for smaller programs to build and study.
+- [Game and demo techniques](guides/README.md) for approaches and tested limits.
+- [Setup, research and validation](guidance/README.md) for agents and contributors.
+- [Experiments](experiments/README.md) for reproducing individual measurements.
+- [Agent instructions](AGENTS.md) for starting work; [PLAN.md](PLAN.md) for
+  outstanding work.
 
 ## Books, firmware, and licensing
 
