@@ -5,8 +5,8 @@
 Provide a cloneable repository that prepares local reference material, agent
 guidance, and host-side tooling for CoCo development. Own the setup, manifest,
 original guidance, and verification. Keep books, converted text, and ROMs in
-ignored local storage. The repository stays local and unregistered with Foundry
-at Stacey's request.
+ignored local storage. Stacey requested public publication as
+`svetzal/coco-llm-blank`. Foundry registration remains off.
 
 ## Current implementation
 
@@ -36,7 +36,7 @@ at Stacey's request.
 4. Verify on clean Linux and macOS hosts. The current environment targets
    Apple Silicon macOS and Linux; Intel Mac support needs separate dependency
    compatibility work.
-5. Prepare public-template metadata and licensing when publication is wanted.
+5. Gather feedback from the fresh `coco-lines` clone using microgentic.
 
 ## Acceptance evidence
 

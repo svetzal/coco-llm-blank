@@ -87,3 +87,9 @@ Their first run needs model downloads. Co-located `*_spec.py` files use
 cache and failure behavior, target preservation, and executable discovery.
 
 See [PLAN.md](PLAN.md) for scope and remaining work.
+
+## License
+
+The starter code and original guidance use the [MIT license](LICENSE).
+Downloaded reference works and their derived text or images retain their own
+copyright and licensing; the starter's license does not apply to them.

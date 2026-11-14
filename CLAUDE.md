@@ -1,3 +1,0 @@
-# Claude guidance
-
-@AGENTS.md
