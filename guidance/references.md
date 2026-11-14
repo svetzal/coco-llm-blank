@@ -35,8 +35,8 @@ For the manifest's graphics book, these PDF page ranges locate useful sections:
 These are navigation hints, not a substitute for reading the source. For a
 CoCo 1/2 two-colour task, convert 106–108 first, then 79–81 for the SAM register
 explanation. PDF page 106's table identifies the highest two-colour resolution;
-check it before accepting a requested pixel count. The book's printed pages
-are nine lower than the PDF page numbers in these ranges.
+check it before accepting a requested pixel count. In these chapter sections,
+the printed page number is nine lower than the PDF page number.
 
 ```sh
 uv run python scripts/setup.py --target coco1 \
