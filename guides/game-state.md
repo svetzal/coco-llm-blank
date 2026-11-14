@@ -7,9 +7,11 @@ commands and presentation state separate. A redraw must not advance a turn.
 The pseudocode and design rules below are original adaptations. A bounded
 [host reference model](../guidance/game-state-validation.md) now checks 60
 scenarios for commands, journeys, phases and menu transitions. This is not
-CoCo execution evidence.
-They can inform CoCo 1, 2 or 3 projects, but establish no machine compatibility,
-RAM budget or timing result. The sources use contemporary BASIC; *Conqueror!*
+CoCo execution evidence. A separate
+[CoCo 3 experiment](../guidance/game-state-coco3-validation.md) now checks a
+small assembly subset, described below. The host rules can inform CoCo 1, 2
+or 3 projects, but the host results establish no machine compatibility, RAM
+budget or timing result. The sources use contemporary BASIC; *Conqueror!*
 also requires an external assembly screen expander and does not state its RAM
 requirement (printed 11, PDF 13). Verify each target's input and display adapters
 separately. No register writes, wiring or BASIC delay loops are recommended here.
@@ -144,7 +146,9 @@ menus and turn-based commands, not evidence for simultaneous arcade controls.
 
 ## Check the behavior before relying on it
 
-These are proposed acceptance checks, not completed tests:
+The host model checks bounded versions of these behaviors. Target acceptance
+must cover the chosen game's full contract; only the smaller CoCo 3 subset
+below has assembly execution evidence:
 
 - Fill all `N` slots. Reject the next send with identical planet and journey
   state; then resolve a journey in the last slot and reuse that slot.
@@ -159,14 +163,33 @@ These are proposed acceptance checks, not completed tests:
   the last item, timeout, coincident expiry and selection, and a speed change
   with a command partly composed.
 
+## Bounded CoCo 3 execution
+
+The [target report](../guidance/game-state-coco3-validation.md) records 35 passing
+tests and all 44 checkpoints matching on both 128 and 512 KiB CoCo 3 profiles
+(NTSC, GIME 1986, 6809, slow MPU rate). The
+[reproduction guide](../experiments/game-state-coco3/README.md) fixes the subset
+and commands. This original adaptation uses two friendly planets, two journey
+slots, byte ship counts and 16-bit turns. It checks rejection without mutation,
+successful sends after rejection without resetting the world, slot reuse,
+once-only arrivals, saturation and phase/turn limits. Five faulty builds fail
+their named expectations at both RAM sizes.
+
+This is a bounded adaptation of the host model, not all 60 host cases or either
+historical BASIC listing. Combat, production, ownership changes, victory,
+menus and input are absent. IRQ/FIRQ stay masked; routine-boundary rejection
+atomicity does not establish interrupt-safe multi-field updates. The evidence
+is assembly execution and RAM state, without framebuffer, rendered display,
+audio, performance or physical-hardware claims.
+
 ## Sources and provenance
 
 The [Undercolor research record](../guidance/undercolor-game-research.md)
 contains archive hashes, full reading coverage, correction-search limits and
 configuration gaps. These sources have no manifest resource IDs. PDF pages are
-one-based positions in the archived files. No historical listing or adaptation
-has been run here; there is no build, runtime, framebuffer, rendered-display,
-audio or physical-hardware evidence for this guide.
+one-based positions in the archived files. No historical listing has been
+run here. The host and CoCo 3 results above apply to our original adaptations;
+they supply no rendered-display, audio or physical-hardware evidence.
 
 - Byorick, Tony. "Conqueror!" *Undercolor*, volume 1, issue 6, March 8, 1985.
   Passages used here: printed 10–12 and 16–17, PDF 12–14 and 18–19.

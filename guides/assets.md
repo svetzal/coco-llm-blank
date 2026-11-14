@@ -3,7 +3,9 @@
 Read this when deciding how a game's artwork becomes reusable drawing data.
 The examined sources are CoCo 3 community articles. The original proposals
 have a bounded [host preparation check](../guidance/asset-validation.md)
-with 33 passing cases. Target integration and banked storage remain untested.
+with 33 passing cases. A separate
+[target consumer](../guidance/asset-loading-validation.md) now checks prepared
+assets on CoCo 1/2; banked storage remains untested.
 Their general data-design ideas can inform CoCo 1/2 work,
 but neither source establishes a CoCo 1/2 implementation.
 
@@ -112,9 +114,11 @@ truncation and output overflow, and measure worst observed decode cost on the
 chosen target. A small file can still need a large working buffer. These are
 original design requirements, not results from either article.
 
-## Proposed checks before implementation is called working
+## Match checks to the implementation boundary
 
-No checks in this table were executed in this source-only pass.
+The source-reading pass proposed these checks. Later host and target experiments
+cover only the bounded RG6 preparation and consumption described below; text,
+palette-section loading and bank mapping still need their own checks.
 
 - Asset ID lookup. Distinct terrain IDs select distinct original pictures.
   Remove the translation entry; loading must fail before drawing.
@@ -140,7 +144,22 @@ No checks in this table were executed in this source-only pass.
 Keep host-format tests, target assembly, emulator execution, framebuffer,
 rendered output and physical-machine evidence separate. The tracked
 [host experiment](../experiments/assets/README.md) checks fixed RG6 preparation
-and publication. Target loading and banked-storage checks remain proposals.
+and publication; its converter remains host-only.
+
+The separate [target-loading report](../guidance/asset-loading-validation.md)
+records 35 passing tests for an original 6809 consumer. On explicit NTSC,
+32 KiB, normal-clock, non-T1 CoCo 1/2 configurations, it draws all 48 cells
+from prepared pictures and compares all 6,144 framebuffer bytes with independent
+literal expectations. Guards, changed picture bytes and out-of-bounds writes
+provide failure controls. The [reproduction guide](../experiments/asset-loading/README.md)
+retains commands and the memory contract.
+
+This consumer assembles trusted picture rows, a terrain-pointer table and room
+data into a DECB executable. Host validation rejects damaged bundles before
+assembly; the target does not parse JSON or damaged binary input. It is our
+adaptation, not a reproduction of either historical article. General disk
+loading, banked storage, compression, rendered appearance and physical hardware
+remain unverified.
 
 The [research record](../guidance/community-game-research.md) holds exact hashes,
 complete reading ranges, corrections, rejected leads and license boundaries.

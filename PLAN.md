@@ -128,15 +128,23 @@ Static renderer geometry is measured on CoCo 1 and an explicit NTSC, 32 KiB,
 normal-clock, non-T1 CoCo 2. The [CoCo 2 display record](guidance/display-coco2-validation.md)
 reports 12 positive cases at 0.5 and 1.0 seconds of settling, plus a wrong-SAM
 control. This is stationary output, not animation or physical-display evidence.
-Sound experiments cover CoCo 1/3 execution and DAC intervals; CoCo 2 sound
-runtime coverage remains open.
+Sound experiments cover CoCo 1/3 execution and DAC intervals. The separate
+[CoCo 2 sound validation](guidance/sound-coco2-validation.md) now adds 19 passing
+tests with 98.13% scoped Python coverage and per-boundary delay checks on an
+explicit NTSC, 64 KiB, normal-clock, non-T1 target. Scripted logical input is
+not physical input; no listening, rendered-output or hardware result is claimed.
 
 [Controls and collision validation](guidance/controls-collision-validation.md)
 reports 26 host cases for bounded logical-input and collision policies. It
-supplies no keyboard-driver, 6809 execution, timing or hardware evidence.
+supplies no keyboard-driver, 6809 execution, timing or hardware evidence itself.
+Separate [keyboard validation](guidance/keyboard-controls-validation.md) passes
+21 tests with 97.06% runner coverage on CoCo 1/2B. It exercises XRoar's keyboard
+API, matrix and PIA through 6809 execution, not OS events or physical keys.
 [Game-state validation](guidance/game-state-validation.md) now reports 60 host
 cases for bounded commands, journeys, phases and menu transitions, without
-CoCo execution. [Selective redraw](guidance/selective-redraw-validation.md)
+CoCo execution. A separate [CoCo 3 subset](guidance/game-state-coco3-validation.md)
+passes 35 tests and all 44 checkpoints at both 128 and 512 KiB; it does not
+validate the complete host model. [Selective redraw](guidance/selective-redraw-validation.md)
 passes 12 checkpoints for each selective and full-region build on explicit
 NTSC CoCo 3 configurations at 128 and 512 KiB. It checks two bounded RAM
 windows and failure controls, not rendered output or speed.
@@ -144,8 +152,11 @@ windows and failure controls, not rendered output or speed.
 original RG6 packing, scene composition and publication.
 [Asset guidance](guides/assets.md) distinguishes that adaptation from its
 [examined CoCo 3 community sources](guidance/community-game-research.md).
-Target asset loading, banked storage, compression and animation cadence remain
-unverified.
+Separate [asset-loading validation](guidance/asset-loading-validation.md) passes
+35 tests and compares all 6,144 framebuffer bytes on explicit CoCo 1/2 targets.
+The original converter remains host-only; this is an original 6809 consumer,
+not a general disk loader. Banked storage and compression remain unverified.
+Animation cadence awaits independent review and is not marked complete.
 
 For each later pass, update the relevant guide and navigation before calling
 the pass complete. Check citations, relative links, Markdown, and runnable
@@ -188,8 +199,10 @@ press/hold/release fixtures, and an unreachable checkpoint. Its ordinary sample
 gap is 11 instructions; frame work increases that to 30. A separate one-second
 run completes 60 marker updates and bounds throughput at 15,360–15,616 samples.
 This establishes cooperative progress, not constant timing or audible quality.
-The fixture is not physical-input evidence. CoCo 2 runtime reproduction and
-physical/display/audio checks remain open.
+The fixture is not physical-input evidence. The later
+[CoCo 2 adaptation](guidance/sound-coco2-validation.md) supplies bounded runtime
+and DAC timing evidence. Physical, rendered-display and listening checks remain
+open.
 The following pass adds CoCo 3 timer evidence.
 
 ### CoCo 3 timer comparison
@@ -377,11 +390,11 @@ shared Matthews conversion coverage.
 4. Inspect published game/demo source and companion magazine disks. Record
    licenses separately from archive availability. Do not redistribute code or
    assets merely because they are downloadable.
-5. Extend the host controls model with a target-specific input adapter and
-   execution checks. Extend host game-state evidence to target execution, and
-   validate animation and asset integration with small original examples. Keep
-   CoCo 3 implementation evidence alongside CoCo 1/2 work before claiming broad
-   coverage.
+5. Build on the bounded keyboard, asset-consumer, CoCo 3 state and CoCo 2 sound
+   results below when a game needs broader integration. Keep the original host
+   models separate from their target adaptations. Animation cadence still
+   awaits independent review; these finite experiments do not establish broad
+   machine coverage or a complete game.
 
 Each pass should produce a few examined references and their usable guide text.
 Update existing guides when a finding changes their advice. Review topic and
@@ -393,26 +406,38 @@ The entries below distinguish completed work from contracts still in progress
 or independent review. A future worker file or reported test count alone is not
 evidence; integration follows review of the delivered record and checks.
 
-- Keyboard input. Declare one target and scan policy; check press, hold,
-  release, repress and simultaneous-key handling through the actual adapter,
-  including rejection and return to play. Logical host events alone do not
-  establish keyboard scanning, physical debounce or all-model support.
-- Target assets. Consume the published host converter's original output on an
-  explicitly configured target; compare placement, packed bytes and guards with
-  independent expectations and a damaged-input/output control. The 33 host
-  cases do not establish target loading, banked storage or compression.
-- CoCo 3 state subset. Declare the implemented subset, integer bounds and RAM
-  layout; check accepted transitions, unchanged state on rejection, slot reuse
-  and phase order against independent vectors. The 60 host cases remain
-  separate; a subset cannot validate the whole host model, display or input.
-- CoCo 2 sound. Declare the CoCo 2 profile, firmware and clock; check a bounded
-  DAC sequence with foreground progress and a meaningful failure control. CoCo
-  1/3 results do not transfer; execution does not establish listening quality
-  or worst-case timing.
-- Animation cadence. Declare sequence, dwell units, timing source and wrap
-  policy; measure a finite sequence including return/repeat and delayed work,
-  with an incorrect-cadence control. Static frames do not establish cadence;
-  finite-window timing is not physical-display or worst-case evidence.
+- Keyboard input (completed, bounded CoCo 1/2B scope).
+  [Report and reproduction commands](guidance/keyboard-controls-validation.md)
+  record 21 tests and 97.06% runner coverage. All 16 update records match on
+  both profiles, including held input, release/repress, simultaneous keys and
+  return from boundaries. Injection uses XRoar's keyboard API through its
+  matrix/PIA and 6809 scanner; OS events and physical keys remain untested.
+- Target assets (completed, bounded CoCo 1/2 scope).
+  [Report](guidance/asset-loading-validation.md) and
+  [reproduction guide](experiments/asset-loading/README.md) record 35 tests,
+  all 6,144 framebuffer bytes matching on each target, guards and failure
+  controls. The separate consumer uses the unchanged host bundle. General
+  loaders, banked storage, compression and rendered output remain unverified.
+- CoCo 3 state subset (completed, bounded 128/512 KiB scope).
+  [Report](guidance/game-state-coco3-validation.md) and
+  [reproduction guide](experiments/game-state-coco3/README.md) record 35 tests
+  and 44 matching checkpoints at both RAM sizes, including valid sends after
+  rejection without resetting the world. Two friendly planets and two slots
+  cover sending, arrivals and phase/turn limits. The 60-case host model remains
+  separate; combat, production, menus, display and input are outside the subset.
+- CoCo 2 sound (completed, bounded non-T1 NTSC scope).
+  [Report](guidance/sound-coco2-validation.md) and
+  [reproduction guide](experiments/sound-coco2/README.md) record 19 tests and
+  98.13% scoped Python coverage. All three cases pass seven checkpoints, with
+  exact DAC samples, framebuffer state and modeled write intervals. Delayed
+  work adds exactly 80,003 slow cycles at each of 63 inter-block boundaries.
+  Scripted input substitutes logical states after the PIA read; it does not
+  establish physical-button behavior, listening quality or worst-case timing.
+- Animation cadence (awaiting independent review, not completed). The contract
+  requires sequence, dwell units, timing source and wrap policy; a finite
+  sequence including return/repeat and delayed work; and an incorrect-cadence
+  control. Static frames do not establish cadence, and finite-window timing
+  is not physical-display or worst-case evidence.
 - Input source crosscheck (completed). [Primary manual findings](guidance/input-hardware-research.md)
   record 18 examined pages, matrix coordinates, board distinctions and unresolved
   conflicts. Source interpretation alone is not an executed

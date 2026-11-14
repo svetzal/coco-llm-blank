@@ -3,9 +3,10 @@
 Read this when held movement must coexist with single-press actions, or when
 changing a picture must not change what blocks the player. The proposals below
 use logical controls and collision coordinates. They can inform CoCo 1/2/3
-designs, but supply neither a keyboard driver nor a tested collision engine.
-The examined articles concern the original CoCo generation; each target needs
-its own input and execution checks.
+designs. The host model checks bounded collision policies; the separate
+[keyboard experiment](../guidance/keyboard-controls-validation.md) now supplies
+a bounded CoCo 1/2B scanner and execution check. The examined articles concern
+the original CoCo generation; broader target compatibility needs its own checks.
 
 ## Sample controls before choosing actions
 
@@ -150,7 +151,23 @@ A [host reference model](../guidance/controls-collision-validation.md) now check
 26 bounded scenarios for logical input, horizontal grid movement and one-axis
 sweeps, including naive failure controls. That does not validate a CoCo input
 adapter, arbitrary geometry, performance, display or physical hardware.
-The broader target-specific checks above remain required. Source reading and page-image
+The broader target-specific checks above remain required.
+
+The separate [keyboard report and reproduction commands](../guidance/keyboard-controls-validation.md)
+record 21 passing tests with 97.06% runner coverage. Original 6809 code scans
+left, right and space on explicit NTSC, 32 KiB, stock-clock CoCo 1 and CoCo 2B
+profiles. Both match all 16 update records, including startup-held suppression,
+movement plus action, opposing directions, blocked release/repress and return
+from both boundaries. Wrong-column, wrong-register-selection, held-action and
+stale-history controls fail the independent expectations.
+
+Injection calls XRoar's `keyboard_press`/`keyboard_release` API. Its real matrix
+and PIA feed the 6809 scanner; the hook does not write logical input or RAM.
+This is not OS key-event, physical-key, debounce or general chord evidence.
+There is no cadence, rendered-output, sound or CoCo 3 result. The host collision
+model remains separate; these bounded position checks do not port that model.
+
+Source reading and page-image
 inspection support the historical descriptions only. The
 [research provenance](../guidance/hot-coco-game-research.md#sources-and-reading-coverage)
 records local evidence, hashes, full reading coverage, and research-local IDs

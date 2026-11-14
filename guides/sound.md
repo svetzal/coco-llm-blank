@@ -103,7 +103,28 @@ not cycle counts or a measure of audible quality. A later
 The practical consequence is that more foreground work can slow playback.
 Use this example to expose that coupling before adding a whole game.
 The input fixture does not prove physical joystick operation.
-CoCo 2 compatibility has not been tested.
+A separate CoCo 2 adaptation now supplies bounded evidence, described below.
+
+## Bound foreground work on CoCo 2
+
+The separate [CoCo 2 report](../guidance/sound-coco2-validation.md) and
+[reproduction guide](../experiments/sound-coco2/README.md) adapt the original
+sound-slots example without changing it. The target is explicit NTSC, 64 KiB,
+normal-clock 6809, non-T1 MC6847, with verified BASIC 1.2/Extended BASIC 1.1.
+The reviewed scoped run passes 19 tests with 98.13% Python statement/branch
+coverage. Each of three cases passes seven checkpoints; every final run checks
+16,384 samples, 16,383 modeled DAC intervals and all 6,144 framebuffer bytes.
+
+Released-input gaps are 57–138 slow cycles; scripted-input gaps are 57–158.
+Delayed foreground work preserves samples and state but adds exactly 80,003
+slow cycles at each of 63 inter-block boundaries, reaching a maximum gap of
+80,161 cycles. A regression shifts a boundary while preserving the total delay
+and requires rejection. Correct state alone does not establish timely samples.
+
+Scripted cases substitute logical input after the real PIA read. They do not
+exercise OS events, a physical button or the keyboard experiment's matrix path.
+Application updates are not video frames. These finite modeled intervals supply
+no worst-case, listening, rendered-output, analog-voltage or hardware evidence.
 
 ## Use CoCo 3 timer interrupts when drawing delays samples
 
