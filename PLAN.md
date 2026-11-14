@@ -156,7 +156,9 @@ Separate [asset-loading validation](guidance/asset-loading-validation.md) passes
 35 tests and compares all 6,144 framebuffer bytes on explicit CoCo 1/2 targets.
 The original converter remains host-only; this is an original 6809 consumer,
 not a general disk loader. Banked storage and compression remain unverified.
-Animation cadence awaits independent review and is not marked complete.
+[Animation cadence](guidance/animation-cadence-validation.md) now has reviewed
+150-frame renderer windows, exact repeat checks and 27 passing tests. Two
+partial-erasure frames show why complete-frame RAM checks are insufficient.
 
 For each later pass, update the relevant guide and navigation before calling
 the pass complete. Check citations, relative links, Markdown, and runnable
@@ -392,8 +394,8 @@ shared Matthews conversion coverage.
    assets merely because they are downloadable.
 5. Build on the bounded keyboard, asset-consumer, CoCo 3 state and CoCo 2 sound
    results below when a game needs broader integration. Keep the original host
-   models separate from their target adaptations. Animation cadence still
-   awaits independent review; these finite experiments do not establish broad
+   models separate from their target adaptations. Reviewed animation cadence
+   remains finite-window evidence; these experiments do not establish broad
    machine coverage or a complete game.
 
 Each pass should produce a few examined references and their usable guide text.
@@ -433,11 +435,12 @@ evidence; integration follows review of the delivered record and checks.
   work adds exactly 80,003 slow cycles at each of 63 inter-block boundaries.
   Scripted input substitutes logical states after the PIA read; it does not
   establish physical-button behavior, listening quality or worst-case timing.
-- Animation cadence (awaiting independent review, not completed). The contract
-  requires sequence, dwell units, timing source and wrap policy; a finite
-  sequence including return/repeat and delayed work; and an incorrect-cadence
-  control. Static frames do not establish cadence, and finite-window timing
-  is not physical-display or worst-case evidence.
+- Animation cadence (completed, bounded renderer evidence). The
+  [experiment](guidance/animation-cadence-validation.md) checks 150 consecutive
+  frames per case, exact repeat timestamps and pixels, and added workload.
+  Two partial-erasure frames are demonstrated in the original animation.
+  All 27 tests pass after independent review corrections. This establishes
+  neither host smoothness, physical tearing nor worst-case timing.
 - Input source crosscheck (completed). [Primary manual findings](guidance/input-hardware-research.md)
   record 18 examined pages, matrix coordinates, board distinctions and unresolved
   conflicts. Source interpretation alone is not an executed

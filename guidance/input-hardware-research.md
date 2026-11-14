@@ -194,15 +194,21 @@ from pathlib import Path
 import pypdfium2 as pdf
 
 sources = (
-    ("coco1-technical",
-     "8c4ed0c6de6e54f941932999d6750202f75102bff061f215b2dd3f757067cc64",
-     (13, 36, 37, 38, 40, 75)),
-    ("coco2-service",
-     "7210e7a0da2b5211bc95a5833759a15fb575a5cc5787a0d9cbfa3c09b1622447",
-     (11, 34, 35, 36, 37, 38)),
-    ("coco3-service",
-     "5c4c82d1b825daacf861be097d93d0a0eff78fbdf394234d4adb06df0cfd3c29",
-     (9, 39, 40, 41, 42, 43)),
+    (
+        "coco1-technical",
+        "8c4ed0c6de6e54f941932999d6750202f75102bff061f215b2dd3f757067cc64",
+        (13, 36, 37, 38, 40, 75),
+    ),
+    (
+        "coco2-service",
+        "7210e7a0da2b5211bc95a5833759a15fb575a5cc5787a0d9cbfa3c09b1622447",
+        (11, 34, 35, 36, 37, 38),
+    ),
+    (
+        "coco3-service",
+        "5c4c82d1b825daacf861be097d93d0a0eff78fbdf394234d4adb06df0cfd3c29",
+        (9, 39, 40, 41, 42, 43),
+    ),
 )
 output = Path("local/research/input-hardware")
 output.mkdir(parents=True, exist_ok=True)
@@ -212,9 +218,7 @@ for name, expected, pages in sources:
         raise ValueError(f"Source identity changed: {name}")
     with pdf.PdfDocument(source) as document:
         for number in pages:
-            document[number - 1].render(scale=2.5).to_pil().save(
-                output / f"{name}-{number}.png"
-            )
+            document[number - 1].render(scale=2.5).to_pil().save(output / f"{name}-{number}.png")
     print(f"{name}: verified source; rendered {len(pages)} pages")
 ```
 

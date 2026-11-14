@@ -6,7 +6,7 @@ Your agent can read one guide without loading the whole research collection.
 
 | I want to… | Read | Current evidence |
 | --- | --- | --- |
-| Animate objects or alternate pictures | [Plan animation storage](animation.md) | Examined BASIC articles; animation cadence awaits independent review and is not marked complete. |
+| Animate objects or alternate pictures | [Plan animation storage](animation.md) | [150-frame renderer windows](../guidance/animation-cadence-validation.md) expose partial erasure in the CoCo 1 example; no host-smoothness or physical-display claim. |
 | Move objects over scenery or detect collisions | [Move objects without losing the world](moving-objects.md) | Original full-redraw and masked-object framebuffer checks on defined CoCo 1/2 configurations; broader collision proposals remain untested. |
 | Decide which parts of a scene to redraw | [Decide what to redraw](selective-redraw.md) | [Bounded CoCo 3 RAM validation](../guidance/selective-redraw-validation.md): 12 checkpoints for each selective/full build at 128/512 KiB; no rendered-output or speed claim. |
 | Combine movement, firing and collision rules | [Separate controls, collision, and artwork](controls-and-collision.md) | [26 host cases](../guidance/controls-collision-validation.md) check bounded logical input and collision policies; separate [keyboard validation](../guidance/keyboard-controls-validation.md) passes 21 tests on CoCo 1/2B through the XRoar keyboard API, matrix/PIA and 6809 scanner, not OS or physical input. |
@@ -26,8 +26,8 @@ another model. Each guide names its narrower scope.
 The [current dispatched batch](../PLAN.md#current-dispatched-batch-in-progress)
 has completed bounded keyboard, target-asset, CoCo 3 state and CoCo 2 sound
 validation. Their reports link reproduction instructions. Animation cadence
-awaits independent review and is not marked complete. Input source reading and
-the bounded sudo-policy checks are also complete.
+now has reviewed continuous-renderer evidence and 27 passing tests. Input
+source reading and the bounded sudo-policy checks are also complete.
 
 For setup evidence, the [nonroot Ubuntu record](../guidance/linux-onboarding-validation.md#nonroot-sudo-validation)
 reports passwordless-sudo bootstrap, 13 CoCo 2 moving-object frames and preserved

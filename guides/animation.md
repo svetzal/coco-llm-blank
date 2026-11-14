@@ -3,7 +3,14 @@
 Read this when planning moving objects, a short animation cycle, or a title screen.
 The published examples use PMODE and Extended Color BASIC.
 Their ideas inform assembly design, but their array formats and delays do not
-become assembly contracts. No new renderer has been tested for this guide.
+become assembly contracts.
+
+The [continuous-renderer experiment](../guidance/animation-cadence-validation.md)
+checks 150 consecutive frames from the original CoCo 1 moving-object example.
+It finds two partial-erasure frames and many object-free backgrounds despite
+correct completed-frame RAM. A correct redraw checkpoint does not establish
+clean animation. Measure consecutive output before choosing a redraw strategy;
+these results do not measure host smoothness or physical tearing.
 
 ## Store the picture, not an oversized container
 
