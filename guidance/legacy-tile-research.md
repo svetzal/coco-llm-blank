@@ -339,3 +339,6 @@ No shared manifest, index, build output or conversion state was changed.
 [droid-src]: https://colorcomputerarchive.com/repo/Programming/Source/Droid%20War%20(Public%20Domain)/DroidWar.zip
 [dunkey-src]: https://colorcomputerarchive.com/repo/Programming/Source/Dunkey%20Monkey/Dunkey%20Munkey%20Source%20(Harvey%20Brofman)%20(Cercomp).zip
 [sea-src]: https://colorcomputerarchive.com/repo/Programming/Source/Sea%20Quest/seasrch.zip
+
+The [next bounded source pass](tile-source-followup.md) examines Cubix,
+Space Raiders and Calixto Island. None closes the historical tile-ID grid gap.

@@ -11,6 +11,7 @@ Your agent can read one guide without loading the whole research collection.
 | Decide which parts of a scene to redraw | [Decide what to redraw](selective-redraw.md) | CoCo 3 Gloom/Symmetry source reading only; original adaptation untested. |
 | Combine movement, firing and collision rules | [Separate controls, collision, and artwork](controls-and-collision.md) | Examined Hot CoCo articles; original adaptations remain untested. |
 | Schedule turns, journeys and menu transitions | [Separate game state from presentation](game-state.md) | Examined Undercolor articles; original adaptations remain untested. |
+| Prepare reusable artwork | [Prepare assets before drawing](assets.md) | Examined CoCo 3 community articles; original asset proposals remain untested. |
 | Build a room from tiles | [Separate map, drawing, and movement](tile-maps.md) | Original fixed tile-room checked on defined CoCo 1/2 targets; historical tile-ID source gap remains open. |
 | Smooth CoCo 3 text output | [Text scrolling and the 512K correction](scrolling.md#scroll-text-a-scan-line-at-a-time) | Hardware cross-check and instrumented display-address probe complete; scrolling itself unverified. |
 | Scroll a CoCo 3 playfield | [Plan scrolling and memory](scrolling.md) | Examined book; no scrolling implementation reproduced. |
