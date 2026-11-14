@@ -88,5 +88,29 @@
     "title": "The Rainbow Vol. 07 No. 09 - April 1988",
     "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2009%20-%20April%201988.pdf",
     "sha256": "4bdda1acc48f53132be0a0b69ca84466b09ceb74f187a42132b446c1654d6e56"
+  },
+  {
+    "id": "grafexpress",
+    "title": "GrafExpress 2.0 (Sundog Systems, 1991)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Manuals/Programming/GrafExpress%202.0%20(Sundog%20Systems).pdf",
+    "sha256": "d6c569ab8c846167f28622e3e86b8a46d64770a9b600f5346af3631943189034"
+  },
+  {
+    "id": "rainbow-1986-03",
+    "title": "The Rainbow Vol. 05 No. 08 - March 1986",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2005%20No.%2008%20-%20March%201986.pdf",
+    "sha256": "afc8d0fb4a33dba55bca153d3e0345e8505b1765bf76a1959ea9f1e9e7a406de"
+  },
+  {
+    "id": "rainbow-1989-03",
+    "title": "The Rainbow Vol. 08 No. 08 - March 1989",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2008%20No.%2008%20-%20March%201989.pdf",
+    "sha256": "ff027060086cb25cd25e7f4cee6028fc11b85e406cb3d53bcb3219e3839ac874"
+  },
+  {
+    "id": "speech-sound-manual",
+    "title": "Speech-Sound Cartridge Manual (Tandy; optional expansion)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Speech-Sound%20Cartridge%20(Tandy).pdf",
+    "sha256": "80aa645aa57da31121f7741d7373f21c5e5c69825f5a5eff8a86ad899055c92a"
   }
 ]

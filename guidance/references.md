@@ -89,8 +89,46 @@ uv run python scripts/setup.py --resource rainbow-1992-10 --pages 10:10
 ```
 
 The magazine's dense listings need image checks. Its cover contains an unrelated
-random-number article as well as the game introduction. A search hit on the cover
+random-number article as well as the game introduction. A search hit on the
+cover
 does not identify which article supplies a claim.
+
+### Background restoration and separate collision shapes
+
+Resource `grafexpress` is the *GrafExpress 2.0* manual by Sundog Systems.
+Start with [moving objects](../guides/moving-objects.md) to distinguish the
+historical methods from the starter's tested full-redraw example.
+
+| PDF pages | Use and limits |
+| --- | --- |
+| 7–8 | Appearance, solidity, sprite priority and deferred display changes. |
+| 20–23 | Picture transparency, solid invisible rectangles, collision checks and alignment restrictions. |
+| 26–27 | Pixel packing and save/draw/display/restore sequence with separate restoration buffers. |
+
+Convert each range separately, preserving the project's current target:
+
+```sh
+uv run python scripts/setup.py --resource grafexpress --pages 7:8
+uv run python scripts/setup.py --resource grafexpress --pages 20:23
+uv run python scripts/setup.py --resource grafexpress --pages 26:27
+```
+
+Printed page numbers are five lower than these PDF page numbers. The manual's
+GE16 and GE256 contracts are specific to that software. They do not establish
+CoCo 1/2 register setup, arbitrary pixel alignment or a tested masked-sprite
+assembly loop. The essential restoration explanation is on PDF 27.
+
+The checked OCR damages the final sprite sentence on PDF 7 and part of the
+stationary-scenery hint on PDF 21. PDF 22 loses the standalone switch-command
+symbol and damages the sprite abbreviation example. PDF 27 also damages part of
+the sync explanation, though its restoration
+sequence remains readable. The full-page PNGs retain those details. Use the
+images for command syntax and damaged passages.
+
+The [rendering source notes](rendering-sources.md) also cite *Dunkey Munkey* source
+files and routines for persistent-background restoration. That ZIP is a direct
+source citation, not a PDF manifest resource. Its code was read but not ported
+or run. Keep downloads local and use the file/routine citations in the note.
 
 ## Pixel order, timing, and prepared-frame animation
 
@@ -132,6 +170,57 @@ Markdown places that article's listing inside SMOOTHY's explanation and turns
 SMOOTHY's opening lines into a broken table. Use the full-page image to separate
 the articles and inspect code. PDF 82 reorders DATA lines and separates the
 right column from the left. Its full-page image preserves the listing order.
+
+## Sound effects, ROM calls and optional cartridge sound
+
+Read the [sound guide](../guides/sound.md) for target restrictions and the
+separation between historical players and tested starter experiments.
+
+| Resource | Selected PDF pages | Use and limits |
+| --- | --- | --- |
+| `rainbow-1986-03` | 246, 251 | Barden's DAC sample alignment and table playback. These are selected passages from a longer article, not the full player context. |
+| `rainbow-1989-03` | 30–32 | Nee's ROM SOUND/PLAY calls, BASIC workspace and register context. Not a standalone portable audio interface. |
+| `hotcoco-1985-06` | 75–78 | Clemens's cartridge review. Read the primary manual for the command/status interface. |
+| `speech-sound-manual` | 10–11 | Command-ready status and temporarily invalid activity bits. Optional expansion hardware, not a stock-machine dependency. |
+
+Use the current target and convert only the needed range. For example:
+
+```sh
+uv run python scripts/setup.py --resource rainbow-1989-03 --pages 30:32
+uv run python scripts/setup.py --resource speech-sound-manual --pages 10:11
+```
+
+On Barden PDF 246, OCR scrambles part of the `POKE` sound-selection command and
+interleaves columns. The full-page image retains the routing diagram and the
+separate sample-alignment explanation. Use that image for register expressions.
+PDF 251 turns the listing into a damaged table, confuses zeros and labels, and
+misplaces the `CMPU` operand. The original prose calls the table-loop branch
+`BNE DAC010`, but the listing at `$3E24` uses `BLS DAC010`. Reconcile that
+source discrepancy before adapting its bounds behavior.
+
+Nee's PDF 30 conversion changes column order and merges a note-table value into
+a heading. PDF 31 reverses some short tokens, drops operands and misreads
+instructions. PDF 32 merges the routine into table cells. Use the page images
+for all code and numeric tables. There is also a source discrepancy on PDF 32:
+the prose places `NTAB1`/`NTAB2` at `$301D`/`$3056`, while the assembled listing
+places them at `$3019`/`$3058`. Reconcile those before following debugger edits.
+
+The cartridge manual's PDF 11 OCR damages the sentence that warns about invalid
+speech/sound status immediately after a command. Open its full-page image before
+using the status interface. Some missing letters also appear in the rendered
+archive copy; the image still makes this warning readable.
+
+Hot CoCo PDF 76–78 retains the review but also includes advertisements. PDF 77
+changes paragraph order. PDF 78 places the end of the cartridge review beneath
+the next article's heading and rating. Use the full-page image to separate the
+reviews; the T/S Edit rating does not rate the cartridge.
+
+Barden's complete article runs through PDF 239–242, 246, 248, 250–251 and
+254–255. Convert those pages when adapting the player; pages 246 and 251 alone
+are not its complete setup. The [sound research notes](sound-research.md) record
+full source-reading coverage and the proposed adaptations. Selecting the
+cartridge manual downloads a reference only. It installs no cartridge driver
+and does not change the project's hardware contract.
 
 ## Find the relevant passage
 
@@ -196,7 +285,8 @@ the existing result rather than discarding previous work.
 
 The first conversion downloads model weights and can take time. Models run
 locally; remote document services are disabled. Allow disk space for the Python
-environment, model cache, original PDFs, and conversion records. `--guidance-only`
+environment, model cache, original PDFs, and conversion records.
+`--guidance-only`
 and `--list` do not initialize the model pipeline.
 
 ## Read the results
@@ -206,7 +296,8 @@ assembled `text.md`, `extraction.json` with completed PDF pages and conversion
 versions, and `docling-pages/` with page checkpoints and an `images/` directory.
 Each checkpoint keeps Markdown, structured Docling JSON with element locations,
 and image checksums. Figure PNGs are linked where Docling found them; each page
-also has a full-page PNG link. Image data is never embedded as base64 in Markdown
+also has a full-page PNG link. Image data is never embedded as base64 in
+Markdown
 or checkpoint JSON.
 
 Checkpoint filenames are five-digit PDF page numbers, such as `00108.json`,
@@ -250,7 +341,8 @@ OCR, tables, figure crops, and the full-page image then use that same rendering.
 A failed or still nearly blank retry returns an error instead of saving it.
 Genuinely blank source pages remain valid.
 
-This recovered CoCo 3 service-manual PDF pages 16–18. Page 17's image was checked
+This recovered CoCo 3 service-manual PDF pages 16–18. Page 17's image was
+checked
 visually. Its OCR remains imperfect, including merged table-row labels.
 The detector is a rendering check, not a general OCR quality score. Continue
 to inspect page images before using hardware values.
