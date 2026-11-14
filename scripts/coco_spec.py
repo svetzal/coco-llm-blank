@@ -9,6 +9,8 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import coco
+import instrumented_xroar
+import numpy as np
 import pytest
 from coco import Host, ProjectError
 from native import ROOT, tool_path
@@ -50,7 +52,30 @@ def verify_ram(ram, symbols, frame):
     if ram[symbols["state"]] != frame:
         raise ValueError("state differs from the model")
 """
+CAPTURE_MODEL = """
+import numpy as np
+
+
+def expected_frame(frame):
+    return np.full((2, 3, 3), frame, dtype=np.uint8)
+
+
+def verify_sound(sound, frame):
+    if not sound.samples.any():
+        raise ValueError("silent")
+    return {"frame": frame, "samples": len(sound.samples)}
+"""
+KEYS = """
+[keys]
+at = "start"
+letters = { L = "left", F = "space" }
+
+[variants.play]
+keys = "play.txt"
+"""
 SYMBOLS = "start EQU $3000\nready EQU $3010\nstate EQU $3020\nprogram_end EQU $3030\n"
+TICKS = 14318180
+CHECKPOINT_TICK = TICKS  # one emulated second after audio starts: 44,100 samples
 EXAMPLES = sorted(path.parent for path in (ROOT / "examples").glob("*/coco.toml"))
 
 
@@ -76,10 +101,38 @@ def project(folder: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> co
     return coco.load_project(folder)
 
 
-def emulated(ram: bytes | None = None, unreachable: bool = False, trace: str = "") -> Mock:
+def recorded(env: dict[str, str], frame: int, picture: np.ndarray | None) -> str:
+    """What the instrumented emulator's hooks write: raw files and their log lines."""
+    lines = [f"COCO_CHECKPOINT,{CHECKPOINT_TICK},{TICKS}"]
+    if "COCO_VIDEO" in env:
+        pixels = np.full((2, 3, 3), frame, dtype=np.uint8) if picture is None else picture
+        height, width, _ = pixels.shape
+        Path(env["COCO_VIDEO"]).write_bytes(
+            f"P6\n{width} {height}\n255\n".encode() + pixels.tobytes()
+        )
+        lines.append(f"COCO_VIDEO,{CHECKPOINT_TICK + 300000},{width},{height}")
+    if "COCO_AUDIO" in env:
+        buffers = 44
+        samples = (np.arange(buffers * 1024) % 90 * 300).astype("<i2")
+        Path(env["COCO_AUDIO"]).write_bytes(samples.tobytes())
+        lines.append("COCO_AUDIO_START,0,44100,1024")
+        lines += [f"COCO_AUDIO,{round(n * 1024 * TICKS / 44100)}" for n in range(1, buffers + 1)]
+    if "COCO_KEYS" in env:
+        steps = Path(env["COCO_KEYS"]).read_text().splitlines()
+        lines += [f"COCO_KEYS,{n},{n * 1000}" for n in range(len(steps))]
+    return "\n".join(lines) + "\n"
+
+
+def emulated(
+    ram: bytes | None = None,
+    unreachable: bool = False,
+    trace: str = "",
+    picture: np.ndarray | None = None,
+) -> Mock:
     """A host whose assembler writes symbols and whose emulator writes snapshots."""
     host = Mock(spec=Host)
     host.executable.side_effect = lambda name: f"/tools/{name}"
+    host.instrumented.return_value = "/tools/xroar-instrumented"
     host.firmware.side_effect = lambda profile, names: {n: Path("/roms") / n for n in names}
 
     def run(command, log, timeout, cwd=None, env=None):
@@ -90,12 +143,14 @@ def emulated(ram: bytes | None = None, unreachable: bool = False, trace: str = "
             binary = next(arg for arg in command if arg.startswith("--output="))
             Path(binary.split("=", 1)[1]).write_bytes(b"DECB")
             return
-        snaps = [command[i + 1] for i, arg in enumerate(command) if arg == "-trap-snap"]
+        snaps = [i + 1 for i, arg in enumerate(command) if arg == "-trap-snap"]
         if unreachable:
-            Path(snaps[0]).write_bytes(b"")
-        frame = int(command[command.index("-trap-range") + 1])
+            Path(command[snaps[0]]).write_bytes(b"")
+        frame = int(command[snaps[-1] - 2].split("-")[0])
         if ram is not None:
-            Path(snaps[-1]).write_bytes(ram if len(ram) != 32768 else ram_for(frame))
+            Path(command[snaps[-1]]).write_bytes(ram if len(ram) != 32768 else ram_for(frame))
+            if env:
+                log.write_text(trace + recorded(env, frame, picture))
 
     host.run.side_effect = run
     return host
@@ -229,8 +284,10 @@ class DescribeCommands:
         joined = " ".join(options)
         assert "-ram-init set" in joined and "-no-ratelimit" in joined
         assert "-trap pc=0x3020 -trap-snap u.ram" in joined
-        assert "-trap pc=0x3010 -trap-range 4 -trap-snap s.ram" in joined
+        assert "-trap pc=0x3010 -trap-range 4-4 -trap-snap s.ram" in joined
         assert "-trap-trace" not in joined
+        assert options[-2:] == ["-trap-timeout", "0"]
+        assert "-fskip" not in options
 
     def should_trace_from_a_label_until_the_checkpoint(self, project: coco.Project) -> None:
         check = project.settings.check.model_copy(update={"trace_from": "start"})
@@ -238,7 +295,7 @@ class DescribeCommands:
         options = coco.capture_options(check, coco.parse_symbols(SYMBOLS), 2, Path("s"), Path("u"))
 
         joined = " ".join(options)
-        assert "-trap pc=0x3000 -trap-range 1 -trap-trace" in joined
+        assert "-trap pc=0x3000 -trap-range 1-1 -trap-trace" in joined
         assert joined.index("-trap-no-trace") > joined.index("-trap-snap s")
 
     def should_assemble_with_defines_and_the_build_folder_for_includes(self) -> None:
@@ -301,10 +358,13 @@ class DescribeCapture:
         host = emulated(ram=bytes(32768))
         built = coco.build(project, host)
 
-        ram, log = coco.capture(project, host, built, "coco1", 3)
+        evidence = coco.capture(project, host, built, "coco1", 3)
 
-        assert ram == ram_for(3)
-        assert log.name == "main-coco1-3.log"
+        assert evidence.ram == ram_for(3)
+        assert evidence.log.name == "main-coco1-3.log"
+        assert evidence.picture is None and evidence.sound is None
+        assert host.run.call_args.kwargs["env"] is None
+        assert not host.instrumented.called
         command = host.run.call_args.args[0]
         assert command[:4] == ["/tools/xroar", "-no-c", "-machine", "cocous"]
         assert command[-2:] == ["-run", str(built.binary)]
@@ -339,8 +399,13 @@ class DescribeCheck:
         assert record["frames"] == [1, 3, 4]
         assert record["variants"]["main"]["screen_bytes_each"] == 4
         assert record["unreachable_checkpoint"] == "no snapshot"
-        assert record["visual"] == "not inspected"
-        assert "Memory: all 4 screen bytes" in coco.report(project, record)[1]
+        assert record["visual"] == "not inspected by a person"
+        assert record["rendered_display"] == record["sound"] == "not captured"
+        lines = coco.report(project, record)
+        assert "Memory: all 4 screen bytes" in lines[1]
+        assert lines[-3].startswith("Rendered display: not captured; add --video")
+        assert lines[-2].startswith("Sound: not captured; add --audio")
+        assert lines[-1].startswith("Visual: not inspected by a person")
 
     def should_remove_a_previous_pass_before_a_failing_attempt(self, project: coco.Project) -> None:
         previous = project.output / "coco1-results.json"
@@ -439,12 +504,288 @@ class DescribeCommandLine:
         assert coco.main(["check", str(folder), "--target", "coco2"], emulated()) == 1
 
 
+class DescribeEquipmentSettings:
+    def should_read_keys_capture_and_key_variants(self, folder: Path) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + KEYS + "\n[capture]\nvideo = true\n")
+
+        settings = coco.load_project(folder).settings
+
+        assert settings.keys.letters == {"L": "left", "F": "space"}
+        assert settings.variants["play"] == coco.Variant(keys="play.txt")
+        assert settings.capture == coco.Capture(video=True)
+
+    @pytest.mark.parametrize(
+        "change,message",
+        [
+            ('F = "space"', 'F = "spacebar"'),
+            ('F = "space"', '"-" = "space"'),
+            ('keys = "play.txt"', "defines = []"),
+            ("[keys]", "[ignored]"),
+        ],
+    )
+    def should_reject_unusable_key_settings(self, folder: Path, change: str, message: str):
+        (folder / "coco.toml").write_text(SETTINGS + KEYS.replace(change, message))
+
+        with pytest.raises(ProjectError, match="is invalid"):
+            coco.load_project(folder)
+
+    def should_combine_capture_settings_flags_and_the_variant_script(self, folder: Path) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + KEYS + "\n[capture]\naudio = true\n")
+        (folder / "play.txt").write_text("# held keys, then notes\nF  start\n-\nLF\n")
+        project = coco.load_project(folder)
+
+        plain = coco.equipment_for(project, "", video=True)
+        played = coco.equipment_for(project, "play")
+
+        assert (plain.video, plain.audio, plain.keys) == (True, True, None)
+        assert played.keys == (("space",), (), ("left", "space"))
+        assert played.script == "play.txt" and played.instrumented
+
+    def should_let_a_command_line_script_replace_the_variant_script(
+        self, folder: Path, tmp_path: Path
+    ) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + KEYS)
+        other = tmp_path / "other.txt"
+        other.write_text("L\n")
+
+        equipment = coco.equipment_for(coco.load_project(folder), "play", script=other)
+
+        assert equipment.keys == (("left",),)
+
+    def should_explain_key_scripts_it_cannot_use(self, folder: Path, tmp_path: Path) -> None:
+        script = tmp_path / "keys.txt"
+        script.write_text("X\n")
+        project = coco.load_project(folder)
+
+        with pytest.raises(ProjectError, match="needs \\[keys\\]"):
+            coco.equipment_for(project, script=script)
+        (folder / "coco.toml").write_text(SETTINGS + KEYS)
+        with pytest.raises(ProjectError, match="Cannot read the key script"):
+            coco.equipment_for(coco.load_project(folder), "play")
+        with pytest.raises(ValueError, match="X is not a declared letter"):
+            coco.equipment_for(coco.load_project(folder), script=script)
+
+
+class DescribeEquipmentRuns:
+    def should_record_frames_and_audio_then_run_on_after_the_checkpoint(
+        self, project: coco.Project
+    ) -> None:
+        equipment = coco.Equipment(video=True, audio=True)
+
+        options = coco.capture_options(
+            project.settings.check,
+            coco.parse_symbols(SYMBOLS),
+            2,
+            Path("s.ram"),
+            Path("u.ram"),
+            equipment,
+        )
+
+        assert options[: len(coco.VIDEO_OPTIONS)] == coco.VIDEO_OPTIONS
+        assert options[-2:] == ["-trap-timeout", "0.06"]
+
+    def should_act_on_keys_at_every_hit_of_the_key_label(self, folder: Path) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + KEYS)
+        project = coco.load_project(folder)
+        symbols = coco.parse_symbols(SYMBOLS)
+        equipment = coco.Equipment(keys=(("left",),))
+        paths = {"ram": Path("s.ram"), "keys": Path("k.keys")}
+
+        options = coco.capture_options(
+            project.settings.check,
+            symbols,
+            2,
+            Path("s.ram"),
+            Path("u.ram"),
+            equipment,
+            project.settings.keys,
+        )
+        variables = coco.recording_environment(equipment, symbols, project.settings.keys, paths)
+
+        assert "-trap pc=0x3000 -trap-range 1-" in " ".join(options)
+        assert options[-2:] == ["-trap-timeout", "0"]
+        assert variables == {
+            "COCO_CHECKPOINT": "s.ram",
+            "COCO_KEYS": "k.keys",
+            "COCO_KEYS_AT": "pc=0x3000",
+        }
+
+    def should_capture_with_the_instrumented_emulator(
+        self, folder: Path, project: coco.Project, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("COCO_VIDEO", "/stale/from/the/shell.ppm")
+        (folder / "coco.toml").write_text(SETTINGS + KEYS)
+        (folder / "play.txt").write_text("F\nL\n")
+        project = coco.load_project(folder)
+        host = emulated(ram=bytes(32768))
+        built = coco.build(project, host, "play")
+        equipment = coco.equipment_for(project, "play", video=True, audio=True)
+
+        evidence = coco.capture(project, host, built, "coco1", 3, equipment)
+
+        command = host.run.call_args.args[0]
+        env = host.run.call_args.kwargs["env"]
+        assert command[0] == "/tools/xroar-instrumented"
+        assert env["COCO_VIDEO"].endswith("play-coco1-3.ppm") and "PATH" in env
+        assert (project.output / "play-coco1-3.keys").read_text() == "space\nleft\n"
+        assert evidence.picture.pixels.shape == (2, 3, 3)
+        assert evidence.picture.path.name == "play-coco1-3.png" and evidence.picture.path.exists()
+        assert evidence.sound.rate == 44100 and len(evidence.sound.samples) == 44100
+        assert evidence.sound.path.name == "play-coco1-3.wav" and evidence.sound.path.exists()
+        assert evidence.keys_delivered == 2
+        assert not list(project.output.glob("*.ppm")) and not list(project.output.glob("*.pcm"))
+
+    def should_fail_when_the_emulator_rendered_no_frame(self, project: coco.Project) -> None:
+        host = emulated(ram=bytes(32768))
+        host.run.side_effect = lambda command, log, timeout, cwd=None, env=None: (
+            Path(env["COCO_CHECKPOINT"]).write_bytes(ram_for(1)),
+            log.write_text(f"COCO_CHECKPOINT,5,{TICKS}\n"),
+        )
+        built = coco.Build(binary=project.output / "main.bin", symbols=coco.parse_symbols(SYMBOLS))
+        project.output.mkdir(parents=True)
+
+        with pytest.raises(ValueError, match="rendered no complete frame"):
+            coco.capture(project, host, built, "coco1", 1, coco.Equipment(video=True))
+
+
+class DescribeRenderedAndSoundChecks:
+    @pytest.fixture
+    def capturing(self, folder: Path) -> coco.Project:
+        (folder / "expected.py").write_text(MODEL + CAPTURE_MODEL)
+        return coco.load_project(folder)
+
+    def should_compare_every_rendered_sample(self, capturing: coco.Project) -> None:
+        model = coco.load_expected(capturing.directory)
+        picture = coco.Picture(path=Path("f.png"), pixels=np.full((2, 3, 3), 4, dtype=np.uint8))
+
+        assert coco.verify_picture(capturing, model, picture, 4) == 6
+        assert coco.verify_picture(capturing, model, None, 4) == 0
+        with pytest.raises(ProjectError, match=r"Frame 3: rendered display: 6 of 6 .* x=0, y=0"):
+            coco.verify_picture(capturing, model, picture, 3)
+
+    def should_record_matched_frames_and_accepted_sound(self, capturing: coco.Project) -> None:
+        record = coco.check_target(
+            capturing, emulated(ram=bytes(32768)), "coco1", video=True, audio=True
+        )
+
+        main = record["variants"]["main"]
+        assert main["rendered"]["compared_samples_each"] == 6
+        assert main["rendered"]["images"] == [f"main-coco1-{f}.png" for f in (1, 3, 4)]
+        assert main["sound"]["model"][0] == {"frame": 1, "samples": 44100}
+        assert main["emulator"] == "/tools/xroar-instrumented"
+        assert record["rendered_display"] == "matched expected_frame"
+        assert record["sound"] == "accepted by verify_sound"
+        lines = coco.report(capturing, record)
+        assert "all 6 samples of the 3x2 frame matched expected_frame" in lines[-3]
+        assert lines[-2].startswith("Sound: verify_sound accepted the mixer output")
+
+    def should_reject_a_rendered_frame_that_differs(self, capturing: coco.Project) -> None:
+        wrong = np.zeros((2, 3, 3), dtype=np.uint8)
+        host = emulated(ram=bytes(32768), picture=wrong)
+
+        with pytest.raises(ProjectError, match="Frame 1: rendered display"):
+            coco.check_target(capturing, host, "coco1", video=True)
+
+        assert not (capturing.output / "coco1-results.json").exists()
+
+    def should_say_what_was_captured_but_not_compared(self, project: coco.Project) -> None:
+        record = coco.check_target(
+            project, emulated(ram=bytes(32768)), "coco1", video=True, audio=True
+        )
+
+        assert record["rendered_display"] == "captured; no expected_frame"
+        lines = coco.report(project, record)
+        assert "captured, not compared (no expected_frame)" in lines[-3]
+        assert "captured, not checked (no verify_sound)" in lines[-2]
+
+    def should_point_out_expectations_that_were_not_run(self, capturing: coco.Project) -> None:
+        record = coco.check_target(capturing, emulated(ram=bytes(32768)), "coco1")
+
+        lines = coco.report(capturing, record)
+        assert "so expected_frame was not compared; add --video" in lines[-3]
+        assert "verify_sound was not run" in lines[-2]
+
+    def should_report_keys_per_variant(self, folder: Path) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + KEYS)
+        (folder / "play.txt").write_text("F\nL\n-\n")
+        (folder / "expected.py").write_text(
+            "def verify_ram(ram, symbols, frame, variant):\n    pass\n"
+        )
+        project = coco.load_project(folder)
+
+        record = coco.check_target(project, emulated(ram=bytes(32768)), "coco1")
+
+        keys = record["variants"]["play"]["keys"]
+        assert keys == {
+            "script": "play.txt",
+            "at": "start",
+            "steps": 3,
+            "delivered_by_checkpoint": [3, 3, 3],
+        }
+        assert "keys" not in record["variants"]["main"]
+        assert "Keys (play): 3 steps of play.txt" in coco.report(project, record)[1]
+
+
+class DescribeEquipmentCommandLine:
+    def should_check_with_video_and_audio(self, folder: Path, project, capsys) -> None:
+        host = emulated(ram=bytes(32768))
+
+        code = coco.main(["check", str(folder), "--target", "coco1", "--video", "--audio"], host)
+
+        assert code == 0
+
+        output = capsys.readouterr().out
+        assert "Rendered display: captured" in output and "Sound: captured" in output
+
+    def should_print_every_recorded_path_from_a_snapshot(
+        self, folder: Path, project, tmp_path: Path, capsys
+    ) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + KEYS)
+        script = tmp_path / "keys.txt"
+        script.write_text("L\n")
+
+        code = coco.main(
+            ["snapshot", str(folder), "--video", "--audio", "--keys", str(script)],
+            emulated(ram=bytes(32768)),
+        )
+
+        assert code == 0
+        assert capsys.readouterr().out.splitlines() == [
+            str(project.output / f"main-coco1-1.{kind}") for kind in ("ram", "png", "wav")
+        ]
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [["run", "x", "--video"], ["build", "x", "--keys", "k"], ["check", "x", "--keys", "k"]],
+    )
+    def should_reject_equipment_where_it_does_not_apply(self, arguments: list[str]) -> None:
+        host = Mock(spec=Host)
+
+        with pytest.raises(SystemExit) as error:
+            coco.main(arguments, host)
+
+        assert error.value.code == 2
+        assert not host.method_calls
+
+
 class DescribeHost:
     def should_explain_missing_tools(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(coco, "tool_path", lambda name: None)
 
         with pytest.raises(ProjectError, match=r"uv run python scripts/native\.py"):
             Host().executable("lwasm")
+
+    def should_build_the_instrumented_emulator_on_demand(
+        self, monkeypatch: pytest.MonkeyPatch, capsys
+    ) -> None:
+        def ensure(say):
+            say("Building the instrumented XRoar once")
+            return Path("/local/xroar")
+
+        monkeypatch.setattr(coco.instrumented_xroar, "ensure", ensure)
+
+        assert Host().instrumented() == "/local/xroar"
+        assert "Building" in capsys.readouterr().err
 
     def should_log_process_output(self, tmp_path: Path) -> None:
         log = tmp_path / "out.log"
@@ -464,12 +805,25 @@ def firmware_profiles(directory: Path) -> set[str]:
     return {m.firmware or name for name, m in project.settings.targets.items()}
 
 
+def uses_equipment(directory: Path) -> bool:
+    settings = coco.load_project(directory).settings
+    capture = settings.capture.video or settings.capture.audio
+    return capture or any(variant.keys for variant in settings.variants.values())
+
+
+def instrumented_ready(*profiles: str) -> bool:
+    build_tools = not instrumented_xroar.missing_prerequisites(instrumented_xroar.BuildHost())
+    return native_ready(*profiles) and build_tools
+
+
 @pytest.mark.integration
 class DescribeExamplesInXRoar:
     @pytest.mark.parametrize("example", EXAMPLES, ids=lambda path: path.name)
     def should_pass_the_real_check(self, example: Path, capsys) -> None:
         if not native_ready(*firmware_profiles(example)):
             pytest.skip("Native tools or firmware are not installed")
+        if uses_equipment(example) and not instrumented_ready():
+            pytest.skip("A C compiler and make are needed for the instrumented XRoar")
 
         assert coco.main(["check", str(example)]) == 0
 
