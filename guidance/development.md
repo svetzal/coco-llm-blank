@@ -85,3 +85,21 @@ and uncertainty. Update current-state notes in place; Git keeps their history.
 This guidance adapts general development practices from Stacey Vetzal's
 `coco-llm` project. It does not carry that project's language-model goals,
 game assumptions, private paths, or reference collection into this template.
+
+## Keep implementation tied to verified facts
+
+A citation does not make a transcription correct. Compare each display-register
+write with the cited row, including every SAM strobe and the distinction between
+SAM fields and PIA fields. If a second source corrects a fact, update the code
+and source note together. Do not retain the earlier transcription in a stub.
+
+Allocate code, state, framebuffer, and stack as explicit address intervals.
+A framebuffer ending at an address does not imply code must fit below its
+start; check the remaining RAM above it too. Reserve state after the code or
+in a separate region, rather than assigning addresses inside growing code.
+
+Assemble the smallest complete increment before extending it. Do not leave
+invented instructions, omitted endpoint updates, or a line-drawing stub as a
+finished animation. For trailing lines, test both endpoint bounds and direction
+changes, history wrap and tenth-line expiry, and intersections between old and
+retained lines. If the build fails, report runtime behavior as untested.

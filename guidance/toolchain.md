@@ -39,7 +39,8 @@ starter does not yet automate native-tool installation.
 ## Verify the actual workflow
 
 Finding an executable does not prove a working build. Assemble an original
-small program, inspect its load address, then build and inspect its disk image.
+small program and inspect its load and execution addresses. Build and inspect
+a disk image only when the project needs one.
 For Disk BASIC, use the DECB binary format and test `LOADM` from the disk.
 Read [development.md](development.md) for memory and evidence requirements.
 
@@ -89,3 +90,36 @@ cannot validate keyboard, graphics, disk, or ROM behavior. Emulator results do
 not establish physical hardware timing.
 
 Use [python.md](python.md) when adding build orchestration or test scripts.
+
+## Diagnose binary startup
+
+For a directly launched LWASM DECB program, give the entry label explicitly
+with `end start` (where `start` is your entry label). `org` selects placement;
+it does not supply the execution address. Inspect both records in the emitted
+binary. XRoar's log name "RS-DOS BIN" is compatible with this DECB output;
+it is not evidence that you should invent a different header or byte order.
+
+Use an explicit hexadecimal prefix in XRoar traps, such as `pc=0x3005`.
+Derive the address from the current build's symbols. Put the overall timeout
+before the PC trap and attach snapshot actions after that trap. Allow ROM boot
+and binary loading to finish; a fraction-of-a-second trace of ROM initialization
+does not establish an infinite loop. For a bounded headless check:
+
+```sh
+xroar -ui null -machine cocous -ram 32 \
+  -bas local/roms/coco1/bas11.rom \
+  -extbas local/roms/coco1/extbas10.rom \
+  -no-cart -no-ratelimit -timeout 10 \
+  -trap "pc=$READY_ADDRESS" -trap-snap build/ready.ram \
+  -trap-timeout 0.01 -run build/demo.bin
+```
+
+Set `READY_ADDRESS` to the actual checkpoint address, including `0x`.
+Remove any stale snapshot first. Check its size and known state bytes; also
+check that an unreachable trap produces no snapshot. Keep a host timeout around
+the emulator. A raw `.ram` dump supports memory checks, not visual claims.
+
+When a probe fails, check entry point, address notation, trap ordering, and
+boot duration before blaming firmware or the loader. Change one variable per
+probe. After repeated identical results, consult the installed manual and
+record the unresolved question instead of restating a guess as a root cause.

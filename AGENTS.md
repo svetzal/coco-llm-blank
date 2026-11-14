@@ -59,3 +59,8 @@ Work on `main` in small scoped commits. Keep build products under `build/`.
 Test observable behavior across the boundary changed by the work. Preserve
 project notes on reruns. Keep this entry point short; place task-specific
 instructions in linked Markdown files with a clear statement of when to read them.
+
+Some agents hide ignored paths from their file tools. If `local/` or `build/`
+exists but a file tool rejects it, use an available shell to read local reference
+text or write project notes and build outputs. Keep those paths ignored. Check
+that a write succeeded before relying on the recorded project contract.
