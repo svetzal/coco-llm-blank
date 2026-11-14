@@ -1,0 +1,49 @@
+# Techniques for games and demos
+
+Start with the effect you want. Each guide explains a practical approach,
+credits its sources, and states what has actually been tested.
+Your agent can read one guide without loading the whole research collection.
+
+| I want to… | Read | Current evidence |
+| --- | --- | --- |
+| Animate objects or alternate pictures | [Plan animation storage](animation.md) | Examined BASIC articles; assembly adaptations remain untested. |
+| Scroll a CoCo 3 playfield | [Plan scrolling and memory](scrolling.md) | Examined book; no scrolling implementation reproduced. |
+| Get the intended colours | [Design for the display](colour.md) | Examined hardware manuals; proposed visual checks remain untested. |
+| Play sound during drawing and input | [Schedule sound](sound.md) | Original CoCo 1 and CoCo 3 experiments checked in XRoar. |
+
+CoCo 1, 2, and 3 all belong in this collection. Evidence is uneven today.
+A shared hardware description does not establish that an example runs on
+another model. Each guide names its narrower scope.
+
+## Read the evidence correctly
+
+**Published explanation** means we examined the cited passage. It does not
+mean we reproduced its program or established who first invented the idea.
+**Our adaptation** means the starter authors derived the advice or procedure.
+**Measured result** means a linked experiment checked a stated outcome.
+A proposal remains untested until an experiment supplies that evidence.
+
+Citations sit beside the claims they support. PDF page numbers are one-based
+positions in the archive file. Printed page numbers appear separately when known.
+Source resource IDs resolve to URLs and checksums in [resources.json](../resources.json).
+Use [reference lookup](../guidance/references.md) to download only the needed pages.
+Check diagrams, tables, and assembly listings against their page images.
+
+These guides explain techniques in our own words. They do not redistribute
+books, magazine listings, music, or art. Archive availability grants no license
+to reuse someone else's code or assets.
+
+## Before writing a game
+
+Read the selected guide, then inspect its cited hardware passages for your target.
+Record the machine, memory, video standard, display, and CPU clock in project notes.
+Keep unresolved details visible. Do not fill gaps from model memory.
+
+Start with a small example and check its memory writes and timing.
+Treat an assembled binary, emulator execution, visible output, audible output,
+and physical-machine behaviour as separate evidence.
+
+For source selection, rejected matches, and open questions, read the
+[game research notes](../guidance/game-research.md) or
+[sound research notes](../guidance/sound-research.md).
+The [plan](../PLAN.md#permanent-technique-guides) defines how this collection grows.

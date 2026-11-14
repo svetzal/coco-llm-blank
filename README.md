@@ -91,6 +91,8 @@ not included yet.
 You can start without reading these guides. They are here for your agent and
 for anyone who wants to understand or troubleshoot the setup.
 
+- [Game and demo techniques](guides/README.md): animation, scrolling, colours,
+  and sound.
 - [Agent instructions](AGENTS.md): where your agent starts.
 - [Manual setup](guidance/setup.md): commands for setup and checks.
 - [Reference books](guidance/references.md): finding pages and checking diagrams.

@@ -1,6 +1,7 @@
 # Sound while a game runs
 
-Load this guide before combining sound, animation, and controls.
+Start with [Schedule sound](../guides/sound.md) for practical guidance.
+Read these research notes for detailed evidence, source conflicts, and exclusions.
 The main question is how often the CPU must service each task.
 A music player with several voices does not necessarily leave time for a game.
 

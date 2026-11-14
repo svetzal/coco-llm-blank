@@ -1,6 +1,7 @@
 # Research for games and demos
 
-Load this guide when choosing techniques or references for a game or demo.
+Start with the [technique guides](../guides/README.md) when building a game or demo.
+Read these research notes for source selection, exclusions, and open questions.
 Use [reference lookup](references.md) to obtain and inspect the selected pages.
 This guide records selected research batches, not a complete survey or tested engine.
 

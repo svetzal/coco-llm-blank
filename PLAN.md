@@ -45,8 +45,9 @@ ignored local storage. Stacey requested public publication as
 
 Stacey requested a methodical archive survey, with equal attention to CoCo 1,
 CoCo 2, and CoCo 3. No preferred games or genres define the selection.
-[The research guide](guidance/game-research.md) holds the findings and source
-judgements. Update these living documents as research proceeds.
+[Research notes](guidance/game-research.md) hold findings and source judgements.
+[Permanent technique guides](guides/README.md) turn examined findings into practical
+guidance. Update these living documents as research proceeds.
 
 ### Method
 
@@ -64,13 +65,58 @@ judgements. Update these living documents as research proceeds.
    or resolve a hardware question. Keep reasons for exclusions and narrower uses.
 7. Add selected sources to the manifest and page-level navigation guide.
    Test selected-page conversion. Check difficult output against page images.
-8. Reproduce a small example before promoting a technique to implementation
-   guidance. Record build, runtime, visual, and hardware evidence separately.
+8. Write or update a task-focused technique guide for each selected useful finding.
+   Cite claims at the relevant passage. Label adaptations and proposed checks.
+9. Reproduce a small example before presenting an implementation as tested.
+   Record build, runtime, visual, audible, and hardware evidence separately.
+   Update the guide with the result, configuration, and limits.
 
 For each technique, distinguish **discovered**, **examined**, and **reproduced**.
 Examined means the relevant source was read; it does not mean its code works.
 Do not rank by nostalgia, impressive titles, or the number of pages collected.
 A BASIC tutorial can explain an algorithm without being a usable assembly driver.
+
+### Permanent technique guides
+
+The repository has three connected layers. Research notes preserve source
+selection and uncertainty. Guides explain how to use the findings. Original
+examples supply bounded implementation evidence. A source list alone does not
+complete a research pass.
+
+Keep guides under `guides/`, with one index organized by the effect a builder
+wants. AGENTS.md routes agents to that index and then to the relevant guide.
+The beginner README links the collection without making it required reading.
+Guides use ordinary Markdown and need no agent-specific skill loader.
+
+Each guide must include:
+
+- The task, applicable machines, and known configuration limits.
+- Practical steps, memory or timing tradeoffs, and likely failure cases.
+- Citations beside sourced claims, naming the author, title, edition or issue,
+  exact PDF pages, printed pages when known, archive URL, and resource ID.
+- Clear attribution for published explanations, our adaptations, derived
+  calculations, measured results, and untested proposals.
+- Links to original examples and their checks when implementation evidence exists.
+- Unresolved conflicts and the evidence needed to settle them.
+
+Credit an examined author without claiming they invented the technique.
+Do not cite unread continuation pages as support. Check diagrams and listings
+against images when conversion is uncertain. Keep copyrighted source content
+in ignored local storage; publish our explanations and source metadata only.
+
+A guide can document an examined technique before reproduction, provided its
+procedures remain labelled proposals. Only measured claims gain tested status.
+Emulator memory, visible output, audible output, and physical hardware remain
+separate evidence. Compatibility needs a test on each claimed target.
+
+The first guides now cover animation storage, prepared pictures, CoCo 3
+scrolling and mapping, display-dependent colours, and sound scheduling.
+Graphics procedures remain proposals. Sound guides link original CoCo 1 and
+CoCo 3 emulator experiments. CoCo 2 runtime coverage remains incomplete.
+
+For each later pass, update the relevant guide and navigation before calling
+the pass complete. Check citations, relative links, Markdown, and runnable
+commands. Re-run example checks when their code or contract changes.
 
 ### First batch
 
@@ -150,8 +196,9 @@ possible follow-up experiments, not measured improvements.
 5. Reproduce selected small techniques with original implementations and tests.
    Choose examples across all three machines before claiming broad coverage.
 
-Each pass should produce a few examined, usable references rather than a large
-unread library. Review topic and machine gaps after every pass.
+Each pass should produce a few examined references and their usable guide text.
+Update existing guides when a finding changes their advice. Review topic and
+machine gaps after every pass.
 
 ## Next increments
 
