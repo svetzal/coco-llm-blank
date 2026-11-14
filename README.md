@@ -114,10 +114,11 @@ or was never published, and there are still new things to discover as we use
 these computers in a modern context.
 
 The quality of the games or demos you produce is going to hinge on guides
-already in this repository that are being built up over time, or starting a lab
-and having the agent help you research around your problem - which may come up
-with new books or blogs or articles that may help you find a solution. Or the
-agent may just have to put its head down and try to solve the problem itself.
+already in this repository that are being built up over time, or on a lab
+that you start to have the agent help you research your challenge. The agent
+may find new books or blogs or articles on the Internet that may help find
+a solution. Or the agent may just have to put its head down and try to solve
+the problem itself.
 
 Your attention to detail, your diligence in playability and user experience
 will have far more impact on the quality of the game it produces than the agent
