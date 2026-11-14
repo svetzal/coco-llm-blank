@@ -9,9 +9,10 @@ renderer and movement routines share a map, but use separate address and rule
 calculations. This guide explains that separation, then proposes a smaller
 original game design.
 
-**Evidence:** source reading only. We did not assemble or run PacDude, and the
-adaptation below has not been implemented. The examined renderer targets CoCo 3.
-This reading does not establish CoCo 1/2 support or a minimum RAM configuration.
+**Evidence:** PacDude source reading only; that historical program was not run.
+A separate original [tile-room example](../examples/tile-room/README.md) checks
+a bounded adaptation on defined CoCo 1/2 configurations. The examined historical
+renderer targets CoCo 3; its compatibility does not follow from our example.
 
 ## Keep three kinds of position separate
 
@@ -166,7 +167,12 @@ replace `LEGAL` with `VALID` and assume the movement remains equivalent.
 
 ## Build a smaller original game
 
-The following is **our untested adaptation**, not PacDude's implementation.
+The following is **our original adaptation**, not PacDude's implementation.
+The [tile-room example](../examples/tile-room/README.md) checks scripted
+cell movement, walls, collection and return on defined NTSC, 32 KiB, non-T1
+CoCo 1/2 configurations. Each target passes 42 complete framebuffer/map
+checkpoints with guards and negative controls. It has no keyboard or victory
+system. Visual appearance, smooth movement and physical hardware remain untested.
 Start with a single room, original tiles, and one actor that occupies one cell.
 Use cell-by-cell movement first. This avoids needing a pixel-sized collision
 shape before the map and input loop work.
