@@ -22,7 +22,9 @@ eight rows by eight columns, while the table has seven labelled row values
 (printed/PDF 106, 108). [Landwehr, "Read the Keyboard in Assembly"][keyboard].
 These conflicts remain unresolved here. Before writing a scanner, check the
 target hardware reference for PIA setup, row masks, shared input bits, and
-supported key combinations. This article alone is not a register recipe.
+supported key combinations. Use the [primary input-hardware findings](../guidance/input-hardware-research.md)
+for board-specific matrix coordinates and shared-input limits. This article
+alone is not a register recipe.
 
 Our adaptation is to sample every required control, then apply an explicit
 policy. Use held state for movement and a rising edge for a single action.
