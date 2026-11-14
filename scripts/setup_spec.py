@@ -28,6 +28,41 @@ class DescribeProjectSetup:
 
         assert notes.read_bytes() == saved
 
+    @pytest.mark.parametrize("suffix", [" (owner request)", "", "   "])
+    def should_preserve_an_annotated_target_without_a_final_newline(
+        self, project: Path, suffix: str
+    ) -> None:
+        notes = project / "local/PROJECT.md"
+        notes.parent.mkdir()
+        notes.write_text("# My project\nTarget: CoCo 1" + suffix)
+        saved = notes.read_bytes()
+
+        assert setup.main(["--guidance-only", "--target", "coco1"], project) == 0
+        assert setup.main(["--guidance-only"], project) == 0
+        assert setup.main(["--guidance-only", "--target", "coco2"], project) == 1
+        assert notes.read_bytes() == saved
+
+    @pytest.mark.parametrize(
+        "target_lines",
+        [
+            "Target: CoCo 10",
+            "Target: unknown",
+            "No target yet",
+            "Target: CoCo 1\nTarget: CoCo 2",
+            "Target: CoCo 1\nTarget: CoCo 1",
+        ],
+    )
+    def should_explain_an_invalid_or_ambiguous_target(
+        self, project: Path, target_lines: str, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        notes = project / "local/PROJECT.md"
+        notes.parent.mkdir()
+        notes.write_text(target_lines)
+
+        assert setup.main(["--guidance-only"], project) == 1
+        assert "needs one Target line" in capsys.readouterr().err
+        assert notes.read_text() == target_lines
+
     def should_use_the_owners_interactive_target(self, project: Path) -> None:
         console = Mock(spec=setup.ConsoleGateway)
         console.choose_target.return_value = "coco3"

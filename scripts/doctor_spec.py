@@ -12,7 +12,7 @@ import pytest
 def tool_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("PATH", str(tmp_path))
     for command, (variable, _) in doctor.TOOLS.items():
-        monkeypatch.delenv(variable, raising=False)
+        monkeypatch.setenv(variable, str(tmp_path / command))
         executable = tmp_path / command
         executable.write_text("#!/bin/sh\nexit 99\n")
         executable.chmod(0o755)

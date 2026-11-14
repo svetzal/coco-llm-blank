@@ -94,14 +94,23 @@ class ProjectStore:
     def initialize(self, target: str | None, console: ConsoleGateway) -> str:
         project = self.root / "local/PROJECT.md"
         if project.exists():
-            if target and f"Target: {TARGETS[target]}\n" not in project.read_text():
+            lines = re.findall(r"^Target:[ \t]*(.*)$", project.read_text(), re.MULTILINE)
+            match = (
+                re.fullmatch(r"(CoCo [123])(?:[ \t]+\([^\r\n]*\))?[ \t]*", lines[0])
+                if len(lines) == 1
+                else None
+            )
+            if not match:
+                raise ValueError(
+                    "local/PROJECT.md needs one Target line: Target: CoCo 1, "
+                    "Target: CoCo 2, or Target: CoCo 3. A parenthesized note is allowed.",
+                )
+            chosen = next(key for key, label in TARGETS.items() if label == match[1])
+            if target and target != chosen:
                 raise ValueError(
                     "Existing local/PROJECT.md has a different target. Edit it deliberately before rerunning.",
                 )
-            for key, label in TARGETS.items():
-                if f"Target: {label}\n" in project.read_text():
-                    return key
-            raise ValueError("Set a recognized Target in local/PROJECT.md before rerunning")
+            return chosen
         chosen = target or console.choose_target()
         atomic_text(project, project_notes(chosen))
         return chosen
