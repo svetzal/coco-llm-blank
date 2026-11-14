@@ -139,8 +139,9 @@ def journey(container: str, sudo: bool) -> None:
         "notes-before",
         """
         mkdir -p build/linux-onboarding
-        printf '\\n## Owner preservation fixture\\n\\nKeep this project note exactly.\\n' >> local/PROJECT.md
-        cp local/PROJECT.md build/linux-onboarding/PROJECT-before.md
+        mkdir -p projects/demo
+        printf '# Demo\\n\\n## Owner preservation fixture\\n\\nKeep this project note exactly.\\n' > projects/demo/PROJECT.md
+        cp projects/demo/PROJECT.md build/linux-onboarding/PROJECT-before.md
     """,
     )
     inside(container, "rerun", "timeout 300 sh scripts/bootstrap.sh coco2")
@@ -148,8 +149,8 @@ def journey(container: str, sudo: bool) -> None:
         container,
         "notes-after",
         """
-        cmp local/PROJECT.md build/linux-onboarding/PROJECT-before.md
-        cp local/PROJECT.md build/linux-onboarding/PROJECT-after.md
+        cmp projects/demo/PROJECT.md build/linux-onboarding/PROJECT-before.md
+        cp projects/demo/PROJECT.md build/linux-onboarding/PROJECT-after.md
         uv run python scripts/doctor.py --profile demo --target coco2
         uv --version; uv run python --version
         local/toolchain/bin/lwasm --version; local/toolchain/bin/xroar --version

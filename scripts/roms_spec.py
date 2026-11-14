@@ -38,7 +38,7 @@ class DescribeFirmwareSetup:
         assert not (project / "local/references").exists()
         assert not (project / "local/roms/escape.rom").exists()
         gateway.fetch.side_effect = AssertionError("cache must work offline")
-        assert setup.main(["--roms-only"], project, rom_downloads=gateway) == 0
+        assert setup.main(["--target", "coco1", "--roms-only"], project, rom_downloads=gateway) == 0
 
     @pytest.mark.parametrize("damage", ["download", "cache", "member", "size", "missing", "zip"])
     def should_reject_bad_firmware_without_publishing_roms(
@@ -82,15 +82,14 @@ class DescribeFirmwareSetup:
             provision(project, "coco1", gateway)
         assert not (project / "local").exists()
 
-    def should_explain_unknown_profiles_and_target_notes(self, project: Path) -> None:
+    def should_explain_unknown_profiles_and_a_missing_target(self, project: Path) -> None:
         gateway = fixture_archive(project)
         with pytest.raises(ValueError, match="No ROM profile"):
             provision(project, "coco2", gateway)
-        notes = project / "local/PROJECT.md"
-        notes.parent.mkdir()
-        notes.write_text("My notes without a target")
-        assert setup.main(["--roms-only"], project, rom_downloads=gateway) == 1
-        assert notes.read_text() == "My notes without a target"
+        console = Mock(spec=setup.ConsoleGateway)
+        console.choose_target.side_effect = ValueError("Choose a target with --target")
+        assert setup.main(["--roms-only"], project, console=console, rom_downloads=gateway) == 1
+        assert not (project / "local/roms").exists()
 
 
 class DescribeRomTransport:

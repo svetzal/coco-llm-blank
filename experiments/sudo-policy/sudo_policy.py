@@ -121,7 +121,8 @@ class Experiment:
         (inputs / "local").mkdir()
         (inputs / "scripts/bootstrap.sh").write_bytes(source)
         (inputs / "scripts/prerequisites.sh").write_text(prerequisite_prefix(source.decode()))
-        (inputs / "local/PROJECT.md").write_bytes(NOTES)
+        (inputs / "projects/demo").mkdir(parents=True, exist_ok=True)
+        (inputs / "projects/demo/PROJECT.md").write_bytes(NOTES)
         (self.output / "validate.py").write_bytes(Path(__file__).read_bytes())
         self.run("git-head", ["git", "rev-parse", "HEAD"])
         self.run("git-status", ["git", "status", "--short"])
@@ -132,7 +133,7 @@ class Experiment:
 
     def notes(self, name: str, phase: str, expected: bytes = NOTES) -> None:
         label = f"{name}-{phase}-notes"
-        self.shell(name, label, "cat /work/local/PROJECT.md", "learner")
+        self.shell(name, label, "cat /work/projects/demo/PROJECT.md", "learner")
         assert (self.output / f"{label}.log").read_bytes() == expected, "Project note bytes changed"
 
     def unchanged(self, name: str, phase: str) -> None:
@@ -319,7 +320,7 @@ class Experiment:
         self.shell(
             name,
             f"{name}-edit-notes",
-            "printf '\\n## Edited after recovery\\n\\nPreserve this later owner-note fixture too.\\n' >> local/PROJECT.md",
+            "printf '\\n## Edited after recovery\\n\\nPreserve this later owner-note fixture too.\\n' >> projects/demo/PROJECT.md",
             "learner",
         )
         self.bootstrap(name, "rerun", NOTES + EDIT)

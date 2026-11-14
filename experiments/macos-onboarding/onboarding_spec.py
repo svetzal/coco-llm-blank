@@ -68,18 +68,16 @@ def prepare(root: Path) -> None:
 
 
 class DescribeCurrentHostRecovery:
-    def should_preserve_notes_across_conflict_failure_and_recovery(self, workspace: Path) -> None:
-        result = run(workspace, "setup.py", "--target", "coco1", "--guidance-only")
-        assert result.returncode == 0, result.stderr
-        notes = workspace / "local/PROJECT.md"
-        original = notes.read_bytes() + b"\nOwner fixture: keep this exact note.\n"
+    def should_preserve_owner_projects_across_setup_and_recovery(self, workspace: Path) -> None:
+        notes = workspace / "projects/demo/PROJECT.md"
+        notes.parent.mkdir(parents=True)
+        original = b"# Demo\nTarget: CoCo 1\nOwner fixture: keep this exact note.\n"
         notes.write_bytes(original)
 
-        result = run(workspace, "setup.py", "--target", "coco2", "--roms-only")
-        assert result.returncode == 1
-        assert "different target" in result.stderr
+        result = run(workspace, "setup.py", "--target", "coco1", "--guidance-only")
+        assert result.returncode == 0, result.stderr
         assert notes.read_bytes() == original
-        assert not (workspace / "local/roms/coco2").exists()
+        assert not (workspace / "local/PROJECT.md").exists()
         prepare(workspace)
         assert notes.read_bytes() == original
         assert not (workspace / "local/references").exists()

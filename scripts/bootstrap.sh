@@ -59,7 +59,7 @@ fi
 printf 'For later commands, uv is at: %s\n' "$(command -v uv)"
 echo 'Preparing the project Python environment. The first run can take a while.'
 uv sync --locked
-echo 'Preparing project notes without converting books or downloading firmware.'
+echo 'Preparing the local reference index without converting books or downloading firmware.'
 uv run python scripts/setup.py --target "$target" --guidance-only
 echo 'Installing missing assembly and emulator tools.'
 uv run python scripts/native.py

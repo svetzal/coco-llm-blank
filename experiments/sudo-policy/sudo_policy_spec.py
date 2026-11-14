@@ -146,29 +146,20 @@ class DescribeBoundedFailureEvidence:
 
 class DescribeProjectFixture:
     @pytest.mark.parametrize("suffix", [b"", b"\nOwner has edited this note.\n"])
-    def should_survive_real_guidance_setup_without_rewriting(self, tmp_path, suffix):
+    @pytest.mark.parametrize("target", ["coco1", "coco2"])
+    def should_survive_real_guidance_setup_without_rewriting(self, tmp_path, suffix, target):
         import setup
         from sudo_policy import ROOT
 
-        (tmp_path / "local").mkdir()
-        note = tmp_path / "local/PROJECT.md"
+        note = tmp_path / "projects/demo/PROJECT.md"
+        note.parent.mkdir(parents=True)
         original = NOTES + suffix
         note.write_bytes(original)
         (tmp_path / "resources.json").write_bytes((ROOT / "resources.json").read_bytes())
 
-        assert setup.main(["--target", "coco2", "--guidance-only"], tmp_path) == 0
+        assert setup.main(["--target", target, "--guidance-only"], tmp_path) == 0
         assert note.read_bytes() == original
         assert (tmp_path / "local/INDEX.md").is_file()
-
-    def should_reject_wrong_target_without_damaging_notes(self, tmp_path):
-        import setup
-
-        (tmp_path / "local").mkdir()
-        note = tmp_path / "local/PROJECT.md"
-        note.write_bytes(NOTES)
-
-        assert setup.main(["--target", "coco1", "--guidance-only"], tmp_path) == 1
-        assert note.read_bytes() == NOTES
 
 
 class DescribeRecoveryFailure:

@@ -66,8 +66,7 @@ Run these commands from the repository root after the starter's setup has
 prepared `uv`, LWTOOLS, XRoar and the selected firmware. `scripts/coco.py` verifies
 both ROM files before launch and ignores personal XRoar configuration.
 
-To use or check both targets, provision both firmware profiles without changing
-`local/PROJECT.md`. Do not rerun project setup with a different target.
+To use or check both targets, provision both firmware profiles.
 This is the [complete validation environment procedure](../../guidance/starter/python.md#complete-starter-validation-environment),
 limited to the two targets this example uses:
 

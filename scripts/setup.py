@@ -1,4 +1,4 @@
-"""Initialize local CoCo guidance and a checksum-verified reference library."""
+"""Prepare checksum-verified references and firmware in ignored local storage."""
 
 import argparse
 import json
@@ -79,7 +79,7 @@ class DownloadGateway:
 
 
 class ProjectStore:
-    """Read the manifest and preserve the owner's local project notes."""
+    """Read the manifest and describe the local reference library."""
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -90,30 +90,6 @@ class ProjectStore:
         )
         validate_manifest(resources)
         return resources
-
-    def initialize(self, target: str | None, console: ConsoleGateway) -> str:
-        project = self.root / "local/PROJECT.md"
-        if project.exists():
-            lines = re.findall(r"^Target:[ \t]*(.*)$", project.read_text(), re.MULTILINE)
-            match = (
-                re.fullmatch(r"(CoCo [123])(?:[ \t]+\([^\r\n]*\))?[ \t]*", lines[0])
-                if len(lines) == 1
-                else None
-            )
-            if not match:
-                raise ValueError(
-                    "local/PROJECT.md needs one Target line: Target: CoCo 1, "
-                    "Target: CoCo 2, or Target: CoCo 3. A parenthesized note is allowed.",
-                )
-            chosen = next(key for key, label in TARGETS.items() if label == match[1])
-            if target and target != chosen:
-                raise ValueError(
-                    "Existing local/PROJECT.md has a different target. Edit it deliberately before rerunning.",
-                )
-            return chosen
-        chosen = target or console.choose_target()
-        atomic_text(project, project_notes(chosen))
-        return chosen
 
     def extraction_status(self, resource: Resource) -> str | None:
         directory = self.root / "local/references" / resource.id
@@ -152,25 +128,6 @@ def validate_manifest(resources: list[Resource]) -> None:
             raise ValueError(f"Expected an archive HTTPS URL: {resource.id}")
 
 
-def project_notes(target: str) -> str:
-    return f"""# Local project contract
-
-Target: {TARGETS[target]}
-CPU: 6809
-RAM: not selected
-Video standard: not selected
-Clock: stock for the selected machine
-Controls: not selected
-Loading method: not selected
-
-Complete these choices from the owner's request and the documented emulator
-defaults in guidance/starter/development.md before implementation. Label defaults as
-defaults; ask about unresolved physical-machine requirements or conflicts.
-Read `guidance/starter/development.md` and `local/INDEX.md` from the repository root.
-This file is yours to edit. Setup preserves it on subsequent runs.
-"""
-
-
 def index_entry(resource: Resource, status: str | None) -> str:
     if status is None:
         return f"- {resource.title}: not converted. Run setup with `--resource {resource.id}`."
@@ -201,9 +158,15 @@ def select_resources(resources: list[Resource], requested: list[str] | None) -> 
 
 def parse_options(argv: list[str] | None) -> SetupOptions:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--target", choices=TARGETS)
+    parser.add_argument(
+        "--target", choices=TARGETS, help="Machine whose firmware --roms-only downloads"
+    )
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--guidance-only", action="store_true")
+    mode.add_argument(
+        "--guidance-only",
+        action="store_true",
+        help="Write the local reference index without downloading books or firmware",
+    )
     mode.add_argument(
         "--roms-only", action="store_true", help="Download target ROMs without converting books"
     )
@@ -256,8 +219,8 @@ def main(
             return 0
         selected = select_resources(resources, options.resources)
         page_range = parse_page_range(options.pages)
-        target = store.initialize(options.target, console or ConsoleGateway())
         if options.roms_only:
+            target = options.target or (console or ConsoleGateway()).choose_target()
             provision(root, target, rom_downloads)
             store.write_index(resources)
             return 0
@@ -269,7 +232,7 @@ def main(
             documents or DoclingGateway(),
         )
         store.write_index(resources)
-        print("Local guidance: local/PROJECT.md; references: local/INDEX.md")
+        print("References: local/INDEX.md")
         return 0 if success else 1
     except (OSError, ValueError) as error:
         print(f"Setup failed: {error}", file=sys.stderr)

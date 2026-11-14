@@ -8,13 +8,16 @@ reference. Paths in commands are relative to the repository root.
 
 A beginner can arrive with only the repository URL and an idea. Handle setup
 and implementation; do not ask them to translate tool errors into instructions.
-Use a new folder for a new project and preserve existing projects.
+Each project lives in its own folder, `projects/<name>/`. Name it from the
+owner's idea: a few lowercase words joined by hyphens, such as `bouncing-lines`.
+Never reuse or change another project's folder. Tell the owner the name and
+where the project is.
 
 Read [the contract checklist](guidance/starter/development.md#establish-the-contract)
 to establish the target before implementation.
 Run `sh scripts/bootstrap.sh coco1` for a CoCo 1 project, or use the chosen
 target.
-This prepares Python, project notes, native tools, and checksum-verified
+This prepares Python, the reference index, native tools, and checksum-verified
 firmware.
 Bootstrap must finish successfully before an emulator launch. A tool-only check
 does not establish that ROMs are installed.
@@ -25,23 +28,23 @@ that require the owner. Explain those questions without assuming tool knowledge.
 Run `uv run python scripts/doctor.py --profile demo --target coco1`,
 substituting
 the chosen target. It checks the actual installed ROM bytes, not only filenames.
-If firmware is missing, run `uv run python scripts/setup.py --roms-only` using
-the existing project target. Resolve checksum errors before continuing.
+If firmware is missing, run `uv run python scripts/setup.py --roms-only` with
+the project's `--target`. Resolve checksum errors before continuing.
 
 For CoCo 1, use [the first-screen example](examples/first-screen/README.md) to
 check boot and execution before building the requested feature. It is a starting
 point, not
 the requested game or animation.
 
-Before adapting an example or writing code, complete and read back
-`local/PROJECT.md` from the request and documented defaults. Convert
-only reference pages needed for the first feature. Build a small complete
-increment and test it in XRoar. Give the project folder a `coco.toml` and an
-independent `expected.py`, as the first-screen example does, and explain the
-`scripts/coco.py run` and `check` commands in plain language.
-Separate build, runtime, and visual evidence. Never call a build alone a working
-project. Keep downloads outside Git and do not publish the owner's project
-unless requested.
+Before writing code, copy `examples/first-screen/` to `projects/<name>/` and
+write the project's `README.md`: what the owner asked for, how to run it in
+plain language, and the [project contract](guidance/starter/development.md#establish-the-contract).
+Read it back. Convert only reference pages needed for the first feature. Build
+a small complete increment and test it with `scripts/coco.py check`, keeping
+`coco.toml` and an independent `expected.py` current. Separate build, runtime,
+and visual evidence. Never call a build alone a working project.
+Commit the project folder in the owner's copy of the starter. Keep downloads
+outside Git and do not push or publish the project unless the owner asks.
 
 ## Launch only with validated firmware
 
@@ -86,10 +89,9 @@ an example. Read its cited primary passages; the example is not a substitute.
 
 ## What to load
 
-- Starting a project: read [README.md](README.md), then `local/PROJECT.md`.
-  If it is missing, use the target already named in the request, for example
-  `uv run python scripts/setup.py --target coco1 --guidance-only`.
-  Ask for the target only when it is unspecified. Use the documented emulator
+- Starting or resuming a project: read [README.md](README.md), then the
+  project's `projects/<name>/README.md` if it exists. For a new project, use the
+  target named in the request; ask for it only when it is unspecified. Use the documented emulator
   defaults in [development practice](guidance/starter/development.md#establish-the-contract)
   where applicable, and record them as defaults rather than owner choices.
 - Choosing game or demo techniques: read the [technique index](guidance/techniques/README.md),
@@ -127,14 +129,14 @@ guidance. The manifest records sources; it does not grant a license.
 
 Work on `main` in small scoped commits. Keep build products under `build/`.
 Test observable behavior across the boundary changed by the work. Preserve
-project notes on reruns. Keep this entry point short; place task-specific
+the owner's project folders. Keep this entry point short; place task-specific
 instructions in linked Markdown files with a clear statement of when to read
 them.
 
 Some agents hide ignored paths from their file tools. If `local/` or `build/`
 exists but a file tool rejects it, use an available shell to read local
 reference
-text or write project notes and build outputs. Keep those paths ignored. Check
+text or write build outputs. Keep those paths ignored. Check
 that a write succeeded before relying on the recorded project contract.
 
 ## How this starter grows

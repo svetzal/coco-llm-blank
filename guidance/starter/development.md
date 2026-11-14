@@ -2,10 +2,13 @@
 
 ## Establish the contract
 
-Record the CoCo model/revision, XRoar machine profile, RAM, CPU, video standard,
-clock, controls, and loader in `local/PROJECT.md` before adapting an example,
-assembling, or writing hardware-dependent code. Read the file back to verify
-the write succeeded. Notes filled in after a run describe that run; they do not
+A project is a folder, `projects/<name>/`, holding `main.asm`, `coco.toml`,
+`expected.py` and `README.md`. The README starts with what the owner asked for
+and how to run it in plain language. Its contract section records the CoCo
+model/revision, XRoar machine profile, RAM, CPU, video standard, clock,
+controls, and loader. Write it before adapting an example, assembling, or
+writing hardware-dependent code, and read it back to verify the write
+succeeded. Keep `coco.toml` consistent with it. Notes filled in after a run describe that run; they do not
 replace this implementation contract.
 Setup selects a starting target;
 it does not establish that an application supports it. Keep unknowns explicit.
@@ -13,7 +16,7 @@ Do not silently enable a 6309, more RAM, or a faster clock to pass a test.
 
 For a new CoCo 1 emulator demo with no RAM or video requirement, start with
 32 KiB RAM, NTSC, a stock-clock 6809, and direct DECB binary auto-run in XRoar.
-Record these as starter defaults in `local/PROJECT.md` and state them to the
+Record these as starter defaults in the project contract and state them to the
 owner; do not claim the owner confirmed them. An animation needs no controls
 unless requested. These defaults let the first prototype proceed. Explicit
 requirements and existing project notes take precedence; ask when a physical
@@ -162,13 +165,13 @@ Do not write or copy a launcher. A project is a folder that
 
 ```sh
 uv run python scripts/coco.py --help
-uv run python scripts/coco.py build projects/my-demo
-uv run python scripts/coco.py run projects/my-demo
-uv run python scripts/coco.py check projects/my-demo
-uv run python scripts/coco.py snapshot projects/my-demo --frame 3
+uv run python scripts/coco.py build projects/<name>
+uv run python scripts/coco.py run projects/<name>
+uv run python scripts/coco.py check projects/<name>
+uv run python scripts/coco.py snapshot projects/<name> --frame 3
 ```
 
-The folder holds three files. Start by copying
+Besides its `README.md`, the folder holds three files. Start by copying
 [first-screen](../../examples/first-screen/README.md); its files show each
 setting with a comment.
 
@@ -191,7 +194,7 @@ unreachable label leaves no snapshot, compares every screen byte, and then runs
 the model. It reports execution and memory evidence separately and never claims
 visual evidence; look at the `run` window for that. Without `expected.py` it
 only proves that the checkpoint was reached. Record the `coco.toml` machine
-choices in `local/PROJECT.md` too.
+choices in the project contract too.
 
 The tool parses arguments before any build or launch: `--help` exits
 successfully and unknown arguments exit nonzero. It verifies every firmware

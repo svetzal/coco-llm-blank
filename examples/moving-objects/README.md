@@ -49,7 +49,7 @@ This is a defined emulator configuration, not proof for every CoCo 2 revision.
 The check reports the exact configuration in its results file.
 
 ROMs remain in ignored `local/roms/` storage. The project manifest identifies
-their source and checksums. The check never changes `local/PROJECT.md`.
+their source and checksums. The check never changes project files.
 
 ## Source facts and our design
 

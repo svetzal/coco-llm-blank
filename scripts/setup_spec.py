@@ -13,66 +13,44 @@ from references import ConversionError, ConvertedPage, DoclingGateway, Resource,
 
 
 class DescribeProjectSetup:
-    @pytest.mark.parametrize("target", list(setup.TARGETS))
-    def should_preserve_owner_notes_and_reject_a_target_change(
-        self, project: Path, target: str
+    @pytest.mark.parametrize("target", [None, *setup.TARGETS])
+    def should_write_the_index_without_creating_project_notes(
+        self, project: Path, target: str | None
     ) -> None:
-        assert setup.main(["--target", target, "--guidance-only"], project) == 0
-        notes = project / "local/PROJECT.md"
-        notes.write_text(notes.read_text() + "\nOwner notes.\n")
-        saved = notes.read_bytes()
+        arguments = ["--guidance-only"] + (["--target", target] if target else [])
 
-        assert setup.main(["--guidance-only"], project) == 0
-        other = "coco3" if target != "coco3" else "coco1"
-        assert setup.main(["--guidance-only", "--target", other], project) == 1
+        assert setup.main(arguments, project) == 0
 
-        assert notes.read_bytes() == saved
+        assert (project / "local/INDEX.md").is_file()
+        assert not (project / "local/PROJECT.md").exists()
+        assert not (project / "projects").exists()
 
-    @pytest.mark.parametrize("suffix", [" (owner request)", "", "   "])
-    def should_preserve_an_annotated_target_without_a_final_newline(
-        self, project: Path, suffix: str
-    ) -> None:
-        notes = project / "local/PROJECT.md"
-        notes.parent.mkdir()
-        notes.write_text("# My project\nTarget: CoCo 1" + suffix)
+    def should_leave_owner_projects_untouched(self, project: Path) -> None:
+        notes = project / "projects/demo/PROJECT.md"
+        notes.parent.mkdir(parents=True)
+        notes.write_text("# Demo\nTarget: CoCo 2\nOwner notes.")
         saved = notes.read_bytes()
 
         assert setup.main(["--guidance-only", "--target", "coco1"], project) == 0
-        assert setup.main(["--guidance-only"], project) == 0
-        assert setup.main(["--guidance-only", "--target", "coco2"], project) == 1
+        assert setup.main(["--guidance-only", "--target", "coco3"], project) == 0
+
         assert notes.read_bytes() == saved
 
-    @pytest.mark.parametrize(
-        "target_lines",
-        [
-            "Target: CoCo 10",
-            "Target: unknown",
-            "No target yet",
-            "Target: CoCo 1\nTarget: CoCo 2",
-            "Target: CoCo 1\nTarget: CoCo 1",
-        ],
-    )
-    def should_explain_an_invalid_or_ambiguous_target(
-        self, project: Path, target_lines: str, capsys: pytest.CaptureFixture[str]
+    def should_ask_for_the_firmware_target_only_when_downloading_firmware(
+        self, project: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        notes = project / "local/PROJECT.md"
-        notes.parent.mkdir()
-        notes.write_text(target_lines)
-
-        assert setup.main(["--guidance-only"], project) == 1
-        assert "needs one Target line" in capsys.readouterr().err
-        assert notes.read_text() == target_lines
-
-    def should_use_the_owners_interactive_target(self, project: Path) -> None:
         console = Mock(spec=setup.ConsoleGateway)
         console.choose_target.return_value = "coco3"
+        provision = Mock()
+        monkeypatch.setattr(setup, "provision", provision)
 
-        result = setup.main(["--guidance-only"], project, console=console)
+        assert setup.main(["--guidance-only"], project, console=console) == 0
+        console.choose_target.assert_not_called()
+        assert setup.main(["--roms-only"], project, console=console) == 0
 
-        assert result == 0
-        assert "Target: CoCo 3" in (project / "local/PROJECT.md").read_text()
+        provision.assert_called_once_with(project, "coco3", None)
 
-    def should_explain_a_missing_target_without_a_traceback(
+    def should_explain_a_missing_firmware_target_without_a_traceback(
         self, project: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         console = Mock(spec=setup.ConsoleGateway)
@@ -80,14 +58,14 @@ class DescribeProjectSetup:
             "Choose a target with --target coco1, coco2, or coco3"
         )
 
-        result = setup.main(["--guidance-only"], project, console=console)
+        result = setup.main(["--roms-only"], project, console=console)
 
         assert result == 1
         assert "Choose a target" in capsys.readouterr().err
         assert not (project / "local").exists()
 
     @pytest.mark.parametrize("value", ["invalid", "0:1", "2:1"])
-    def should_reject_invalid_page_ranges_before_creating_notes(
+    def should_reject_invalid_page_ranges_before_writing_anything(
         self, project: Path, value: str
     ) -> None:
         assert setup.main(["--pages", value], project) == 1

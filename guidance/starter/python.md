@@ -63,7 +63,7 @@ specs and fixtures.
 Selected-target setup prepares the demo, not the whole starter test suite.
 The suite also runs CoCo 1, CoCo 2, and CoCo 3 emulator checks. Install native
 tools using [toolchain.md](toolchain.md), then provision all three ROM profiles
-without rerunning project setup or changing `local/PROJECT.md`:
+without changing any project:
 
 ```sh
 uv sync --locked

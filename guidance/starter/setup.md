@@ -48,15 +48,15 @@ uv run python scripts/setup.py --target coco2 \
   --resource assembly-graphics --pages 10:12
 ```
 
-To initialize project notes without downloading books or loading models:
+To write the local reference index without downloading books or loading models:
 
 ```sh
 uv run python scripts/setup.py --target coco3 --guidance-only
 ```
 
 Use `--list` to list resources. Repeat `--resource ID` to select several books.
-Existing project notes are preserved. Change the target deliberately in
-`local/PROJECT.md` before requesting a different target.
+Setup never reads or changes `projects/`. Pass `--target` for the firmware
+you need; several targets can be installed side by side.
 
 Download the selected machine's firmware without starting book conversion:
 

@@ -17,14 +17,15 @@ again whenever you want to see the example.
 
 ## Start your own project from this folder
 
-Copy this folder to a new folder, for example `projects/my-demo`, and run the
-same commands with that folder's path. No launcher script is needed. The folder
-holds three files:
+Copy this folder to `projects/<name>`, named after your idea, and run the same
+commands with that folder's path. No launcher script is needed. Give the copy a
+`README.md` that says what the project is and how to run it. The folder holds
+three other files:
 
 - `main.asm`: the program.
 - `coco.toml`: the machine, firmware, memory layout and checkpoint settings.
   The `[targets.coco1]` table records the emulated machine; change it only
-  after recording the choice in `local/PROJECT.md`.
+  after recording the choice in the project README's contract.
 - `expected.py`: an independent model of the memory the program must produce.
   Write it from the sourced pixel layout and your requirements, never from the
   assembled bytes. Without it, `check` proves only that the checkpoint was

@@ -1,7 +1,7 @@
 # CoCo development toolchain
 
 Load this file before assembling, compiling, building disk images, or launching
-an emulator. First read [the local target](../../local/PROJECT.md). Do not infer
+an emulator. First read the project's contract in `projects/<name>/README.md`. Do not infer
 RAM, video standard, or firmware from whatever happens to be installed.
 
 ## Tool roles
