@@ -165,11 +165,9 @@ Other search results were excluded or left unexamined:
   a CoCo implementation. Do not promote it on the site's CoCo affiliation.
 - William Barden Jr.'s *An A "maze" ing adventure*,
   [*The Rainbow*, February 1988][rainbow], printed page 171 onward, is a
-  magazine candidate. Search results expose
-  `FINDMAZE` on printed page 180 with room-door arrays and a 3-D maze listing.
-  That is insufficient evidence of bitmap tile rendering. The web PDF fetch
-  failed because the 27,473,575-byte file exceeded its size limit. No PDF pages
-  were downloaded or inspected, and no PDF page offset is asserted.
+  completed follow-up. The [legacy maze reading](legacy-tile-research.md)
+  examines the full article and listings. It establishes room-state and
+  movement logic, but no bitmap tile renderer or background restoration.
 - The [ugBASIC scrolling-tilemap example][ugbasic] explicitly excludes its
   `COCO` target in the shown procedure condition. A CoCo 3 compile command
   does not establish CoCo 1/2 support. Its backend implementation was not examined.
@@ -233,9 +231,8 @@ extracted ZIP-member hashes. Source archives were read as data only.
 
 No PDF conversion pages are recommended from the examined sources: PacDude is
 text assembly, Ice Hockey is a disk-contained source set, and Dufort's articles
-are HTML. Do not send these through Docling. The unexamined Barden lead needs
-its complete article and listing located first; printed page numbers above are
-navigation hints only. The tokenized PacDude BASIC files were not decoded or
+are HTML. Do not send these through Docling. For Barden conversion pages,
+use the completed [legacy maze reading](legacy-tile-research.md). The tokenized PacDude BASIC files were not decoded or
 used as evidence. No source image was needed for the plain-text assembly paths.
 
 [pac]: https://colorcomputerarchive.com/repo/Programming/Source/PacDude%20Monster%20Maze/PacDude%20Monster%20Maze%20source%20code%20(Brian%20O'Neill).zip
