@@ -12,10 +12,14 @@ Use a new folder for a new project and preserve existing projects.
 
 Read [development practice](guidance/development.md) to establish the target.
 Run `sh scripts/bootstrap.sh coco1` for a CoCo 1 project, or use the chosen target.
-This prepares Python and project notes, then checks tools for a direct demo.
+This prepares Python and project notes and installs missing tools for a direct demo.
 If tools are missing, read [toolchain](guidance/toolchain.md), install what the
 host needs, and rerun the check. Ask only for unresolved choices or permissions
 that require the owner. Explain those questions without assuming tool knowledge.
+
+For CoCo 1, use [the first-screen example](examples/first-screen/README.md) to
+check setup before building the requested feature. It is a starting point, not
+the requested game or animation.
 
 Complete `local/PROJECT.md` from the request and documented defaults. Download
 firmware with `--roms-only`, then convert only reference pages needed for the

@@ -53,6 +53,7 @@ class DescribeBootstrap:
         assert Path(env["BOOTSTRAP_LOG"]).read_text().splitlines() == [
             "sync --locked",
             "run python scripts/setup.py --target coco2 --guidance-only",
+            "run python scripts/native.py",
             "run python scripts/doctor.py --profile demo",
         ]
 

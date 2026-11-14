@@ -22,15 +22,21 @@ project build commands. Do not copy a developer's private paths into defaults.
 
 ## Installation sources
 
-On macOS, Homebrew supplies LWTOOLS and XRoar:
+Bootstrap runs `uv run python scripts/native.py` to install missing tools.
+On macOS it uses Homebrew, installing Homebrew from its official source if needed.
+System permissions may require the owner's help; failures stop with an explanation.
+Existing tools and explicit executable overrides are preserved.
 
-```sh
-brew install lwtools xroar
-```
+On Ubuntu 24.04, it installs build dependencies with apt and builds verified
+LWTOOLS and XRoar release archives into `local/toolchain/`. A non-root account
+needs sudo permission for apt. The installer uses non-interactive sudo and
+stops if permission is unavailable. It never asks an agent to collect a password.
+Reruns reuse working executables and verify cached source archives.
 
-Use the upstream instructions for ToolShed. On Linux, use a suitable
-distribution package where available or the upstream build instructions. The
-starter does not yet automate native-tool installation.
+`doctor.py` and `first_screen.py` find the local tools without shell profile
+changes. For custom commands, use the paths reported by the doctor or add
+`local/toolchain/bin` to PATH. ToolShed installation is still separate and is
+needed only for disk images. Other Linux distributions need manual installation.
 
 - [LWTOOLS downloads and build instructions](https://www.lwtools.ca/)
 - [ToolShed documentation](https://toolshed.sourceforge.net/ToolShed.html)

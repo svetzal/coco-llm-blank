@@ -5,6 +5,8 @@ import os
 import shutil
 import sys
 
+from native import tool_path
+
 TOOLS = {
     "lwasm": ("LWASM", "LWTOOLS assembler"),
     "lwlink": ("LWLINK", "LWTOOLS linker"),
@@ -17,7 +19,11 @@ class ExecutableGateway:
     """Resolve explicit environment overrides or search PATH."""
 
     def find(self, command: str, variable: str) -> str | None:
-        return shutil.which(os.environ.get(variable, command))
+        return (
+            tool_path(command)
+            if command != "decb"
+            else shutil.which(os.environ.get(variable, command))
+        )
 
 
 def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None = None) -> int:

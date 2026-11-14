@@ -33,11 +33,13 @@ ignored local storage. Stacey requested public publication as
    agent-led setup, and the project idea. AGENTS.md owns the setup procedure.
 2. Reduce setup work. `scripts/bootstrap.sh` prepares uv, Python, and project
    notes. The demo check no longer treats optional disk tools as blockers.
-   Native-tool installation remains the next missing part of this path.
+   Native tools now install through Homebrew on macOS or verified source builds
+   on Ubuntu 24.04. ToolShed and other Linux distributions remain manual.
 3. Establish platform evidence. GitHub Actions now defines Ubuntu and Apple
    Silicon macOS jobs for locked setup, specifications, real Docling conversion,
-   and project initialization. The first remote results are still pending.
-   These jobs do not prove native emulator installation or a working game.
+   and project initialization. The initial checks passed on both platforms.
+   The native installer and first-screen memory check also passed in a clean
+   Ubuntu 24.04 container. Visual and physical-machine checks remain separate.
 
 ## Next increments
 
@@ -46,12 +48,12 @@ ignored local storage. Stacey requested public publication as
 2. Add target-specific manuals and datasheets and select resource groups by
    target. The first books are shared 6809 and CoCo 1/2 background, not a
    complete CoCo 3 library.
-3. Automate native-tool installation where practical,
-   and add an original assembly program with disk and emulator checks.
+3. Extend native-tool installation to other Linux distributions and disk tools.
+   The original first-screen example now supplies an assembly and emulator baseline.
 4. Verify on clean Linux and macOS hosts. The current environment targets
    Apple Silicon macOS and Linux; Intel Mac support needs separate dependency
    compatibility work.
-5. Run fresh-clone microgentic trials in a separate experiment directory.
+5. Test the beginner prompt with Claude Code in an isolated project.
    Leave Stacey's `coco-lines` project untouched.
 
 ## Acceptance evidence
@@ -93,3 +95,8 @@ column labels. Reference guidance identifies these limitations and page ranges.
 LWTOOLS and XRoar are discoverable on this Mac. ToolShed's `decb` is not on PATH;
 the original project uses an explicit private path that this template does not
 inherit. Full-book quality and clean Linux execution remain unverified.
+
+The original first-screen example passes complete framebuffer checks and an
+unreachable-checkpoint negative control in XRoar on macOS and Ubuntu 24.04.
+The available Mac UI tool could not select the Homebrew executable, so this
+session does not claim a visual check.

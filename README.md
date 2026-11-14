@@ -72,13 +72,15 @@ This is an early starter, not a finished game or a guarantee that an agent will
 get every program right. The guidance asks agents to check original sources and
 test their work. Scanned books can still contain conversion errors.
 
-Apple Silicon Macs are the tested starting point. Linux is a target, but setup
-on a fresh Linux computer still needs testing. Intel Macs need more compatibility
+Apple Silicon Macs and Ubuntu 24.04 have automated checks. The Ubuntu tool
+installation and emulator memory check also pass in a clean container. Intel Macs need
+more compatibility
 work. Windows setup is not covered yet.
 
 Your agent can handle setup commands when its permissions allow them. Some
-installs need your approval or a password that only you can enter. Native-tool
-installation is agent-led today. The starter has no single installer for everything.
+installs need your approval or a password that only you can enter. The setup entry point
+installs assembly and emulator tools on macOS and
+Ubuntu 24.04. Other Linux distributions still need agent-led installation.
 You do not need to prepare those tools before giving your agent the prompt.
 
 Projects currently use 6809 assembly, the Color Computer's machine-level

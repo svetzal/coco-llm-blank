@@ -38,5 +38,7 @@ echo 'Preparing the project Python environment. The first run can take a while.'
 uv sync --locked
 echo 'Preparing project notes without converting books or downloading firmware.'
 uv run python scripts/setup.py --target "$target" --guidance-only
+echo 'Installing missing assembly and emulator tools.'
+uv run python scripts/native.py
 echo 'Checking tools for a directly launched emulator demo.'
 uv run python scripts/doctor.py --profile demo
