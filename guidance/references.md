@@ -346,3 +346,7 @@ checked
 visually. Its OCR remains imperfect, including merged table-row labels.
 The detector is a rendering check, not a general OCR quality score. Continue
 to inspect page images before using hardware values.
+
+For concrete OCR and image-reading hazards, use the
+[six-page conversion assessment](conversion-quality.md). Successful conversion
+and valid image checksums do not establish accurate tables or listings.
