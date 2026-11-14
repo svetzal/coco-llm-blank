@@ -126,12 +126,29 @@ reference
 text or write project notes and build outputs. Keep those paths ignored. Check
 that a write succeeded before relying on the recorded project contract.
 
-## Quality Standards
+## Quality standards
 
 Maintain quality standards when researching and distilling good practices for
 effective CoCo development.
 
 - Cite all sources unambiguously when researching so that future agents can
-  review the research and compare against new sources
-- When validating suggestions and ideas from sources locally, ensure you have
-  run them on Xroar
+  review the research and compare against new sources.
+- When validating suggestions and ideas from sources, ensure you have locally
+  documented the distilled technique with code examples, and cited the sources
+  clearly so that your validations can be verified or even challenged.
+- Finish useful research with a task-focused guide, not only a source list.
+  Explain what a game or demo builder can do, the tradeoffs, and where the
+  technique applies. Follow the [guide requirements](PLAN.md#permanent-technique-guides).
+- Distinguish source statements, our deductions, original adaptations, and
+  measured results. Preserve contradictions and failed experiments; do not
+  strengthen a claim merely because it appears in our own earlier notes.
+- Make measured claims reproducible from tracked original code and instructions.
+  Record the exact target, source provenance, checks and limitations. Keep
+  downloads and generated evidence ignored; essential experiment logic must
+  not exist only in a private working directory.
+- Require meaningful failure controls and expectations independent of the
+  implementation. Report assembly, execution, framebuffer, rendered display,
+  audible output and physical-hardware evidence separately.
+- Keep the starter useful to beginners and ordinary Markdown-based agents.
+  Add context only where a task needs it, maintain equal research attention to
+  CoCo 1/2/3, and state uneven evidence without implying universal support.
