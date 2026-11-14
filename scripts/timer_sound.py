@@ -6,9 +6,11 @@ import re
 import subprocess
 from pathlib import Path
 
-from first_screen import executable
+from coco import Host
 from native import ROOT
 from roms import verify_installed
+
+executable = Host().executable
 
 # Executive pages $38-$3F occupy the upper 64 KiB of this 128 KiB machine.
 RAM_BASE = 0x10000

@@ -13,9 +13,11 @@ import tarfile
 import urllib.request
 from pathlib import Path
 
-from first_screen import executable
+from coco import Host
 from native import ROOT
 from roms import verify_installed
+
+executable = Host().executable
 
 HERE = ROOT / "examples/collect-room"
 OUTPUT = ROOT / "build/collect-room"

@@ -8,20 +8,38 @@ Ask your agent to run these steps. Commands start in the project folder:
 ```sh
 sh scripts/bootstrap.sh coco1
 uv run python scripts/setup.py --target coco1 --roms-only
-uv run python scripts/first_screen.py check
-uv run python scripts/first_screen.py run
+uv run python scripts/coco.py check examples/first-screen
+uv run python scripts/coco.py run examples/first-screen
 ```
 
 The last command opens XRoar. Close the window to stop it. Run that command
-again whenever you want to see the example. Your agent can adapt this launcher
-for your own program.
+again whenever you want to see the example.
+
+## Start your own project from this folder
+
+Copy this folder to a new folder, for example `projects/my-demo`, and run the
+same commands with that folder's path. No launcher script is needed. The folder
+holds three files:
+
+- `main.asm`: the program.
+- `coco.toml`: the machine, firmware, memory layout and checkpoint settings.
+  The `[targets.coco1]` table records the emulated machine; change it only
+  after recording the choice in `local/PROJECT.md`.
+- `expected.py`: an independent model of the memory the program must produce.
+  Write it from the sourced pixel layout and your requirements, never from the
+  assembled bytes. Without it, `check` proves only that the checkpoint was
+  reached.
+
+Run `uv run python scripts/coco.py --help` for the commands. The Python under
+`scripts/` holds no CoCo knowledge; you do not need to read or copy it.
 
 ## What the example proves
 
 The check assembles the actual source and runs it in XRoar. It starts with
 nonzero RAM, waits for the program's ready label, and checks all 6144 screen
-bytes against an independent pixel specification. An unreachable checkpoint
-must produce no snapshot. This prevents startup RAM from passing as a result.
+bytes against the independent pixel specification in `expected.py`. An
+unreachable checkpoint must produce no snapshot. This prevents startup RAM from
+passing as a result.
 
 The check passes on Apple Silicon macOS and in a clean Ubuntu 24.04 container.
 It does not inspect the displayed image or prove physical hardware operation.

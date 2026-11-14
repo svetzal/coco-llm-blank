@@ -50,7 +50,7 @@ stops if permission is unavailable. It never asks an agent to collect a
 password.
 Reruns reuse working executables and verify cached source archives.
 
-`doctor.py` and `first_screen.py` find the local tools without shell profile
+`doctor.py` and `coco.py` find the local tools without shell profile
 changes. For custom commands, use the paths reported by the doctor or add
 `local/toolchain/bin` to PATH. ToolShed installation is still separate and is
 needed only for disk images. Other Linux distributions need manual installation.

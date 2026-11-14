@@ -6,9 +6,11 @@ import re
 import subprocess
 from pathlib import Path
 
-from first_screen import executable
+from coco import Host
 from native import ROOT
 from roms import verify_installed
+
+executable = Host().executable
 
 ROM_NAMES = {"coco1": ("bas11.rom", "extbas10.rom"), "coco2": ("bas12.rom", "extbas11.rom")}
 # Scene input specification, independently expressed in PIXEL coordinates.

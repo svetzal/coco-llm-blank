@@ -126,7 +126,7 @@ mkdir -p build/macos-onboarding
 uv run --no-sync pytest -q experiments/macos-onboarding/onboarding_spec.py \
   --basetemp=build/macos-onboarding/pytest
 uv run --no-sync pytest -q scripts/bootstrap_spec.py scripts/setup_spec.py \
-  scripts/roms_spec.py scripts/native_spec.py scripts/first_screen_spec.py \
+  scripts/roms_spec.py scripts/native_spec.py scripts/coco_spec.py \
   -m 'not integration' --basetemp=build/macos-onboarding/existing
 uv run --no-sync ruff check experiments/macos-onboarding
 uv run --no-sync ruff format --check experiments/macos-onboarding

@@ -135,8 +135,6 @@ class DescribeInstalledFirmware:
     @pytest.mark.parametrize(
         ("runner", "target", "rom_name"),
         [
-            ("first_screen", "coco1", "bas11.rom"),
-            ("first_screen", "coco1", "extbas10.rom"),
             ("moving_objects", "coco1", "bas11.rom"),
             ("moving_objects", "coco1", "extbas10.rom"),
             ("moving_objects", "coco2", "bas12.rom"),
@@ -158,13 +156,11 @@ class DescribeInstalledFirmware:
         rom_name: str,
         damage: str,
     ) -> None:
-        import first_screen
         import masked_objects
         import moving_objects
         import timer_sound
 
         module = {
-            "first_screen": first_screen,
             "moving_objects": moving_objects,
             "masked_objects": masked_objects,
             "timer_sound": timer_sound,

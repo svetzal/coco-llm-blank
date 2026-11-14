@@ -24,7 +24,7 @@ from cases import (
     require_unreachable,
     symbol,
 )
-from first_screen import expected_screen
+from coco import load_expected
 from instrument import instrument
 from native import tool_path
 from roms import verify_installed
@@ -34,6 +34,8 @@ ARCHIVE_SHA256 = "ba525225fbd732c4dbf2cbb571dc9d2810fd9dcedf0482133cf637e2eef61f
 CONFIGURE = ["./configure", "--without-gtk2", "--without-gtk3", "--without-sdl3", "--without-sdl2"]
 RESEARCH = ROOT / "local/research/display-validation-reproduction"
 OUTPUT = ROOT / "build/display-validation-reproduction"
+
+FIRST_SCREEN = load_expected(ROOT / "examples/first-screen")
 
 
 def digest(path: Path) -> str:
@@ -167,7 +169,7 @@ def run_cases(
     cases = make_cases(
         (ROOT / "examples/first-screen/main.asm").read_text(),
         (ROOT / "examples/moving-objects/main.asm").read_text(),
-        expected_screen(),
+        FIRST_SCREEN.expected_screen(1),
     )
     report["cases"] = []
     for case in cases:
@@ -214,7 +216,9 @@ def provenance(assembler: str, roms: dict[str, Path]) -> dict:
     inputs = [
         "examples/first-screen/main.asm",
         "examples/moving-objects/main.asm",
-        "scripts/first_screen.py",
+        "examples/first-screen/expected.py",
+        "examples/first-screen/coco.toml",
+        "scripts/coco.py",
         "scripts/native.py",
         "scripts/roms.py",
         "scripts/references.py",

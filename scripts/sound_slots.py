@@ -7,8 +7,17 @@ import re
 import subprocess
 from pathlib import Path
 
-from first_screen import emulator, executable
+from coco import Host, load_project
+from coco import emulator as project_emulator
 from native import ROOT
+
+executable = Host().executable
+
+
+def emulator(binary: Path) -> list[str]:
+    """Transitional: the CoCo 1 profile declared by the first-screen project."""
+    return project_emulator(load_project(ROOT / "examples/first-screen"), Host(), None)
+
 
 CHECK_FRAMES = (1, 16, 17, 32, 33, 63, 64)
 

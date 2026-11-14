@@ -15,7 +15,7 @@ dependencies = [
 package = false
 
 [tool.pytest.ini_options]
-testpaths = ["scripts"]
+testpaths = ["scripts", "examples"]
 python_files = ["*_spec.py"]
 python_classes = ["Describe*"]
 python_functions = ["should_*"]
@@ -32,9 +32,9 @@ extend-select = ["C90"]
 max-complexity = 10
 
 [tool.coverage.run]
-source = ["scripts"]
+source = ["scripts", "examples"]
 branch = true
-omit = ["scripts/*_spec.py", "scripts/conftest.py"]
+omit = ["*_spec.py", "*/conftest.py"]
 
 [tool.coverage.report]
 show_missing = true

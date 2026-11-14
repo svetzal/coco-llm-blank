@@ -6,9 +6,11 @@ import re
 import subprocess
 from pathlib import Path
 
-from first_screen import executable
+from coco import Host
 from native import ROOT
 from roms import verify_installed
+
+executable = Host().executable
 
 CHECK_FRAMES = (1, 15, 16, 17, 31, 32, 46, 64, 65, 185, 186, 369, 370)
 ROM_NAMES = {"coco1": ("bas11.rom", "extbas10.rom"), "coco2": ("bas12.rom", "extbas11.rom")}

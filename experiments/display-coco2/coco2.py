@@ -21,7 +21,7 @@ from cases import (
     require_unreachable,
     symbol,
 )
-from first_screen import expected_screen
+from coco import load_expected
 from instrument import replace_once
 from native import tool_path
 from roms import verify_installed
@@ -40,12 +40,14 @@ PROFILE = {
     "display": "S-video, ccr none, zoomed RGBA8 software renderer",
 }
 
+FIRST_SCREEN = load_expected(ROOT / "examples/first-screen")
+
 
 def make_scenes() -> list[Case]:
     """Freeze completed scenes without changing original drawing or display setup."""
     first = (ROOT / "examples/first-screen/main.asm").read_text()
     moving = (ROOT / "examples/moving-objects/main.asm").read_text()
-    result = make_cases(first, moving, expected_screen())[1:3]
+    result = make_cases(first, moving, FIRST_SCREEN.expected_screen(1))[1:3]
     for kind, indices, variable, oracle in (
         ("tile-room", (0, 5, 39, 41), "step", tile_room.expected_screen),
         ("masked-objects", (0, 2, 3, 8, 9, 10, 11), "scene", masked_objects.expected_screen),

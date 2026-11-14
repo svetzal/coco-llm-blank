@@ -13,7 +13,6 @@ from cases import (
     require_unreachable,
     symbol,
 )
-from first_screen import expected_screen
 from instrument import instrument, replace_once
 from PIL import Image
 
@@ -22,7 +21,7 @@ def cases():
     return make_cases(
         (reproduce.ROOT / "examples/first-screen/main.asm").read_text(),
         (reproduce.ROOT / "examples/moving-objects/main.asm").read_text(),
-        expected_screen(),
+        reproduce.FIRST_SCREEN.expected_screen(1),
     )
 
 

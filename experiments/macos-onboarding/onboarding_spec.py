@@ -133,8 +133,9 @@ class DescribeCurrentHostRecovery:
             "XROAR": str(recorder),
             "LAUNCH_MARKER": str(marker),
         }
-        for args, status in ((["--help"], 0), (["unknown"], 2)):
-            result = run(workspace, "first_screen.py", *args, env=env)
+        project = str(workspace / "examples/first-screen")
+        for args, status in ((["--help"], 0), (["unknown"], 2), (["run", project, "--x"], 2)):
+            result = run(workspace, "coco.py", *args, env=env)
             assert result.returncode == status
             assert not marker.exists()
             assert not (workspace / "build").exists()
@@ -145,13 +146,13 @@ class DescribeCurrentHostRecovery:
                 extended.unlink()
             else:
                 extended.write_bytes(damage)
-            result = run(workspace, "first_screen.py", "run", env=env)
+            result = run(workspace, "coco.py", "run", project, env=env)
             assert result.returncode != 0
             assert "do not launch XRoar" in result.stderr
             assert not marker.exists()
         extended.unlink()
         prepare(workspace)
-        result = run(workspace, "first_screen.py", "run", env=env)
+        result = run(workspace, "coco.py", "run", project, env=env)
         assert result.returncode == 0, result.stderr
         args = marker.read_text().splitlines()
         for flag, name in (("-bas", "bas11.rom"), ("-extbas", "extbas10.rom")):
