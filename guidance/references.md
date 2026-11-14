@@ -4,6 +4,26 @@ Load this file when obtaining, converting, or searching reference documents.
 For available local sources and page coverage, read [the index](../local/INDEX.md)
 after setup. A missing index means setup has not run.
 
+## Choose a source before making a hardware claim
+
+Reference lookup is required before relying on a CoCo-specific fact. A familiar
+sounding answer from model memory does not count as verification. Start here:
+
+| Question | First local reference |
+| --- | --- |
+| Graphics | `local/references/assembly-graphics/text.md` |
+| 6809 CPU | `local/references/6809-programming/text.md` |
+
+These are starting sources, not guarantees that every target or peripheral is
+covered. Check the book's machine and mode context. A CPU book alone cannot
+establish a CoCo peripheral's register layout. Where the books do not establish
+the fact, obtain the relevant technical manual or datasheet and cite it.
+
+For graphics, search terms can include the mode name, `PMODE`, `semigraphics`,
+`resolution`, `VDG`, `SAM`, `screen`, and `memory`. Follow a matching passage to
+its table, figure, and nearby definitions. Do not infer a complete mode setup
+from a search hit or a contents entry.
+
 ## Find the relevant passage
 
 1. Read `local/INDEX.md` to choose a book and check converted-page coverage.
@@ -26,10 +46,27 @@ after setup. A missing index means setup has not run.
 6. Cite the book title and PDF page. If there are no matches, check
    `extraction.json` for `completed_pages` before concluding the book does not
    cover the topic. Convert the missing range when its location is known.
+7. Before implementing, state the verified facts and their title/page citations.
+   Identify calculations derived from those facts separately from source claims.
+   A test based on the same unverified recollection is not independent evidence.
 
 Image viewing requires a multimodal tool in the agent runtime. If it is absent,
 report that limitation; do not infer a diagram from its filename or OCR alone.
 The original PDF remains available when the saved images are insufficient.
+
+## When the reference is not ready
+
+A manifest entry or an index entry marked "not converted" is not available
+reference content. Read the setup instructions and obtain the selected book.
+If only a sample range is converted, inspect the PDF contents/index or convert
+those opening pages to locate the needed chapter, then convert that range.
+The example pages 10 through 12 below are a conversion demonstration, not a
+recommended range for learning graphics modes.
+
+Do not repeat an empty search and then fall back to memory. If download,
+conversion, or image viewing is blocked, report the exact missing evidence and
+continue only work that does not depend on it. Preserve unresolved questions
+instead of filling in hardware values by guesswork.
 
 ## Convert and resume
 

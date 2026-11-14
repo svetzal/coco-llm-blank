@@ -7,6 +7,42 @@ before writing hardware-dependent code. Setup selects a starting target;
 it does not establish that an application supports it. Keep unknowns explicit.
 Do not silently enable a 6309, more RAM, or a faster clock to pass a test.
 
+## Graphics before code
+
+Load [reference lookup](references.md) and consult the graphics programming book
+before choosing a graphics mode, allocating its framebuffer, packing pixels,
+or writing display registers. Do not start with remembered mode tables and use
+the book only after the screen looks wrong.
+
+Establish these facts from passages that apply to the selected hardware:
+
+- The mode's name and meaning in its context. Distinguish BASIC mode numbers,
+  hardware control-bit encodings, and names used by the author. Do not assume
+  they are interchangeable or transfer a CoCo 3 description to a CoCo 1/2.
+- Resolution, available colors, pixel encoding, pixels per byte, row stride,
+  and framebuffer size. Show how the memory sizes follow from the layout.
+- The relevant control registers, field values, display-memory selection,
+  alignment requirements, and shared bits that setup must preserve.
+- The palette or artifact-color behavior relevant to the selected video
+  standard and display. Do not treat an emulator's appearance as a mode table.
+
+Keep a short source note beside the implementation or in existing design notes:
+what was verified, the book title and PDF page, and the values derived from it.
+Inspect table and diagram PNGs for bit ordering and labels; OCR of a register
+value or bit pattern is not sufficient when its interpretation is uncertain.
+If the book does not cover the target, find a source that does before proceeding.
+
+Derive expected test bytes from the sourced layout, independently of the packing
+code. Check boundary pixels, row transitions, and framebuffer limits. Then use
+a small emulator display check to inspect the chosen mode and colors before
+building the full graphics feature. Passing arithmetic tests cannot establish
+that the hardware mode was selected correctly.
+
+If the observed display contradicts the source, revisit the target, source
+scope, and setup code together. Do not cycle through guessed register values
+until something looks plausible, or change working behavior solely to match an
+unverified summary.
+
 ## Build and verify
 
 Keep deterministic computation separate from display, input, and disk I/O.

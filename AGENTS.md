@@ -4,6 +4,27 @@ This file is the agent entry point. No agent skills or vendor-specific loader
 are required. Follow the links for the current task instead of loading every
 reference. Paths in commands are relative to the repository root.
 
+## Verify CoCo specifics before using them
+
+Model memory is a search hint, not evidence about CoCo hardware. Before writing
+hardware-dependent code or explaining a CoCo-specific detail, read the relevant
+local reference passage and check that it applies to the selected machine.
+This includes graphics modes, register addresses and bit meanings, memory maps,
+pixel packing, palettes, ROM calls, and instruction behavior or timing.
+
+For graphics, start with
+`local/references/assembly-graphics/text.md`, using the
+[reference lookup procedure](guidance/references.md). Read the relevant table
+or diagram as an image when OCR leaves any doubt. Before implementation, state
+the facts you will rely on with book title and PDF page citations. Reuse facts
+already checked in this session; do not invent page numbers or cite unread text.
+
+If the needed pages are missing, obtain or convert them first. If the source
+covers a different machine or remains ambiguous, leave the claim unresolved
+and defer the code that depends on it. Never substitute a confident recollection
+for missing evidence. Follow the [graphics checks](guidance/development.md#graphics-before-code)
+before choosing a mode or writing display setup.
+
 ## What to load
 
 - Starting a project: read [README.md](README.md), then `local/PROJECT.md`.
