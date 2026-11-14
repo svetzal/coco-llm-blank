@@ -15,6 +15,10 @@ extended = "extbas10.rom"
 at = { start = 0x3000 }
 below = { state_end = 0x7E00 }   # the stack is reserved from $7E00
 
+# Every check also records XRoar's mixer output; expected.py's verify_sound judges it.
+[capture]
+audio = true
+
 # A test-only input fixture: released/pressed for alternating 16-frame blocks.
 [variants.scripted]
 defines = ["SCRIPTED"]

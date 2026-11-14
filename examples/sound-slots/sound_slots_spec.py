@@ -2,8 +2,10 @@
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 from coco import load_expected
+from recording import Sound
 
 model = load_expected(Path(__file__).parent)
 SYMBOLS = {
@@ -27,6 +29,14 @@ def snapshot(frame: int, variant: str) -> bytearray:
         ram[address : address + 2] = value.to_bytes(2, "big")
     ram[0x3F08], ram[0x3F09] = button, frame % 32
     return ram
+
+
+def sawtooth(hz: float, seconds: float = 1.0, rate: int = 44100) -> Sound:
+    """A synthetic mixer recording: boot silence, then a tone up to the checkpoint."""
+    time = np.arange(int(seconds * rate)) / rate
+    tone = ((time * hz) % 1.0 - 0.5) * 20000
+    samples = np.concatenate([np.zeros(rate // 2), tone]).astype(np.int16)
+    return Sound(path=Path("x.wav"), rate=rate, samples=samples)
 
 
 def trace(variant: str, extra_every: int = 256) -> str:
@@ -89,3 +99,40 @@ class DescribeSoundSlots:
 
         with pytest.raises(ValueError):
             model.verify_trace(text, SYMBOLS, "")
+
+
+class DescribeSoundOutput:
+    def should_take_each_frames_pitch_from_the_previous_input(self) -> None:
+        pitches = [model.pitch_for(frame, "scripted") for frame in (1, 17, 18, 33, 34)]
+
+        assert pitches == [0x0800, 0x0800, 0x1000, 0x1000, 0x0800]
+        assert model.steady_frames(32, "scripted") == 15
+        assert model.steady_frames(64, "") == 64
+
+    def should_derive_the_tone_from_cycle_counts(self) -> None:
+        assert model.expected_hz(0x0800) == pytest.approx(490.6, abs=0.1)
+        assert model.expected_hz(0x1000) == pytest.approx(2 * model.expected_hz(0x0800))
+
+    @pytest.mark.parametrize("frame,variant,hz", [(64, "", 488), (32, "scripted", 975)])
+    def should_accept_a_tone_at_the_selected_pitch(self, frame, variant, hz) -> None:
+        result = model.verify_sound(sawtooth(hz), frame, variant)
+
+        assert result["expected_hz"] == pytest.approx(
+            model.expected_hz(model.pitch_for(frame, variant)), abs=0.1
+        )
+        assert abs(result["peak_hz"] - hz) < 7
+
+    def should_reject_a_tone_at_the_other_pitch(self) -> None:
+        with pytest.raises(ValueError, match="peaks at .* expected 490.6 Hz"):
+            model.verify_sound(sawtooth(975), 64, "")
+
+    def should_reject_silence(self) -> None:
+        silent = Sound(path=Path("x.wav"), rate=44100, samples=np.zeros(44100, dtype=np.int16))
+
+        with pytest.raises(ValueError, match="no tone"):
+            model.verify_sound(silent, 64, "")
+
+    def should_only_require_a_signal_when_the_pitch_is_new(self) -> None:
+        result = model.verify_sound(sawtooth(975), 1, "")
+
+        assert result["peak_hz"] is None and result["ac_rms"] > 0.01

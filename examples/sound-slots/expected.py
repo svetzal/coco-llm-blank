@@ -6,8 +6,18 @@ Functions take the build variant: "" for live input, "scripted" for the fixture.
 import itertools
 import re
 
+import numpy as np
+
 SAMPLES_PER_FRAME = 256
 LOW_PITCH, HIGH_PITCH = 0x0800, 0x1000
+# Sound timing, from the 6809 cycle counts of the eleven instructions in the sample
+# loop (tick..bne tick, 57 cycles) at the stock 894,886.25 Hz clock. The foreground
+# work after every 256 samples adds a little; the tolerance covers it.
+CPU_HZ = 894_886.25
+CYCLES_PER_SAMPLE = 57
+FRAME_SECONDS = SAMPLES_PER_FRAME * CYCLES_PER_SAMPLE / CPU_HZ
+PITCH_TOLERANCE_HZ = 15
+MIN_AC_RMS = 0.01
 
 
 def expected_button(frame: int, variant: str) -> int:
@@ -69,3 +79,50 @@ def verify_trace(trace: str, symbols: dict[str, int], variant: str) -> dict[str,
         "minimum_instructions_between_writes": min(gaps),
         "maximum_instructions_between_writes": max(gaps),
     }
+
+
+def pitch_for(frame: int, variant: str) -> int:
+    """The phase step used for a frame's samples: set by the previous frame's input."""
+    if frame == 1:
+        return LOW_PITCH
+    return LOW_PITCH if expected_button(frame - 1, variant) else HIGH_PITCH
+
+
+def expected_hz(pitch: int) -> float:
+    """A sawtooth repeats every 65536 / pitch samples."""
+    return CPU_HZ / CYCLES_PER_SAMPLE / (65536 / pitch)
+
+
+def steady_frames(frame: int, variant: str) -> int:
+    """How many frames up to this one share its pitch."""
+    count = 1
+    while count < frame and pitch_for(frame - count, variant) == pitch_for(frame, variant):
+        count += 1
+    return count
+
+
+def verify_sound(sound, frame: int, variant: str) -> dict[str, float]:
+    """XRoar's mixer output ends with a tone at the pitch this frame's input selected.
+
+    Only whole steady frames are analysed, at most the last 150 ms. With less than
+    100 ms of steady pitch, only the presence of a varying signal is checked.
+    """
+    pitch = pitch_for(frame, variant)
+    seconds = min(0.15, (steady_frames(frame, variant) - 1) * FRAME_SECONDS)
+    count = int(max(seconds, FRAME_SECONDS / 2) * sound.rate)
+    tail = sound.samples[-count:].astype(float) / 32768
+    signal = tail - tail.mean()
+    rms = float(np.sqrt(np.mean(signal**2)))
+    if rms < MIN_AC_RMS:
+        raise ValueError(f"Frame {frame}: no tone in the mixer output (AC RMS {rms:.5f}).")
+    result = {"frame": frame, "ac_rms": round(rms, 4), "expected_hz": None, "peak_hz": None}
+    if seconds < 0.1:
+        return result
+    spectrum = np.abs(np.fft.rfft(signal * np.hanning(len(signal))))
+    peak = (int(np.argmax(spectrum[1:])) + 1) * sound.rate / len(signal)
+    if abs(peak - expected_hz(pitch)) > PITCH_TOLERANCE_HZ:
+        raise ValueError(
+            f"Frame {frame}: mixer output peaks at {peak:.1f} Hz, "
+            f"expected {expected_hz(pitch):.1f} Hz."
+        )
+    return result | {"expected_hz": round(expected_hz(pitch), 1), "peak_hz": round(peak, 1)}

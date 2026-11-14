@@ -1003,6 +1003,19 @@ class DescribeEquipmentInXRoar:
         with pytest.raises(ProjectError, match="Frame 16: .* screen bytes differ"):
             coco.check_variant(project, Host(), model, "coco1", "journey", equipment)
 
+    def should_reject_sound_from_a_muted_mux(self, tmp_path: Path, capsys) -> None:
+        if not instrumented_ready("coco1"):
+            pytest.skip("Native tools, CoCo 1 firmware, a C compiler or make are missing")
+        directory = tmp_path / "sound-slots-copy"
+        shutil.copytree(ROOT / "examples/sound-slots", directory)
+        source = directory / "main.asm"
+        text = source.read_text()
+        source.write_text(text.replace("ora #8\n        sta $FF23", "anda #$F7\n        sta $FF23"))
+
+        assert coco.main(["check", str(directory)]) == 1
+
+        assert "Frame 1: no tone in the mixer output" in capsys.readouterr().err
+
 
 @pytest.mark.integration
 class DescribeRealAssembler:
