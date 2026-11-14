@@ -42,12 +42,13 @@ ignored local storage. Stacey requested public publication as
    Silicon macOS jobs for locked setup, specifications, real Docling conversion,
    and project initialization. The initial checks passed on both platforms.
    The native installer and first-screen memory check also passed in a clean
-   Ubuntu 24.04 container. Later [Linux validation](guidance/linux-onboarding-validation.md)
-   passed bootstrap and CoCo 2 recovery after manual curl/CA installation.
-   Bootstrap now installs those missing prerequisites; a fresh container proved
-   that correction through real uv installation, stopping before `uv sync`.
-   An uninterrupted full run of the corrected bootstrap remains unverified.
-   Visual and physical-machine checks remain separate.
+   Ubuntu 24.04 container. The full corrected [Linux onboarding run](guidance/linux-onboarding-validation.md#full-corrected-bootstrap-validation)
+   now passes in a fresh Ubuntu 24.04 ARM64 root container without manually
+   installed prerequisites: bootstrap took 796.40 seconds, all 13 CoCo 2
+   moving-object frames passed, and a 1.06-second rerun preserved edited notes.
+   These are measured run times, not guarantees. Native desktop, x86-64,
+   non-root sudo and GUI onboarding remain unverified by this run. It supplies
+   no visual, audible or physical-machine evidence.
 
 ## Game and demo research
 
@@ -121,8 +122,14 @@ The first guides now cover animation storage, prepared pictures, CoCo 3
 scrolling and mapping, display-dependent colours, and sound scheduling.
 Original opaque and masked rendering now has bounded CoCo 1/2 framebuffer
 evidence. Static renderer geometry is measured only on CoCo 1. Sound guides
-link CoCo 1 and CoCo 3 experiments, including DAC intervals. Tile-game
-adaptations and CoCo 2 sound runtime coverage remain untested.
+link CoCo 1 and CoCo 3 experiments, including DAC intervals. The original
+[tile-room example](examples/tile-room/README.md) adds bounded CoCo 1/2 map,
+movement and framebuffer evidence. New [selective-redraw](guides/selective-redraw.md),
+[controls and collision](guides/controls-and-collision.md), and
+[game-state](guides/game-state.md) guides, plus the
+[animation additions](guides/animation.md#let-an-accumulating-picture-retain-its-history),
+contain source-backed, untested adaptations. CoCo 2 sound runtime coverage
+remains open.
 
 For each later pass, update the relevant guide and navigation before calling
 the pass complete. Check citations, relative links, Markdown, and runnable
@@ -273,8 +280,9 @@ The [tile-map guide](guides/tile-maps.md) now distills the examined PacDude
 CoCo 3 map, drawing and movement paths. The complete Barden maze article and
 both listings are read in [legacy tile research](guidance/legacy-tile-research.md).
 That legacy BASIC source supplies room graphs and model-driven perspective
-redraw, not bitmap tiles or sprite restoration. The CoCo 1/2 bitmap tile-renderer
-source gap and an original tile-game reproduction remain open.
+redraw, not bitmap tiles or sprite restoration. The historical CoCo 1/2
+bitmap tile-ID renderer source gap remains open. The original tile-room
+implementation below supplies separate evidence; it does not close that gap.
 
 [Display validation](guidance/display-validation.md) measured five positive
 static CoCo 1 renderer cases, including three frozen moving-object frames.
@@ -295,22 +303,51 @@ eleven audio results matched in an empty-output run using the existing checkout,
 environment and verified firmware. This is not evidence of a newly provisioned
 clone or completed Linux onboarding.
 
+### Published source and tile-room follow-up
+
+The original [tile-room example](examples/tile-room/README.md#evidence-and-limits)
+passes all 42 checkpoints on each defined CoCo 1 and CoCo 2 configuration.
+It checks map persistence after collection and return, blocked movement,
+actor state, full framebuffer bytes and guards. The runner enforces NTSC and
+excludes user configuration. This is a 32 KiB, normal-clock, non-T1 emulator
+result, not a historical reproduction, visual check or physical-hardware test.
+
+[Hot CoCo research](guidance/hot-coco-game-research.md) now supplies examined
+collision, control and foreground-coverage articles.
+[Undercolor research](guidance/undercolor-game-research.md) adds selected
+turn-state, single-switch menu and small-animation sources.
+[CoCo 3 source research](guidance/coco3-game-source-research.md) examines Gloom
+and Symmetry; [expanded legacy research](guidance/legacy-tile-research.md#three-game-source-candidates)
+assesses Droid War, Dunkey Munkey and Sea Quest. Useful findings are linked
+through the technique guides. These source-only passes did not run the historical
+programs or validate the proposed adaptations. They broaden selected coverage;
+the archive survey and historical CoCo 1/2 tile-ID renderer search remain open.
+
+[Conversion-quality inspection](guidance/conversion-quality.md) now covers six
+difficult pages and all eleven exported images. Tables, diagrams and listing
+images remain useful where OCR merges rows or columns and damages code.
+This bounded inspection does not establish book-wide accuracy or change the
+shared Matthews conversion coverage.
+
 ### Next research passes
 
-1. Broaden magazine coverage to Hot CoCo, Color Computer Magazine, Undercolor,
-   and later community publications. Read original articles and their errata,
-   not only Rainbow's index. Sample early and late periods for each machine.
+1. Continue beyond the selected Hot CoCo and Undercolor articles into Color
+   Computer Magazine and later community publications. Follow unresolved errata
+   and sample early and late periods for each machine; selected readings do
+   not complete publication coverage.
 2. Investigate sound alongside animation and controls. Distinguish the stock
    DAC, one-bit output, cassette audio, and expansion hardware. Check timing
    costs and interference with input rather than assuming simultaneous playback.
-3. Examine reusable rendering and game techniques: masked objects, background
-   restoration, collision, tile maps, scrolling, text/adventure state, and
-   deterministic movement. Compare memory and frame-time costs on each target.
+3. Keep the historical CoCo 1/2 bitmap tile-ID renderer search open. Use the
+   published full-redraw examples as correctness baselines before testing
+   selective redraw, restoration or scrolling. Memory and frame-time comparisons
+   across targets remain to be measured.
 4. Inspect published game/demo source and companion magazine disks. Record
    licenses separately from archive availability. Do not redistribute code or
    assets merely because they are downloadable.
-5. Reproduce selected small techniques with original implementations and tests.
-   Choose examples across all three machines before claiming broad coverage.
+5. Validate selected proposals from the new controls, game-state, animation
+   and selective-redraw guides with small original examples. Keep CoCo 3
+   implementation evidence alongside CoCo 1/2 work before claiming broad coverage.
 
 Each pass should produce a few examined references and their usable guide text.
 Update existing guides when a finding changes their advice. Review topic and
@@ -318,16 +355,17 @@ machine gaps after every pass.
 
 ## Next increments
 
-1. Evaluate Docling output across assembly listings, tables, and diagrams before
-   claiming book-wide conversion quality. Preserve explicit page coverage.
+1. Use the six-page conversion-quality findings when selecting further difficult
+   pages. Preserve explicit coverage and image checks; book-wide quality remains
+   unverified.
 2. Add target-specific manuals and datasheets and select resource groups by
    target. The first books are shared 6809 and CoCo 1/2 background, not a
    complete CoCo 3 library.
 3. Extend native-tool installation to other Linux distributions and disk tools.
    The original first-screen example now supplies an assembly and emulator baseline.
-4. Verify on clean Linux and macOS hosts. The current environment targets
-   Apple Silicon macOS and Linux; Intel Mac support needs separate dependency
-   compatibility work.
+4. Extend host evidence beyond the completed Ubuntu ARM64 root-container run
+   to native desktop, non-root and GUI journeys, and clean macOS onboarding.
+   x86-64 Linux and Intel Mac compatibility need separate checks.
 5. Extend beginner trials after addressing observed failures. The first Claude
    Code trial built a demo and passed runtime checks; Claude 02 now has an
    independent assessment above. Visual evidence remains incomplete.
@@ -343,8 +381,11 @@ content, model weights, or virtual environment.
 
 ## Verification status
 
-The co-located pytest specifications pass on the development Mac with combined
-statement and branch coverage above the 90% gate. They cover real Docling OCR
+The published independent full-suite run on the development Mac passed
+239 tests with 95.28% combined statement and branch coverage. That run preceded
+two configuration regression tests; it does not establish a full-suite result
+for the later test set. The tile-room example records its separate scoped run.
+The co-located specifications cover real Docling OCR
 of an original image-only PDF, original PDF page provenance for a selected range,
 interruption and resume, converter-version cache separation, invalid checkpoint
 rejection, download failures, project-note preservation, and native executable

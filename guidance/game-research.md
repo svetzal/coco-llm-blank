@@ -21,6 +21,13 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Match CoCo 2 artifact colours | Tandy, `coco2-service`, PDF 31–33 | Examined hardware discussion. Specific NTSC models, not all CoCo 2 variants. |
 | Choose CoCo 3 colours for a display | Tandy, `coco3-service`, PDF 17 | Examined palette tables. RGB and composite encodings differ; PAL caveat applies. |
 | Sound alongside animation and controls | [Sound research](sound-research.md) | Examined hardware for all three models; CoCo 1 cooperative and CoCo 3 timer experiments. |
+| Keep map state separate from actors | [Tile-map guide](../guides/tile-maps.md) and [tile-room result](../examples/tile-room/README.md#evidence-and-limits) | Original CoCo 1/2 implementation, 42 checkpoints per defined target; historical tile-ID source gap remains. |
+| Redraw only changed regions | [Selective redraw](../guides/selective-redraw.md), [CoCo 3 source reading](coco3-game-source-research.md) | Gloom and Symmetry examined; original adaptations untested. |
+| Combine held controls and collision rules | [Controls and collision](../guides/controls-and-collision.md), [Hot CoCo reading](hot-coco-game-research.md) | Examined articles; no tested keyboard driver or general collision engine. |
+| Schedule turns and menu transitions | [Game state](../guides/game-state.md), [Undercolor reading](undercolor-game-research.md) | Source-backed proposals; target adapters and runtime checks remain open. |
+| Accumulate a picture without storing every shape | [Animation guide](../guides/animation.md#let-an-accumulating-picture-retain-its-history) | Undercolor source examined; adaptation untested. |
+| Find legacy bitmap composition sources | [Expanded legacy reading](legacy-tile-research.md#three-game-source-candidates) | Selected Droid War, Dunkey Munkey and Sea Quest paths examined; no historical program run or tile-ID map established. |
+| Decide whether OCR is usable | [Conversion-quality inspection](conversion-quality.md) | Six selected pages and eleven exported images checked; no book-wide accuracy claim. |
 | Find more magazine techniques | `rainbow-index` | Discovery only. Find the issue, then inspect the actual article and corrections. |
 
 These are source-backed reading recommendations. Historical programs remain
@@ -297,8 +304,9 @@ its listing into the repository.
 
 - *Undercolor* volume 1 number 1, December 10, 1984: downloaded 28 pages;
   inspected cover and contents, PDF 1–3. The contents offered no direct
-  rendering or collision article for this pass. Its articles remain unexamined.
-  Keep it as a collection sample, outside the setup manifest. [Archive][undercolor-01]
+  rendering or collision article for that pass. Later [Undercolor research](undercolor-game-research.md)
+  examines four selected articles in other issues; the initial contents sample
+  alone remains discovery evidence. [Archive][undercolor-01]
 - *Color Computer Magazine*: mapped the archive directory, but selected no
   article in this pass. Directory discovery is not publication coverage.
 - Search results for **Graphic Master** in *Hot CoCo* were advertisements and
@@ -346,9 +354,18 @@ map addressing, tile copying and movement rules. The
 [legacy tile reading](legacy-tile-research.md) completes Barden's February 1988
 article and both BASIC listings (PDF 173–174, 176, 178–183). Its room graph and
 perspective redraw do not supply bitmap tiles or sprite restoration. Reading
-is complete for these selected passages; the CoCo 1/2 bitmap-renderer source
-gap and original tile-game validation remain open. Neither historical program
-was run.
+is complete for these selected passages. Expanded reading of Droid War,
+Dunkey Munkey and Sea Quest adds narrower shape and bitmap-composition findings,
+but the historical CoCo 1/2 tile-ID map-renderer source gap remains open.
+None of these historical programs was run.
+
+The original [tile-room example](../examples/tile-room/README.md#evidence-and-limits)
+now checks 42 checkpoints on each explicit NTSC, 32 KiB, normal-clock, non-T1
+CoCo 1/2 target. It verifies persistent collection after departure and return,
+blocked movement, state, map bytes, framebuffer and guards. The runner enforces
+NTSC and excludes user configuration. This is an original full-redraw
+implementation, not a historical reproduction or evidence for selective redraw,
+physical controls, visible appearance, timing or physical hardware.
 
 [Static display validation](display-validation.md) checks five CoCo 1 renderer
 cases, including frozen moving-object frames 1, 35 and 65. A wrong-SAM control
@@ -370,7 +387,15 @@ selected original reproductions, and display/audio/hardware limits.
 
 ## Conversion evidence
 
-Thirteen selected pages were processed through the starter's Docling pipeline.
+The later [six-page inspection](conversion-quality.md) compares selected
+assembly/listing pages, tables and diagrams with source renders and all eleven
+exported images. It records specific OCR failures and when to read the image.
+Its isolated conversions leave shared indexes and checkpoints unchanged;
+Matthews pages 44/46 are not thereby added to shared active Markdown coverage.
+These selected checks do not establish whole-book accuracy.
+
+In the first batch, thirteen selected pages were processed through the starter's
+Docling pipeline.
 The first conversion of CoCo 3 service-manual pages 16–18 produced empty OCR.
 The exported page-17 PNG was also blank, although direct PDFium rendering worked.
 
