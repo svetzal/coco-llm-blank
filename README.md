@@ -7,7 +7,9 @@ to original reference books. You bring the idea.
 You do not need to know assembly language or prepare a development environment
 before you start. Ask your agent to handle setup as part of building your project.
 You can try the result on your current computer using XRoar, an emulator that
-acts like a Color Computer. You do not need the original hardware.
+acts like a Color Computer. You do not need the original hardware. For now it
+works on Macs with Apple silicon and on Ubuntu Linux 24.04; Windows and older
+Intel Macs aren't supported yet.
 
 ## Start with your agent
 
@@ -134,6 +136,13 @@ computing technology than these computers that inspired and drove our entire
 personal computing field.
 
 ## Look inside when you are ready
+
+The games and demos you build are written in 6809 assembly language, the
+Color Computer's own machine language. Your agent writes it for you, and you
+can read it in your project's `main.asm`. The starter also has some Python code
+that automates the tedious technical steps: setting up tools, assembling your
+program, launching the emulator and checking the results. You never need to
+touch it.
 
 You can start without reading these pages. Choose one when you need it:
 
