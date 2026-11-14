@@ -402,11 +402,9 @@ Each pass should produce a few examined references and their usable guide text.
 Update existing guides when a finding changes their advice. Review topic and
 machine gaps after every pass.
 
-### Current dispatched batch: in progress
+### Prior dispatched batch: completed within recorded bounds
 
-The entries below distinguish completed work from contracts still in progress
-or independent review. A future worker file or reported test count alone is not
-evidence; integration follows review of the delivered record and checks.
+The entries below retain the completed batch and its evidence limits.
 
 - Keyboard input (completed, bounded CoCo 1/2B scope).
   [Report and reproduction commands](guidance/keyboard-controls-validation.md)
@@ -453,6 +451,53 @@ evidence; integration follows review of the delivered record and checks.
   and no false readiness. The published missing-sudo control is different;
   neither case proves interactive password handling or native desktop
   onboarding.
+
+### Current bounded batch: in progress
+
+These six items are acceptance contracts, not completed results. Parent review
+and integration must check the delivered evidence before changing their status.
+
+- Clean CoCo 1/2 animation. Require continuous consecutive rendered frames on
+  each declared target, with independent pixel expectations, cadence checks and
+  a failure control that exposes partial erasure or incomplete publication.
+  Completed framebuffer RAM alone cannot establish clean animation. State the
+  capture window and workload; do not infer unlimited or host-display smoothness.
+- Playable collection game. Require a complete start, movement, collection,
+  score/progress, completion and restart journey, followed by playable movement
+  and collection in the fresh game. Check visible state, held/released input,
+  boundaries and rejected actions against independent expectations. A reset
+  checkpoint alone does not prove restart; state the input-injection boundary.
+- Clean CoCo 3 presentation. Require continuous rendered frames for the declared
+  RAM sizes and display configuration, including transitions and restoration.
+  Compare against independent expected scenes and a broken-publication control;
+  correct final RAM or an isolated screenshot is insufficient.
+- Actual emulated audio output. Capture the emulator's produced audio at an
+  explicitly named output boundary and verify non-silent signal, duration and
+  expected waveform/frequency properties with silence or disconnected-output
+  controls. DAC writes and modeled intervals alone do not satisfy this item.
+  Identify whether evidence reaches emulator samples, a host audio backend,
+  listening or physical output; claim only the boundary actually observed.
+- Primary frame-publication reading. Read applicable primary passages on frame
+  preparation, display publication and synchronization, including relevant
+  figures and corrections. Cite title, edition/issue, exact PDF pages and source
+  URL beside each fact. Separate published facts, our adaptations and measured
+  results; carry unresolved machine-specific conflicts into the relevant guide.
+- Claude Code beginner trial and rubric. The rubric is in preparation; the
+  first launch was rejected by workspace routing before any trial ran. Run a
+  bounded independent trial from
+  a beginner prompt and assess setup, primary-source use, configuration/ROM
+  provenance, complete play/restart, continuous display and audio evidence,
+  recovery from failure and reproducibility. Record assistance and limitations;
+  a build or RAM check cannot substitute for the rubric's visible/play outcomes.
+
+For this batch, retain original implementation and reproduction instructions
+in Git; keep downloads and generated evidence ignored. Use explicit isolated
+machine configurations and verified ROM bytes. Require scoped outcome tests
+with independent expectations and failure controls, Ruff checks, and Markdown
+fix/check. Record RAM, renderer output, emulated timing, audio, host presentation
+and physical evidence separately. Existing host and physical-machine limits
+remain open unless directly tested. Link deliverables only after they exist;
+no planned output is completed evidence.
 
 Retain original code and reproduction instructions in Git; keep downloads and
 generated evidence ignored. Before any worker emulator run, verify ROM bytes

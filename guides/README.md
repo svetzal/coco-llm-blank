@@ -23,7 +23,7 @@ CoCo 1, 2, and 3 all belong in this collection. Evidence is uneven today.
 A shared hardware description does not establish that an example runs on
 another model. Each guide names its narrower scope.
 
-The [current dispatched batch](../PLAN.md#current-dispatched-batch-in-progress)
+The [current dispatched batch](../PLAN.md#prior-dispatched-batch-completed-within-recorded-bounds)
 has completed bounded keyboard, target-asset, CoCo 3 state and CoCo 2 sound
 validation. Their reports link reproduction instructions. Animation cadence
 now has reviewed continuous-renderer evidence and 27 passing tests. Input
