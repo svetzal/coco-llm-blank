@@ -10,7 +10,8 @@ A beginner can arrive with only the repository URL and an idea. Handle setup
 and implementation; do not ask them to translate tool errors into instructions.
 Use a new folder for a new project and preserve existing projects.
 
-Read [development practice](guidance/development.md) to establish the target.
+Read [the contract checklist](guidance/development.md#establish-the-contract)
+to establish the target before implementation.
 Run `sh scripts/bootstrap.sh coco1` for a CoCo 1 project, or use the chosen
 target.
 This prepares Python, project notes, native tools, and checksum-verified
@@ -32,7 +33,8 @@ check boot and execution before building the requested feature. It is a starting
 point, not
 the requested game or animation.
 
-Complete `local/PROJECT.md` from the request and documented defaults. Convert
+Before adapting an example or writing code, complete and read back
+`local/PROJECT.md` from the request and documented defaults. Convert
 only reference pages needed for the first feature. Build a small complete
 increment and test it in XRoar. Provide
 a reusable launch command or script and explain how to run it in plain language.
@@ -74,7 +76,8 @@ If the needed pages are missing, obtain or convert them first. If the source
 covers a different machine or remains ambiguous, leave the claim unresolved
 and defer the code that depends on it. Never substitute a confident recollection
 for missing evidence. Follow the [graphics checks](guidance/development.md#graphics-before-code)
-before choosing a mode or writing display setup.
+before choosing a mode or writing display setup, including setup copied from
+an example. Read its cited primary passages; the example is not a substitute.
 
 ## What to load
 
@@ -89,7 +92,10 @@ before choosing a mode or writing display setup.
   measured results. Use its cited pages before hardware-dependent
   implementation.
   [Research notes](guidance/game-research.md) retain source selection and open questions.
-- Writing or testing CoCo code: read [development practice](guidance/development.md).
+- Writing CoCo code: read [development practice](guidance/development.md).
+- Testing controls, sound or artwork: use the task-specific
+  [evidence checks](guidance/development.md#check-the-feature-you-claim), which
+  link existing keyboard, audio and artwork experiment methods.
 - Building binaries, disks, or emulator tests: read [toolchain](guidance/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read
   [Python tools](guidance/python.md), including the co-located `*_spec.py` rules.

@@ -3,8 +3,10 @@
 ## Establish the contract
 
 Record the CoCo model/revision, XRoar machine profile, RAM, CPU, video standard,
-clock, controls, and loader in `local/PROJECT.md` before writing
-hardware-dependent code. Read the file back to verify the write succeeded.
+clock, controls, and loader in `local/PROJECT.md` before adapting an example,
+assembling, or writing hardware-dependent code. Read the file back to verify
+the write succeeded. Notes filled in after a run describe that run; they do not
+replace this implementation contract.
 Setup selects a starting target;
 it does not establish that an application supports it. Keep unknowns explicit.
 Do not silently enable a 6309, more RAM, or a faster clock to pass a test.
@@ -27,7 +29,10 @@ default; state agent-selected choices to the owner without attributing consent.
 Load [reference lookup](references.md) and consult the graphics programming book
 before choosing a graphics mode, allocating its framebuffer, packing pixels,
 or writing display registers. Do not start with remembered mode tables and use
-the book only after the screen looks wrong.
+the book only after the screen looks wrong. Copying display setup from a
+working example still requires reading its cited primary passages for the
+selected target before reuse. Downloading or converting a page does not count
+as reading it. Reuse facts already checked in this session.
 
 Establish these facts from passages that apply to the selected hardware:
 
@@ -86,6 +91,69 @@ A process exiting is not proof of a successful boot. Check a meaningful
 program state. Directly loading a binary is not proof that a disk image works;
 test `LOADM` from the disk. Report minimum RAM and loading instructions with
 any distributable artifact.
+
+## Check the feature you claim
+
+Choose checks for the requested feature and declared target. A first prototype
+needs a small complete path through its behavior, not every experiment or every
+CoCo model. Use the methods below when their boundary matters, adapting their
+configuration and expectations to the project. Report an untested boundary
+plainly instead of expanding a narrow pass into a playability claim.
+
+Write expected outcomes from the contract, source facts and intended artwork
+before inspecting the run's output. Use an alternate route or lifecycle where
+it could reveal a bug, and a negative control that breaks the claimed behavior.
+Do not repair a failed expectation by copying the observed result; resolve the
+difference against the requirement first.
+
+### Keyboard input
+
+For an input claim, deliver press, hold and release through the actual keyboard
+adapter and observe the resulting game state. Use the
+[keyboard experiment's injection boundary](keyboard-controls-validation.md#actual-injection-boundary)
+and [failure controls](keyboard-controls-validation.md#reproduction-and-failure-controls)
+as a starting method. It drives XRoar's keyboard API through its matrix, PIA
+and the 6809 scanner. Adapt its keys and profile to the game; a passing example
+does not validate a new scanner.
+
+Writing logical key bits after the scanner returns tests gameplay logic only,
+even if the scanner executed first. Keep that useful test separate from keyboard
+delivery. Include a no-input or wrong-column control, and check release and
+repress across the relevant blocked movement or restart transition. XRoar API
+injection does not establish OS key delivery, window focus or physical keys;
+claim those only after checking those paths.
+
+### Sound
+
+A sound-call counter proves invocation, not DAC output, duration or audibility.
+For a waveform or duration claim, use actual DAC values and event timestamps,
+following the [DAC timing method](audio-timing-validation.md) or its retained
+[CoCo 2 experiment](../experiments/sound-coco2/README.md). State whether a duration
+is measured or calculated and give its basis; a call count supplies neither.
+
+For emulator audio output, adapt the
+[mixer PCM capture method](../experiments/audio-output/README.md), with an
+independent expected signal and a muted or wrong-routing control. PCM captured
+from XRoar is separate evidence from host playback, listening and physical
+output. Keep those limits explicit when any of them is untested.
+
+### Artwork and display
+
+Derive expected pixels from independently specified art rows and scene positions,
+not from art or font bytes read back from the same emulator RAM being checked.
+Copying those bytes into an oracle can check placement while accepting corrupted
+art. The [asset-loading experiment](../experiments/asset-loading/README.md#what-the-target-checks-establish)
+compares literal artwork and the full framebuffer, with complemented-picture
+and swapped-assignment controls. Adapt that method to the intended artwork;
+do not make captured output the new expected picture.
+
+A PNG decoded from RAM is a framebuffer view, not an emulator renderer capture.
+For a rendered-display claim, use the
+[renderer method and wrong-mode control](../experiments/display-validation/README.md#acceptance-and-negative-controls)
+within its stated target scope. Static captures do not establish animation
+cadence or tearing; for those tasks follow the
+[animation guide](../guides/animation.md). Host presentation and physical displays
+remain separate checks.
 
 ## Reusable launchers
 
