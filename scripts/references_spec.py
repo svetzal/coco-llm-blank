@@ -5,6 +5,7 @@ import io
 import json
 import re
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import numpy as np
@@ -258,9 +259,11 @@ class DescribeReferenceConversion:
             DoclingGateway().convert_page(source, 1)
 
     @pytest.mark.integration
+    @pytest.mark.parametrize("blank_primary_render", [False, True])
     def should_convert_a_scanned_pdf_through_setup_and_keep_original_page_numbers(
         self,
         tmp_path: Path,
+        blank_primary_render: bool,
     ) -> None:
         image = Image.fromarray(np.full((1100, 850, 3), 255, dtype=np.uint8))
         draw = ImageDraw.Draw(image)
@@ -285,7 +288,11 @@ class DescribeReferenceConversion:
         )
         (tmp_path / "resources.json").write_text(json.dumps([resource.model_dump()]))
 
-        result = setup.main(["--target", "coco2", "--pages", "2:2"], tmp_path)
+        gateway = DoclingGateway()
+        if blank_primary_render:
+            gateway.converter = Mock()
+            gateway.converter.convert.return_value = blank_conversion(2)
+        result = setup.main(["--target", "coco2", "--pages", "2:2"], tmp_path, documents=gateway)
 
         assert result == 0
         assert "1/2 PDF pages converted with Docling" in (tmp_path / "local/INDEX.md").read_text()
@@ -300,8 +307,79 @@ class DescribeReferenceConversion:
         with Image.open(directory / full_page.group(1)) as rendered:
             assert rendered.width > 850
             assert rendered.height > 1100
+            assert rendered.convert("L").getextrema()[0] < 100
         assert "data:image" not in json.dumps(checkpoint)
         assert checkpoint["image_hashes"]
+
+    @pytest.mark.integration
+    def should_preserve_a_genuinely_blank_page(self, book: Path) -> None:
+        gateway = DoclingGateway()
+        gateway.fallback_converter = Mock()
+        gateway.fallback_converter.convert.side_effect = AssertionError(
+            "Blank source needs no retry"
+        )
+
+        page = gateway.convert_page(book / "source.pdf", 2)
+
+        assert "View full PDF page 2" in page.markdown
+        with Image.open(io.BytesIO(page.images["page-00002-full.png"])) as image:
+            assert image.convert("L").getextrema() == (255, 255)
+
+    @pytest.mark.parametrize("failure", ["status", "blank", "missing-image"])
+    def should_reject_an_unusable_fallback(self, book: Path, failure: str) -> None:
+        from docling.datamodel.base_models import ConversionStatus
+
+        gateway = DoclingGateway()
+        gateway.converter = Mock()
+        gateway.converter.convert.return_value = blank_conversion(1)
+        gateway.fallback_converter = Mock()
+        failed = blank_conversion(1)
+        if failure == "status":
+            failed.status = ConversionStatus.FAILURE
+        elif failure == "missing-image":
+            failed.document.pages[1].image = None
+        gateway.fallback_converter.convert.return_value = failed
+
+        with pytest.raises(ConversionError, match="PDFium fallback"):
+            gateway.convert_page(book / "source.pdf", 1)
+
+    def should_replace_cached_blank_output_from_the_previous_renderer(
+        self, resource: Resource, book: Path, document_gateway: Mock
+    ) -> None:
+        from references import ConversionIdentity, PageCheckpoint, ReferenceStore
+
+        old = conversion_profile().model_copy(update={"format": 2})
+        checkpoint = PageCheckpoint(
+            identity=ConversionIdentity(sha256=resource.sha256, profile=old),
+            page=1,
+            markdown="OLD BLANK OUTPUT",
+            document={},
+        )
+        ReferenceStore(book).save_checkpoint(checkpoint, {})
+        document_gateway.convert_page.return_value = ConvertedPage(
+            markdown="Recovered original text", document={}
+        )
+
+        convert(resource, book, (1, 1), documents=document_gateway)
+
+        assert "Recovered original text" in (book / "text.md").read_text()
+        assert "OLD BLANK OUTPUT" not in (book / "text.md").read_text()
+        assert len(list((book / "docling-pages").iterdir())) == 2
+
+
+def blank_conversion(number: int) -> SimpleNamespace:
+    from docling.datamodel.base_models import ConversionStatus
+    from docling_core.types.doc import DoclingDocument, ImageRef, Size
+
+    document = DoclingDocument(name="Solid-colour renderer failure")
+    image = Image.new("RGB", (100, 100), "white")
+    ImageDraw.Draw(image).rectangle((1, 1, 98, 98), fill=(255, 255, 153))
+    document.add_page(
+        page_no=number,
+        size=Size(width=100, height=100),
+        image=ImageRef.from_pil(image, dpi=144),
+    )
+    return SimpleNamespace(status=ConversionStatus.SUCCESS, document=document)
 
 
 class DescribeDoclingImageExport:

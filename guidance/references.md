@@ -160,9 +160,10 @@ Sparse-page flags identify pages to inspect; they do not assess OCR correctness.
 
 Checkpoints are keyed by source checksum and converter profile. Upgrading the
 converter starts a new checkpoint collection. Old conversion records remain
-local; they are not merged into the new output. Image export uses profile
-format 2, so old text-only pages are converted again once. A checkpoint is saved
-only after all its PNGs. Missing or damaged images make that page eligible for
+local; they are not merged into the new output. Rendering recovery uses profile
+format 3, so pages from earlier profiles are converted again when requested.
+A checkpoint is saved only after all its PNGs. Missing or damaged images make
+that page eligible for
 conversion on the next run that includes it. Page-by-page conversion makes
 resumption bounded, but does not reconstruct tables that span pages.
 
@@ -173,3 +174,17 @@ Python tools, load [python.md](python.md).
 
 Implementation follows the [Docling installation guide](https://docling-project.github.io/docling/getting_started/installation/)
 and [converter API](https://docling-project.github.io/docling/reference/document_converter/).
+
+## Recovery from nearly blank renders
+
+A nearly blank page can be a PDF renderer failure rather than an empty source.
+The converter compares low-contrast output with a direct PDFium render. When
+PDFium shows detail, Docling retries that page through its PDFium backend.
+OCR, tables, figure crops, and the full-page image then use that same rendering.
+A failed or still nearly blank retry returns an error instead of saving it.
+Genuinely blank source pages remain valid.
+
+This recovered CoCo 3 service-manual PDF pages 16–18. Page 17's image was checked
+visually. Its OCR remains imperfect, including merged table-row labels.
+The detector is a rendering check, not a general OCR quality score. Continue
+to inspect page images before using hardware values.

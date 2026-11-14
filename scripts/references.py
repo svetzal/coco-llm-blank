@@ -138,9 +138,15 @@ def export_page(document: "DoclingDocument", number: int) -> ConvertedPage:
     return ConvertedPage(markdown=markdown, document=document.export_to_dict(), images=images)
 
 
+def low_contrast_image(image: "Image") -> bool:
+    """Flag near-flat rasters for comparison with an independent source render."""
+    low, high = image.convert("L").getextrema()
+    return high - low < 32
+
+
 def conversion_profile() -> ConversionProfile:
     return ConversionProfile(
-        format=2,
+        format=3,
         docling=version("docling"),
         docling_core=version("docling-core"),
         rapidocr=version("rapidocr"),
@@ -159,6 +165,13 @@ class DoclingGateway:
 
     @cached_property
     def converter(self) -> "DocumentConverter":
+        return self.make_converter()
+
+    @cached_property
+    def fallback_converter(self) -> "DocumentConverter":
+        return self.make_converter(pdfium_backend=True)
+
+    def make_converter(self, *, pdfium_backend: bool = False) -> "DocumentConverter":
         # Cached and guidance-only runs do not initialize the model pipeline.
         from docling.datamodel.base_models import InputFormat
         from docling.datamodel.pipeline_options import OcrMode, PdfPipelineOptions, RapidOcrOptions
@@ -176,9 +189,12 @@ class DoclingGateway:
         options.generate_page_images = True
         options.images_scale = 2.0
         options.enable_remote_services = False
-        return DocumentConverter(
-            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)},
-        )
+        pdf_options = PdfFormatOption(pipeline_options=options)
+        if pdfium_backend:
+            from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+
+            pdf_options.backend = PyPdfiumDocumentBackend
+        return DocumentConverter(format_options={InputFormat.PDF: pdf_options})
 
     def convert_page(self, source: Path, number: int) -> ConvertedPage:
         """Normalize model/backend failures into a conversion error for the CLI."""
@@ -188,6 +204,19 @@ class DoclingGateway:
             result = self.converter.convert(source, page_range=(number, number))
             if result.status != ConversionStatus.SUCCESS:
                 raise ConversionError(f"Docling did not finish PDF page {number}: {result.status}")
+            page = result.document.pages[number]
+            if page.image is not None and low_contrast_image(page.image.pil_image):
+                with pdfium.PdfDocument(source) as original:
+                    rendered = original[number - 1].render(scale=2).to_pil()
+                if not low_contrast_image(rendered):
+                    result = self.fallback_converter.convert(source, page_range=(number, number))
+                    if result.status != ConversionStatus.SUCCESS:
+                        raise ConversionError(f"PDFium fallback did not finish PDF page {number}")
+                    fallback_page = result.document.pages[number]
+                    if fallback_page.image is None or low_contrast_image(
+                        fallback_page.image.pil_image
+                    ):
+                        raise ConversionError(f"PDFium fallback returned a blank PDF page {number}")
             return export_page(result.document, number)
         except Exception as error:
             raise ConversionError(f"PDF page {number}: {error}") from error

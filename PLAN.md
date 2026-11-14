@@ -83,17 +83,16 @@ rejected matches, or unexamined candidates in the research guide.
 Examined topics include compact object storage, prepared-frame animation,
 CoCo 2 artifact circuitry, CoCo 3 scrolling, palette interpretation, and
 interrupt visibility during memory remapping. Thirteen selected pages were
-converted. CoCo 3 manual pages 16–18 have empty
-OCR, and the exported page-17 PNG is blank. Direct PDFium rendering is readable.
-Tepolt page 59 has damaged text without a sparse flag. No new technique is
-reproduced or benchmarked yet. Shared CoCo 1/2 articles need separate
-compatibility checks;
-the specific CoCo 2 service manual does not establish every board revision.
+converted. A nearly blank render affected CoCo 3 manual pages 16–18.
+The converter now retries through Docling's PDFium backend when an independent
+render shows detail. The repaired page-17 image was checked. Profile 3 prevents
+reuse of the old blank checkpoints. OCR still needs image checks: palette row
+labels can merge, and Tepolt page 59 has damaged text without a sparse flag.
+No new game technique is reproduced or benchmarked yet. Shared CoCo 1/2 articles
+need separate compatibility checks. The specific CoCo 2 service manual does
+not establish every board revision.
 
 ### Next research passes
-
-First resolve the CoCo 3 manual rendering discrepancy, or retain the documented
-direct-render fallback. Do not describe its blank Docling outputs as usable.
 
 1. Broaden magazine coverage to Hot CoCo, Color Computer Magazine, Undercolor,
    and later community publications. Read original articles and their errata,

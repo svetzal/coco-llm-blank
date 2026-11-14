@@ -152,27 +152,25 @@ Check corrections and continuation pages before relying on an article.
 ## Conversion evidence
 
 Thirteen selected pages were processed through the starter's Docling pipeline.
-The CoCo 3 service-manual sample (PDF 16–18) produced empty OCR and was flagged
-as sparse. Its exported page-17 PNG is also blank. Do not use those conversion
-outputs as evidence. Direct PDFium rendering of the original page is readable;
-that is the image used for the palette finding above.
+The first conversion of CoCo 3 service-manual pages 16–18 produced empty OCR.
+The exported page-17 PNG was also blank, although direct PDFium rendering worked.
 
-To inspect this page with the installed PDFium dependency:
+The converter now compares low-contrast pages with a direct PDFium render.
+If the original contains visible detail, it retries OCR, layout, and image
+extraction through Docling's PDFium backend. The repaired page-17 image was
+visually checked against the original. Its palette text and tables are now
+searchable, but OCR still merges the white and black row labels.
+
+Rerun the affected range to replace the old output:
 
 ```sh
-uv run python - <<'PYTHON'
-from pathlib import Path
-import pypdfium2 as pdfium
-
-root = Path("local/references/coco3-service")
-with pdfium.PdfDocument(root / "source.pdf") as document:
-    document[16].render(scale=2).to_pil().save(root / "page-17-direct.png")
-PYTHON
+uv run python scripts/setup.py --resource coco3-service --pages 16:18
 ```
 
-Open `local/references/coco3-service/page-17-direct.png` with an image tool.
-This fallback supplies a page image, not OCR or verified figure crops. It does
-not repair Docling's cached conversion. The rendering discrepancy remains open.
+Conversion profile 3 creates fresh checkpoints. It preserves PDF page numbers
+and leaves old checkpoints on disk without using them in the new index.
+This check catches the observed nearly blank rendering failure. It does not
+prove every image, table, or character is correct.
 
 Tepolt's PDF 59 contains damaged OCR sentences even though the page was not
 flagged as sparse. The original page image was checked for the scrolling
