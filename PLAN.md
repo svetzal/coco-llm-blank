@@ -50,7 +50,8 @@ ignored local storage. Stacey requested public publication as
    and GUI onboarding remain unverified by this run. A separate
    [nonroot sudo run](guidance/linux-onboarding-validation.md#nonroot-sudo-validation)
    passed bootstrap, all 13 CoCo 2 frames and note preservation. Its no-sudo
-   control failed actionably. Password-required or denied sudo remains untested.
+   control failed actionably. Separate [sudo-policy validation](guidance/sudo-policy-validation.md)
+   covers denied/password-required failures and prerequisite-only recovery.
    Neither run supplies visual, audible or physical-machine evidence.
 
 ## Game and demo research
@@ -388,9 +389,9 @@ machine gaps after every pass.
 
 ### Current dispatched batch: in progress
 
-The following work is dispatched, not completed. These are narrow acceptance
-contracts; no future worker file, test count or result is evidence yet. Integrate
-only after reading each delivered record and its reproducible checks.
+The entries below distinguish completed work from contracts still in progress
+or independent review. A future worker file or reported test count alone is not
+evidence; integration follows review of the delivered record and checks.
 
 - Keyboard input. Declare one target and scan policy; check press, hold,
   release, repress and simultaneous-key handling through the actual adapter,
@@ -412,11 +413,14 @@ only after reading each delivered record and its reproducible checks.
   policy; measure a finite sequence including return/repeat and delayed work,
   with an incorrect-cadence control. Static frames do not establish cadence;
   finite-window timing is not physical-display or worst-case evidence.
-- Input source crosscheck. Read the relevant primary text and diagrams to
-  reconcile the documented keyboard discrepancies; cite exact passages and
-  preserve unresolved conflicts. Source interpretation alone is not an executed
+- Input source crosscheck (completed). [Primary manual findings](guidance/input-hardware-research.md)
+  record 18 examined pages, matrix coordinates, board distinctions and unresolved
+  conflicts. Source interpretation alone is not an executed
   keyboard driver or a claim of archive-wide errata coverage.
-- Denied sudo. Exercise present-but-denied noninteractive sudo as an ordinary
+- Denied sudo (completed, prerequisite scope). [Validation](guidance/sudo-policy-validation.md)
+  covers password-required and denied policies, followed by administrator
+  correction and real curl/CA/HTTPS recovery. The original contract was to
+  exercise present-but-denied noninteractive sudo as an ordinary
   user in an isolated Ubuntu case; require nonzero exit, actionable diagnostics
   and no false readiness. The published missing-sudo control is different;
   neither case proves interactive password handling or native desktop
@@ -439,8 +443,8 @@ plan/index update performs no runtime work and adds no runtime result.
 3. Extend native-tool installation to other Linux distributions and disk tools.
    The original first-screen example now supplies an assembly and emulator baseline.
 4. Extend host evidence beyond completed Ubuntu ARM64 root and passwordless-sudo
-   container runs to native desktop, denied/password-required sudo, GUI journeys
-   and clean macOS onboarding.
+   container runs to native desktop, complete bootstrap after restricted-sudo
+   recovery, GUI journeys and clean macOS onboarding.
    x86-64 Linux and Intel Mac compatibility need separate checks.
 5. Extend beginner trials after addressing observed failures. The first Claude
    Code trial built a demo and passed runtime checks; Claude 02 now has an

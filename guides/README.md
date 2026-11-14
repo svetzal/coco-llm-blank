@@ -25,13 +25,14 @@ another model. Each guide names its narrower scope.
 
 The [current dispatched batch](../PLAN.md#current-dispatched-batch-in-progress)
 is in progress: keyboard input, target assets, a CoCo 3 state subset, CoCo 2
-sound, animation cadence, input source crosschecking and denied sudo. These
-contracts add no completed results to the table above.
+sound and animation cadence. Input source reading and the bounded sudo-policy
+checks are complete; the remaining contracts add no completed runtime results.
 
 For setup evidence, the [nonroot Ubuntu record](../guidance/linux-onboarding-validation.md#nonroot-sudo-validation)
 reports passwordless-sudo bootstrap, 13 CoCo 2 moving-object frames and preserved
-notes on rerun. Its missing-sudo control failed actionably. Present-but-denied
-sudo remains pending; this is ARM64 container evidence, not a native desktop,
+notes on rerun. Separate [sudo-policy checks](../guidance/sudo-policy-validation.md)
+cover denied/password-required failures and prerequisite recovery. This is
+ARM64 container evidence, not a native desktop,
 GUI, audible-output or physical-machine check.
 
 ## Read the evidence correctly
