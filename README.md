@@ -124,10 +124,11 @@ Your attention to detail, your diligence in playability and user experience
 will have far more impact on the quality of the game it produces than the agent
 technology itself.
 
-There will be problems you can't solve (I mean, it's a 40 year old computer),
-there will be problems you might find a brand new solution to that nobody has
-found before, there will be problems that someone else has published a solution
-to, and there will be problems already solved by guides here in this repo.
+There will be problems you can't solve (I mean, it's a 40 year old computer,
+you won't be building Call of Duty or First Light), there will be problems you
+might find a brand new solution to that nobody has found before, there will be
+problems that someone else has published a solution to, and there will be
+problems already solved by guides here in this repo.
 
 Most importantly, have fun! And if you have trouble with it, drop me a line.
 My goal is to enable, 40 years later, people to have the same sense of learning
