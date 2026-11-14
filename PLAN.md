@@ -42,8 +42,11 @@ ignored local storage. Stacey requested public publication as
    Silicon macOS jobs for locked setup, specifications, real Docling conversion,
    and project initialization. The initial checks passed on both platforms.
    The native installer and first-screen memory check also passed in a clean
-   Ubuntu 24.04 container. The current clean Linux beginner-onboarding check
-   remains pending; earlier container evidence does not establish that outcome.
+   Ubuntu 24.04 container. Later [Linux validation](guidance/linux-onboarding-validation.md)
+   passed bootstrap and CoCo 2 recovery after manual curl/CA installation.
+   Bootstrap now installs those missing prerequisites; a fresh container proved
+   that correction through real uv installation, stopping before `uv sync`.
+   An uninterrupted full run of the corrected bootstrap remains unverified.
    Visual and physical-machine checks remain separate.
 
 ## Game and demo research

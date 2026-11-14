@@ -23,6 +23,25 @@ if ! command -v uv >/dev/null 2>&1; then
         echo 'Installing uv with Homebrew.'
         brew install uv
     else
+        if ! command -v curl >/dev/null 2>&1; then
+            if ! command -v apt-get >/dev/null 2>&1; then
+                echo 'curl is missing. Install curl and CA certificates with your system package manager, then rerun bootstrap.' >&2
+                exit 1
+            fi
+            if [ "$(id -u)" -eq 0 ]; then
+                set --
+            elif command -v sudo >/dev/null 2>&1; then
+                set -- sudo -n
+            else
+                echo 'Installing curl requires root or non-interactive sudo. Ask an administrator to install curl and ca-certificates, then rerun bootstrap.' >&2
+                exit 1
+            fi
+            echo 'Installing curl and CA certificates with apt.'
+            if ! "$@" apt-get update || ! "$@" apt-get install -y curl ca-certificates; then
+                echo 'Could not install curl and ca-certificates. Resolve the apt error above and ensure root or non-interactive sudo access, then rerun bootstrap.' >&2
+                exit 1
+            fi
+        fi
         echo 'Installing uv with its official installer.'
         installer=$(mktemp)
         trap 'rm -f "$installer"' EXIT HUP INT TERM
