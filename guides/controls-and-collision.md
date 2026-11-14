@@ -85,7 +85,7 @@ Its full-redraw and masked-object examples do not implement collision.
 A few probe offsets are easy to inspect for a small ship in broad tunnels.
 Keep those offsets as collision data, separate from the sprite. Togliatti's
 four screen tests motivate this choice, but the separate scenery query and
-substeps below are our untested additions.
+substeps below are our additions, with bounded host-model checks linked below.
 [Matt Togliatti, "Attacker," October 1983, printed/PDF 86, line 150][attacker].
 
 This original pseudocode deliberately handles integer, horizontal movement
@@ -144,8 +144,11 @@ Use expected positions and events written independently of the renderer:
    representations. Check projectile/actor contact separately from scenery,
    including crossing paths between updates and the chosen touching rule.
 
-These are proposed checks, not results. No runtime, performance, display, or
-physical-hardware claim follows from this guide. Source reading and page-image
+A [host reference model](../guidance/controls-collision-validation.md) now checks
+26 bounded scenarios for logical input, horizontal grid movement and one-axis
+sweeps, including naive failure controls. That does not validate a CoCo input
+adapter, arbitrary geometry, performance, display or physical hardware.
+The broader target-specific checks above remain required. Source reading and page-image
 inspection support the historical descriptions only. The
 [research provenance](../guidance/hot-coco-game-research.md#sources-and-reading-coverage)
 records local evidence, hashes, full reading coverage, and research-local IDs
