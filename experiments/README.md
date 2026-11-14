@@ -14,6 +14,7 @@ The links below describe existing work; they do not claim a new validation run.
 
 | Task | Code and procedure | Validation report |
 | --- | --- | --- |
+| Check a collection-game output journey | [collect-room-output](collect-room-output/README.md) | [Evidence and limits](../guidance/collect-room-output-validation.md) |
 | Pack original artwork | [assets](assets/README.md) | [Evidence and limits](../guidance/asset-validation.md) |
 | Consume prepared artwork on CoCo 1/2 | [asset-loading](asset-loading/README.md) | [Evidence and limits](../guidance/asset-loading-validation.md) |
 | Check logical controls and collisions | [controls-collision](controls-collision/) | [Evidence and limits](../guidance/controls-collision-validation.md) |
@@ -34,6 +35,10 @@ The links below describe existing work; they do not claim a new validation run.
 | Check sudo failure and recovery | [sudo-policy](sudo-policy/README.md) | [Evidence and limits](../guidance/sudo-policy-validation.md) |
 
 ## Choose the right test suite
+
+Use the [validation command](../guidance/python.md#repository-validation-cli)
+to list scopes and run selected suites separately. `root --heavy` runs the full
+starter suite; named experiments retain their own coverage and prerequisites.
 
 The root [pytest configuration](../pyproject.toml) selects `scripts/` and
 co-located `*_spec.py` files. A root `uv run pytest --cov` checks starter scripts

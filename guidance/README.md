@@ -62,6 +62,8 @@ of your environment. Reproduction code is indexed under
 
 ### Controls, state and assets
 
+- [Collection-game keyboard, renderer and PCM journey](collect-room-output-validation.md).
+
 - [Controls and collision policy validation](controls-collision-validation.md).
 - [Keyboard matrix to movement and action](keyboard-controls-validation.md).
 - [Host validation of scheduled journeys and menu transitions](game-state-validation.md).

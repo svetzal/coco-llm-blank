@@ -120,3 +120,73 @@ also run `uv run pytest -m integration`; this loads real Docling models.
 
 For CoCo binaries and emulator checks, load [toolchain.md](toolchain.md).
 For books and OCR, load [references.md](references.md).
+
+## Repository validation CLI
+
+Use the existing locked environment. Prepare it explicitly with
+`uv sync --locked` when needed; the runner never installs packages or tools.
+On macOS, the supported host is Apple Silicon.
+
+```sh
+uv run --locked --no-sync python scripts/validate_repository.py list
+uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
+uv run --locked --no-sync python scripts/validate_repository.py run assets game-state
+```
+
+Each selection runs pytest, Ruff, and Ruff's format check in separate processes
+from the repository root. Root selects the complete `scripts` suite, including
+integrations, and requires `--heavy`. It preserves the full starter coverage
+gate rather than presenting a partial run as root validation. Experiment names
+select only that experiment. Coverage uses its `coverage.ini` where present,
+otherwise the root configuration with the documented module targets.
+
+The light experiment scopes are `assets`, `controls-collision`, `game-state`,
+`linux-onboarding`, and `sudo-policy`. The last two run host specifications with
+controlled process boundaries, not the Docker onboarding or sudo journeys.
+`linux-onboarding`, `macos-onboarding`, `sudo-policy`, and `audio-timing` have
+no scoped coverage gate. The runner does not invent one or borrow the root's
+measured source scope.
+
+Other experiments require `--heavy`, even if their prerequisites are cached.
+The entire selection is checked before any work begins. `all` means all
+experiments, excluding root. Scopes run sequentially and stop at the first failed
+check. These commands explicitly opt into expensive work:
+
+```sh
+uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
+uv run --locked --no-sync python scripts/validate_repository.py run \
+  display-coco2 --heavy
+uv run --locked --no-sync python scripts/validate_repository.py run all --heavy
+```
+
+Before opting in, read the selected experiment's README or validation guide.
+Root with `--heavy` requires the complete starter environment described above;
+Docling can download model weights. Display and animation suites can download
+pinned XRoar sources and compile private emulators. Native runs require the
+assembler, build tools, and verified ROMs for their documented machines.
+`macos-onboarding` requires installed `lwasm`; it checks current-host recovery
+with fixture firmware and a recording launcher, not clean-host installation.
+`collect-room-output` builds a private emulator from `COLLECT_ARCHIVE` (default
+`local/research/audio-timing/xroar-1.12.1.tar.gz`) and requires CoCo 1/2 ROMs.
+`keyboard-controls` and `sound-coco2` require their prepared private emulator.
+`audio-output` requires `AUDIO_ARCHIVE` and `AUDIO_XROAR` to point to the prepared
+archive and executable described in its README. `audio-timing` requires fresh
+measurement evidence from its documented reproduction command. The runner does
+not prepare these inputs, launch experiment setup scripts, or start an
+interactive GUI. Missing prerequisites follow the selected suite's behavior:
+some fail, while others skip tests. The runner preserves these outcomes and
+does not convert skips into failures. Inspect the pytest log and JUnit report
+before claiming full validation; a zero exit alone does not mean every check ran.
+
+Each invocation retains a new directory under ignored `build/validation/`.
+Each scope has numbered merged stdout/stderr logs and JSON records containing
+the command and raw child exit status. Pytest writes JUnit results there and,
+where configured, coverage JSON and its data file. Temporary test files are
+isolated per invocation. The terminal prints log paths and statuses. An ordinary
+child failure becomes the runner's exit status; signal termination uses
+`128 + signal`, with the raw negative status retained in JSON. A process that
+cannot start is recorded as 127. Later checks do not run after failure, and a
+retry leaves earlier logs intact. Experiment-owned evidence paths still follow
+the experiment's own rules. These results establish only what the selected
+tests measure, not physical hardware operation, visible display, or audible
+output.

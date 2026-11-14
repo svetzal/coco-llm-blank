@@ -7,22 +7,7 @@ complete. Dependencies describe integration order, not additional tasks.
 
 ## Current batch
 
-1. **Unified experiment checks.** Provide a documented way to run the existing
-   experiment checks with explicit prerequisites and bounded evidence scopes.
-   Acceptance: exercise the real check entry points, demonstrate that a failing
-   check produces a failure, and expose missing prerequisites or skipped checks
-   without presenting them as passes. Preserve independent expectations and
-   negative controls. Final integration depends on the collection-game check
-   interface and the documented host support boundary.
-2. **Integrated collection-game renderer and audio.** Validate the existing
-   [collection game](examples/collect-room/README.md) through renderer output
-   and digital audio during the same bounded game journeys. Acceptance: name
-   the tested machine profiles, verify expected scenes and sound events against
-   independent expectations, and show controls that reject incorrect output.
-   Report RAM, rendered frames, timing and mixer PCM separately. Do not infer
-   host listening, UI interaction or physical-hardware results. Document the
-   runnable checks for inclusion in the unified experiment checks.
-3. **Full restricted-sudo recovery.** Extend the
+1. **Full restricted-sudo recovery.** Extend the
    [sudo-policy validation](guidance/sudo-policy-validation.md) beyond
    prerequisite-only recovery. Acceptance: record the initial restriction and
    actionable failure, then complete bootstrap and an existing target execution
@@ -32,9 +17,8 @@ complete. Dependencies describe integration order, not additional tasks.
 
 Finish integration after the worker reports arrive: reconcile changed
 interfaces, run the applicable combined checks, and record actual results and
-remaining limitations in the relevant records. The existing 274-test result
-with 95.06% coverage is prior evidence, not an outstanding task or proof of
-this batch. Remove accepted items rather than adding completed status sections.
+remaining limitations in the relevant records. Remove accepted items rather than
+adding completed status sections.
 
 The historical tile-source hunt is stopped; no further search is queued.
 Keep downloads and generated evidence ignored. Do not modify `coco-lines`,
