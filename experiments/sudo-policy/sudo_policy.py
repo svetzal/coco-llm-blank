@@ -1,8 +1,9 @@
-"""Original bounded tests of real Ubuntu sudo policy and bootstrap prerequisites."""
+"""Original bounded tests of real Ubuntu sudo policy and bootstrap recovery through CoCo 2 checkpoints."""
 
 import hashlib
 import json
 import subprocess
+import sys
 import time
 import traceback
 from pathlib import Path
@@ -10,7 +11,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 IMAGE = "ubuntu@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5"
 BOUNDARY = "        echo 'Installing uv with its official installer.'\n"
-NOTES = b"# Existing project\n\nOwner fixture: preserve these exact bytes.\nTarget: coco2\n"
+NOTES = (
+    b"# Existing project\n\nOwner fixture: preserve these exact bytes.\nTarget: CoCo 2\n"
+    b"Experiment configuration: cocous, 6847, 6809, 32 KiB, NTSC, stock clock.\n"
+    b"Direct DECB loading; no controls. Agent-selected test configuration.\n"
+)
+EDIT = b"\n## Edited after recovery\n\nPreserve this later owner-note fixture too.\n"
 
 
 def absent_tools(names: str) -> str:
@@ -33,11 +39,14 @@ class Experiment:
         self.output = ROOT / "build/sudo-policy" / self.name
         self.output.mkdir(parents=True)
         self.commands: list[dict] = []
+        self.stage = "capture"
+        self.prior_failure = None
 
-    def run(self, label: str, args: list[str], expected: int = 0) -> str:
+    def run(self, label: str, args: list[str], expected: int = 0, timeout: int = 300) -> str:
+        self.stage = label
         start = time.monotonic()
         log = self.output / f"{label}.log"
-        status: int | str = "timeout"
+        status: int | str = "interrupted"
         try:
             with log.open("w") as stream:
                 result = subprocess.run(
@@ -45,16 +54,20 @@ class Experiment:
                     cwd=ROOT,
                     stdout=stream,
                     stderr=subprocess.STDOUT,
-                    timeout=300,
+                    timeout=timeout,
                     check=False,
                 )
             status = result.returncode
+        except subprocess.TimeoutExpired:
+            status = "timeout"
+            raise
         finally:
             self.commands.append(
                 {
                     "label": label,
                     "argv": args,
                     "exit": status,
+                    "timeout_seconds": timeout,
                     "seconds": round(time.monotonic() - start, 2),
                 }
             )
@@ -64,7 +77,13 @@ class Experiment:
         return log.read_text()
 
     def shell(
-        self, name: str, label: str, script: str, user: str = "root", expected: int = 0
+        self,
+        name: str,
+        label: str,
+        script: str,
+        user: str = "root",
+        expected: int = 0,
+        timeout: int = 300,
     ) -> str:
         return self.run(
             label,
@@ -76,19 +95,29 @@ class Experiment:
                 "--env",
                 "HOME=/home/learner",
                 "--env",
-                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "PATH=/home/learner/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                 name,
                 "sh",
                 "-ec",
                 script,
             ],
             expected,
+            timeout,
         )
 
     def capture(self) -> Path:
         source = (ROOT / "scripts/bootstrap.sh").read_bytes()
         inputs = self.output / "input"
-        (inputs / "scripts").mkdir(parents=True)
+        inputs.mkdir()
+        paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).decode().split("\0")
+        for name in filter(None, paths):
+            if Path(name).parts[0] in {"local", "build", ".venv", ".git"}:
+                continue
+            original = ROOT / name
+            destination = inputs / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(original.read_bytes())
+            destination.chmod(original.stat().st_mode & 0o777)
         (inputs / "local").mkdir()
         (inputs / "scripts/bootstrap.sh").write_bytes(source)
         (inputs / "scripts/prerequisites.sh").write_text(prerequisite_prefix(source.decode()))
@@ -101,10 +130,13 @@ class Experiment:
         self.run("docker-version", ["docker", "version"])
         return inputs
 
-    def unchanged(self, name: str, phase: str) -> None:
+    def notes(self, name: str, phase: str, expected: bytes = NOTES) -> None:
         label = f"{name}-{phase}-notes"
         self.shell(name, label, "cat /work/local/PROJECT.md", "learner")
-        assert (self.output / f"{label}.log").read_bytes() == NOTES, "Project note bytes changed"
+        assert (self.output / f"{label}.log").read_bytes() == expected, "Project note bytes changed"
+
+    def unchanged(self, name: str, phase: str) -> None:
+        self.notes(name, phase)
         self.shell(
             name,
             f"{name}-{phase}-no-readiness",
@@ -128,13 +160,15 @@ class Experiment:
                     "-d",
                     "--name",
                     name,
+                    "--label",
+                    f"coco.sudo-policy.owner={name}",
                     "--platform",
                     "linux/arm64",
                     "--workdir",
                     "/work",
                     IMAGE,
                     "sleep",
-                    "1800",
+                    "7200",
                 ],
             )
             self.run(f"{name}-copy", ["docker", "cp", f"{inputs}/.", f"{name}:/work"])
@@ -209,8 +243,112 @@ class Experiment:
             )
             self.unchanged(name, "recovered")
             self.shell(name, f"{name}-sudo-help", "sudo --version; sudo --help")
+            self.complete(name)
         finally:
-            self.run(f"{name}-cleanup", ["docker", "rm", "-f", name])
+            self.cleanup_owned(name, sys.exception())
+
+    def cleanup_owned(self, name: str, preceding: BaseException | None) -> None:
+        """Find owned containers even when create/start did not return success."""
+        prior_stage = self.stage
+        try:
+            identities = self.run(
+                f"{name}-cleanup-discover",
+                ["docker", "ps", "-aq", "--filter", f"label=coco.sudo-policy.owner={name}"],
+            ).split()
+            for identity in identities:
+                self.run(f"{name}-cleanup", ["docker", "rm", "-f", identity])
+        except BaseException:
+            if preceding is not None:
+                self.prior_failure = {
+                    "stage": prior_stage,
+                    "type": type(preceding).__name__,
+                    "error": str(preceding),
+                }
+            raise
+        else:
+            if preceding is not None:
+                self.stage = prior_stage
+
+    def bootstrap(self, name: str, phase: str, expected_notes: bytes, timeout: int = 300) -> None:
+        """Retain note bytes on failure as well as success, without losing the failed stage."""
+        self.notes(name, f"before-{phase}", expected_notes)
+        try:
+            output = self.shell(
+                name, f"{name}-{phase}", "sh scripts/bootstrap.sh coco2", "learner", timeout=timeout
+            )
+            assert "Tools and firmware are ready" in output, "Bootstrap omitted readiness"
+        except BaseException:
+            failed_stage = self.stage
+            try:
+                self.notes(name, f"failed-{phase}", expected_notes)
+            finally:
+                self.stage = failed_stage
+            raise
+        self.notes(name, f"after-{phase}", expected_notes)
+
+    def complete(self, name: str) -> None:
+        """Run production setup and independent existing scene checks after correction."""
+        self.bootstrap(name, "bootstrap", NOTES, timeout=2400)
+        self.shell(
+            name,
+            f"{name}-firmware",
+            "uv run python scripts/doctor.py --profile demo --target coco2",
+            "learner",
+        )
+        self.shell(
+            name,
+            f"{name}-moving-objects",
+            "uv run python scripts/moving_objects.py check --target coco2",
+            "learner",
+            timeout=840,
+        )
+        self.shell(
+            name,
+            f"{name}-game-prepare",
+            "uv run python scripts/collect_room.py prepare-check",
+            "learner",
+            timeout=900,
+        )
+        self.shell(
+            name,
+            f"{name}-game-check",
+            "uv run python scripts/collect_room.py check --target coco2",
+            "learner",
+            timeout=900,
+        )
+        self.shell(
+            name,
+            f"{name}-edit-notes",
+            "printf '\\n## Edited after recovery\\n\\nPreserve this later owner-note fixture too.\\n' >> local/PROJECT.md",
+            "learner",
+        )
+        self.bootstrap(name, "rerun", NOTES + EDIT)
+        self.shell(
+            name,
+            f"{name}-versions",
+            "uv --version; uv run python --version; local/toolchain/bin/lwasm --version; "
+            "local/toolchain/bin/xroar --version; "
+            "uv run python scripts/doctor.py --profile demo --target coco2",
+            "learner",
+        )
+        self.run(
+            f"{name}-collect-game",
+            [
+                "docker",
+                "cp",
+                f"{name}:/work/build/collect-room",
+                str(self.output / f"{name}-collect-room"),
+            ],
+        )
+        self.run(
+            f"{name}-collect",
+            [
+                "docker",
+                "cp",
+                f"{name}:/work/build/moving-objects",
+                str(self.output / f"{name}-moving-objects"),
+            ],
+        )
 
     def execute(self) -> None:
         phase = "capture"
@@ -223,7 +361,7 @@ class Experiment:
                 json.dumps(
                     {
                         "policies": ["password", "denied"],
-                        "scope": "curl/CA prerequisite only",
+                        "scope": "sudo recovery, complete bootstrap, CoCo 2 checkpoints, edited-note rerun",
                     },
                     indent=2,
                 )
@@ -234,9 +372,11 @@ class Experiment:
                 json.dumps(
                     {
                         "phase": phase,
+                        "stage": self.stage,
                         "error": str(error),
                         "type": type(error).__name__,
                         "traceback": traceback.format_exc(),
+                        "prior_failure": self.prior_failure,
                     },
                     indent=2,
                 )

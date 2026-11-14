@@ -2,29 +2,10 @@
 
 Keep this file limited to open work. Remove each item when its acceptance
 criteria are met and its report is available; keep evidence in the relevant
-guide or validation record. The items below are dispatched, not confirmed
-complete. Dependencies describe integration order, not additional tasks.
+guide or validation record. The items below are open; they are not currently
+dispatched.
 
-## Current batch
-
-1. **Full restricted-sudo recovery.** Extend the
-   [sudo-policy validation](guidance/sudo-policy-validation.md) beyond
-   prerequisite-only recovery. Acceptance: record the initial restriction and
-   actionable failure, then complete bootstrap and an existing target execution
-   check after the permitted recovery; verify reruns preserve edited project
-   notes. Record the exact host/container and privilege conditions. Container
-   evidence does not establish native desktop or GUI onboarding.
-
-Finish integration after the worker reports arrive: reconcile changed
-interfaces, run the applicable combined checks, and record actual results and
-remaining limitations in the relevant records. Remove accepted items rather than
-adding completed status sections.
-
-The historical tile-source hunt is stopped; no further search is queued.
-Keep downloads and generated evidence ignored. Do not modify `coco-lines`,
-start new beginner trials, or register Foundry for this batch.
-
-## Open work beyond this batch
+## Open work
 
 - Clean Apple Silicon host and native Linux desktop onboarding, including
   x86-64 Linux. Intel Mac support is excluded. Current container and configured
@@ -39,6 +20,9 @@ start new beginner trials, or register Foundry for this batch.
 - Host keyboard delivery, window presentation, listening, and physical-machine
   validation where required by a guide's claim. Emulator-only checks must keep
   their stated limits.
+
+The historical tile-source hunt remains stopped unless a substantive new lead
+meets its documented boundary. Intel Mac support is excluded.
 
 ## Permanent technique guides
 
