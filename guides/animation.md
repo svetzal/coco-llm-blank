@@ -88,6 +88,38 @@ The page labels the listing CoCo 3 and discusses CoCo 1/2 speed changes.
 We have not run it on any model. Its speed suggestions do not establish
 normal-clock performance and are not part of our recommended setup.
 
+## Let an accumulating picture retain its history
+
+Richard Ramella's "Summer Frippery", *Undercolor*, volume 1, issue 11,
+June 30, 1985, printed 16, PDF 18, includes *Flower Fantasy*. It adds circle
+segments without clearing between passes and rejects a colour matching the
+existing centre pixel. The page specifies 16K Extended Color BASIC and makes
+its speed POKE conditional. This is no CoCo 3 compatibility or normal-clock
+performance evidence. [Ramella][ramella]
+
+For an accumulating garden, trail or paint demo, our untested adaptation keeps
+past marks in the framebuffer instead of a growing shape list:
+
+```text
+add_mark():
+    centre = choose_valid_centre()
+    choices = allowed_colours minus read_logical_colour(centre)
+    if choices is empty: return
+    draw_clipped_mark(centre, choose(choices))
+```
+
+Choosing from the remaining colours replaces the source's retry loop with a
+bounded selection step. Clipping and the empty-set exit are our additions.
+Use the target renderer's logical colours, not the listing's colour offset or
+POKEs. This saves shape-history storage but loses independent reconstruction
+and undo unless more state is retained. Later choices depend on earlier pixels;
+a centre-pixel check does not detect overlap across the whole mark.
+
+Before adopting it, check empty choices, edge clipping, repeatability from a
+fixed seed, and a reset of both the drawing and random-generator state. No such
+checks were run here. The [Undercolor research record](../guidance/undercolor-game-research.md)
+records source images, hashes and limits; this source has no manifest resource ID.
+
 ## Check the result before expanding it
 
 The following checks are proposed work, not completed animation evidence:
@@ -127,3 +159,5 @@ for selection limits.
 [pendell]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2012%20No.%2003%20-%20October%201992.pdf#page=3>
 
 [matthews-ending]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf#page=47>
+
+[ramella]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n11%20%281985%29%28ColorPlus%20Inc%29.pdf#page=18>
