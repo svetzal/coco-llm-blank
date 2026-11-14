@@ -2,54 +2,63 @@
 
 ## Purpose and boundary
 
-Provide a cloneable repository that prepares local reference material and
-agent guidance for CoCo development. Own the setup, manifest, original
-guidance, and verification. Download reference works from their source into
-ignored local storage. Do not bundle books, derived book text, or ROMs.
+Provide a cloneable repository that prepares local reference material, agent
+guidance, and host-side tooling for CoCo development. Own the setup, manifest,
+original guidance, and verification. Keep books, converted text, and ROMs in
+ignored local storage. The repository stays local and unregistered with Foundry
+at Stacey's request.
 
-## First increment
+## Current implementation
 
-- Support macOS and Linux with Python and Poppler.
-- Let the user choose CoCo 1, CoCo 2, or CoCo 3 during setup.
-- Generate local project notes without overwriting user changes.
-- Fetch a small explicit manifest, validate checksums, and reuse downloads.
-- Extract text with PDF page boundaries and flag sparse pages.
-- Offer OCR with an optional page range for a small initial trial.
-- Produce a local source index for agents.
-- Test downloads, extraction, reruns, and failure behavior.
-
-The repository stays local and unregistered with Foundry at Stacey's request.
+- uv owns the Python `.venv`, dependency declarations, and lockfile.
+- Docling provides layout analysis, RapidOCR, and table recognition.
+- Per-page checkpoints preserve completed work across ranges and interruptions.
+- Conversion records preserve source hashes, versions, and PDF provenance.
+- NumPy and Pillow support reference models, assets, and test vectors.
+- pytest and Ruff provide the development checks; pygame-ce and music21 are
+  optional dependency groups for interactive and music work.
+- Setup selects CoCo 1, 2, or 3 and preserves local project notes.
+- `AGENTS.md` routes tasks through ordinary Markdown files without agent skills.
+- Native-tool guidance and discovery cover LWTOOLS, ToolShed, and XRoar.
+  Stacey selected assembly only; C compilation is outside the baseline.
 
 ## Next increments
 
-1. Make OCR resumable per page and evaluate scan quality on assembly listings.
-   The first version supports explicit full-book or bounded-range OCR.
-2. Add target-specific manuals and datasheets, then select resource groups
-   by target. The first collection is shared 6809 and CoCo 1/2 background;
-   it is not a complete CoCo 3 reference library.
-3. Add a toolchain check for LWTOOLS and XRoar, explicit ROM configuration,
-   and an original small program with an emulator smoke test.
-4. Verify setup on a clean Linux host and a clean macOS host before claiming
-   cross-platform validation. Current local execution is on macOS.
+1. Evaluate Docling output across assembly listings, tables, and diagrams before
+   claiming book-wide conversion quality. Preserve explicit page coverage.
+2. Add target-specific manuals and datasheets and select resource groups by
+   target. The first books are shared 6809 and CoCo 1/2 background, not a
+   complete CoCo 3 library.
+3. Automate native-tool installation where practical, configure ROM paths,
+   and add an original assembly program with disk and emulator checks.
+4. Verify on clean Linux and macOS hosts. The current environment targets
+   Apple Silicon macOS and Linux; Intel Mac support needs separate dependency
+   compatibility work.
 5. Prepare public-template metadata and licensing when publication is wanted.
 
 ## Acceptance evidence
 
-A fresh checkout can initialize guidance, obtain a checksum-verified PDF,
-convert its text, and locate it through the index. A second run preserves
-project notes and reuses downloads. Failed downloads and conversion return
-nonzero status without replacing valid output. Git tracks no downloaded or
-derived reference content.
+A checkout can create its Python environment from the lockfile, initialize
+guidance, verify a downloaded PDF, convert selected pages, and find them through
+the index. Reruns preserve project notes and completed pages. Failed conversions
+retain successful checkpoints and return nonzero status. Git tracks no reference
+content, model weights, or virtual environment.
 
-## Current verification
+## Verification status
 
-Nine tests pass on the development Mac, including real HTTP download behavior,
-Poppler conversion, Tesseract OCR, preserved project notes and OCR text,
-checksum rejection, and failed conversion output preservation.
+Twelve tests pass on the development Mac. They cover real Docling OCR of an
+original image-only PDF, original PDF page provenance for a selected range,
+interruption and resume, converter-version cache separation, download failures,
+project-note preservation, and native executable discovery. Ruff checks pass.
+The locked environment synchronizes successfully and package compatibility
+checks pass. Docling emits upstream deprecation warnings during conversion.
 
-Both manifest PDFs were downloaded from the archive and checksum-verified.
-Both are image-only scans. PDF pages 10 through 12 of each were processed with
-Tesseract and produced text. The rest still need OCR. Downloaded PDFs,
-extracted text, metadata, and the local index are ignored by Git.
+PDF pages 10 through 12 of both archive books were converted with Docling.
+The graphics book now has paragraph structure, headings, and a Markdown table.
+Some OCR remains garbled; the 6809 book's contents pages have awkward table
+structure. These are useful samples, not evidence of reliable whole-book OCR.
+Pictures remain placeholders with the original PDF available for inspection.
 
-Linux execution and full-book OCR have not been verified.
+LWTOOLS and XRoar are discoverable on this Mac. ToolShed's `decb` is not on PATH;
+the original project uses an explicit private path that this template does not
+inherit. Full-book quality and clean Linux execution remain unverified.

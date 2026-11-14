@@ -1,72 +1,86 @@
 # coco-llm-blank
 
 A starting repository for agent-assisted Tandy Color Computer projects.
-Choose a machine target, build local agent context, and download selected
-references directly from the Color Computer Archive. No books or ROMs ship
-in this repository.
+Choose a machine target, prepare local references, and use Python support tools
+alongside the CoCo assembler, disk utilities, and emulator. No books or ROMs
+ship in this repository.
 
 ## Setup
 
-Requires Python 3.10 or newer and Poppler's `pdftotext` on macOS or Linux.
-Install Poppler with `brew install poppler` on macOS, or
-`sudo apt install poppler-utils` on Debian/Ubuntu.
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
 
 ```sh
-python3 scripts/setup.py
+uv sync --locked
+uv run python scripts/setup.py
 ```
 
-Setup asks for CoCo 1, CoCo 2, or CoCo 3 and downloads the reference manifest.
-For an unattended run, choose the target explicitly:
+uv creates a real `.venv` using the Python version in `.python-version` and the
+packages pinned by `uv.lock`. Setup asks for CoCo 1, 2, or 3, downloads the
+reference manifest, and converts it with Docling. Full-book conversion is slow;
+start with a few pages to inspect the output:
 
 ```sh
-python3 scripts/setup.py --target coco2
+uv run python scripts/setup.py --target coco2 \
+  --resource assembly-graphics --pages 10:12
 ```
 
-To create local guidance without downloading books:
+To initialize project notes without downloading books or loading models:
 
 ```sh
-python3 scripts/setup.py --target coco3 --guidance-only
+uv run python scripts/setup.py --target coco3 --guidance-only
 ```
 
-Use `--list` to see resources or `--resource ID` to download one selection.
-Repeat `--resource` for several. Reruns verify and reuse cached PDFs. Existing
-project notes are preserved; changing the selected target requires editing
-`local/PROJECT.md` deliberately. No system packages are installed by setup.
+Use `--list` to list resources. Repeat `--resource ID` to select several books.
+Existing project notes are preserved. Change the target deliberately in
+`local/PROJECT.md` before requesting a different target.
 
-## Local references
+The Python baseline includes Docling/RapidOCR, NumPy, Pillow, pytest, and Ruff.
+Optional groups cover interactive prototypes and music analysis. Read
+[Python tools](guidance/python.md) for their purpose and commands.
 
-`resources.json` holds titles, source URLs, and SHA-256 checksums. Downloads go
-to `local/references/ID/source.pdf`; page-numbered text goes to `text.md`.
-`local/INDEX.md` lists each resource and extraction status. PDF page numbers
-count from the PDF's first page, not the book's printed numbering.
+## Reference conversion
 
-Text extraction preserves page boundaries but not diagrams or page layout.
-Pages with little text are flagged for inspection, not silently called usable
-OCR. Both initial books are scans and need OCR to become searchable. Install
-Tesseract with `brew install tesseract` or `sudo apt install tesseract-ocr`.
-Then use `--ocr`, optionally limiting the first trial to a page range:
+Docling replaces the original plain text and Tesseract conversion path.
+It processes layout, OCR, and tables locally. The first conversion downloads
+model weights. Poppler and the Tesseract executable are no longer required.
+
+Results live in ignored `local/`: source PDFs, page-numbered Markdown,
+structured page records, and an index that reports completed pages. Reruns
+reuse completed pages. A new range adds pages without losing earlier work.
+Read [reference conversion](guidance/references.md) for cache behavior and limits.
+OCR still needs checking, especially for assembly code and diagrams.
+
+The baseline targets Apple Silicon macOS and Linux. Intel macOS needs separate
+PyTorch compatibility work and is not covered by this environment. Linux still
+needs a clean-host verification. Archive availability does not change copyright
+or licensing; downloaded and derived content stays outside Git.
+
+## Native CoCo tools
+
+LWTOOLS, ToolShed, and XRoar are separate host installations:
 
 ```sh
-python3 scripts/setup.py --resource assembly-graphics --ocr --pages 10:12
+uv run python scripts/doctor.py
 ```
 
-Omit `--pages` to process the whole book. Full-book OCR can take considerable
-time. A range run leaves other scanned pages unconverted and marks them sparse.
-Each explicit OCR run regenerates text from the PDF; range runs replace prior
-OCR text, so use the full range for a complete library. Ordinary reruns preserve
-existing OCR text. OCR uses Tesseract English at 150 DPI and can misread assembly
-code. Check the PDF when text is missing or uncertain.
-`local/` is ignored by Git, including derived text.
-Archive availability does not change a work's copyright or license.
+Read [toolchain](guidance/toolchain.md) for executable overrides, installation
+sources, firmware requirements, and build verification. This starter currently
+uses assembly; a C compiler is not part of the baseline.
 
-## Development
+## Agent entry point and checks
+
+Agents start at [AGENTS.md](AGENTS.md). It routes each task to ordinary Markdown
+files. No skill system is required, including for microgentic.
 
 ```sh
-python3 -m unittest discover -s tests -v
+uv run pytest -m 'not integration'
+uv run pytest -m integration
+uv run ruff check .
+uv run ruff format --check .
 ```
 
-The setup script uses the Python standard library and the external Poppler
-converter. Tests use synthetic PDFs and a local HTTP server; they do not
-redistribute reference material or need the archive to be online.
+Integration tests use an original scanned PDF and the real Docling pipeline.
+Their first run needs model downloads. Other tests cover local HTTP downloads,
+cache and failure behavior, target preservation, and executable discovery.
 
-See [PLAN.md](PLAN.md) for the current scope and next increments.
+See [PLAN.md](PLAN.md) for scope and remaining work.
