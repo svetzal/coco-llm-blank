@@ -152,6 +152,100 @@ Confirm the issue date on the scan. Confirm each PDF page against its printed
 page. The October 1987 scan already shows why a single offset is unsafe.
 Check corrections and continuation pages before relying on an article.
 
+## Rendering and collision pass
+
+The [moving-object guide](../guides/moving-objects.md) turns this pass into
+practical advice. [Animation storage](../guides/animation.md#precompute-geometry-when-pictures-cost-too-much-memory)
+now also covers precomputed coordinates. These are examined sources with
+proposed adaptations, not newly reproduced programs.
+
+### Rectangle erasure and placement bounds
+
+Don Inman, Kurt Inman with Dymax, **Assembly Language Graphics for the TRS-80
+Color Computer**, chapter 7, printed 151–156 / PDF 159–164, develops a
+joystick-controlled shape. The page images show a two-byte by six-row copy,
+a matching rectangle clear, and placement clamps. This is a concrete assembly
+source for object storage and placement. It is not a background-restoring renderer.
+[Archive book][assembly-graphics].
+
+Printed 157–158 / PDF 165–166 introduce interrupts. Printed 163 / PDF 171
+shows part of the timed-pylon example. These sampled pages do not establish
+that the whole timed program was examined. Printed 168–169 / PDF 176–177 ask
+readers to extend the program to two saucers and investigate overlap.
+The exercise does not supply an overlap-safe implementation.
+
+Our guide derives the erase limitation from the listing and proposes restoration
+and redraw designs. Those proposals have no runtime or speed evidence yet.
+The book's ROM joystick calls remain version-dependent implementation details.
+We did not promote them as a general input API.
+
+### Screen values as collision state
+
+Kenneth Reighard Jr., **The Universal Pick-Up**, *The Rainbow*, October 1992,
+cover/PDF 1 and printed/PDF 10, presents *Interplanetary Trash Collector*.
+The contents calls it **Inter-Planetary Trash**. The listing is `IPTRASH`.
+We examined the introduction, continuation, and complete listing on page 10.
+Resource `rainbow-1992-10`. [Archive issue][rainbow-1992-10].
+
+Lines 145–220 draw the old point, read input, advance the position, check bounds,
+and dispatch on `PPOINT`. This connects pixel values with game rules.
+The guide explains the consequences as our inference from that listing.
+It does not claim hardware collision detection or a general sprite system.
+
+The article labels CoCo 3/32K Extended and supplies CoCo 1/2 changes.
+It distinguishes RGB and composite settings and explicitly uses the faster clock.
+These author-provided options remain untested here. A normal-clock assembly
+port needs its own budget and machine contract.
+
+### Prepared geometry for animation
+
+Joseph Pendell, **Zippy Animation in BASIC?**, the same issue, printed/PDF 3,
+precalculates rotated endpoints before the display loop. We examined the whole
+article and listing image. It offers a useful alternative to complete stored
+pictures. The assembly table format and size formula in our guide are original
+proposals, not the article's BASIC array layout. [Archive issue][rainbow-1992-10].
+
+The listing is labelled CoCo 3. The prose discusses speed changes for CoCo 1/2,
+but that is not evidence of a tested port. We did not run the program or copy
+its listing into the repository.
+
+### Other leads and correction limits
+
+- *Undercolor* volume 1 number 1, December 10, 1984: downloaded 28 pages;
+  inspected cover and contents, PDF 1–3. The contents offered no direct
+  rendering or collision article for this pass. Its articles remain unexamined.
+  Keep it as a collection sample, outside the setup manifest. [Archive][undercolor-01]
+- *Color Computer Magazine*: mapped the archive directory, but selected no
+  article in this pass. Directory discovery is not publication coverage.
+- Search results for **Graphic Master** in *Hot CoCo* were advertisements and
+  a product review. They do not establish its rendering algorithm.
+- COMPUTE! results for GET/PUT and XOR concerned IBM BASIC; collision-register
+  results concerned Atari. Archive location alone does not make them CoCo evidence.
+- Tile maps and masked-object implementations remain open. This pass supplies
+  neither a sourced tile engine nor a tested mask routine.
+
+The Rainbow index PDF 87 locates the October 1992 articles. Its introduction
+warns about the final issues' OCR. Targeted title/author correction searches
+found no matching correction, but we have not read all later issues.
+Errata coverage remains incomplete. Do not describe either program as corrected
+or verified merely because its listing was examined.
+
+### Downloads and conversion
+
+The October 1992 issue has 24 PDF pages. Its URL and SHA-256 are pinned in
+`resources.json`. The book was already in the manifest. Downloads, extracted
+text, and page images remain ignored under `local/`.
+
+Docling converted magazine PDF 3 and 10 with no sparse-page warnings.
+Both exported full-page images were checked against direct PDF rendering.
+The prose is useful for search, but the page-3 listing is badly garbled and
+page 10 merges listing lines. Do not assemble or port that OCR.
+Conversion warnings are not a code-correctness detector.
+
+Graphics-book PDF 159–164 also converted, with no sparse-page warnings.
+The placement and erase explanations are searchable, but the assembly listing
+still corrupts operands. Use the directly examined page images for code details.
+
 ## Conversion evidence
 
 Thirteen selected pages were processed through the starter's Docling pipeline.
@@ -218,3 +312,9 @@ PDFs, extracted text, and images stay under ignored `local/`.
 [rainbow-1987-10]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf
 [rainbow-1985-04]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2004%20No.%2009%20-%20April%201985.pdf
 [rainbow-1986-10]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2006%20No.%2003%20-%20October%201986.pdf
+
+[assembly-graphics]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf>
+
+[rainbow-1992-10]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2012%20No.%2003%20-%20October%201992.pdf>
+
+[undercolor-01]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n01%20%281984%29%28ColorPlus%20Inc%29.pdf>

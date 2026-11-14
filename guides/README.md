@@ -7,6 +7,7 @@ Your agent can read one guide without loading the whole research collection.
 | I want to… | Read | Current evidence |
 | --- | --- | --- |
 | Animate objects or alternate pictures | [Plan animation storage](animation.md) | Examined BASIC articles; assembly adaptations remain untested. |
+| Move objects over scenery or detect collisions | [Move objects without losing the world](moving-objects.md) | Examined assembly and BASIC sources; restoration designs remain proposals. |
 | Scroll a CoCo 3 playfield | [Plan scrolling and memory](scrolling.md) | Examined book; no scrolling implementation reproduced. |
 | Get the intended colours | [Design for the display](colour.md) | Examined hardware manuals; proposed visual checks remain untested. |
 | Play sound during drawing and input | [Schedule sound](sound.md) | Original CoCo 1 and CoCo 3 experiments checked in XRoar. |

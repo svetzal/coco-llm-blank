@@ -4,8 +4,8 @@ Load this file when obtaining, converting, or searching reference documents.
 For available local sources and page coverage, read [the index](../local/INDEX.md)
 after setup. A missing index means setup has not run.
 
-For game and demo techniques, start with [the research guide](game-research.md).
-It separates examined sources from discovery leads and records machine limits.
+For game and demo techniques, start with [the technique guides](../guides/README.md).
+[Research notes](game-research.md) retain source selection and open questions.
 
 ## Choose a source before making a hardware claim
 
@@ -35,6 +35,8 @@ For the manifest's graphics book, these PDF page ranges locate useful sections:
 | Contents and chapter locations | 4–7 |
 | SAM/VDG selection and four-colour mode tables | 79–81 |
 | Two-colour resolution, byte layout, and mode selection | 106–108 |
+| Shape tables, placement bounds, rectangle erasure | 159–164 |
+| Two-object overlap exercise, not a finished renderer | 176–177 |
 
 These are navigation hints, not a substitute for reading the source. For a
 CoCo 1/2 two-colour task, convert 106–108 first, then 79–81 for the SAM register
@@ -66,6 +68,29 @@ the checked sample. Compare the values with the graphics book. For PIA pin
 functions and the SAM register map, convert PDF pages 14–15. This manual covers
 the original CoCo hardware; it is not a CoCo 3 register reference. Its numbered
 pages are seven lower than the PDF page numbers.
+
+## Rendering and collision sources
+
+For an object moving over scenery, read [moving objects](../guides/moving-objects.md)
+before adapting the graphics book. Chapter 7 PDF 159–164 corresponds to printed
+151–156. Use page labels directly; do not extrapolate earlier chapter offsets.
+
+The October 1992 Rainbow issue adds two selected techniques:
+
+| Resource | PDF pages | Use and limits |
+| --- | --- | --- |
+| `rainbow-1992-10` | 3 | Precomputed rotation endpoints; BASIC listing, not a tested assembly renderer. |
+| `rainbow-1992-10` | 1, 10 | Trail-game collision from screen values; faster-clock BASIC target. |
+
+Convert the needed page independently. Do not convert an entire magazine first:
+
+```sh
+uv run python scripts/setup.py --resource rainbow-1992-10 --pages 10:10
+```
+
+The magazine's dense listings need image checks. Its cover contains an unrelated
+random-number article as well as the game introduction. A search hit on the cover
+does not identify which article supplies a claim.
 
 ## Find the relevant passage
 

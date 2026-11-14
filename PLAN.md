@@ -179,6 +179,26 @@ Per-sample jitter, audible quality, bank switching, analog input, and physical
 GIME timing remain unverified. Lower sample rates and leaner handlers are
 possible follow-up experiments, not measured improvements.
 
+### Rendering and collision pass
+
+Added [moving-object guidance](guides/moving-objects.md) from examined assembly
+and BASIC sources. The graphics book supplies shape storage, placement bounds,
+and rectangle erasure. The guide explains why that erasure does not restore
+scenery and marks save/restore and redraw designs as our untested proposals.
+
+The October 1992 Rainbow issue adds a trail game's use of screen values for
+collision and precomputed rotation coordinates for animation. Added the issue
+to the manifest with its download hash. Converted PDF 3 and 10 and checked
+exported images. Also converted graphics-book PDF 159–164.
+Dense listing OCR remains unreliable despite no sparse warnings.
+The animation guide separates its proposed packed format from BASIC arrays.
+
+Sampled Undercolor's first contents page and mapped Color Computer Magazine's
+directory. Neither counts as examined technical coverage. Tile maps, masked
+rendering, and a reproduced multi-object example remain open. CoCo 1/2 adaptation
+notes in a magazine do not establish runtime support. No new emulator or
+physical-machine result is claimed for this pass.
+
 ### Next research passes
 
 1. Broaden magazine coverage to Hot CoCo, Color Computer Magazine, Undercolor,

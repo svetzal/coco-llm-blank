@@ -56,6 +56,33 @@ It does not imply that a whole program fits in 16 KiB.
 The starter's [first-screen example](../examples/first-screen/README.md)
 provides a sourced CoCo 1 mode setup and a single-buffer memory check.
 
+## Precompute geometry when pictures cost too much memory
+
+Joseph Pendell's **"Zippy Animation in BASIC?"**, *The Rainbow*, October 1992,
+printed/PDF 3, calculates rotated endpoints before drawing the animation.
+The playback loop uses those stored coordinates. This is a useful alternative
+to storing every complete picture. [Pendell][pendell]
+
+Our proposed assembly adaptation is to generate a coordinate table during asset
+preparation. Keep the asset generator's precision and the target's integer
+rounding explicit. The article uses BASIC arrays; it does not establish a
+packed assembly format or a cycle budget.
+
+For our own format with two one-byte coordinates per point, storage would be
+`2 * point_count * frame_count` bytes. This excludes connectivity, headers,
+and any erase data. Wider or signed coordinates change that calculation.
+Line drawing still happens during playback, so precomputation does not remove
+all frame work.
+
+Before adopting the approach, check every point against the intended bounds.
+Check the last-to-first transition and the erase policy. Pendell's drawing
+choices are not proof of clean background restoration in a game.
+Read [moving objects](moving-objects.md) before combining the effect with scenery.
+
+The page labels the listing CoCo 3 and discusses CoCo 1/2 speed changes.
+We have not run it on any model. Its speed suggestions do not establish
+normal-clock performance and are not part of our recommended setup.
+
 ## Check the result before expanding it
 
 The following checks are proposed work, not completed animation evidence:
@@ -79,6 +106,10 @@ another storage and display contract.
   October 1987, printed/PDF 44, 46–47. Examined 44 and 46 only.
   Resource `rainbow-1987-10`. [Archive][matthews]
 
+- Pendell, Joseph. "Zippy Animation in BASIC?" *The Rainbow*, October 1992,
+  printed/PDF 3. Resource `rainbow-1992-10`. Explanation and listing examined.
+  [Archive][pendell]
+
 The format calculations and proposed checks are original guidance.
 Neither article's listing has been reproduced here. See the
 [research notes](../guidance/game-research.md#coco-1-and-coco-2-animation)
@@ -87,3 +118,5 @@ for selection limits.
 [polsz]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2006%20No.%2003%20-%20October%201986.pdf#page=118>
 
 [matthews]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf#page=44>
+
+[pendell]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2012%20No.%2003%20-%20October%201992.pdf#page=3>
