@@ -8,6 +8,7 @@ Your agent can read one guide without loading the whole research collection.
 | --- | --- | --- |
 | Animate objects or alternate pictures | [Plan animation storage](animation.md) | Examined BASIC articles; assembly adaptations remain untested. |
 | Move objects over scenery or detect collisions | [Move objects without losing the world](moving-objects.md) | Original full-redraw example checked on defined CoCo 1/2 configurations; other designs remain proposals. |
+| Smooth CoCo 3 text output | [Text scrolling and the 512K correction](scrolling.md#scroll-text-a-scan-line-at-a-time) | Article and hardware cross-check complete; runtime unverified. |
 | Scroll a CoCo 3 playfield | [Plan scrolling and memory](scrolling.md) | Examined book; no scrolling implementation reproduced. |
 | Get the intended colours | [Design for the display](colour.md) | Examined hardware manuals; proposed visual checks remain untested. |
 | Play sound during drawing and input | [Schedule sound](sound.md) | Original CoCo 1 and CoCo 3 experiments checked in XRoar. |

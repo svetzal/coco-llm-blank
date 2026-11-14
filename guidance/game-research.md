@@ -160,8 +160,11 @@ The April notice reports that the original fails on 512K CoCo 3 machines.
 It changes the value 25 to 217 in BASIC line 170, and 24 to 216 in line 220.
 Both lines occur on January printed 80 / PDF 82.
 Treat memory configuration as part of this example's requirements.
-No version has been reproduced here, and the register setup has not been
-cross-checked against the GIME hardware documentation.
+No version has been reproduced here. The [scrolling guide](../guides/scrolling.md#understand-the-512k-correction)
+now cross-checks the display-address fields against Tandy PDF 13 and Tepolt
+PDF 29, 33, and 58. The corrected high-address bytes add `$60000`.
+Those upper bits alias on 128K but select different RAM on 512K.
+This is a sourced explanation, not a runtime or firmware-compatibility result.
 Resource `rainbow-1988-04`. [April correction][rainbow-1988-04].
 
 Search titles, authors, and synonyms. A search for `sprite` alone misses useful

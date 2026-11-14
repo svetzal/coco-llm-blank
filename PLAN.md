@@ -208,7 +208,10 @@ non-SAM memory-access discussion must not become a CoCo screen-write restriction
 
 Read Blochowiak's January 1988 SMOOTHY article and its April 1988 correction.
 It concerns CoCo 3 text scrolling, with distinct 128K and 512K requirements.
-No scrolling implementation or GIME register cross-check is claimed.
+The GIME cross-check is complete: Tandy PDF 13 and Tepolt PDF 29, 33, and 58
+explain the physical-address fields and 128K alias behind the 512K correction.
+The scrolling guide labels the address calculation as our cross-source explanation.
+Runtime, firmware compatibility, and visual scrolling remain unverified.
 The datasheet and paired article/correction are now checksum-pinned resources.
 Converted MC6847 PDF 19–22, January PDF 80/82, April PDF 14, and Matthews PDF 47.
 Exported images were checked. Sideways tables and dense listings still need
