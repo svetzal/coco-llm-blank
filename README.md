@@ -52,6 +52,12 @@ Its memory and equipment affect what the project can run.
 
 Your agent checks the tools and downloads the references and firmware needed
 for your machine. The first setup can take a while; later work reuses downloads.
+Your agent works in two modes and starts each reply by naming the current one.
+In BUILD mode it makes your game or demo from the starter's guides and examples.
+If you hit a technical problem, such as crackly sound or slow graphics, ask it
+to open a lab: in LAB mode it investigates that one problem, improves the
+starter's guides and examples with the answer, then returns to building.
+
 Your agent names your project and keeps it in its own folder, such as
 `projects/bouncing-lines`. That folder's README says what you asked for and how
 to run it. Ask for a small working result before adding more features, then

@@ -139,31 +139,31 @@ reference
 text or write build outputs. Keep those paths ignored. Check
 that a write succeeded before relying on the recorded project contract.
 
-## How this starter grows
+## Two modes: BUILD and LAB
 
-Research, experiments and validation runs are temporary working material. Do
-them in ignored `local/lab/<topic>/`, never in tracked folders. A finished topic
-leaves only:
+Every session is in one of two modes. Begin every reply with a line naming it,
+so the owner always knows which one is active:
 
-- a technique guide in `guidance/techniques/`, citing primary sources inline:
-  author, title, PDF page and resource ID;
-- an example in `examples/<name>/` (`main.asm`, `coco.toml`, `expected.py`,
-  `README.md`) whose `scripts/coco.py check` reproduces the evidence;
-- a tested `scripts/coco.py` ability, when other projects will need the same
-  equipment.
+- `BUILD · <project>` (or `BUILD · new project` before it has a name)
+- `LAB · <topic> (from <project>)`
 
-Then delete the lab folder. Do not add research notes, validation reports or
-experiment packages. A result that cannot be rerun cheaply gets one paragraph
-in its guide naming the commit that holds the full record. The existing
-`experiments/`, `guidance/techniques/research/` and `validation/` folders are
-being folded into guides and examples; do not add to them.
-Follow the [guide contract](PLAN.md#guide-contract).
+**BUILD** is the default. The owner and you define a game or demo and build it
+in `projects/<name>/` from the existing guides and examples, as described
+above. The project is persistent and committed.
 
-Keep the evidence honest while distilling it:
+**LAB** answers one technical question the guides and examples do not settle,
+such as crackly audio, slow graphics or unreliable input. It runs in ignored
+`local/lab/<topic>/`, converges on an answer, codifies it as a technique guide,
+an example or a `scripts/coco.py` ability, and is then removed. Follow
+[the lab guide](guidance/starter/lab.md) from opening to closing.
 
-- Cite only passages you read; state which claims are source statements, our
-  deductions, original adaptations or measured results.
-- Keep expectations independent of the implementation, with a failure control.
-- Report assembly, execution, memory, rendered display, sound and physical
-  hardware as separate evidence.
-- Give CoCo 1, 2 and 3 equal research attention; state uneven evidence plainly.
+Switch to LAB only when the owner asks or agrees. When a BUILD problem is not
+answered by the guides, explain the problem in plain words and offer a lab.
+The owner can end a lab at any time; close it as the lab guide describes and
+return to BUILD on the project that raised it. If a project's README has an
+`Open lab` line, ask whether to resume that lab or continue building.
+
+Never add research notes, validation reports or experiment packages to tracked
+folders. The existing `experiments/`, `guidance/techniques/research/` and
+`validation/` folders are labs that were never closed; they are being closed,
+so do not add to them.

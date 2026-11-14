@@ -18,14 +18,18 @@ trial without a new request; the completed Claude 03 assessment is under
 
 ## Open work
 
-- Reduce the repository to its distilled results, in order:
-  1. Move the experiments' reusable equipment into `scripts/coco.py`: rendered
-     screen capture, scripted keyboard input and sound capture from one shared
-     instrumented XRoar build.
-  2. Move the useful assembly programs from `experiments/` into `examples/`, and
-     fold research notes and validation reports into the guides and example
-     READMEs. Then delete `experiments/`, `guidance/techniques/research/` and
-     both `validation/` folders; move setup checks into the `scripts/` suite.
+- Close the labs that were never closed. `experiments/`,
+  `guidance/techniques/research/` and both `validation/` folders are leftover
+  lab material from before [the lab workflow](guidance/starter/lab.md). Close
+  them as that workflow describes, in order:
+  1. Lab equipment: move the experiments' screen capture, scripted keyboard
+     input and sound capture into `scripts/coco.py`, built on one shared
+     instrumented XRoar. BUILD projects use the same abilities in `check`.
+  2. One topic at a time (animation, display, sound, controls, game state,
+     assets, tiles, setup): codify what its experiments, research notes and
+     validation reports established into the technique guide and examples,
+     moving useful assembly programs into `examples/`. Then delete that
+     topic's leftover files. Setup checks become `scripts/` tests.
   3. Add a size check to CI so growth is a deliberate decision.
 - Clean Apple Silicon host and native Linux desktop onboarding, including
   x86-64 Linux. Intel Mac support is excluded. Current container and configured

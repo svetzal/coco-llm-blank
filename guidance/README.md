@@ -24,6 +24,7 @@ evidence trail; open them when a guide's claim matters to the work.
 - [Work on host scripts and prepare the full starter suite](starter/python.md).
 - [Find source pages and inspect diagrams](starter/references.md).
 - [Choose extracted text or page images](starter/conversion-quality.md).
+- [Work in a lab: answer a technical question, then codify it](starter/lab.md).
 
 ## Game and demo techniques
 
