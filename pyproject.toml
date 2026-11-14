@@ -1,0 +1,34 @@
+[project]
+name = "coco-llm-blank"
+version = "0.1.0"
+description = "Local references and Python support tools for CoCo development"
+requires-python = ">=3.12"
+dependencies = [
+    "docling[rapidocr]>=2.150.0",
+    "numpy>=2.5.4",
+    "pillow>=13.0.0",
+    "pypdfium2>=5.15.2",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]
+markers = ["integration: real Docling pipeline; downloads model weights on first run"]
+
+[tool.ruff]
+line-length = 100
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+interactive = [
+    "pygame-ce>=2.5.8",
+]
+music = [
+    "music21>=10.5.2",
+]
