@@ -12,6 +12,7 @@ sounding answer from model memory does not count as verification. Start here:
 | Question | First local reference |
 | --- | --- |
 | Graphics | `local/references/assembly-graphics/text.md` |
+| CoCo 1 hardware | `local/references/coco1-technical/text.md` |
 | 6809 CPU | `local/references/6809-programming/text.md` |
 
 These are starting sources, not guarantees that every target or peripheral is
@@ -47,6 +48,21 @@ The current converter merges some instruction-table cells on PDF page 108.
 Read its full-page PNG before using that table. Do not copy OCR assembly as
 working code. The examples also depend on earlier machine state; read the
 surrounding setup before treating a short mode-selection listing as complete.
+
+For an independent CoCo 1 source, use Tandy's technical reference manual:
+
+```sh
+uv run python scripts/setup.py --target coco1 \
+  --resource coco1-technical --pages 30:31
+```
+
+PDF page 30 describes the full graphics modes. Page 31 has the mode-selection
+table; its leftmost three columns are SAM V2, V1, V0, followed by PIA bits 7–0.
+The converter loses two of those SAM column labels, but preserves the rows in
+the checked sample. Compare the values with the graphics book. For PIA pin
+functions and the SAM register map, convert PDF pages 14–15. This manual covers
+the original CoCo hardware; it is not a CoCo 3 register reference. Its numbered
+pages are seven lower than the PDF page numbers.
 
 ## Find the relevant passage
 

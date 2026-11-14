@@ -61,7 +61,11 @@ existing firmware. Inspect a damaged file before removing it and retrying.
 | --- | --- | --- | --- | --- |
 | CoCo 1 | `local/roms/coco1/` | `bas11.rom` | `extbas10.rom` | `disk11.rom` |
 | CoCo 2 | `local/roms/coco2/` | `bas12.rom` | `extbas11.rom` | `disk11.rom` |
-| CoCo 3 | `local/roms/coco3/` | Combined in `coco3.rom` | `coco3.rom` | `disk11.rom` |
+| CoCo 3 | `local/roms/coco3/` | Combined | `coco3.rom` | `disk11.rom` |
+
+The CoCo 3 profile supplies NTSC firmware; pass its combined BASIC image with
+`-extbas`. Select appropriate user-provided
+firmware for a PAL CoCo 3; the manifest does not yet include that variant.
 
 For a CoCo 1 NTSC project targeting 32 KiB, a DECB binary can auto-run with:
 

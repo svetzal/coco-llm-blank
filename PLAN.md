@@ -14,6 +14,7 @@ ignored local storage. Stacey requested public publication as
 - Docling provides layout analysis, RapidOCR, and table recognition.
 - Per-page checkpoints preserve completed work across ranges and interruptions.
 - Conversion records preserve source hashes, versions, and PDF provenance.
+- Tandy's original CoCo technical manual supplements the graphics and CPU books.
 - Figure crops and full-page PNGs are linked from page sections, with image
   checksums and recovery when an image is missing or damaged.
 - NumPy and Pillow support reference models, assets, and test vectors.
@@ -71,6 +72,11 @@ Figure crops and full-page PNGs are now exported. The graphics-book sample's
 bit/byte and processor/memory diagrams were visually checked against the full
 page; labels are readable. Agents can inspect these PNGs directly. The source
 PDF remains available when the rendered images are insufficient.
+
+Graphics-book PDF pages 106–108 and technical-manual pages 30–31 were also
+converted and visually checked. The graphics instruction table has merged OCR
+cells. The technical manual preserves its mode-table rows but loses two SAM
+column labels. Reference guidance identifies these limitations and page ranges.
 
 LWTOOLS and XRoar are discoverable on this Mac. ToolShed's `decb` is not on PATH;
 the original project uses an explicit private path that this template does not
