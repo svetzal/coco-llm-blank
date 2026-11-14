@@ -28,8 +28,11 @@ before choosing a mode or writing display setup.
 ## What to load
 
 - Starting a project: read [README.md](README.md), then `local/PROJECT.md`.
-  If the latter is missing, run `uv run python scripts/setup.py --guidance-only`
-  and ask the owner to choose the target. Do not assume RAM or video standard.
+  If it is missing, use the target already named in the request, for example
+  `uv run python scripts/setup.py --target coco1 --guidance-only`.
+  Ask for the target only when it is unspecified. Use the documented emulator
+  defaults in [development practice](guidance/development.md#establish-the-contract)
+  where applicable, and record them as defaults rather than owner choices.
 - Writing or testing CoCo code: read [development practice](guidance/development.md).
 - Building binaries, disks, or emulator tests: read [toolchain](guidance/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read

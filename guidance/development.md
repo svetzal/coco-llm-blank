@@ -7,6 +7,14 @@ before writing hardware-dependent code. Setup selects a starting target;
 it does not establish that an application supports it. Keep unknowns explicit.
 Do not silently enable a 6309, more RAM, or a faster clock to pass a test.
 
+For a new CoCo 1 emulator demo with no RAM or video requirement, start with
+32 KiB RAM, NTSC, a stock-clock 6809, and direct DECB binary auto-run in XRoar.
+Record these as starter defaults in `local/PROJECT.md` and state them to the
+owner; do not claim the owner confirmed them. An animation needs no controls
+unless requested. These defaults let the first prototype proceed. Explicit
+requirements and existing project notes take precedence; ask when a physical
+machine's configuration or a conflicting requirement must be resolved.
+
 ## Graphics before code
 
 Load [reference lookup](references.md) and consult the graphics programming book
