@@ -6,12 +6,13 @@ import subprocess
 from pathlib import Path
 
 from native import ROOT, tool_path
+from roms import verify_installed
 
 
 def executable(name: str) -> str:
     path = tool_path(name)
     if not path:
-        raise ValueError(f"Missing {name}; run sh scripts/bootstrap.sh coco1 first.")
+        raise ValueError(f"Missing {name}; run uv run python scripts/native.py first.")
     return path
 
 
@@ -38,12 +39,7 @@ def build() -> tuple[Path, int]:
 
 
 def emulator(binary: Path) -> list[str]:
-    roms = ROOT / "local/roms/coco1"
-    for name in ("bas11.rom", "extbas10.rom"):
-        if not (roms / name).is_file():
-            raise ValueError(
-                "Missing firmware; run uv run python scripts/setup.py --target coco1 --roms-only"
-            )
+    roms = verify_installed(ROOT, "coco1", ("bas11.rom", "extbas10.rom"))
     return [
         executable("xroar"),
         "-machine",
@@ -51,9 +47,9 @@ def emulator(binary: Path) -> list[str]:
         "-ram",
         "32",
         "-bas",
-        str(roms / "bas11.rom"),
+        str(roms["bas11.rom"]),
         "-extbas",
-        str(roms / "extbas10.rom"),
+        str(roms["extbas10.rom"]),
         "-no-cart",
     ]
 

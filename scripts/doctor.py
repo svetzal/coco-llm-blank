@@ -1,11 +1,12 @@
-"""Report CoCo executables without launching an emulator or modifying disks."""
+"""Check CoCo executables and optional target firmware without launching XRoar."""
 
 import argparse
 import os
 import shutil
 import sys
 
-from native import tool_path
+from native import ROOT, tool_path
+from roms import verify_installed
 
 TOOLS = {
     "lwasm": ("LWASM", "LWTOOLS assembler"),
@@ -34,6 +35,11 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
         default="all",
         help="demo checks assembly and emulator tools; all also requires disk tools",
     )
+    parser.add_argument(
+        "--target",
+        choices=("coco1", "coco2", "coco3"),
+        help="also validate installed firmware for this machine",
+    )
     options = parser.parse_args(argv)
     executables = executables or ExecutableGateway()
     print(f"Python: {sys.executable}")
@@ -48,12 +54,23 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
                 print("  Optional for this demo; only needed to build disk images.")
             else:
                 missing.append(command)
-    print("This checks executable discovery only, not ROMs or build/run compatibility.")
+    firmware_ok = True
+    if options.target:
+        try:
+            paths = verify_installed(ROOT, options.target)
+            for name, path in paths.items():
+                print(f"Firmware verified: {name}: {path}")
+        except ValueError as error:
+            print(str(error))
+            firmware_ok = False
+    else:
+        print("Firmware NOT checked. Add --target coco1, coco2, or coco3 before launching XRoar.")
+    print("Discovery and file checks do not prove boot. Run the selected example's check command.")
     if missing:
         print("Setup is incomplete. Ask your agent to install: " + ", ".join(missing))
         print("On macOS, Homebrew provides assembly and emulator tools: brew install lwtools xroar")
     print("Read guidance/toolchain.md for installation and verification.")
-    return 1 if missing else 0
+    return 1 if missing or not firmware_ok else 0
 
 
 if __name__ == "__main__":

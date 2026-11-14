@@ -6,7 +6,7 @@ case "${1:-}" in
     coco1|coco2|coco3) target=$1 ;;
     -h|--help)
         echo 'Usage: sh scripts/bootstrap.sh coco1|coco2|coco3'
-        echo 'Prepare Python and project notes, then check tools for an emulator demo.'
+        echo 'Prepare Python, tools, project notes, and verified firmware for an emulator demo.'
         echo 'Missing uv is installed with Homebrew when available, otherwise its official installer.'
         exit 0 ;;
     *) echo 'Choose a machine: sh scripts/bootstrap.sh coco1|coco2|coco3' >&2; exit 2 ;;
@@ -40,5 +40,8 @@ echo 'Preparing project notes without converting books or downloading firmware.'
 uv run python scripts/setup.py --target "$target" --guidance-only
 echo 'Installing missing assembly and emulator tools.'
 uv run python scripts/native.py
-echo 'Checking tools for a directly launched emulator demo.'
-uv run python scripts/doctor.py --profile demo
+echo 'Downloading and verifying firmware for the selected machine.'
+uv run python scripts/setup.py --target "$target" --roms-only
+echo 'Checking tools and firmware for a directly launched emulator demo.'
+uv run python scripts/doctor.py --profile demo --target "$target"
+echo 'Tools and firmware are ready. Run the selected example check before its GUI launch.'

@@ -73,3 +73,31 @@ class DescribeToolchainDoctor:
 
         assert doctor.main(["--profile", "demo"]) == 1
         assert "Setup is incomplete. Ask your agent to install: lwasm" in capsys.readouterr().out
+
+    def should_fail_target_check_until_firmware_is_verified(
+        self, tool_directory: Path, monkeypatch: pytest.MonkeyPatch, capsys
+    ) -> None:
+        import hashlib
+        import json
+
+        monkeypatch.setattr(doctor, "ROOT", tool_directory)
+        data = b"original firmware fixture"
+        profile = {
+            "url": "https://colorcomputerarchive.com/repo/ROMs/MAME-MESS/test.zip",
+            "sha256": "0" * 64,
+            "members": [
+                {"name": "basic.rom", "size": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+            ],
+        }
+        (tool_directory / "roms.json").write_text(json.dumps({"coco2": profile}))
+        assert doctor.main(["--profile", "demo", "--target", "coco2"]) == 1
+        assert "--target coco2 --roms-only" in capsys.readouterr().out
+        rom = tool_directory / "local/roms/coco2/basic.rom"
+        rom.parent.mkdir(parents=True)
+        rom.write_bytes(data)
+
+        assert doctor.main(["--profile", "demo", "--target", "coco2"]) == 0
+        assert "Firmware verified" in capsys.readouterr().out
+        rom.write_bytes(b"x" * len(data))
+        assert doctor.main(["--profile", "demo", "--target", "coco2"]) == 1
+        assert "checksum mismatch" in capsys.readouterr().out

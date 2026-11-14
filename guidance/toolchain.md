@@ -15,7 +15,11 @@ RAM, video standard, or firmware from whatever happens to be installed.
 These are host executables, separate from the uv Python environment. Check
 availability with `uv run python scripts/doctor.py`. For a directly launched
 emulator demo, use `--profile demo`; this treats ToolShed as optional.
-The check reports paths, returns nonzero for missing executables, and does not
+Add `--target coco1`, `--target coco2`, or `--target coco3` to validate firmware
+as well. Without a target, the doctor explicitly reports that firmware is
+unchecked.
+The check reports paths, returns nonzero for missing executables or invalid
+selected firmware, and does not
 launch XRoar or modify a disk. Set `LWASM`, `LWLINK`, `DECB`, or `XROAR`
 to a particular executable path when needed. Use those same resolved paths in
 project build commands. Do not copy a developer's private paths into defaults.
@@ -23,14 +27,17 @@ project build commands. Do not copy a developer's private paths into defaults.
 ## Installation sources
 
 Bootstrap runs `uv run python scripts/native.py` to install missing tools.
-On macOS it uses Homebrew, installing Homebrew from its official source if needed.
-System permissions may require the owner's help; failures stop with an explanation.
+On macOS it uses Homebrew, installing Homebrew from its official source if
+needed.
+System permissions may require the owner's help; failures stop with an
+explanation.
 Existing tools and explicit executable overrides are preserved.
 
 On Ubuntu 24.04, it installs build dependencies with apt and builds verified
 LWTOOLS and XRoar release archives into `local/toolchain/`. A non-root account
 needs sudo permission for apt. The installer uses non-interactive sudo and
-stops if permission is unavailable. It never asks an agent to collect a password.
+stops if permission is unavailable. It never asks an agent to collect a
+password.
 Reruns reuse working executables and verify cached source archives.
 
 `doctor.py` and `first_screen.py` find the local tools without shell profile
@@ -53,7 +60,9 @@ Read [development.md](development.md) for memory and evidence requirements.
 
 ## Firmware and launching
 
-XRoar requires matching firmware. Run setup with the selected target:
+XRoar requires matching firmware even when auto-running a DECB binary.
+Bootstrap downloads it. For an existing checkout, run setup with the selected
+target:
 
 ```sh
 uv run python scripts/setup.py --target coco1 --roms-only
@@ -64,6 +73,21 @@ This downloads the manifest's ZIP from the
 It verifies ZIP and member checksums and extracts only named ROMs. It does not
 convert books. Reruns validate the cache; a mismatch stops without replacing
 existing firmware. Inspect a damaged file before removing it and retrying.
+
+Before every new launch workflow, run:
+
+```sh
+uv run python scripts/doctor.py --profile demo --target coco1
+```
+
+Use the actual target. This checks installed member sizes and SHA-256 hashes.
+It does not use file existence as proof of valid firmware. The existing example
+runners perform the same checks for the ROMs they need before starting XRoar.
+For a new Python runner, use `roms.verify_installed(ROOT, target, names)` and
+pass the returned absolute paths. Include `disk11.rom` when using Disk BASIC.
+Custom firmware needs an explicit, reviewed configuration and independent boot
+validation; renaming different bytes to a manifest filename does not validate
+them.
 
 | Target | Firmware directory | BASIC | Extended BASIC | Disk BASIC |
 | --- | --- | --- | --- | --- |
@@ -126,7 +150,14 @@ Remove any stale snapshot first. Check its size and known state bytes; also
 check that an unreachable trap produces no snapshot. Keep a host timeout around
 the emulator. A raw `.ram` dump supports memory checks, not visual claims.
 
-When a probe fails, check entry point, address notation, trap ordering, and
-boot duration before blaming firmware or the loader. Change one variable per
+A checkerboard is not a successful boot check or a diagnosis by itself.
+Missing or zero-filled ROMs can leave XRoar running without reaching the
+program.
+In a bounded local probe, both cases returned exit code zero without the
+first-screen ready checkpoint. Do not treat a process exit as boot evidence.
+
+When a probe fails, validate firmware bytes and explicit command paths first.
+Then check entry point, address notation, trap ordering, and boot duration.
+Change one variable per
 probe. After repeated identical results, consult the installed manual and
 record the unresolved question instead of restating a guess as a root cause.

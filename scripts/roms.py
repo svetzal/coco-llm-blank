@@ -34,6 +34,39 @@ def checked(data: bytes, checksum: str, label: str) -> bytes:
     return data
 
 
+def verify_installed(
+    root: Path, target: str, names: tuple[str, ...] | None = None
+) -> dict[str, Path]:
+    """Check installed bytes before launch, without downloads or replacements."""
+    recovery = f"uv run python scripts/setup.py --target {target} --roms-only"
+    try:
+        profiles = TypeAdapter(dict[str, RomArchive]).validate_json(
+            (root / "roms.json").read_text()
+        )
+        if target not in profiles:
+            raise ValueError(f"No ROM profile for {target}")
+        members = {member.name: member for member in profiles[target].members}
+        selected = tuple(members) if names is None else names
+        paths = {}
+        for name in selected:
+            if name not in members:
+                raise ValueError(f"{name}: not listed in the {target} ROM profile")
+            member = members[name]
+            path = (root / "local/roms" / target / name).resolve()
+            data = path.read_bytes()
+            if len(data) != member.size:
+                raise ValueError(f"{path}: expected {member.size} bytes, found {len(data)}")
+            checked(data, member.sha256, str(path))
+            paths[name] = path
+        return paths
+    except (OSError, ValueError) as error:
+        raise ValueError(
+            f"Cannot use {target} firmware: {error}. "
+            f"Run {recovery}. If a file differs, inspect it before replacing it; "
+            "do not launch XRoar until validation passes."
+        ) from error
+
+
 def provision(root: Path, target: str, downloads: RomDownloadGateway | None = None) -> None:
     """Validate the whole selection before publishing allowlisted members."""
     profiles = TypeAdapter(dict[str, RomArchive]).validate_json((root / "roms.json").read_text())

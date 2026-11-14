@@ -8,6 +8,7 @@ from pathlib import Path
 
 from first_screen import executable
 from native import ROOT
+from roms import verify_installed
 
 CHECK_FRAMES = (1, 15, 16, 17, 31, 32, 46, 64, 65, 185, 186, 369, 370)
 ROM_NAMES = {"coco1": ("bas11.rom", "extbas10.rom"), "coco2": ("bas12.rom", "extbas11.rom")}
@@ -42,9 +43,7 @@ def build() -> tuple[Path, dict[str, int]]:
 
 def emulator(target: str) -> list[str]:
     basic, extended = ROM_NAMES[target]
-    directory = ROOT / "local/roms" / target
-    if not all((directory / name).is_file() for name in (basic, extended)):
-        raise ValueError(f"Missing {target} firmware; provision this target's ROMs first.")
+    roms = verify_installed(ROOT, target, (basic, extended))
     # The NTSC CoCo architecture plus explicit VDG/firmware defines the model.
     # Do not use the CoCo 2B T1 default for the non-T1 board reference.
     return [
@@ -58,9 +57,9 @@ def emulator(target: str) -> list[str]:
         "-ram",
         "32",
         "-bas",
-        str(directory / basic),
+        str(roms[basic]),
         "-extbas",
-        str(directory / extended),
+        str(roms[extended]),
         "-no-cart",
     ]
 

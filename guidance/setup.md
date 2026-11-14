@@ -15,11 +15,14 @@ sh scripts/bootstrap.sh coco1
 Use the selected machine target. This installs missing uv through Homebrew when
 available, or through the
 [official uv installer](https://docs.astral.sh/uv/getting-started/installation/).
-Use the printed uv path if the current agent cannot find `uv` after installation.
+Use the printed uv path if the current agent cannot find `uv` after
+installation.
 It prepares the locked Python environment and preserves existing project notes.
-It does not download books, firmware, or conversion models.
+It downloads and verifies firmware for the selected machine. It does not
+download books or conversion models.
 
-The final check requires the assembler, linker, and emulator. Missing tools
+The final check requires the assembler, linker, emulator, and verified firmware.
+Missing tools
 produce a nonzero exit and installation guidance. Bootstrap installs missing
 native tools on macOS and Ubuntu 24.04.
 Use [toolchain.md](toolchain.md) if permissions or installation fail.
@@ -65,6 +68,18 @@ uv run python scripts/setup.py --target coco1 --roms-only
 size. Setup verifies cached files too, preserves different existing firmware,
 and writes only selected members to ignored `local/roms/TARGET/`.
 The manifest uses the archive's MAME-MESS area. No ROM bytes ship in Git.
+Bootstrap already performs this step. For an existing checkout, `--roms-only`
+prepares firmware without reinstalling tools or converting books.
+
+Before launching XRoar, validate the files again:
+
+```sh
+uv run python scripts/doctor.py --profile demo --target coco1
+```
+
+Use the selected target. A successful executable-only doctor check is not
+firmware validation. The checked example runners also verify their ROMs before
+starting XRoar. Do not bypass a checksum error by launching it manually.
 See [toolchain](toolchain.md#firmware-and-launching) for launch options.
 
 The Python baseline includes Docling/RapidOCR, NumPy, Pillow, pytest, and Ruff.
@@ -79,7 +94,8 @@ model weights. Poppler and the Tesseract executable are no longer required.
 
 Results live in ignored `local/`: source PDFs, page-numbered Markdown,
 structured page records, figure and full-page PNGs, and an index that reports
-completed pages. The Markdown links images for direct multimodal inspection. Reruns
+completed pages. The Markdown links images for direct multimodal inspection.
+Reruns
 reuse completed pages. A new range adds pages without losing earlier work.
 Read [reference conversion](references.md) for cache behavior and limits.
 OCR still needs checking, especially for assembly code and diagrams.
@@ -116,7 +132,8 @@ uv run ruff format --check .
 
 Integration tests use an original scanned PDF and the real Docling pipeline.
 Their first run needs model downloads. Co-located `*_spec.py` files use
-`Describe*` / `should_*` pytest conventions. Other tests cover local HTTP downloads,
+`Describe*` / `should_*` pytest conventions. Other tests cover local HTTP
+downloads,
 cache and failure behavior, target preservation, and executable discovery.
 
 See [PLAN.md](../PLAN.md) for scope and remaining work.

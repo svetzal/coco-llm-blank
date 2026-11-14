@@ -31,7 +31,7 @@ class DescribeFirstScreen:
 
     def should_explain_missing_tools(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(first_screen, "tool_path", lambda name: None)
-        with pytest.raises(ValueError, match="bootstrap"):
+        with pytest.raises(ValueError, match=r"uv run python scripts/native\.py"):
             first_screen.executable("lwasm")
 
     def should_explain_missing_firmware(

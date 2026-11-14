@@ -39,7 +39,7 @@ def run_bootstrap(
 
 
 class DescribeBootstrap:
-    def should_prepare_only_the_selected_project_without_downloads(
+    def should_prepare_selected_target_firmware_without_book_conversion(
         self, bootstrap_workspace: tuple[Path, dict[str, str]]
     ) -> None:
         project, env = bootstrap_workspace
@@ -54,7 +54,49 @@ class DescribeBootstrap:
             "sync --locked",
             "run python scripts/setup.py --target coco2 --guidance-only",
             "run python scripts/native.py",
-            "run python scripts/doctor.py --profile demo",
+            "run python scripts/setup.py --target coco2 --roms-only",
+            "run python scripts/doctor.py --profile demo --target coco2",
+        ]
+
+    def should_stop_before_readiness_when_firmware_preparation_fails(
+        self, bootstrap_workspace: tuple[Path, dict[str, str]]
+    ) -> None:
+        project, env = bootstrap_workspace
+        commands = Path(env["PATH"].split(":")[0])
+        uv = commands / "uv"
+        uv.write_text(
+            '#!/bin/sh\nprintf "%s\\n" "$*" >> "$BOOTSTRAP_LOG"\n'
+            'case "$*" in *--roms-only*) echo "firmware unavailable" >&2; exit 7;; esac\n'
+        )
+        uv.chmod(0o755)
+
+        result = run_bootstrap(project, env, "coco2")
+
+        assert result.returncode == 7
+        assert "firmware unavailable" in result.stderr
+        assert "Tools and firmware are ready" not in result.stdout
+        assert "doctor.py" not in Path(env["BOOTSTRAP_LOG"]).read_text()
+
+    def should_stop_before_readiness_when_final_validation_fails(
+        self, bootstrap_workspace: tuple[Path, dict[str, str]]
+    ) -> None:
+        project, env = bootstrap_workspace
+        commands = Path(env["PATH"].split(":")[0])
+        uv = commands / "uv"
+        uv.write_text(
+            '#!/bin/sh\nprintf "%s\\n" "$*" >> "$BOOTSTRAP_LOG"\n'
+            'case "$*" in *scripts/doctor.py*) echo "validation failed" >&2; exit 7;; esac\n'
+        )
+        uv.chmod(0o755)
+
+        result = run_bootstrap(project, env, "coco2")
+
+        assert result.returncode == 7
+        assert "validation failed" in result.stderr
+        assert "Tools and firmware are ready" not in result.stdout
+        assert Path(env["BOOTSTRAP_LOG"]).read_text().splitlines()[-2:] == [
+            "run python scripts/setup.py --target coco2 --roms-only",
+            "run python scripts/doctor.py --profile demo --target coco2",
         ]
 
     def should_install_missing_uv_with_the_available_host_manager(

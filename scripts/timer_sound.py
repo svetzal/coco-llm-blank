@@ -8,6 +8,7 @@ from pathlib import Path
 
 from first_screen import executable
 from native import ROOT
+from roms import verify_installed
 
 # Executive pages $38-$3F occupy the upper 64 KiB of this 128 KiB machine.
 RAM_BASE = 0x10000
@@ -47,11 +48,7 @@ def build(timer: bool, heavy: bool, no_ack: bool = False) -> tuple[Path, dict[st
 
 
 def emulator(revision: int) -> list[str]:
-    rom = ROOT / "local/roms/coco3/coco3.rom"
-    if not rom.exists():
-        raise ValueError(
-            "Missing CoCo 3 firmware; provision it with setup.py --target coco3 --roms-only."
-        )
+    rom = verify_installed(ROOT, "coco3", ("coco3.rom",))["coco3.rom"]
     return [
         executable("xroar"),
         "-machine",
