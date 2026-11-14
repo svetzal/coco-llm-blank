@@ -298,7 +298,7 @@ class Experiment:
         self.shell(
             name,
             f"{name}-moving-objects",
-            "uv run python scripts/moving_objects.py check --target coco2",
+            "uv run python scripts/coco.py check examples/moving-objects --target coco2",
             "learner",
             timeout=840,
         )

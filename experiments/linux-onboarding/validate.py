@@ -132,7 +132,7 @@ def journey(container: str, sudo: bool) -> None:
     inside(
         container,
         "moving-objects",
-        "timeout 840 uv run python scripts/moving_objects.py check --target coco2",
+        "timeout 840 uv run python scripts/coco.py check examples/moving-objects --target coco2",
     )
     inside(
         container,

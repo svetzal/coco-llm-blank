@@ -136,13 +136,16 @@ nonroot coverage; this task does not edit that plan.
 ### Examined sources and attribution
 
 This is an original onboarding validation, not a hardware technique adaptation.
-The directly examined primary implementation passages are
-[bootstrap's missing-curl privilege branch and final readiness sequence](../../../scripts/bootstrap.sh),
-[HostGateway.dependencies and checksum-verified native source builds](../../../scripts/native.py),
-and [the moving-object runner's emulator, verify_ram and capture functions](../../../scripts/moving_objects.py).
-The latter checks real assembled output against a closed-form trajectory and
-pixel-level framebuffer oracle, with an unreachable checkpoint control.
-The [example contract](../../../examples/moving-objects/README.md#machine-contract)
+The directly examined primary implementation passages are [bootstrap's
+missing-curl privilege branch and final readiness
+sequence](../../../scripts/bootstrap.sh), [HostGateway.dependencies and
+checksum-verified native source builds](../../../scripts/native.py), and the
+moving-object check, then a dedicated runner and now [its
+settings](../../../examples/moving-objects/coco.toml) and [independent
+model](../../../examples/moving-objects/expected.py) run by `scripts/coco.py`.
+The check compares real assembled output against a closed-form trajectory and
+pixel-level framebuffer oracle, with an unreachable checkpoint control. The
+[example contract](../../../examples/moving-objects/README.md#machine-contract)
 defines the tested CoCo 2 configuration. This follow-up adds no hardware facts
 and does not claim fresh examination of the example's cited book pages.
 
@@ -242,6 +245,9 @@ docker exec coco-linux-onboarding-final-20261114 \
   sh -c 'timeout 840 /root/.local/bin/uv run python \
     scripts/moving_objects.py check --target coco2'
 ```
+
+That recorded run used the former runner. The equivalent command is now
+`uv run python scripts/coco.py check examples/moving-objects --target coco2`.
 
 Inside `/work` in that container, preserve an edited copy before rerunning:
 
@@ -432,10 +438,12 @@ docker rm -f coco-linux-onboarding-20261114
 ```
 
 The driver sets `/root/.local/bin` on its child PATH. The successful runtime
-command, executed inside `/work`, is:
+command, executed inside `/work`, was the former runner's
+`uv run python scripts/moving_objects.py check --target coco2`. Its current
+equivalent is:
 
 ```sh
-uv run python scripts/moving_objects.py check --target coco2
+uv run python scripts/coco.py check examples/moving-objects --target coco2
 ```
 
 The driver bounds individual setup commands to 180 seconds, the bootstrap

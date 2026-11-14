@@ -9,9 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "experiments/display-validation"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import masked_objects
 import reproduce as shared
-import tile_room
 from cases import (
     Case,
     compare_capture,
@@ -41,6 +39,8 @@ PROFILE = {
 }
 
 FIRST_SCREEN = load_expected(ROOT / "examples/first-screen")
+TILE_ROOM = load_expected(ROOT / "examples/tile-room")
+MASKED = load_expected(ROOT / "examples/masked-objects")
 
 
 def make_scenes() -> list[Case]:
@@ -49,8 +49,8 @@ def make_scenes() -> list[Case]:
     moving = (ROOT / "examples/moving-objects/main.asm").read_text()
     result = make_cases(first, moving, FIRST_SCREEN.expected_screen(1))[1:3]
     for kind, indices, variable, oracle in (
-        ("tile-room", (0, 5, 39, 41), "step", tile_room.expected_screen),
-        ("masked-objects", (0, 2, 3, 8, 9, 10, 11), "scene", masked_objects.expected_screen),
+        ("tile-room", (0, 5, 39, 41), "step", TILE_ROOM.expected_screen),
+        ("masked-objects", (0, 2, 3, 8, 9, 10, 11), "scene", MASKED.expected_screen),
     ):
         source = (ROOT / f"examples/{kind}/main.asm").read_text()
         for index in indices:
@@ -71,7 +71,7 @@ continue_scene
                     name=f"{kind}-{index}",
                     source=frozen,
                     checkpoint="frozen",
-                    expected=oracle(index),
+                    expected=oracle(index + 1),  # frame N shows step/scene N - 1
                 )
             )
     return result
@@ -105,11 +105,11 @@ def stationary_checkpoint(case: Case, symbols: str, memory: bytes) -> dict:
     if case.name.startswith("tile-room-"):
         index = int(case.name.rsplit("-", 1)[1])
         names = ("map_guard_before", "map_guard_after", "xpos", "ypos", "accepted", "step", "room")
-        tile_room.verify_ram(memory, {n: symbol(symbols, n) for n in names}, index)
-        return {"step": index, "actor": list(tile_room.expected_state(index)[0])}
+        TILE_ROOM.verify_ram(memory, {n: symbol(symbols, n) for n in names}, index + 1)
+        return {"step": index, "actor": list(TILE_ROOM.expected_state(index)[0])}
     if case.name.startswith("masked-objects-"):
         index = int(case.name.rsplit("-", 1)[1])
-        masked_objects.verify_ram(memory, {"scene": symbol(symbols, "scene")}, index)
+        MASKED.verify_ram(memory, {"scene": symbol(symbols, "scene")}, index + 1)
         return {"scene": index}
     if memory[0x2FFF] != 0xA5:
         raise ValueError("Probe completion marker missing")
@@ -200,8 +200,8 @@ def main() -> None:
     inputs = [
         "examples/tile-room/main.asm",
         "examples/masked-objects/main.asm",
-        "scripts/tile_room.py",
-        "scripts/masked_objects.py",
+        "examples/tile-room/expected.py",
+        "examples/masked-objects/expected.py",
     ]
     inputs += [str(p.relative_to(ROOT)) for p in Path(__file__).parent.glob("*.py")]
     report["inputs_sha256"].update({name: shared.digest(ROOT / name) for name in inputs})

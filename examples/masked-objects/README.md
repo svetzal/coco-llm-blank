@@ -22,15 +22,17 @@ The native tools and validated firmware must already be installed. From the
 repository root:
 
 ```sh
-uv run python scripts/masked_objects.py check --target coco1
-uv run python scripts/masked_objects.py check --target coco2
-uv run python scripts/masked_objects.py run --target coco1
+uv run python scripts/coco.py check examples/masked-objects
+uv run python scripts/coco.py run examples/masked-objects --target coco1
 ```
+
+`check` covers both targets declared in [coco.toml](coco.toml); add
+`--target coco2` to check one. Frame N of the check shows scene N - 1.
 
 `run` opens a normal-speed XRoar window and cycles through 12 discrete scenes.
 Close that window to stop. There are no controls or return to BASIC.
 `check` uses bounded headless processes and never opens a window. Both actions
-rebuild the DECB binary and call `roms.verify_installed` before launching XRoar.
+rebuild the DECB binary and verify the firmware bytes before launching XRoar.
 The resulting absolute firmware paths are passed explicitly.
 
 This is direct DECB auto-run. No disk image, disk boot or `LOADM` result is claimed.
@@ -123,9 +125,9 @@ Run only this example's specifications with:
 
 ```sh
 COVERAGE_FILE=build/masked-objects/.coverage uv run pytest \
-  scripts/masked_objects_spec.py --cov=masked_objects
-uv run ruff check scripts/masked_objects.py scripts/masked_objects_spec.py
-uv run ruff format --check scripts/masked_objects.py scripts/masked_objects_spec.py
+  examples/masked-objects --cov=examples/masked-objects
+uv run ruff check examples/masked-objects
+uv run ruff format --check examples/masked-objects
 ```
 
 Generated binaries, symbols, logs, RAM captures, coverage and results live under

@@ -45,11 +45,12 @@ source bodies are copied into this package.
 ## How acceptance works
 
 The renderer receives the emulator's actual SAM/VDG scanlines. The null-UI draw
-hook exports its RGBA8 buffer as RGB PPM; PNG is only a lossless conversion.
-The oracle never supplies image pixels to that hook. Expected scene pixels come
-from the independent graph/text-art model in `scripts/tile_room.py` and the
-geometric ring model in `scripts/masked_objects.py`, not captured RAM or assembly
-art tables. The probe has five isolated pixels and an asymmetric rectangle.
+hook exports its RGBA8 buffer as RGB PPM; PNG is only a lossless conversion. The
+oracle never supplies image pixels to that hook. Expected scene pixels come from
+the independent graph/text-art model in `examples/tile-room/expected.py` and the
+geometric ring model in `examples/masked-objects/expected.py`, not captured RAM
+or assembly art tables. The probe has five isolated pixels and an asymmetric
+rectangle.
 
 The runner checks all 6,144 screen bytes and all 98,304 renderer samples at
 both 0.5 and 1.0 emulated seconds after each checkpoint. It verifies assembled

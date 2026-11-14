@@ -323,17 +323,18 @@ def verify_snapshot(
     frame: int,
     variant: str = "",
 ) -> int:
-    """Compare one snapshot with the model; returns the number of screen bytes compared."""
+    """Compare the screen, then the model's state checks; returns screen bytes compared."""
     check = project.settings.check
+    compared = 0
+    if check.screen is not None and hasattr(model, "expected_screen"):
+        expected = model_call(project, model.expected_screen, frame, variant=variant)
+        actual = ram[check.screen : check.screen + len(expected)]
+        if difference := screen_difference(expected, actual, check.screen):
+            raise ProjectError(f"Frame {frame}: {difference}.")
+        compared = len(expected)
     if hasattr(model, "verify_ram"):
         model_call(project, model.verify_ram, ram, symbols, frame, variant=variant)
-    if check.screen is None or not hasattr(model, "expected_screen"):
-        return 0
-    expected = model_call(project, model.expected_screen, frame, variant=variant)
-    actual = ram[check.screen : check.screen + len(expected)]
-    if difference := screen_difference(expected, actual, check.screen):
-        raise ProjectError(f"Frame {frame}: {difference}.")
-    return len(expected)
+    return compared
 
 
 def digest(path: Path) -> str:

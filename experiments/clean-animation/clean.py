@@ -15,10 +15,18 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(ROOT / "scripts"), str(ROOT / "experiments/animation-cadence")]
 import cadence
-from moving_objects import ROM_NAMES, expected_screen, position, verify_ram
+from coco import load_expected, load_project
 from native import tool_path
 from roms import verify_installed
 from timing import publication_phases
+
+MOVING_PROJECT = ROOT / "examples/moving-objects"
+MOVING = load_expected(MOVING_PROJECT)
+expected_screen, position, verify_ram = MOVING.expected_screen, MOVING.position, MOVING.verify_ram
+ROM_NAMES = {
+    name: (machine.basic, machine.extended)
+    for name, machine in load_project(MOVING_PROJECT).settings.targets.items()
+}
 
 PERIOD = 238944
 CHECKS = (1, 2, 16, 32, 64, 65, 185, 186, 369, 370)
@@ -316,7 +324,8 @@ def main() -> None:
                 *HERE.glob("*.py"),
                 HERE / "main.asm",
                 Path(cadence.__file__),
-                ROOT / "scripts/moving_objects.py",
+                MOVING_PROJECT / "expected.py",
+                MOVING_PROJECT / "coco.toml",
                 ROOT / "examples/moving-objects/main.asm",
                 ROOT / "experiments/display-validation/instrument.py",
                 ROOT / "experiments/display-validation/reproduce.py",

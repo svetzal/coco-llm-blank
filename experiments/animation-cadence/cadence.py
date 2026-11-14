@@ -16,11 +16,15 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / "scripts"), str(ROOT / "experiments/display-validation")]
+from coco import load_expected
 from instrument import CAPTURE, instrument, replace_once
-from moving_objects import expected_screen, verify_ram
 from native import tool_path
 from reproduce import CONFIGURE, digest, logged, obtain_archive, provenance
 from roms import verify_installed
+
+ORACLE = "examples/moving-objects/expected.py"
+MOVING = load_expected(ROOT / "examples/moving-objects")
+expected_screen, verify_ram = MOVING.expected_screen, MOVING.verify_ram
 
 DRAW = r"""static void capture_draw(void *sptr) {
     struct vo_interface *vo = sptr;
@@ -303,9 +307,7 @@ def main() -> None:
     report["inputs_sha256"].update(
         {str(p.relative_to(ROOT)): digest(p) for p in Path(__file__).parent.glob("*.py")}
     )
-    report["inputs_sha256"]["scripts/moving_objects.py"] = digest(
-        ROOT / "scripts/moving_objects.py"
-    )
+    report["inputs_sha256"][ORACLE] = digest(ROOT / ORACLE)
     archive = obtain_archive(work / "xroar.tar.gz", args.archive)
     with tarfile.open(archive) as package:
         package.extractall(work, filter="data")

@@ -80,13 +80,14 @@ address encodings; it does not prove physical adoption or safe reuse.
 ## Independent expectations and observation boundaries
 
 RAM checks use the existing pixel-coordinate oracle in
-`scripts/moving_objects.py`. Its reflected-motion formula and pixel composition
-are independent of the assembly's movement branches and byte-writing loops.
-Completed scenes 1, 2, 16, 32, 64, 65, 185, 186, 369 and 370 check the hidden
-screen, counter, position, pointer and all four guards. After scene 1, the other
-screen must still equal the preceding complete scene. These cases cover both
-buffers, overlap order, changed scenery and motion reversals. A trap at the
-unreachable state-data label must never fire.
+`examples/moving-objects/expected.py` (formerly `scripts/moving_objects.py`).
+Its reflected-motion formula and pixel composition are independent of the
+assembly's movement branches and byte-writing loops. Completed scenes 1, 2, 16,
+32, 64, 65, 185, 186, 369 and 370 check the hidden screen, counter, position,
+pointer and all four guards. After scene 1, the other screen must still equal
+the preceding complete scene. These cases cover both buffers, overlap order,
+changed scenery and motion reversals. A trap at the unreachable state-data label
+must never fire.
 
 Continuous output uses the existing cadence experiment's private null-UI
 capture hook, unchanged. The normal SAM/VDG and software renderer generate each

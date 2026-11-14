@@ -135,15 +135,7 @@ class DescribeInstalledFirmware:
     @pytest.mark.parametrize(
         ("runner", "target", "rom_name"),
         [
-            ("moving_objects", "coco1", "bas11.rom"),
-            ("moving_objects", "coco1", "extbas10.rom"),
-            ("moving_objects", "coco2", "bas12.rom"),
-            ("moving_objects", "coco2", "extbas11.rom"),
             ("timer_sound", "coco3", "coco3.rom"),
-            ("masked_objects", "coco1", "bas11.rom"),
-            ("masked_objects", "coco1", "extbas10.rom"),
-            ("masked_objects", "coco2", "bas12.rom"),
-            ("masked_objects", "coco2", "extbas11.rom"),
         ],
     )
     @pytest.mark.parametrize("damage", ["missing", "empty", "wrong-target", "directory", "valid"])
@@ -156,13 +148,9 @@ class DescribeInstalledFirmware:
         rom_name: str,
         damage: str,
     ) -> None:
-        import masked_objects
-        import moving_objects
         import timer_sound
 
         module = {
-            "moving_objects": moving_objects,
-            "masked_objects": masked_objects,
             "timer_sound": timer_sound,
         }[runner]
         tmp_path = tmp_path / "project with spaces"
@@ -205,9 +193,7 @@ class DescribeInstalledFirmware:
         monkeypatch.setenv("LAUNCH_MARKER", str(marker))
         monkeypatch.setattr(module, "ROOT", tmp_path)
         monkeypatch.setattr(module, "build", lambda *args: (tmp_path / "test.bin", 0))
-        argv = ["demo.py", "run"] + (
-            ["--target", target] if runner in ("moving_objects", "masked_objects") else []
-        )
+        argv = ["demo.py", "run"]
         monkeypatch.setattr("sys.argv", argv)
 
         if damage == "valid":

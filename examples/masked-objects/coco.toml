@@ -1,0 +1,31 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# NTSC CoCo architecture with an explicit non-T1 6847 VDG and firmware.
+[targets.coco1]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas11.rom"
+extended = "extbas10.rom"
+
+[targets.coco2]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
+[memory]
+below = { program_end = 0x7E00 }   # the stack is reserved from $7E00
+
+[check]
+checkpoint = "frame_ready"   # reached once per completed scene
+frames = ["1-12"]            # frame N shows scene N - 1
+unreachable = "state"        # a data label: executing it is a fault
+screen = 0x0400
+emulated_seconds = 20

@@ -15,14 +15,15 @@ Prepare the starter's native tools and the selected machine's firmware first.
 From the repository root:
 
 ```sh
-uv run python scripts/moving_objects.py check --target coco1
-uv run python scripts/moving_objects.py check --target coco2
-uv run python scripts/moving_objects.py run --target coco1
+uv run python scripts/coco.py check examples/moving-objects
+uv run python scripts/coco.py run examples/moving-objects --target coco1
 ```
 
-Each command rebuilds the binary. The run command opens XRoar at normal speed.
-Close its window to stop it. There are no controls and no return to BASIC.
-The loader is direct DECB auto-run, not a disk boot or `LOADM` check.
+`check` covers both targets declared in [coco.toml](coco.toml); add
+`--target coco2` to check one. Each command rebuilds the binary. The run
+command opens XRoar at normal speed. Close its window to stop it. There are no
+controls and no return to BASIC. The loader is direct DECB auto-run, not a disk
+boot or `LOADM` check.
 
 The intended picture is two 16×8 rectangles over an 8×8 checker pattern.
 One rectangle uses set pixels; the other uses clear pixels. They move in
@@ -134,9 +135,9 @@ The development Mac passes all 133 tests with 93.99% combined coverage.
 The non-integration run passes 124 tests; Ruff check and format checks pass.
 
 Results, logs, symbols, and snapshots are ignored under `build/moving-objects/`.
-The implementation files are [main.asm](main.asm),
-[the runner](../../scripts/moving_objects.py), and
-[the specifications](../../scripts/moving_objects_spec.py).
+The implementation files are [main.asm](main.asm), the machine and checkpoint
+settings in [coco.toml](coco.toml), the independent scene model in
+[expected.py](expected.py), and [its specifications](moving_objects_spec.py).
 
 Visual appearance, physical hardware, PAL, T1, CoCo 3, sound during redraw,
 independent vertical object motion, and partial-byte placement remain untested.

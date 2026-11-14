@@ -150,7 +150,9 @@ class DescribeModels:
 
         assert result == (3, "fast")
 
-    def should_compare_every_screen_byte_after_the_state_model(self, project: coco.Project) -> None:
+    def should_compare_every_screen_byte_and_then_the_state_model(
+        self, project: coco.Project
+    ) -> None:
         model = coco.load_expected(project.directory)
         symbols = coco.parse_symbols(SYMBOLS)
 
@@ -159,8 +161,10 @@ class DescribeModels:
         damaged[0x402] ^= 0x10
         with pytest.raises(ProjectError, match=r"1 of 4 screen bytes differ; first at \$0402"):
             coco.verify_snapshot(project, model, damaged, symbols, 3)
+        wrong_state = bytearray(ram_for(3))
+        wrong_state[0x3020] = 4
         with pytest.raises(ValueError, match="state differs"):
-            coco.verify_snapshot(project, model, ram_for(4), symbols, 3)
+            coco.verify_snapshot(project, model, wrong_state, symbols, 3)
 
     def should_report_a_short_screen(self) -> None:
         assert "holds 1 screen bytes" in coco.screen_difference(b"ab", b"a", 0x400)
@@ -584,3 +588,17 @@ class DescribeFirmwareBoundary:
         else:
             assert code == 1
             assert not launched
+
+
+@pytest.mark.integration
+class DescribeRealAssembler:
+    def should_reject_a_program_assembled_at_the_wrong_address(self, tmp_path: Path) -> None:
+        if not tool_path("lwasm"):
+            pytest.skip("LWASM is not installed")
+        directory = tmp_path / "tile-room-copy"
+        shutil.copytree(ROOT / "examples/tile-room", directory)
+        source = directory / "main.asm"
+        source.write_text(source.read_text().replace("org $3000", "org $3001"))
+
+        with pytest.raises(ProjectError, match=r"start must be at \$3000"):
+            coco.build(coco.load_project(directory), Host())

@@ -155,6 +155,6 @@ class DescribeExactRepeat:
 
     def should_record_the_independent_oracle_hash(self, reproduction):
         report = reproduction[2]
-        assert report["inputs_sha256"]["scripts/moving_objects.py"] == cadence.digest(
-            cadence.ROOT / "scripts/moving_objects.py"
+        assert report["inputs_sha256"][cadence.ORACLE] == cadence.digest(
+            cadence.ROOT / cadence.ORACLE
         )

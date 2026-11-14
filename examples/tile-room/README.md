@@ -15,23 +15,27 @@ picture; it has no victory rule. There is no keyboard system.
 From the repository root, with the existing native tools and verified firmware:
 
 ```sh
-uv run python scripts/tile_room.py check --target coco1
-uv run python scripts/tile_room.py check --target coco2
-uv run python scripts/tile_room.py run --target coco1
+uv run python scripts/coco.py check examples/tile-room
+uv run python scripts/coco.py run examples/tile-room --target coco1
 ```
+
+`check` covers both targets declared in [coco.toml](coco.toml) and keeps a
+result file for each; add `--target coco2` to check one. Frame N of the check
+shows the room after N - 1 moves.
 
 `check` runs headlessly. `run` opens XRoar, moves through the script once,
 and holds the final picture. Close XRoar to stop it. There is no return to
 BASIC. This is direct DECB auto-run, not disk-loading evidence.
 `--help` and invalid arguments do not build or launch anything.
 
-A fresh build invalidates previous snapshots and success records before invoking
-LWASM. To retain both targets' results from one binary, run the scoped specs:
+A check removes the target's previous success record before building. The
+independent model and its specifications are [expected.py](expected.py) and
+[tile_room_spec.py](tile_room_spec.py):
 
 ```sh
 COVERAGE_FILE=build/tile-room/.coverage \
-  uv run pytest scripts/tile_room_spec.py \
-  --basetemp=build/tile-room/pytest --cov=tile_room --cov-report=term-missing
+  uv run pytest examples/tile-room \
+  --basetemp=build/tile-room/pytest --cov=examples/tile-room --cov-report=term-missing
 ```
 
 Generated binaries, symbols, snapshots, logs, and success records stay under
@@ -129,7 +133,7 @@ renderer or diagonal-path collision. Its archive citations remain in the
 ## Evidence and limits
 
 The scoped run passed all 12 specs, including all 42 checkpoints on each
-defined target. Combined statement and branch coverage of `tile_room.py` was
+defined target. Combined statement and branch coverage of the former runner was
 98.67%. Ruff lint/format and scoped Markdown lint passed. The two result files
 record the same binary SHA-256 and each target's checkpoint list.
 

@@ -205,10 +205,10 @@ pair in an unclassified frame. The revised measurement retains each of the
 150 timestamps and RGB hashes and compares them on repeat. Regression cases
 alter a valid pixel pair at video indexes 26 and 83 and require rejection.
 
-Runtime provenance now includes `scripts/moving_objects.py`, which supplies the
-independent complete-scene and RAM oracle. The retained original runner hash
-above identifies the earlier execution; the revised runner records its own
-hashes on each new run.
+Runtime provenance now includes `examples/moving-objects/expected.py`, which
+supplies the independent complete-scene and RAM oracle. It was moved unchanged
+from the former `scripts/moving_objects.py` runner, whose hash above identifies
+the earlier execution; each new run records the current file's hash.
 
 The revised fresh-build suite passed 27 tests in 321.58 seconds with 95.58%
 combined statement/branch coverage of `cadence.py`. Exact repeated timestamps
