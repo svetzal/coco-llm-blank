@@ -76,7 +76,11 @@ surrounding setup before treating a short mode-selection listing as complete.
 
 Image viewing requires a multimodal tool in the agent runtime. If it is absent,
 report that limitation; do not infer a diagram from its filename or OCR alone.
-The original PDF remains available when the saved images are insufficient.
+Opening a PNG in another application or parsing its bytes does not let a
+text-only agent see it. Do not repeatedly try those approaches. Resolve an
+uncertain hardware value through another clear primary source or a human's
+inspection, and defer the dependent code until then. The original PDF remains
+available when the saved images are insufficient.
 
 ## When the reference is not ready
 
@@ -119,6 +123,14 @@ Each checkpoint keeps Markdown, structured Docling JSON with element locations,
 and image checksums. Figure PNGs are linked where Docling found them; each page
 also has a full-page PNG link. Image data is never embedded as base64 in Markdown
 or checkpoint JSON.
+
+Checkpoint filenames are five-digit PDF page numbers, such as `00108.json`,
+inside the active `docling-pages/PROFILE/` directory. Inspect keys before
+querying unfamiliar JSON. In the current format, table cells are under
+`document.tables[].data.table_cells`; each has `text`, `bbox`, and
+`start_row_offset_idx` / `start_col_offset_idx`. This can explain cell grouping,
+but it is the same OCR as the Markdown, not independent verification of an
+uncertain character. Missing fields are unknown, not zero coordinates.
 
 Read only the pages relevant to the question. Cite the title and PDF page
 number; PDF numbering includes covers and may differ from printed numbering.
