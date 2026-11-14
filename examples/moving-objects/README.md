@@ -46,10 +46,10 @@ The assembly explicitly selects the slow SAM clock. It masks IRQ and FIRQ.
 The CoCo 2 test uses the shared NTSC CoCo architecture with the CoCo 2 ROMs
 and an explicit non-T1 VDG. It does not use the `coco2bus` profile's T1 default.
 This is a defined emulator configuration, not proof for every CoCo 2 revision.
-The runner reports the exact configuration in its results file.
+The check reports the exact configuration in its results file.
 
 ROMs remain in ignored `local/roms/` storage. The project manifest identifies
-their source and checksums. The runner never changes `local/PROJECT.md`.
+their source and checksums. The check never changes `local/PROJECT.md`.
 
 ## Source facts and our design
 
@@ -106,7 +106,7 @@ No frame-rate or smoothness measurement is claimed.
 
 ## Emulator checks
 
-The runner captures completed frames 1, 15, 16, 17, 31, 32, 46, 64, 65,
+The check captures completed frames 1, 15, 16, 17, 31, 32, 46, 64, 65,
 185, 186, 369, and 370. Each capture checks:
 
 - The actual frame counter and both object-position coordinates.

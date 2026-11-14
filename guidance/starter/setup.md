@@ -78,8 +78,8 @@ uv run python scripts/doctor.py --profile demo --target coco1
 ```
 
 Use the selected target. A successful executable-only doctor check is not
-firmware validation. The checked example runners also verify their ROMs before
-starting XRoar. Do not bypass a checksum error by launching it manually.
+firmware validation. `scripts/coco.py` also verifies the ROMs a project names
+before starting XRoar. Do not bypass a checksum error by launching it manually.
 See [toolchain](toolchain.md#firmware-and-launching) for launch options.
 
 The Python baseline includes Docling/RapidOCR, NumPy, Pillow, pytest, and Ruff.

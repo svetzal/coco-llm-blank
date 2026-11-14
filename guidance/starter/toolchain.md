@@ -91,10 +91,11 @@ uv run python scripts/doctor.py --profile demo --target coco1
 ```
 
 Use the actual target. This checks installed member sizes and SHA-256 hashes.
-It does not use file existence as proof of valid firmware. The existing example
-runners perform the same checks for the ROMs they need before starting XRoar.
-For a new Python runner, use `roms.verify_installed(ROOT, target, names)` and
-pass the returned absolute paths. Include `disk11.rom` when using Disk BASIC.
+It does not use file existence as proof of valid firmware. `scripts/coco.py`
+performs the same checks for the ROMs a project's `coco.toml` names before
+starting XRoar, and passes their absolute paths. The tool does not yet set up
+a Disk BASIC cartridge; Disk BASIC work needs `disk11.rom` and a reviewed
+launch configuration.
 Custom firmware needs an explicit, reviewed configuration and independent boot
 validation; renaming different bytes to a manifest filename does not validate
 them.
@@ -109,7 +110,8 @@ The CoCo 3 profile supplies NTSC firmware; pass its combined BASIC image with
 `-extbas`. Select appropriate user-provided
 firmware for a PAL CoCo 3; the manifest does not yet include that variant.
 
-For a CoCo 1 NTSC project targeting 32 KiB, a DECB binary can auto-run with:
+For reference, `scripts/coco.py run` launches a CoCo 1 NTSC, 32 KiB project
+with options equivalent to:
 
 ```sh
 xroar -machine cocous -ram 32 \

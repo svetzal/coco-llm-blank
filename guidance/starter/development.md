@@ -157,17 +157,50 @@ remain separate checks.
 
 ## Reusable launchers
 
-Parse arguments before setup, downloads, builds, or emulator calls. `--help`
-must print usage and exit successfully without those side effects; reject
-unknown arguments with a nonzero exit. Probe these paths with a recording
-process substitute so a help check cannot accidentally open XRoar.
+Do not write or copy a launcher. A project is a folder that
+`scripts/coco.py` builds, launches and checks:
 
-Before launch, call `roms.verify_installed` for every ROM required by the chosen
-machine and loader, then pass its returned absolute paths to XRoar. Checking
-only the BASIC ROM's existence misses a missing Extended BASIC ROM. Use the
-existing provisioner for recovery and verify again before launch; stop on
-validation failure. Test the partially installed case as well as missing and
-corrupt firmware. Do not duplicate ROM validation in a shell wrapper.
+```sh
+uv run python scripts/coco.py --help
+uv run python scripts/coco.py build projects/my-demo
+uv run python scripts/coco.py run projects/my-demo
+uv run python scripts/coco.py check projects/my-demo
+uv run python scripts/coco.py snapshot projects/my-demo --frame 3
+```
+
+The folder holds three files. Start by copying
+[first-screen](../../examples/first-screen/README.md); its files show each
+setting with a comment.
+
+- `main.asm`: the program, assembled as a DECB binary with a symbol dump.
+- `coco.toml`: the contract the tool runs. Each `[targets.<name>]` table names
+  the XRoar machine, CPU, video standard, VDG, RAM and firmware files; the first
+  is the default. `[memory]` requires labels at or below addresses. `[check]`
+  names the checkpoint label reached once per completed frame, the frames to
+  snapshot, a label that must never execute, and where the screen starts.
+  Optional `[variants.<name>]` tables add assembler defines, and `prepare`
+  names a Python file whose `prepare(output)` writes include files first.
+- `expected.py` (optional): the independent model. `expected_screen(frame)`
+  returns the exact screen bytes and `verify_ram(ram, symbols, frame)` raises
+  `ValueError` when the state differs. With variants, both also receive the
+  variant name. Write the model from sourced facts and requirements, never from
+  the assembled bytes or a captured snapshot.
+
+`check` starts from nonzero RAM, snapshots each frame, requires that the
+unreachable label leaves no snapshot, compares every screen byte, and then runs
+the model. It reports execution and memory evidence separately and never claims
+visual evidence; look at the `run` window for that. Without `expected.py` it
+only proves that the checkpoint was reached. Record the `coco.toml` machine
+choices in `local/PROJECT.md` too.
+
+The tool parses arguments before any build or launch: `--help` exits
+successfully and unknown arguments exit nonzero. It verifies every firmware
+file the target names before starting XRoar and ignores personal XRoar
+configuration. If firmware fails, run the recovery command it prints.
+
+For a model spec, name it after the folder (for example `my_demo_spec.py`) and
+load the model with `load_expected(Path(__file__).parent)` from `coco`; several
+folders cannot each have an `expected_spec.py` in one pytest run.
 
 ## Learn from evidence
 

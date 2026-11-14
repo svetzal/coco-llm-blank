@@ -35,7 +35,9 @@ Existing files stay in place; these indexes describe their roles.
 
 ## Checks
 
-The root pytest suite selects `scripts/`, including example runner specs.
+Every example is built, run and checked with `scripts/coco.py`; see its README.
+The root pytest suite selects `scripts/` and `examples/`, including each
+example model's spec.
 Experiment specs are separate and require explicit selection. Follow
 [the suite boundaries](../experiments/README.md#choose-the-right-test-suite)
 and each example's README for prerequisites and scoped commands.

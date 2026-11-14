@@ -36,19 +36,24 @@ the requested game or animation.
 Before adapting an example or writing code, complete and read back
 `local/PROJECT.md` from the request and documented defaults. Convert
 only reference pages needed for the first feature. Build a small complete
-increment and test it in XRoar. Provide
-a reusable launch command or script and explain how to run it in plain language.
+increment and test it in XRoar. Give the project folder a `coco.toml` and an
+independent `expected.py`, as the first-screen example does, and explain the
+`scripts/coco.py run` and `check` commands in plain language.
 Separate build, runtime, and visual evidence. Never call a build alone a working
 project. Keep downloads outside Git and do not publish the owner's project
 unless requested.
 
 ## Launch only with validated firmware
 
-Use an existing checked runner when possible. For a new runner, call
-`roms.verify_installed` before starting XRoar, and pass its absolute ROM paths
-with `-bas` and `-extbas` as required by the selected machine.
-Do not rely on XRoar's default ROM search or a bare `xroar -run` command.
+Build, launch and check every project with
+`uv run python scripts/coco.py build|run|snapshot|check <project-folder>`.
+It verifies the firmware bytes named in `coco.toml` and passes their absolute
+paths to XRoar. Do not write a launcher or rely on a bare `xroar -run` command.
 Read [firmware and launching](guidance/starter/toolchain.md#firmware-and-launching).
+
+Python under `scripts/` and `experiments/` is to be run, not read: use its
+`--help`. It holds no CoCo knowledge. Read the examples' `main.asm`,
+`coco.toml`, `expected.py` and READMEs, and `guidance/`, instead.
 
 If XRoar shows only a checkerboard or never reaches the expected screen, stop
 launching copies. Check the selected machine, actual ROM checksums and command

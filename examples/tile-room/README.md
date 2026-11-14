@@ -46,7 +46,7 @@ ignored `build/tile-room/`. No firmware or downloaded source is distributed.
 The task specifies CoCo 1 and CoCo 2, NTSC, 32 KiB, a normal-clock 6809,
 and a non-T1 MC6847. Both checks use XRoar's `cocous` architecture with explicit
 `-vdg-type 6847`, `-machine-cpu 6809`, `-tv-type ntsc`, and `-ram 32`.
-The runner uses `-c /dev/null` to exclude user configuration. CoCo 1 uses verified
+`scripts/coco.py` passes `-no-c` to exclude user configuration. CoCo 1 uses verified
 `bas11.rom` and `extbas10.rom`; CoCo 2 uses verified `bas12.rom` and
 `extbas11.rom`. These are defined emulator configurations, not evidence for
 every board revision. The scoped local contract is
@@ -151,7 +151,7 @@ All 42 checkpoints cover every scripted move and the initial picture:
 - Every map byte, all 6,144 framebuffer bytes, four guards, actor coordinates,
   acceptance flag and script step at every checkpoint on both targets.
 
-The runner starts with nonzero RAM and requires a completed-frame PC trap.
+The check starts with nonzero RAM and requires a completed-frame PC trap.
 A data-address trap must never fire. Negative controls corrupt the screen,
 map, guards and state, and deliberately select missing or unexpected traps.
 Firmware tests cover missing, partial and corrupt installations. Help and
