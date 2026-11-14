@@ -13,15 +13,15 @@ sh scripts/bootstrap.sh coco1
 ```
 
 Use the selected machine target. This installs missing uv through Homebrew when
-available, or through the [official uv installer](https://docs.astral.sh/uv/getting-
-started/installation/).
+available, or through the
+[official uv installer](https://docs.astral.sh/uv/getting-started/installation/).
 Use the printed uv path if the current agent cannot find `uv` after installation.
 It prepares the locked Python environment and preserves existing project notes.
 It does not download books, firmware, or conversion models.
 
 The final check requires the assembler, linker, and emulator. Missing tools
-produce a nonzero exit and installation guidance. Bootstrap installs missing native tools
-on macOS and Ubuntu 24.04.
+produce a nonzero exit and installation guidance. Bootstrap installs missing
+native tools on macOS and Ubuntu 24.04.
 Use [toolchain.md](toolchain.md) if permissions or installation fail.
 ToolShed is optional for directly launched demos; disk projects still need it.
 Other Linux distributions still need manual native-tool installation.
