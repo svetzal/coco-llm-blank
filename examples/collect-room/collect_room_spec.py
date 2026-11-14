@@ -61,6 +61,15 @@ class DescribeCollectRoomModel:
     def should_accept_an_idle_title_frame(self) -> None:
         model.verify_ram(snapshot("-", model.TITLE), LABELS, 7)
 
+    def should_expect_the_journey_only_in_the_journey_build(self) -> None:
+        keys, state = model.journey()[94]
+
+        model.verify_ram(snapshot(keys, state), LABELS, 95, "journey")
+        assert model.expected_screen(95, "journey") == model.screen_for_state(state)
+        assert model.expected_screen(95, "") == model.screen_for_state(model.TITLE)
+        with pytest.raises(ValueError, match="Game state differs"):
+            model.verify_ram(snapshot(keys, state), LABELS, 95, "")
+
     @pytest.mark.parametrize("damage", ["guard", "state", "history", "room", "sound", "screen"])
     def should_reject_damaged_journey_evidence(self, damage: str) -> None:
         keys, state = model.journey()[64]

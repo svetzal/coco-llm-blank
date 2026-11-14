@@ -89,10 +89,15 @@ def verify_journey_frame(
         raise ValueError("Complete framebuffer differs")
 
 
-def expected_screen(frame: int) -> bytes:
+def step(frame: int, variant: str) -> tuple[str, tuple[int, ...]]:
+    """Keys held and state expected at a checkpoint: the journey, or idle on the title."""
+    return journey()[frame - 1] if variant == "journey" else ("-", TITLE)
+
+
+def expected_screen(frame: int, variant: str = "") -> bytes:
     """Without injected keys, every frame stays on the title screen."""
-    return screen_for_state(TITLE)
+    return screen_for_state(step(frame, variant)[1])
 
 
-def verify_ram(ram: bytes, symbols: dict[str, int], frame: int) -> None:
-    verify_journey_frame(ram, symbols, "-", TITLE)
+def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str = "") -> None:
+    verify_journey_frame(ram, symbols, *step(frame, variant))

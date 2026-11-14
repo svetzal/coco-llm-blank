@@ -987,6 +987,22 @@ class DescribeEquipmentInXRoar:
 
         assert "first at x=0, y=1" in capsys.readouterr().err
 
+    def should_reject_a_journey_with_a_wrong_key(self, tmp_path: Path) -> None:
+        if not instrumented_ready("coco1"):
+            pytest.skip("Native tools, CoCo 1 firmware, a C compiler or make are missing")
+        example = ROOT / "examples/collect-room"
+        project = coco.load_project(example)
+        lines = (example / "journey.txt").read_text().splitlines()
+        step = next(i for i, line in enumerate(lines) if line.startswith("D    1 1 1"))
+        lines[step] = "L" + lines[step][1:]
+        script = tmp_path / "wrong-key.txt"
+        script.write_text("\n".join(lines) + "\n")
+        equipment = coco.equipment_for(project, "journey", script=script)
+        model = coco.load_expected(example)
+
+        with pytest.raises(ProjectError, match="Frame 16: .* screen bytes differ"):
+            coco.check_variant(project, Host(), model, "coco1", "journey", equipment)
+
 
 @pytest.mark.integration
 class DescribeRealAssembler:
