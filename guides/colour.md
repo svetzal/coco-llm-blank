@@ -67,8 +67,19 @@ tearing.
 
 ## Make a display test before making the art
 
-This procedure is our proposed validation method. We have not tested it
-as part of this research.
+A bounded [static display experiment](../guidance/display-validation.md) now
+checks CoCo 1 renderer geometry with an asymmetric probe, first-screen output
+and three frozen moving-object frames. All five positive cases matched every
+renderer sample. A deliberately wrong SAM mode matched RAM but failed the
+renderer comparison. Correct framebuffer bytes alone are therefore insufficient.
+
+This covers only the documented CoCo 1 software-renderer configuration.
+It does not establish CoCo 2/3 output, composite artifact colours, animation
+cadence, tearing or physical appearance. The linked record contains the exact
+display path, controls and tracked reproduction package.
+
+For your project's mode and display, use this procedure. Colour swatches and
+cross-display comparisons remain proposed checks:
 
 1. Record the machine revision, video standard, connection, and emulator settings.
 2. Make an asymmetric pattern with isolated pixels and alternating pixel pairs.
@@ -79,7 +90,8 @@ as part of this research.
 
 The asymmetric pattern helps expose phase or orientation differences.
 The swatches provide a reference when drawing later assets. These are reasons
-for the proposed test, not observations from a completed experiment.
+for those checks. The linked experiment measured asymmetric geometry in one
+configuration, not labelled swatches across display paths.
 
 If physical hardware is a target, repeat the test on that hardware.
 An emulator screenshot establishes only that emulator configuration's output.

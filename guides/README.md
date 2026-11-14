@@ -8,11 +8,11 @@ Your agent can read one guide without loading the whole research collection.
 | --- | --- | --- |
 | Animate objects or alternate pictures | [Plan animation storage](animation.md) | Examined BASIC articles; assembly adaptations remain untested. |
 | Move objects over scenery or detect collisions | [Move objects without losing the world](moving-objects.md) | Original full-redraw and masked-object examples checked on defined CoCo 1/2 configurations; collision remains untested. |
-| Build a room from tiles | [Separate map, drawing, and movement](tile-maps.md) | Examined CoCo 3 source; original game adaptation remains untested. |
+| Build a room from tiles | [Separate map, drawing, and movement](tile-maps.md) | CoCo 3 tile source and legacy BASIC room-map reading complete; CoCo 1/2 bitmap renderer gap and original adaptation remain open. |
 | Smooth CoCo 3 text output | [Text scrolling and the 512K correction](scrolling.md#scroll-text-a-scan-line-at-a-time) | Hardware cross-check and instrumented display-address probe complete; scrolling itself unverified. |
 | Scroll a CoCo 3 playfield | [Plan scrolling and memory](scrolling.md) | Examined book; no scrolling implementation reproduced. |
-| Get the intended colours | [Design for the display](colour.md) | Examined hardware manuals; proposed visual checks remain untested. |
-| Play sound during drawing and input | [Schedule sound](sound.md) | Original CoCo 1 and CoCo 3 experiments checked in XRoar. |
+| Get the intended colours | [Design for the display](colour.md) | Static CoCo 1 renderer geometry measured, including frozen frames; animation, other targets and physical displays unverified. |
+| Play sound during drawing and input | [Schedule sound](sound.md) | CoCo 1/3 execution and eleven DAC interval cases measured; no worst-case, listening or physical evidence. |
 
 CoCo 1, 2, and 3 all belong in this collection. Evidence is uneven today.
 A shared hardware description does not establish that an example runs on

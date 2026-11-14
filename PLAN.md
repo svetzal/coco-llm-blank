@@ -22,7 +22,9 @@ ignored local storage. Stacey requested public publication as
   optional dependency groups for interactive and music work.
 - Setup selects CoCo 1, 2, or 3 and preserves local project notes.
 - `--roms-only` downloads checksum-pinned firmware for the selected target,
-  validates selected ZIP members, and stores it outside Git.
+  validates selected ZIP members, and stores it outside Git. Bootstrap now
+  provisions firmware; doctor and example runners check installed bytes and
+  pass explicit ROM paths. See [firmware safeguards](guidance/toolchain.md#firmware-and-launching).
 - `AGENTS.md` routes tasks through ordinary Markdown files without agent skills.
 - Native-tool guidance and discovery cover LWTOOLS, ToolShed, and XRoar.
   Stacey selected assembly only; C compilation is outside the baseline.
@@ -32,14 +34,17 @@ ignored local storage. Stacey requested public publication as
 1. Keep the starting prompt short. README now asks only for the repository,
    agent-led setup, and the project idea. AGENTS.md owns the setup procedure.
 2. Reduce setup work. `scripts/bootstrap.sh` prepares uv, Python, and project
-   notes. The demo check no longer treats optional disk tools as blockers.
+   notes, native tools, and checksum-verified firmware. The demo check no longer
+   treats optional disk tools as blockers.
    Native tools now install through Homebrew on macOS or verified source builds
    on Ubuntu 24.04. ToolShed and other Linux distributions remain manual.
 3. Establish platform evidence. GitHub Actions now defines Ubuntu and Apple
    Silicon macOS jobs for locked setup, specifications, real Docling conversion,
    and project initialization. The initial checks passed on both platforms.
    The native installer and first-screen memory check also passed in a clean
-   Ubuntu 24.04 container. Visual and physical-machine checks remain separate.
+   Ubuntu 24.04 container. The current clean Linux beginner-onboarding check
+   remains pending; earlier container evidence does not establish that outcome.
+   Visual and physical-machine checks remain separate.
 
 ## Game and demo research
 
@@ -111,8 +116,10 @@ separate evidence. Compatibility needs a test on each claimed target.
 
 The first guides now cover animation storage, prepared pictures, CoCo 3
 scrolling and mapping, display-dependent colours, and sound scheduling.
-Graphics procedures remain proposals. Sound guides link original CoCo 1 and
-CoCo 3 emulator experiments. CoCo 2 runtime coverage remains incomplete.
+Original opaque and masked rendering now has bounded CoCo 1/2 framebuffer
+evidence. Static renderer geometry is measured only on CoCo 1. Sound guides
+link CoCo 1 and CoCo 3 experiments, including DAC intervals. Tile-game
+adaptations and CoCo 2 sound runtime coverage remain untested.
 
 For each later pass, update the relevant guide and navigation before calling
 the pass complete. Check citations, relative links, Markdown, and runnable
@@ -134,7 +141,8 @@ The converter now retries through Docling's PDFium backend when an independent
 render shows detail. The repaired page-17 image was checked. Profile 3 prevents
 reuse of the old blank checkpoints. OCR still needs image checks: palette row
 labels can merge, and Tepolt page 59 has damaged text without a sparse flag.
-No new game technique is reproduced or benchmarked yet. Shared CoCo 1/2 articles
+At the end of this first batch, no new game technique had been reproduced
+or benchmarked. Shared CoCo 1/2 articles
 need separate compatibility checks. The specific CoCo 2 service manual does
 not establish every board revision.
 
@@ -175,7 +183,9 @@ negative control fails as expected. CI now provisions CoCo 3 firmware without
 changing its existing project target, so these checks do not silently skip.
 
 This establishes a tested scheduling choice, not a maximum performance claim.
-Per-sample jitter, audible quality, bank switching, analog input, and physical
+Per-sample jitter was not measured in this pass; the later
+[DAC interval validation](guidance/audio-timing-validation.md) supplies bounded
+measurements. Audible quality, bank switching, analog input, and physical
 GIME timing remain unverified. Lower sample rates and leaner handlers are
 possible follow-up experiments, not measured improvements.
 
@@ -195,7 +205,8 @@ The animation guide separates its proposed packed format from BASIC arrays.
 
 Sampled Undercolor's first contents page and mapped Color Computer Magazine's
 directory. Neither counts as examined technical coverage. Tile maps, masked
-rendering, and a reproduced multi-object example remain open. CoCo 1/2 adaptation
+rendering, and a reproduced multi-object example were still open at this stage;
+the later passes below record the completed work. CoCo 1/2 adaptation
 notes in a magazine do not establish runtime support. No new emulator or
 physical-machine result is claimed for this pass.
 
@@ -232,12 +243,54 @@ separation, changed scenery, complete-object bounds, and memory guards.
 A separate static review found the CI firmware-provisioning gap for CoCo 2;
 CI now provisions CoCo 2 alongside CoCo 3 before running pytest.
 The full suite passes: 133 tests with 93.99% combined coverage. Ruff checks pass.
-Visual output, timing, masks, clipping, and physical hardware remain unverified.
+That pass did not verify visual output, timing, masks, clipping, or physical
+hardware. Later masking and static-renderer checks are recorded below.
 
-A fresh Claude Code beginner trial is running independently against published
-main in the external `coco-starter-onboarding/claude-02` experiment folder.
-Its source-use audit and independent artifact assessment remain pending.
-The trial receives no implementation coaching from the example task.
+The independent Claude Code beginner trial, Claude 02, is assessed in the
+[external evaluation record](/Users/svetzal/Work/Experiments/coco-starter-onboarding/claude-02-evaluation.json).
+Observed primary-text and diagram reads preceded implementation. Independent
+build and framebuffer checks passed on explicit CoCo 2 configurations at
+32/64 KiB, including 30 fresh snapshots. The trial's full gate failed at
+83.32% coverage (151 passed, three skipped); visual and physical evidence
+remain incomplete. The assessment also records configuration-provenance,
+partial-firmware recovery, launcher-argument and board-citation weaknesses.
+These findings do not negate the narrower runtime result or establish Linux
+onboarding. The trial received no implementation coaching.
+
+### Masking, tile reading, display and audio follow-up
+
+The original [masked-object example](examples/masked-objects/README.md) passed
+12 scenes on each explicit NTSC, 32 KiB, normal-clock, non-T1 CoCo 1 and CoCo 2
+configuration. Checks cover transparency versus opaque black, overlap in both
+orders, removal, changed scenery, full framebuffer bytes and guards. This is
+bounded full redraw, not clipping, collision, calibrated animation or a physical
+hardware result.
+
+The [tile-map guide](guides/tile-maps.md) now distills the examined PacDude
+CoCo 3 map, drawing and movement paths. The complete Barden maze article and
+both listings are read in [legacy tile research](guidance/legacy-tile-research.md).
+That legacy BASIC source supplies room graphs and model-driven perspective
+redraw, not bitmap tiles or sprite restoration. The CoCo 1/2 bitmap tile-renderer
+source gap and an original tile-game reproduction remain open.
+
+[Display validation](guidance/display-validation.md) measured five positive
+static CoCo 1 renderer cases, including three frozen moving-object frames.
+Every rendered sample matched; a wrong-SAM control exposed a display error
+despite matching RAM. This establishes static geometry only in the named
+software-renderer configuration, not CoCo 2/3 output, animation, tearing,
+composite appearance or physical display behaviour.
+
+[Audio timing validation](guidance/audio-timing-validation.md) measured eleven
+cases, including calibration, deferred-interrupt and repeatability controls.
+Timer DAC intervals have a nonzero observed spread despite stable average
+throughput. These are finite-window emulator measurements, not worst-case
+bounds, physical GIME timing or listening evidence.
+
+Both private experiments now have tracked reproduction code and instructions
+for a fresh clone. Display results reproduced with the retained package; all
+eleven audio results matched in an empty-output run using the existing checkout,
+environment and verified firmware. This is not evidence of a newly provisioned
+clone or completed Linux onboarding.
 
 ### Next research passes
 
@@ -273,7 +326,8 @@ machine gaps after every pass.
    Apple Silicon macOS and Linux; Intel Mac support needs separate dependency
    compatibility work.
 5. Extend beginner trials after addressing observed failures. The first Claude
-   Code trial built a demo and passed runtime checks; visual evidence is incomplete.
+   Code trial built a demo and passed runtime checks; Claude 02 now has an
+   independent assessment above. Visual evidence remains incomplete.
    Leave Stacey's `coco-lines` project untouched.
 
 ## Acceptance evidence

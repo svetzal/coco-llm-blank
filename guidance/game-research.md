@@ -23,9 +23,9 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Sound alongside animation and controls | [Sound research](sound-research.md) | Examined hardware for all three models; CoCo 1 cooperative and CoCo 3 timer experiments. |
 | Find more magazine techniques | `rainbow-index` | Discovery only. Find the issue, then inspect the actual article and corrections. |
 
-These are source-backed reading recommendations. The graphics techniques below
-remain examined, not reproduced. The sound guide links a bounded original
-experiment and reports its emulator evidence separately.
+These are source-backed reading recommendations. Historical programs remain
+examined, not reproduced. Original rendering and sound experiments now provide
+bounded evidence, summarized in the [validation follow-up](#implementation-and-validation-follow-up).
 
 ## CoCo 1 and CoCo 2 animation
 
@@ -257,7 +257,9 @@ readers to extend the program to two saucers and investigate overlap.
 The exercise does not supply an overlap-safe implementation.
 
 Our guide derives the erase limitation from the listing and proposes restoration
-and redraw designs. Those proposals have no runtime or speed evidence yet.
+and redraw designs. Subsequent original full-redraw examples have bounded
+framebuffer evidence, summarized below; save/restore and speed claims remain
+unverified.
 The book's ROM joystick calls remain version-dependent implementation details.
 We did not promote them as a general input API.
 
@@ -303,8 +305,8 @@ its listing into the repository.
   a product review. They do not establish its rendering algorithm.
 - COMPUTE! results for GET/PUT and XOR concerned IBM BASIC; collision-register
   results concerned Atari. Archive location alone does not make them CoCo evidence.
-- Tile maps and masked-object implementations remain open. This pass supplies
-  neither a sourced tile engine nor a tested mask routine.
+- This pass supplied neither a sourced tile engine nor a tested mask routine.
+  The follow-up below records subsequent tile reading and masking validation.
 
 The Rainbow index PDF 87 locates the October 1992 articles. Its introduction
 warns about the final issues' OCR. Targeted title/author correction searches
@@ -327,6 +329,44 @@ Conversion warnings are not a code-correctness detector.
 Graphics-book PDF 159–164 also converted, with no sparse-page warnings.
 The placement and erase explanations are searchable, but the assembly listing
 still corrupts operands. Use the directly examined page images for code details.
+
+## Implementation and validation follow-up
+
+The [moving-object example](../examples/moving-objects/README.md) checks
+13 frames on each defined CoCo 1/2 configuration. The subsequent
+[masked-object example](../examples/masked-objects/README.md) checks 12 scenes
+on each explicit NTSC, 32 KiB, normal-clock, non-T1 CoCo 1 and CoCo 2 target.
+Its independent per-pixel oracle checks transparency, opaque black, draw order,
+removal and changed scenery against all framebuffer bytes and guards.
+This is original bounded full redraw, not a reproduction of a magazine renderer,
+a collision system, clipping or evidence for all CoCo 2 revisions.
+
+The [tile-map guide](../guides/tile-maps.md) documents examined PacDude CoCo 3
+map addressing, tile copying and movement rules. The
+[legacy tile reading](legacy-tile-research.md) completes Barden's February 1988
+article and both BASIC listings (PDF 173–174, 176, 178–183). Its room graph and
+perspective redraw do not supply bitmap tiles or sprite restoration. Reading
+is complete for these selected passages; the CoCo 1/2 bitmap-renderer source
+gap and original tile-game validation remain open. Neither historical program
+was run.
+
+[Static display validation](display-validation.md) checks five CoCo 1 renderer
+cases, including frozen moving-object frames 1, 35 and 65. A wrong-SAM control
+passes the RAM comparison but fails rendered geometry. The result covers only
+the named software-renderer path, not CoCo 2/3, animation, composite artifact
+appearance or physical displays.
+
+[DAC interval validation](audio-timing-validation.md) measures eleven CoCo 1/3
+cases with calibration, deferred-interrupt and repeatability controls. The
+observed timer jitter is nonzero despite stable average throughput. It is a
+finite-window result, not a worst-case bound, listening test or physical timing
+measurement. Both private experiments now have tracked reproduction code and
+fresh-clone instructions. Audio's empty-output reproduction reused the existing
+checkout and environment; it did not establish fresh-host onboarding.
+
+The [plan](../PLAN.md) retains the remaining source survey and validation scope,
+including broader magazine and errata reading, CoCo 1/2 bitmap tile sources,
+selected original reproductions, and display/audio/hardware limits.
 
 ## Conversion evidence
 

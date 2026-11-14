@@ -96,7 +96,9 @@ uv run python scripts/sound_slots.py run
 The XRoar checks compare sample values, screen memory, and scripted button
 states with independent expectations. Ordinary sample gaps contain 11 traced
 instructions. Frame work increases that to 30. Those are instruction counts,
-not cycle counts or a measure of audible quality.
+not cycle counts or a measure of audible quality. A later
+[DAC interval measurement](../guidance/audio-timing-validation.md) observed
+57–138 slow CPU cycles between writes in this example.
 
 The practical consequence is that more foreground work can slow playback.
 Use this example to expose that coupling before adding a whole game.
@@ -131,8 +133,14 @@ These are results from our experiment, not benchmarks published by Tepolt.
 
 The checks cover every DAC value and the latest completed framebuffer.
 A missing-acknowledgement build fails the expected progress check.
-This establishes bounded emulator behaviour. It does not establish per-sample
-jitter, sound quality, physical GIME timing, or interrupt safety during bank changes.
+These checks establish bounded emulator behaviour. The later
+[eleven-case timing experiment](../guidance/audio-timing-validation.md)
+measured individual DAC intervals: the tested timer cases ranged from 123 to
+134 slow CPU cycles under light load and 123 to 133 under heavy load.
+Stable average throughput therefore does not mean evenly spaced writes.
+These finite windows are not worst-case bounds or evidence of sound quality,
+physical GIME timing, or interrupt safety during bank changes. The linked
+record provides controls and tracked fresh-clone reproduction instructions.
 
 ## Resolve the timer-clock conflict explicitly
 
