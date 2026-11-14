@@ -25,7 +25,8 @@ another model. Each guide names its narrower scope.
 
 The [prior batch](../PLAN.md#prior-dispatched-batch-completed-within-recorded-bounds)
 is complete within its linked evidence limits. In the
-[current batch](../PLAN.md#current-bounded-batch-completed-within-recorded-bounds), reviewed audio
+[current batch](../PLAN.md#current-bounded-batch-completed-within-recorded-bounds),
+reviewed audio
 output fixes and [frame-publication research](../guidance/frame-publication-research.md)
 and both hidden-buffer animation implementations are published on `main`.
 [Collect-room](../examples/collect-room/README.md#review-corrections) fixes pass

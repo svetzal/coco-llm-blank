@@ -461,7 +461,8 @@ smoothness, a complete game or native desktop onboarding.
 
 Keep original code and reproduction instructions in Git, generated evidence
 ignored, and machine configurations isolated with verified ROMs. Parent
-integration passed the full root suite and published the collection game. Record RAM, renderer, timing, mixer PCM, host
+integration passed the full root suite and published the collection game.
+Record RAM, renderer, timing, mixer PCM, host
 presentation and physical evidence separately. This status update adds no
 runtime result.
 
