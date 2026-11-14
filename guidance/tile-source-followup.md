@@ -5,6 +5,8 @@ CoCo 1/2 tile-rendering gap. This bounded pass does not close it. Three new
 packages were inspected on 2026-11-14; none establishes the complete chain
 `grid cell -> tile ID -> packed image -> bitmap destination` on CoCo 1/2.
 This is a negative finding about these packages, not about the whole archive.
+The subsequent Rat Maze reading below establishes a passage grid and procedural
+wall drawing, but does not close the packed-bitmap tile-rendering gap.
 
 The prior [tile research](tile-map-research.md),
 [legacy research](legacy-tile-research.md) and
@@ -167,25 +169,185 @@ discarding a return address (`ADVENT.ASM` 577-580). Its output bounds and
 malformed-input handling were not established. A reusable decoder should
 return explicit completion/error state rather than inherit that stack contract.
 
-## Remaining gap and next leads
+## Rat Maze: a passage grid with procedural drawing
 
-The required missing evidence remains a CoCo 1/2 source whose renderer reads
-cell identifiers from a regular world grid and selects packed bitmap art.
-Neither a room number nor a sprite pointer proves that representation.
+Benjamin W. Brunotte's *Rat Maze*, [The Rainbow, May 1985][rat-may],
+Vol. 4 No. 10, is now examined, including both complete listings and Figures
+1-10. The [index][index], PDF 19 (reprinted July 1985 page 231), correctly
+points to printed 105. In this issue PDF pages are two greater than printed
+pages. The reading covered:
 
-The next bounded pass should prefer a magazine listing and its companion
-disk over more guesses from this source directory. The existing searchable
-[Rainbow index][index], PDF page 19, lists Benjamin W. Brunotte's *Rat maze*,
-May 1985, printed page 105. Only that index entry was examined here. The
-article, target, renderer and any corrections remain unexamined; this is a
-discovery lead, not evidence of tiles. Inspect its data and drawing calls
-before downloading a wider issue set.
+| Material | Printed pages | PDF pages |
+| --- | --- | --- |
+| Complete prose and Figures 1-10 | 105-109 | 107-111 |
+| Listing 1, RAT MAZE, lines 10-1530 | 108-110, 112, 116 | 110-112, 114, 118 |
+| Listing 2, MAZEBLDR, lines 10-1440 | 116, 118 | 118, 120 |
 
-For the already-examined Space Raiders lineage, an earlier revision would be
-worth following only if primary material establishes a CoCo 1/2 target and a
-different map representation. No URL or existence claim for such a revision
-is supplied. More versions of the same object-list renderer would not close
-this gap. Stop after a small candidate budget again.
+Full-page images were read in column order, including statements split across
+pages. The opening illustration is artwork, not runtime evidence. The printed
+check-value boxes were inspected but their checksums were not reproduced.
+The companion disk was unnecessary to establish the representation and drawing
+chain; none was downloaded or executed.
+
+### Machine and representation
+
+The article's badge specifies **16K ECB** (Extended Color BASIC), and the prose
+identifies the Color Computer. This is legacy CoCo BASIC material, not a
+CoCo 3-specific renderer. It does not name separate CoCo 1/2 models, ROM
+revisions, or PAL/NTSC requirements. Those configurations were not tested.
+The warning on printed 109/PDF 111 says large MAZEBLDR dimensions can take a
+long time and can exhaust 16K memory; the badge is not a promise that every
+accepted maze size fits.
+
+RAT MAZE line 10 reserves graphics pages with `PCLEAR4`. Line 240 selects
+`PMODE0,1` for the generation/title display; line 420 selects `PMODE4,1`
+for play, followed by `SCREEN1,1` and colour selection. MAZEBLDR line 420
+also selects `PMODE4,1`. These are BASIC graphics paths, not text or
+semigraphics character placement. No assembly driver or packed-image atlas
+appears in either listing. This reading establishes the commands, not a
+hardware register recipe or measured display output.
+
+The 12-by-9 playable maze occupies the interior of `MZ(13,10)`, a 14-by-11
+BASIC numeric array including its border. These are numeric elements, not
+proven one-byte storage. Printed 105-107/PDF 107-109 and RAT MAZE lines
+70-96, 200, 300-330 establish the cell meanings:
+
+- Open passages have weights west=1, north=2, east=4, south=8. A finished
+  cell's value is their sum. For example, 9 opens west and south.
+- Border cells contain 100. During generation, 0 means unassigned and -1
+  marks a frontier. The first cell temporarily receives 16, removed after
+  its first connection. Those states must not be decoded as passage masks.
+- Opening an edge updates both cells with opposite passage weights.
+  Generation grows through frontier cells; when locally blocked, it scans
+  the array for unfinished cells and an assigned neighbor. The published
+  routine uses arithmetic and branches, not bit-test instructions.
+
+MAZEBLDR accepts widths 5-50 and heights 5-36. Its array includes the same
+border, and its drawing scale is the smaller of `250 / width` and
+`190 / height` (line 30, printed 116/PDF 118). Do not silently round that
+expression or claim all maximum dimensions are usable on 16K.
+
+### Complete drawing chain
+
+For the first-person view, RAT MAZE line 500 clears the graphics screen,
+sets `SQ=1`, and reads `MZ(RH,RV)` into `Z`. Lines 510-650 combine that
+passage value with facing `DR` (west, north, east, south) to select one of
+eight relative left/front/right wall-or-opening combinations at 700-770.
+Those combinations call dispatchers 100-108; `SQ` selects geometry routines
+20-58, which issue `LINE` segments or outlined rectangles. A front wall
+sets `FL=1`. Lines 800-860 stop at that wall or at `SQ=4`, otherwise read
+the next cell straight ahead and increase depth. This is
+`cell passage mask + facing + depth -> line geometry -> BASIC graphics`.
+It never selects packed tile artwork.
+
+The prose at printed 108/PDF 110 describes the cutoff as three squares,
+but the listing starts at `SQ=1`, draws before testing line 800, and supplies
+four geometry groups. Our control-flow reading therefore gives the current
+cell plus up to three ahead. This is a source discrepancy, not a runtime
+measurement. Cheese uses filled rectangles selected by depth (60-66);
+the distance display uses `DRAW` commands (900-921). Movement validation
+reads the same cell value and direction (1020-1180), independently of the
+picture. Turns and accepted moves return to the full-screen drawing path.
+
+The overhead reveal at 1200-1250 draws the top and left outer boundaries
+once, then reads every cell and draws its closed bottom and right edges.
+Cell spacing is 20 coordinate units. Printed 108's description of line 1230
+says right side only; the actual line 1230 on printed 112/PDF 114 draws the
+bottom edge. Line 1240 draws the right edge. Reciprocal passages make this
+single-owner treatment of shared edges sufficient, as the prose on printed
+109/PDF 111 explains. MAZEBLDR uses this same overhead method with variable
+spacing, and erases/redraws its player rectangle inside the cell
+(lines 940-945, 1170-1290, printed 118/PDF 120).
+
+### Useful technique: draw each shared wall once
+
+For an overhead maze, store connectivity separately from geometry. Render
+the north and west exterior edges once, then let each cell own its south
+and east edges. This avoids duplicate shared-wall work and allows movement
+and two different views to use the same topology. It requires reciprocal
+passages; an inconsistent map could show a wall that movement treats as open.
+It supplies walls and corridors, not textured terrain or arbitrary tile art.
+No speed or memory saving was measured.
+
+The following is **original, untested pseudocode**, not a transcription.
+Separate generation states, explicit validation and bit tests are our design
+choices. Coordinates increase east and south; drawing uses a caller-selected
+origin and positive cell size. Support for a zero mask is an adaptation for
+an isolated cell, not a claim about the generator's finished output.
+
+```text
+render_overhead(openings, columns, rows, origin, size):
+    require positive columns, rows, size
+    require exactly rows * columns integer masks in 0..15
+    require no passage crosses the outer boundary
+    require each east opening matches its neighbor's west opening
+    require each south opening matches its neighbor's north opening
+    draw north boundary and west boundary
+    for each cell (column, row):
+        mask = openings[row, column]
+        rectangle = cell_rectangle(origin, column, row, size)
+        if (mask AND 8) == 0:
+            draw rectangle.south_edge
+        if (mask AND 4) == 0:
+            draw rectangle.east_edge
+```
+
+Proposed checks are independent edge expectations: a one-cell closed maze
+has four edges; a two-cell horizontal corridor with masks `[4, 1]` has no
+shared vertical wall and has a closed outer perimeter. Reject `[4, 0]` for
+nonreciprocal connectivity, a west opening on the left boundary, and -1,
+16 or 100 as generation states. Translate the same corridor to a nonzero
+origin to check placement separately from topology. These checks have not
+been executed; no historical code, emulator or hardware was run.
+
+### Corrections boundary and disposition
+
+The bounded check searched the existing index for the author, title and
+MAZEBLDR, then visually checked its relevant entries on PDF 19, 22, 28 and
+109. None attaches a correction to Rat Maze. The actual Corrections columns
+in [June 1985][rat-june], printed 226/PDF 228, and [July 1985][rat-july],
+printed 225/PDF 231, contain no Rat Maze correction. July does correct
+Brunotte's separate Script printer program from May page 68; that is not a
+maze patch. Exact-title/author archive web searches supplied no further
+correction lead. This is a bounded negative finding, not a claim that no
+later correction exists. No further issues were searched or downloaded.
+
+**Disposition:** useful historical evidence for passage-mask topology,
+procedural first-person walls, and overhead shared-edge rendering. It does
+not qualify as the missing `grid cell -> tile ID -> packed image -> bitmap
+destination` source. Calling its masks tile IDs would hide the useful part.
+
+The concrete next decision is whether the intended game needs an untextured
+maze. If yes, an original connectivity-and-edge prototype is justified by
+this source. If it needs bitmap scenery, retain the existing original
+[tile-room example](../examples/tile-room/README.md) as implementation evidence
+and leave historical provenance unresolved. My recommendation is to stop this
+source hunt here. No further candidate search or implementation is queued.
+
+### Rat Maze reproduction record
+
+All new downloads, text and page images are confined to ignored
+`local/research/tile-source-followup/rat-maze/`. The May PDF has 278 pages,
+26,331,460 bytes and SHA-256
+`dc36fcbfbb3e651f4a4cea9ebd51da0e10b03a67e5ed252ecd5de812a05e4f36`.
+Correction-check PDFs are identified below so a fresh checkout does not need
+the ignored metadata file:
+
+| Issue | PDF pages | Bytes | SHA-256 |
+| --- | ---: | ---: | --- |
+| [June 1985][rat-june] | 278 | 26972200 | `95b1d6e65a0e9938c31db9bd6e7ff497473bde66503e70e3f3550c3fdfabe978` |
+| [July 1985][rat-july] | 282 | 27631178 | `dd665288d73b3bd595b33c057d2c3142298e56ee370e5ba3bff7c44eccd68854` |
+
+The local `sources.json` repeats the three download identities.
+
+Download the linked issue into that directory and verify its hash. For each
+PDF page in the table above, use `pdftotext -f N -l N -layout` to locate text
+and `pdftoppm -f N -l N -scale-to 2400 -png` to render that page, with all
+outputs in the same ignored directory. This pass used Poppler text extraction
+and `pypdfium2.PdfDocument(...)[N-1].render(scale=2).to_pil()` for images.
+Read the image when OCR disagrees: the scan's zeros, variable names and
+wrapped BASIC statements are often damaged in extracted text. Do not execute
+the historical listings. No shared conversion checkpoints or manifests changed.
 
 ## Provenance and reproduction
 
@@ -271,3 +433,7 @@ game failure. The alternating-run pseudocode remains unexecuted.
 [raiders]: https://colorcomputerarchive.com/repo/Programming/Source/Space%20Raiders%20%28John%20Crawford%29/SR3.zip
 [calixto]: https://colorcomputerarchive.com/repo/Programming/Source/Calixto%20Island/calixto.zip
 [index]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20-%20Text%20Searchable%20Index/The%20Rainbow%20-%20Text%20Searchable%20Index.pdf
+
+[rat-may]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow%2C%20The%20%28OCR%29/The%20Rainbow%20Vol.%2004%20No.%2010%20-%20May%201985.pdf
+[rat-june]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow%2C%20The%20%28OCR%29/The%20Rainbow%20Vol.%2004%20No.%2011%20-%20June%201985.pdf
+[rat-july]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow%2C%20The%20%28OCR%29/The%20Rainbow%20Vol.%2004%20No.%2012%20-%20July%201985.pdf

@@ -118,18 +118,22 @@ procedures remain labelled proposals. Only measured claims gain tested status.
 Emulator memory, visible output, audible output, and physical hardware remain
 separate evidence. Compatibility needs a test on each claimed target.
 
-The first guides now cover animation storage, prepared pictures, CoCo 3
-scrolling and mapping, display-dependent colours, and sound scheduling.
-Original opaque and masked rendering now has bounded CoCo 1/2 framebuffer
-evidence. Static renderer geometry is measured only on CoCo 1. Sound guides
-link CoCo 1 and CoCo 3 experiments, including DAC intervals. The original
-[tile-room example](examples/tile-room/README.md) adds bounded CoCo 1/2 map,
-movement and framebuffer evidence. New [selective-redraw](guides/selective-redraw.md),
-[controls and collision](guides/controls-and-collision.md), and
-[game-state](guides/game-state.md) guides, plus the
-[animation additions](guides/animation.md#let-an-accumulating-picture-retain-its-history),
-contain source-backed, untested adaptations. CoCo 2 sound runtime coverage
-remains open.
+The [technique index](guides/README.md) records current evidence by task.
+Opaque, masked and tile-room examples have bounded CoCo 1/2 framebuffer checks.
+Static renderer geometry is measured on CoCo 1 and an explicit NTSC, 32 KiB,
+normal-clock, non-T1 CoCo 2. The [CoCo 2 display record](guidance/display-coco2-validation.md)
+reports 12 positive cases at 0.5 and 1.0 seconds of settling, plus a wrong-SAM
+control. This is stationary output, not animation or physical-display evidence.
+Sound experiments cover CoCo 1/3 execution and DAC intervals; CoCo 2 sound
+runtime coverage remains open.
+
+[Controls and collision validation](guidance/controls-collision-validation.md)
+reports 26 host cases for bounded logical-input and collision policies. It
+supplies no keyboard-driver, 6809 execution, timing or hardware evidence.
+Game-state, selective-redraw, animation and asset adaptations remain pending
+validation. [Asset guidance](guides/assets.md) draws on
+[examined CoCo 3 community sources](guidance/community-game-research.md), not
+measured asset loading or compression.
 
 For each later pass, update the relevant guide and navigation before calling
 the pass complete. Check citations, relative links, Markdown, and runnable
@@ -322,6 +326,9 @@ assesses Droid War, Dunkey Munkey and Sea Quest. Useful findings are linked
 through the technique guides. These source-only passes did not run the historical
 programs or validate the proposed adaptations. They broaden selected coverage;
 the archive survey and historical CoCo 1/2 tile-ID renderer search remain open.
+The [bounded tile-source follow-up](guidance/tile-source-followup.md) inspected
+three further packages without finding the required CoCo 1/2 grid-to-tile-ID
+bitmap renderer. This does not establish an archive-wide absence.
 
 [Conversion-quality inspection](guidance/conversion-quality.md) now covers six
 difficult pages and all eleven exported images. Tables, diagrams and listing
@@ -331,10 +338,10 @@ shared Matthews conversion coverage.
 
 ### Next research passes
 
-1. Continue beyond the selected Hot CoCo and Undercolor articles into Color
-   Computer Magazine and later community publications. Follow unresolved errata
-   and sample early and late periods for each machine; selected readings do
-   not complete publication coverage.
+1. Continue beyond the selected Hot CoCo, Undercolor and CoCoNutz articles
+   into Color Computer Magazine and other community publications. Follow
+   unresolved errata and sample early and late periods for each machine;
+   selected readings do not complete publication coverage.
 2. Investigate sound alongside animation and controls. Distinguish the stock
    DAC, one-bit output, cassette audio, and expansion hardware. Check timing
    costs and interference with input rather than assuming simultaneous playback.
@@ -345,9 +352,10 @@ shared Matthews conversion coverage.
 4. Inspect published game/demo source and companion magazine disks. Record
    licenses separately from archive availability. Do not redistribute code or
    assets merely because they are downloadable.
-5. Validate selected proposals from the new controls, game-state, animation
-   and selective-redraw guides with small original examples. Keep CoCo 3
-   implementation evidence alongside CoCo 1/2 work before claiming broad coverage.
+5. Extend the host controls model with a target-specific input adapter and
+   execution checks. Validate pending game-state, animation, selective-redraw
+   and asset proposals with small original examples. Keep CoCo 3 implementation
+   evidence alongside CoCo 1/2 work before claiming broad coverage.
 
 Each pass should produce a few examined references and their usable guide text.
 Update existing guides when a finding changes their advice. Review topic and

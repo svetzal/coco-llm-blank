@@ -78,6 +78,18 @@ It does not establish CoCo 2/3 output, composite artifact colours, animation
 cadence, tearing or physical appearance. The linked record contains the exact
 display path, controls and tracked reproduction package.
 
+The [CoCo 2 display experiment](../guidance/display-coco2-validation.md) adds
+12 positive static cases: an asymmetric probe and eleven frozen tile-room and
+masked-object scenes. On an explicit NTSC, 32 KiB, normal-clock, non-T1 CoCo 2
+configuration, every framebuffer byte and renderer sample matched after both
+0.5 and 1.0 emulated seconds of settling. A wrong-SAM control retained correct
+RAM but changed the rendered image at both intervals.
+
+This measures static geometry through XRoar's S-video software-renderer path
+with composite artifact decoding disabled. It does not establish animation
+cadence, tearing, artifact colours, PAL/T1, CoCo 3 or physical display behaviour.
+The two settling times check stationary output, not drawing speed.
+
 For your project's mode and display, use this procedure. Colour swatches and
 cross-display comparisons remain proposed checks:
 
@@ -90,8 +102,8 @@ cross-display comparisons remain proposed checks:
 
 The asymmetric pattern helps expose phase or orientation differences.
 The swatches provide a reference when drawing later assets. These are reasons
-for those checks. The linked experiment measured asymmetric geometry in one
-configuration, not labelled swatches across display paths.
+for those checks. The linked experiments measured static geometry on their named
+configurations, not labelled swatches across display paths.
 
 If physical hardware is a target, repeat the test on that hardware.
 An emulator screenshot establishes only that emulator configuration's output.

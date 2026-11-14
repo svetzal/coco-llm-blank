@@ -7,15 +7,15 @@ Your agent can read one guide without loading the whole research collection.
 | I want to… | Read | Current evidence |
 | --- | --- | --- |
 | Animate objects or alternate pictures | [Plan animation storage](animation.md) | Examined BASIC articles; assembly adaptations remain untested. |
-| Move objects over scenery or detect collisions | [Move objects without losing the world](moving-objects.md) | Original full-redraw and masked-object examples checked on defined CoCo 1/2 configurations; collision remains untested. |
+| Move objects over scenery or detect collisions | [Move objects without losing the world](moving-objects.md) | Original full-redraw and masked-object framebuffer checks on defined CoCo 1/2 configurations; broader collision proposals remain untested. |
 | Decide which parts of a scene to redraw | [Decide what to redraw](selective-redraw.md) | CoCo 3 Gloom/Symmetry source reading only; original adaptation untested. |
-| Combine movement, firing and collision rules | [Separate controls, collision, and artwork](controls-and-collision.md) | Examined Hot CoCo articles; original adaptations remain untested. |
+| Combine movement, firing and collision rules | [Separate controls, collision, and artwork](controls-and-collision.md) | [26 host cases](../guidance/controls-collision-validation.md) check bounded logical input and collision policies; no target execution or physical-input evidence. |
 | Schedule turns, journeys and menu transitions | [Separate game state from presentation](game-state.md) | Examined Undercolor articles; original adaptations remain untested. |
-| Prepare reusable artwork | [Prepare assets before drawing](assets.md) | Examined CoCo 3 community articles; original asset proposals remain untested. |
-| Build a room from tiles | [Separate map, drawing, and movement](tile-maps.md) | Original fixed tile-room checked on defined CoCo 1/2 targets; historical tile-ID source gap remains open. |
+| Prepare reusable artwork | [Prepare assets before drawing](assets.md) | [Examined CoCo 3 community articles](../guidance/community-game-research.md) on picture preparation and bank access; original asset proposals remain untested. |
+| Build a room from tiles | [Separate map, drawing, and movement](tile-maps.md) | Original fixed tile-room checked on defined CoCo 1/2 targets; [bounded source follow-up](../guidance/tile-source-followup.md) leaves the historical CoCo 1/2 tile-ID renderer gap open. |
 | Smooth CoCo 3 text output | [Text scrolling and the 512K correction](scrolling.md#scroll-text-a-scan-line-at-a-time) | Hardware cross-check and instrumented display-address probe complete; scrolling itself unverified. |
 | Scroll a CoCo 3 playfield | [Plan scrolling and memory](scrolling.md) | Examined book; no scrolling implementation reproduced. |
-| Get the intended colours | [Design for the display](colour.md) | Static CoCo 1 renderer geometry measured, including frozen frames; animation, other targets and physical displays unverified. |
+| Get the intended colours | [Design for the display](colour.md) | Static CoCo 1/2 renderer geometry measured; CoCo 2 has 12 positive cases at two settling times on an explicit non-T1 target. Animation and physical displays remain unverified. |
 | Play sound during drawing and input | [Schedule sound](sound.md) | CoCo 1/3 execution and eleven DAC interval cases measured; no worst-case, listening or physical evidence. |
 
 CoCo 1, 2, and 3 all belong in this collection. Evidence is uneven today.
