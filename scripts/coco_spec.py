@@ -946,6 +946,49 @@ class DescribeFirmwareBoundary:
 
 
 @pytest.mark.integration
+class DescribeEquipmentInXRoar:
+    @pytest.fixture
+    def first_screen(self, tmp_path: Path) -> Path:
+        if not instrumented_ready("coco1"):
+            pytest.skip("Native tools, CoCo 1 firmware, a C compiler or make are missing")
+        directory = tmp_path / "first-screen-copy"
+        shutil.copytree(ROOT / "examples/first-screen", directory)
+        return directory
+
+    def should_match_the_rendered_first_screen(self, first_screen: Path, capsys) -> None:
+        assert coco.main(["check", str(first_screen), "--video"]) == 0
+
+        output = capsys.readouterr().out
+        assert "all 98304 samples of the 512x192 frame matched expected_frame" in output
+        assert (ROOT / "build/first-screen-copy/main-coco1-1.png").is_file()
+
+    def should_reject_a_wrong_display_mode_that_memory_accepts(
+        self, first_screen: Path, capsys
+    ) -> None:
+        source = first_screen / "main.asm"
+        source.write_text(source.read_text().replace("sta $FFC5", "sta $FFC4"))
+
+        assert coco.main(["check", str(first_screen)]) == 0
+        assert coco.main(["check", str(first_screen), "--video"]) == 1
+
+        assert "Frame 1: rendered display:" in capsys.readouterr().err
+
+    def should_reject_an_expected_frame_with_reversed_bit_order(
+        self, first_screen: Path, capsys
+    ) -> None:
+        model = first_screen / "expected.py"
+        model.write_text(
+            model.read_text().replace(
+                "lit(x // SAMPLES_PER_PIXEL, y)", "lit((x // SAMPLES_PER_PIXEL) ^ 7, y)"
+            )
+        )
+
+        assert coco.main(["check", str(first_screen), "--video"]) == 1
+
+        assert "first at x=0, y=1" in capsys.readouterr().err
+
+
+@pytest.mark.integration
 class DescribeRealAssembler:
     def should_reject_a_program_assembled_at_the_wrong_address(self, tmp_path: Path) -> None:
         if not tool_path("lwasm"):

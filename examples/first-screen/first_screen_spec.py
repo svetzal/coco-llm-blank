@@ -37,6 +37,22 @@ class DescribeFirstScreen:
         with pytest.raises(ValueError, match=r"1 of 6144 screen bytes differ; first at \$0C0C"):
             verify_snapshot(load_project(HERE), model, good_ram, {}, 1)
 
+    def should_specify_the_rendered_picture_with_bit_seven_leftmost(self) -> None:
+        frame = model.expected_frame(1)
+
+        assert frame.shape == (192, 512, 3)
+        assert {tuple(colour) for colour in frame.reshape(-1, 3)} == {model.BLACK, model.GREEN}
+        assert [tuple(frame[1, x]) for x in (0, 1, 2, 509, 510, 511)] == [
+            model.GREEN,
+            model.GREEN,
+            model.BLACK,
+            model.BLACK,
+            model.GREEN,
+            model.GREEN,
+        ]
+        assert tuple(frame[64, 191]) == model.BLACK and tuple(frame[64, 192]) == model.GREEN
+        assert tuple(frame[127, 319]) == model.GREEN and tuple(frame[128, 319]) == model.BLACK
+
     @pytest.mark.parametrize("data", [b"", bytes(32768)])
     def should_reject_startup_memory(self, data: bytes) -> None:
         with pytest.raises(ValueError, match="initialized"):
