@@ -1,0 +1,185 @@
+{
+  "base_revision": "6721d2fa00f803a3ff008beee7b549b1bd799f9e",
+  "revision_meaning": "HEAD; working input hashes below",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+  "inputs_sha256": {
+    ".python-version": "02e735b3dfe1c32833eb550b7ff8ffa17f5f2bc3fa1e7bae61a8f5a3883ce398",
+    "examples/first-screen/main.asm": "cf57eeffa0f27e4fd24e56433913d85cc4439625188a4922549c9ae141b18a12",
+    "examples/moving-objects/main.asm": "5dbd9405a0fae62c2573deac127c37591f27886af71bb37db5fc5c28fb1ec703",
+    "experiments/display-validation/cases.py": "a3be855fea2b307aa0b85ec1ff85052fdd4ff603b9ff15a0b1f6035c4c5e28b2",
+    "experiments/display-validation/conftest.py": "77a7cd67a809567f75e97bdd11e5ce409ed97035f1a4b74a303625fb73e2228b",
+    "experiments/display-validation/instrument.py": "60312c732f4e82973ed520add62b2fb6422586109bad18a12aa9c2af8d659993",
+    "experiments/display-validation/reproduce.py": "0577a7c3fba7e3067d0c8486a158027a54fa27c17b93cac49190e54a34323518",
+    "experiments/display-validation/reproduce_spec.py": "100fc71137ca5b360d8a1ec534908f45648909225440574809f66a4dc80ec04d",
+    "pyproject.toml": "af0d1dce7f3569a3f6ea1bc45721dea31ad90688d8b1b176800e444700ba46be",
+    "roms.json": "1bb8365269cc2867d02b020ff7814df9f3729635922e543aba7b027edb754921",
+    "scripts/first_screen.py": "685a9745636755b2c0928bc7f256b8f0db787e68b07d8e1d55e3993bf1b7890d",
+    "scripts/native.py": "8256e172615ce66eda51468e489ae59cad212b453fdc4372ddc919881e6a0f82",
+    "scripts/references.py": "ec8583e28d2900de1eee52a91d669c26744dc2cd6504502cd53bd0d4c5fa6302",
+    "scripts/roms.py": "4f5b57ec44392c8b3037029cae15adf6b084854e1832dff744bfb7778aa9ac28",
+    "uv.lock": "a7203eb44883bbee9776ffd5eda312c918c30c55fc1f664b997a9c72b662d975"
+  },
+  "roms_sha256": {
+    "bas11.rom": "f772ee5ec3ce3bfc455098c0c9aca2b5c42b6aa1f998bb5113ca2250bfbf2c27",
+    "extbas10.rom": "36ce538d261fa727152c41f66fe6b310268efe19f3ef7365e0bbc6d84a5a957e"
+  },
+  "archive": {
+    "url": "https://www.6809.org.uk/xroar/dl/xroar-1.12.1.tar.gz",
+    "sha256": "ba525225fbd732c4dbf2cbb571dc9d2810fd9dcedf0482133cf637e2eef61f88"
+  },
+  "assembler": {
+    "path": "/opt/homebrew/bin/lwasm",
+    "sha256": "d5e7afdf331a6ad3d48ef3e296be0ca39dcaeadcca61079b319f7281a9fb0418",
+    "version": "lwasm from lwtools 4.25"
+  },
+  "passed": true,
+  "build": {
+    "configure": [
+      "./configure",
+      "--without-gtk2",
+      "--without-gtk3",
+      "--without-sdl3",
+      "--without-sdl2"
+    ],
+    "make": [
+      "make",
+      "-j2"
+    ],
+    "pristine_ui_sha256": "b813f70b890375c467dc1c7135e4172884ee659c1e6f63ef058f929d83cca85c",
+    "instrumented_ui_sha256": "ce4379af1df829f0c0eab25fdc3979da963e9169ca0304ae4976fb518aae48c9",
+    "config_status_sha256": "beea44103f3f59fe6f52f0a7add50fa5bd5e35586f5bd1a2805c4113ef3fa8ad",
+    "config_log_sha256": "d62a46add7bf6df2c94e3626631edd9651efc1a9b2857364cd350adf7dbe8698",
+    "config_h_sha256": "1e6e6e7d4890fa18bc74a247ff59ddcac7f4436f4d27119648830d690c13319a",
+    "executable_sha256": "b7069efadec755bceef7d14a8f3ce44e27b7bcf767219c6ca0b0b729c1315126"
+  },
+  "run_command": "COVERAGE_FILE=build/display-validation-reproduction/.coverage uv run --locked pytest experiments/display-validation --basetemp=build/display-validation-reproduction/pytest-tmp --cov=experiments/display-validation --cov-config=experiments/display-validation/coverage.ini --cov-report=term-missing -ra",
+  "validation": {
+    "tests_passed": 24,
+    "statement_and_branch_coverage_percent": 98.4,
+    "scope": "experimental Python only; excludes specs and fixtures",
+    "report_path": "build/display-validation-reproduction/spec-21987595cd63/results.json",
+    "report_sha256": "363adf3f7b8d474e46871d67e42195b0f33ebc29cd05228643a510f945e48c5e"
+  },
+  "original_experiment_sha256": {
+    "local/research/display-validation/instrument.py": "14c8b194e903966d92d3b52c3975185e3b2ab90166c158626284d08e6f92a883",
+    "local/research/display-validation/run.py": "9774b5413c3a4097a64c2357565b40cedc6d2c5b060384de9993abd9c01e1805",
+    "build/display-validation/results.json": "1ebc9169d8539e447a3212f42ad16d219af1de4c85a431b8fc39e5cd8a37ef1b"
+  },
+  "sample_contract": {
+    "size": [
+      512,
+      192
+    ],
+    "colours": [
+      [
+        0,
+        31,
+        0
+      ],
+      [
+        46,
+        188,
+        36
+      ]
+    ],
+    "sample_count": 98304,
+    "framebuffer_bytes": 6144
+  },
+  "cases": [
+    {
+      "name": "first-screen",
+      "returncode": 0,
+      "checkpoint": {
+        "symbol": "ready",
+        "address": 12439
+      },
+      "source_sha256": "cf57eeffa0f27e4fd24e56433913d85cc4439625188a4922549c9ae141b18a12",
+      "binary_sha256": "33239e5a3534eaf3a00e121d44df7ad4d15df87171e30f347c1ee1c6917aebb1",
+      "symbols_sha256": "960253a4c045c3287f06b0e9aad2f403a75750209a8bf83f6a204f8c3d500e60",
+      "capture_sha256": "f7e75a6ec14c033f5c5da2e1236af1df9122e6d5448044a26c0d339ac22ca432",
+      "ram_matches": true,
+      "pixel_mismatches": 0
+    },
+    {
+      "name": "asymmetric",
+      "returncode": 0,
+      "checkpoint": {
+        "symbol": "ready",
+        "address": 12456
+      },
+      "source_sha256": "179604542850da6f4a278d97196b77681ddc3e25dece25bc8ea30686cf552722",
+      "binary_sha256": "c912aaaf79a016077d1bffc5ca3f74a982b4bccc2fa81870312a127b539a1d6c",
+      "symbols_sha256": "c8603bc1009810e6cc5f9e3dfbb9cf5e1fd5baeb17ebb6e87fd33c12a9825c65",
+      "capture_sha256": "9bc238edfa8f42b33c26d1a7903866b4421b7f8e394b479a505a86183d8374e2",
+      "ram_matches": true,
+      "pixel_mismatches": 0
+    },
+    {
+      "name": "wrong-sam",
+      "returncode": 0,
+      "checkpoint": {
+        "symbol": "ready",
+        "address": 12456
+      },
+      "source_sha256": "c365e3b1b72efa14fde112a427b922058571bbc3f67f974459ea2e5a1848a560",
+      "binary_sha256": "caf7cfdb48a2e4405dde8256d396e36ad4427b9e8b65d00116a8d40ef3b7cf6d",
+      "symbols_sha256": "c8603bc1009810e6cc5f9e3dfbb9cf5e1fd5baeb17ebb6e87fd33c12a9825c65",
+      "capture_sha256": "56317e6c892e94b479ab1d5f39cb5add4013e704fb769bd87261456b34ddd7bd",
+      "ram_matches": true,
+      "pixel_mismatches": 3040
+    },
+    {
+      "name": "moving-frozen-1",
+      "returncode": 0,
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12424
+      },
+      "source_sha256": "d1cdcf2d0bd3b719ad374f63295d3a989f47590a02329a6f92225dc07ac9e564",
+      "binary_sha256": "9e20f0978dc1c284b72c88406b8d3205a22ca9ebf8bd5f3bbd7559f50feb13d7",
+      "symbols_sha256": "11f4a28a3f323df839ad995fcbd8e737cc7a41865058a1791cf4df2ded2f8059",
+      "capture_sha256": "899ce4d7b94b8b85fd14537dd9faf7d5a7bcd4ae15773b22ddbe131c30150254",
+      "ram_matches": true,
+      "pixel_mismatches": 0
+    },
+    {
+      "name": "moving-frozen-35",
+      "returncode": 0,
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12424
+      },
+      "source_sha256": "9a73929b5398f3ca19c56b8c70e26112ea8764bd619c67549af5ad2b6ee9f5f2",
+      "binary_sha256": "48b2d2d22268847da0ccf4be839684368065e33f7e1bbb925fab81cc50ad2455",
+      "symbols_sha256": "11f4a28a3f323df839ad995fcbd8e737cc7a41865058a1791cf4df2ded2f8059",
+      "capture_sha256": "9229019dc65a06155bdd1c0f1b3862aabb34c5a473be44913a565025473f2b43",
+      "ram_matches": true,
+      "pixel_mismatches": 0
+    },
+    {
+      "name": "moving-frozen-65",
+      "returncode": 0,
+      "checkpoint": {
+        "symbol": "frozen",
+        "address": 12424
+      },
+      "source_sha256": "8087380843bd66fdd5e93d1f1a59eb0ac86af2466cdc930b892679d79d8b3c88",
+      "binary_sha256": "6c365007c3ce723112f3022ebf4d5537e038e44c8c4043d4286b2eaa640997a5",
+      "symbols_sha256": "11f4a28a3f323df839ad995fcbd8e737cc7a41865058a1791cf4df2ded2f8059",
+      "capture_sha256": "af7ea2108b5e7ef3c659e64f7b233333120cea94821af186ca89a53d1f925ed1",
+      "ram_matches": true,
+      "pixel_mismatches": 0
+    }
+  ],
+  "unreachable": {
+    "returncode": 0,
+    "checkpoint": {
+      "symbol": "state",
+      "address": 12588
+    },
+    "binary_sha256": "6c365007c3ce723112f3022ebf4d5537e038e44c8c4043d4286b2eaa640997a5",
+    "snapshot_exists": false,
+    "capture_exists": true
+  }
+}
