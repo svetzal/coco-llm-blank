@@ -110,6 +110,7 @@ Down twice, Right twice, Down, Right twice (second star), Down, Right (exit).
 
 ```sh
 uv run python scripts/coco.py check examples/collect-room
+uv run python scripts/coco.py check examples/collect-room --target coco2
 uv run python experiments/collect-room-journey/journey.py prepare
 uv run python experiments/collect-room-journey/journey.py check --target coco1
 uv run python experiments/collect-room-journey/journey.py check --target coco2
@@ -119,11 +120,20 @@ markdownlint --fix examples/collect-room/README.md
 markdownlint examples/collect-room/README.md
 ```
 
-The first command uses stock XRoar, which cannot press keys. It checks that,
-with no input, the game stays on its title screen: every screen byte, the
-state, the room and the guards, against [expected.py](expected.py). The
-keyboard journey, audio and mutation controls need an instrumented emulator
-and live in [the journey experiment](../../experiments/collect-room-journey/README.md).
+The first two commands check two builds against [expected.py](expected.py).
+The main build gets no keys and must stay on its title screen: every screen
+byte, the state, the room and the guards. The `journey` variant plays
+[journey.txt](journey.txt) through XRoar's emulated keyboard, one line per
+scanner entry, and checks the screen, state, room and guards at frames 1–3,
+16, 48 and 95 against the outcomes written beside each line. Pressing keys
+needs the [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar),
+which `check` builds once; it needs a C compiler and `make`. A wrong key in
+the script fails at frame 16.
+
+The journey experiment below checks every one of the 95 checkpoints, the
+DAC output and the mutation controls. It still uses its own hooks and
+instrumented build:
+[the journey experiment](../../experiments/collect-room-journey/README.md).
 
 `prepare` downloads the SHA-256-pinned XRoar 1.12.1 release and builds
 an isolated headless executable under `build/collect-room-journey/instrumented`.

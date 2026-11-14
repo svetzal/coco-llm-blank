@@ -43,8 +43,23 @@ unreachable checkpoint must produce no snapshot. This prevents startup RAM from
 passing as a result.
 
 The check passes on Apple Silicon macOS and in a clean Ubuntu 24.04 container.
-It does not inspect the displayed image or prove physical hardware operation.
-A visual check is still needed after changes to display setup.
+
+Screen memory alone cannot show a wrong display mode or bit order. Add
+`--video` to check XRoar's rendered picture too:
+
+```sh
+uv run python scripts/coco.py check examples/first-screen --video
+```
+
+This builds the [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar)
+once, which needs a C compiler and `make`. It saves
+`build/first-screen/coco1-frame-1.png` and compares all 512×192 rendered
+samples (two per pixel) with `expected_frame` in [expected.py](expected.py):
+green where a bit is set, black elsewhere, bit 7 leftmost. A wrong SAM mode or
+a reversed bit order still passes the memory check but fails this one.
+Neither the rendered capture nor the memory check is a person looking at the
+screen, and neither proves physical hardware operation. Open the PNG or the
+`run` window after changes to display setup.
 
 ## Target and memory
 

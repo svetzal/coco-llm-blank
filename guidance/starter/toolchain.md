@@ -134,6 +134,44 @@ not establish physical hardware timing.
 
 Use [python.md](python.md) when adding build orchestration or test scripts.
 
+## Instrumented XRoar
+
+Scripted keys, rendered frames and mixer sound need a second XRoar: the pinned
+XRoar release built from source with the hooks tracked in `scripts/xroar_hooks/`
+patched in. `scripts/coco.py` builds it the first time a project asks for one of
+those abilities, into ignored `local/toolchain/xroar-instrumented/`, and reuses
+it afterwards. Bootstrap does not build it, and `build`, `run` and a plain
+`check` keep using the installed XRoar, so the beginner path needs no C
+compiler. The doctor reports its state as an optional line that never changes
+its exit code.
+
+```sh
+uv run python scripts/instrumented_xroar.py status
+uv run python scripts/instrumented_xroar.py build
+```
+
+The build needs a C compiler and `make` (set `CC` or `MAKE` to choose others).
+It is configured without any window, audio driver or GUI toolkit, so it needs
+no SDL, GTK or other library. If either tool is missing, the build stops before
+downloading anything and says what to install:
+
+- macOS: `xcode-select --install`.
+- Ubuntu 24.04: `sudo apt-get install build-essential pkg-config`.
+
+The source archive is the one the native installer pins, with the same SHA-256,
+cached under `local/toolchain-sources/`. Before patching, every patched file
+must match its recorded pristine SHA-256, and each hook edit must find exactly
+one anchor. A different XRoar release therefore fails with a plain message
+instead of a silently wrong patch. `build.json` beside the build records the
+archive URL and hash, a hash of the whole patch (hooks and edits), each patched
+file's hash, the configure and make commands, the host, and the executable's
+hash. Each use checks that record; when the pinned archive, the hooks, a
+patched file or the executable no longer match, the tool says why and rebuilds.
+
+To add equipment, add a hook file and its edits in `scripts/instrumented_xroar.py`
+and keep the patch tests in `scripts/instrumented_xroar_spec.py` passing against
+the cached archive. The changed patch hash rebuilds the executable on next use.
+
 ## Diagnose binary startup
 
 For a directly launched LWASM DECB program, give the entry label explicitly

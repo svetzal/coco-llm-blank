@@ -71,7 +71,14 @@ uv run python experiments/sound-throughput/throughput.py check
 ```
 
 [coco.toml](coco.toml) declares the machine, the checkpoint frames, the
-`scripted` variant and the trace. [expected.py](expected.py) is the
+`scripted` variant, the trace and `[capture] audio`. The audio capture needs
+the [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar),
+which `check` builds once; it needs a C compiler and `make`. Each checkpoint
+saves XRoar's mixer output as a WAV in `build/sound-slots/`. `verify_sound` in
+expected.py measures its pitch against the tone that the cycle count
+predicts, within 15 Hz, and requires a nonzero signal level. A muted
+mux fails at frame 1 with "no tone", even though its memory check passes.
+[expected.py](expected.py) is the
 independent phase, input and marker model, specified by
 [sound_slots_spec.py](sound_slots_spec.py). The second command is the
 one-second throughput measurement in
@@ -111,8 +118,9 @@ inconsistent evidence.
 
 ## Limits
 
-The automated runs disable audio output. DAC write values do not prove correct
-mux routing, audible pitch, distortion, or audio quality.
+The mixer WAV shows that the emulated mux routes the DAC to XRoar's output at
+the expected pitch. It does not prove host playback, audibility, distortion,
+or audio quality on a real CoCo.
 A bounded normal-speed GUI launch exited successfully, but nobody inspected
 the display or listened to its output. A physical fire button remains untested.
 No physical CoCo, CoCo 2, CoCo 3, PAL, or faster-clock result is claimed.

@@ -35,9 +35,12 @@ between sessions until closed.
   Keep each experiment small enough to answer one sub-question.
 - Log every experiment in `LAB.md`: what was tried, the command, the result and
   what it showed. Failed attempts are findings; keep them in the log.
-- If an experiment needs equipment `scripts/coco.py` lacks, such as capturing
-  the rendered screen or sound, building that ability is part of the lab. Add
-  it to `coco.py` with tests, not as a script in the lab.
+- `scripts/coco.py` already presses scripted keys and captures XRoar's rendered
+  screen and mixer sound ([evidence methods](development.md#check-the-feature-you-claim)).
+  If an experiment needs equipment it lacks, building that ability is part of
+  the lab. Add it to `coco.py` with tests, not as a script in the lab; an
+  emulator hook goes in `scripts/xroar_hooks/` and the
+  [instrumented XRoar](toolchain.md#instrumented-xroar) patch.
 
 Keep the evidence honest: separate source statements, deductions and measured
 results, keep expectations independent of the implementation, include a

@@ -109,22 +109,35 @@ it could reveal a bug, and a negative control that breaks the claimed behavior.
 Do not repair a failed expectation by copying the observed result; resolve the
 difference against the requirement first.
 
+`scripts/coco.py check` keeps each kind of evidence apart: execution, memory,
+keys pressed through the emulated keyboard, XRoar's rendered frame and XRoar's
+mixer output. Keys, rendered frames and sound need the
+[instrumented XRoar](toolchain.md#instrumented-xroar), which the tool builds
+once on first use. Its report ends with `Visual: not inspected by a person`:
+a capture is not a person looking at a window, a television or a physical CoCo.
+
 ### Keyboard input
 
-For an input claim, deliver press, hold and release through the actual keyboard
-adapter and observe the resulting game state. Use the
-[keyboard experiment's injection boundary](../techniques/validation/keyboard-controls.md#actual-injection-boundary)
-and [failure controls](../techniques/validation/keyboard-controls.md#reproduction-and-failure-controls)
-as a starting method. It drives XRoar's keyboard API through its matrix, PIA
-and the 6809 scanner. Adapt its keys and profile to the game; a passing example
-does not validate a new scanner.
+For an input claim, deliver press, hold and release through the emulated
+keyboard and observe the resulting game state. Declare `[keys]` in `coco.toml`
+and a variant whose `keys` names a key script; `check` plays it through XRoar's
+keyboard API, matrix, PIA and the program's own scanner. Each script line takes
+effect at one hit of the `[keys]` label, normally the scanner's entry, so line
+N is held during the Nth scan. The first word lists the held keys by the
+letters `[keys]` declares, or `-` for none; later words are ignored, so the
+script can carry the expected outcome of each step beside it. After the last
+line every key is released. The
+[Collect room journey](../../examples/collect-room/journey.txt) is an example.
 
-Writing logical key bits after the scanner returns tests gameplay logic only,
-even if the scanner executed first. Keep that useful test separate from keyboard
-delivery. Include a no-input or wrong-column control, and check release and
-repress across the relevant blocked movement or restart transition. XRoar API
-injection does not establish OS key delivery, window focus or physical keys;
-claim those only after checking those paths.
+Keep a build without keys as the no-input control, and add a wrong-key or
+wrong-column control that must fail. Check release and repress across the
+relevant blocked movement or restart transition. Writing logical key bits
+after the scanner returns tests gameplay logic only, even if the scanner
+executed first; keep that useful test separate from keyboard delivery. XRoar
+API injection does not establish OS key delivery, window focus or physical
+keys; claim those only after checking those paths. The
+[keyboard experiment's report](../techniques/validation/keyboard-controls.md#actual-injection-boundary)
+records how this injection boundary was first established.
 
 ### Sound
 
@@ -134,11 +147,21 @@ following the [DAC timing method](../techniques/validation/audio-timing.md) or i
 [CoCo 2 experiment](../../experiments/sound-coco2/README.md). State whether a duration
 is measured or calculated and give its basis; a call count supplies neither.
 
-For emulator audio output, adapt the
-[mixer PCM capture method](../../experiments/audio-output/README.md), with an
-independent expected signal and a muted or wrong-routing control. PCM captured
-from XRoar is separate evidence from host playback, listening and physical
-output. Keep those limits explicit when any of them is untested.
+For emulator audio output, add `--audio` to `check`, or set `audio = true` in
+`[capture]`. Each checkpoint then saves XRoar's mixer output as a WAV: mono,
+44,100 Hz, 16-bit, from the start of emulation (including ROM boot) to the
+checkpoint. If `expected.py` defines `verify_sound(sound, frame)`, it receives
+`sound.samples` (a NumPy int16 array) and `sound.rate`, raises `ValueError`
+when the sound differs, and may return a summary for the results file. Derive
+the expected pitch or level from the program's cycle counts and sources, not
+from a capture. Add a muted or wrong-routing control that must fail.
+[Sound slots](../../examples/sound-slots/README.md) checks its tone this way. The
+[audio-output experiment](../../experiments/audio-output/README.md) first
+established this capture.
+
+The mixer output is the emulator's digital signal before any host audio driver.
+It is separate evidence from host playback, listening and physical output;
+keep those limits explicit when any of them is untested.
 
 ### Artwork and display
 
@@ -150,13 +173,26 @@ compares literal artwork and the full framebuffer, with complemented-picture
 and swapped-assignment controls. Adapt that method to the intended artwork;
 do not make captured output the new expected picture.
 
-A PNG decoded from RAM is a framebuffer view, not an emulator renderer capture.
-For a rendered-display claim, use the
-[renderer method and wrong-mode control](../../experiments/display-validation/README.md#acceptance-and-negative-controls)
-within its stated target scope. Static captures do not establish animation
-cadence or tearing; for those tasks follow the
-[animation guide](../techniques/animation.md). Host presentation and physical displays
-remain separate checks.
+Screen memory cannot show a wrong display mode or bit order. For a
+rendered-display claim, add `--video` to `check`, or set `video = true` in
+`[capture]`, and define `expected_frame(frame)` in `expected.py`: the picture
+as rows of RGB values. Each checkpoint saves a PNG of the first frame XRoar's
+software renderer completes entirely after the checkpoint, and `check` compares
+every sample. The program must keep the picture still for about two video
+frames (1/30 s) after its checkpoint, or the capture shows later drawing.
+
+The renderer uses S-video colours without cross-colour artifacts and shows
+only the active area. For CoCo 1/2 graphics that is 512×192 samples, two per
+pixel, with no 4:3 stretch. Its colours are XRoar's palette values, not
+measurements of a monitor; [first-screen](../../examples/first-screen/expected.py)
+records the two for its mode. Include a control the memory check cannot catch,
+such as a wrong SAM mode or a reversed bit order, and open the PNG with an
+image viewer too. The
+[display-validation experiment](../../experiments/display-validation/README.md#acceptance-and-negative-controls)
+first established this renderer method. Static captures do not establish
+animation cadence or tearing; for those tasks follow the
+[animation guide](../techniques/animation.md).
+Host presentation and physical displays remain separate checks.
 
 ## Reusable launchers
 
@@ -168,7 +204,10 @@ uv run python scripts/coco.py --help
 uv run python scripts/coco.py build projects/<name>
 uv run python scripts/coco.py run projects/<name>
 uv run python scripts/coco.py check projects/<name>
+uv run python scripts/coco.py check projects/<name> --video --audio
 uv run python scripts/coco.py snapshot projects/<name> --frame 3
+uv run python scripts/coco.py snapshot projects/<name> --frame 3 --video \
+  --keys keys.txt
 ```
 
 Besides its `README.md`, the folder holds three files. Start by copying
@@ -181,25 +220,35 @@ setting with a comment.
   is the default. `[memory]` requires labels at or below addresses. `[check]`
   names the checkpoint label reached once per completed frame, the frames to
   snapshot, a label that must never execute, and where the screen starts.
-  Optional `[variants.<name>]` tables add assembler defines, and `prepare`
-  names a Python file whose `prepare(output)` writes include files first.
+  Optional `[variants.<name>]` tables add assembler defines, a key script
+  (`keys = "file"`), or both. `[keys]` names the label where each script line
+  takes effect (`at`) and maps the script's letters to XRoar key names
+  (`letters`). `[capture]` turns on `video` or `audio` for every check.
+  `prepare` names a Python file whose `prepare(output)` writes include files
+  first.
 - `expected.py` (optional): the independent model. `expected_screen(frame)`
   returns the exact screen bytes and `verify_ram(ram, symbols, frame)` raises
-  `ValueError` when the state differs. With variants, both also receive the
-  variant name. Write the model from sourced facts and requirements, never from
-  the assembled bytes or a captured snapshot.
+  `ValueError` when the state differs. `expected_frame(frame)` returns the
+  rendered picture and `verify_sound(sound, frame)` judges the mixer output;
+  each is used only when that capture runs. With variants, every function
+  also receives the variant name. Write the model from sourced facts and
+  requirements, never from the assembled bytes or a captured snapshot.
 
 `check` starts from nonzero RAM, snapshots each frame, requires that the
 unreachable label leaves no snapshot, compares every screen byte, and then runs
-the model. It reports execution and memory evidence separately and never claims
-visual evidence; look at the `run` window for that. Without `expected.py` it
-only proves that the checkpoint was reached. Record the `coco.toml` machine
-choices in the project contract too.
+the model. It reports execution, keys, memory, rendered display and sound
+evidence separately, and never claims that a person looked; use the `run`
+window for that. Without `expected.py` it only proves that the checkpoint was
+reached. Captures that ran without a matching model function are reported as
+not compared. PNGs, WAVs and the results file stay in `build/<name>/`. Record
+the `coco.toml` machine choices in the project contract too.
 
 The tool parses arguments before any build or launch: `--help` exits
 successfully and unknown arguments exit nonzero. It verifies every firmware
 file the target names before starting XRoar and ignores personal XRoar
-configuration. If firmware fails, run the recovery command it prints.
+configuration. If firmware fails, run the recovery command it prints. `run`
+always opens the installed XRoar; only key scripts and captures use the
+instrumented one.
 
 For a model spec, name it after the folder (for example `my_demo_spec.py`) and
 load the model with `load_expected(Path(__file__).parent)` from `coco`; several
