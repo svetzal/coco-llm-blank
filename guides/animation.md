@@ -12,6 +12,23 @@ correct completed-frame RAM. A correct redraw checkpoint does not establish
 clean animation. Measure consecutive output before choosing a redraw strategy;
 these results do not measure host smoothness or physical tearing.
 
+The [frame-publication source research](../guidance/frame-publication-research.md)
+is published. It distinguishes preparing a hidden image, publishing its base,
+and waiting for adoption before reusing the old buffer. Its SAM/PIA and native
+GIME findings retain unresolved latch and timing contracts; source reading
+alone does not prove tear-free output.
+
+Original hidden-buffer implementations are published on `main` for
+[CoCo 1/2](../experiments/clean-animation/README.md) and
+[native CoCo 3](../experiments/clean-animation-coco3/README.md). The
+[CoCo 1/2 validation](../guidance/clean-animation-validation.md) passes
+38 tests with 97.01% scoped coverage and a 150-frame acceptance window on each
+target. Cross-sequence chronology checks reject premature buffer reuse.
+The [CoCo 3 validation](../guidance/clean-animation-coco3-validation.md)
+passes 28 tests with 93.51% coverage and all 42 complete frames with ordered
+scenes 0–4 on both RAM capacities. These bounded emulator results establish
+neither host smoothness nor physical safe-switch timing.
+
 ## Store the picture, not an oversized container
 
 Steven R. Polsz compares oversized BASIC arrays with compact storage for an
@@ -129,7 +146,8 @@ records source images, hashes and limits; this source has no manifest resource I
 
 ## Check the result before expanding it
 
-The following checks are proposed work, not completed animation evidence:
+For a new adaptation, use these checks. The published experiments above supply
+bounded evidence for their own configurations, not acceptance for a new workload:
 
 - Compare each prepared picture with an independent expected bitmap.
 - Check memory guards around every picture and asset.

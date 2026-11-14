@@ -75,19 +75,23 @@ guidance. Update these living documents as research proceeds.
 5. Record machine, RAM, video standard, display path, language, and dependencies
    where the source establishes them. Mark missing details as unresolved.
 6. Select sources that explain a reusable technique, expose a useful tradeoff,
-   or resolve a hardware question. Keep reasons for exclusions and narrower uses.
+   or resolve a hardware question. Keep reasons for exclusions and narrower
+  uses.
 7. Add selected sources to the manifest and page-level navigation guide.
    Test selected-page conversion. Check difficult output against page images.
-8. Write or update a task-focused technique guide for each selected useful finding.
+8. Write or update a task-focused technique guide for each selected useful
+finding.
    Cite claims at the relevant passage. Label adaptations and proposed checks.
 9. Reproduce a small example before presenting an implementation as tested.
    Record build, runtime, visual, audible, and hardware evidence separately.
    Update the guide with the result, configuration, and limits.
 
-For each technique, distinguish **discovered**, **examined**, and **reproduced**.
+For each technique, distinguish **discovered**, **examined**, and
+**reproduced**.
 Examined means the relevant source was read; it does not mean its code works.
 Do not rank by nostalgia, impressive titles, or the number of pages collected.
-A BASIC tutorial can explain an algorithm without being a usable assembly driver.
+A BASIC tutorial can explain an algorithm without being a usable assembly
+driver.
 
 ### Permanent technique guides
 
@@ -109,7 +113,8 @@ Each guide must include:
   exact PDF pages, printed pages when known, archive URL, and resource ID.
 - Clear attribution for published explanations, our adaptations, derived
   calculations, measured results, and untested proposals.
-- Links to original examples and their checks when implementation evidence exists.
+- Links to original examples and their checks when implementation evidence
+exists.
 - Unresolved conflicts and the evidence needed to settle them.
 
 Credit an examined author without claiming they invented the technique.
@@ -217,7 +222,8 @@ this conflict and the GIME revision offsets explicitly.
 
 The original timer/cooperative comparison runs on the same slow-clock CoCo 3.
 Both emulated GIME revisions retain their predicted audio throughput during a
-full framebuffer clear. Foreground redraws fall from 27 to 2 per measured second.
+full framebuffer clear. Foreground redraws fall from 27 to 2 per measured
+second.
 The cooperative comparison loses most of its audio throughput under that load.
 All DAC values and completed-frame memory are checked. A missing-acknowledgement
 negative control fails as expected. CI now provisions CoCo 3 firmware without
@@ -256,13 +262,15 @@ physical-machine result is claimed for this pass.
 Completed Matthews's October 1987 listing through PDF 47 and examined the
 MC6847/MC6847Y technical datasheet. Its RG6 tables resolve the chip's bit order.
 Board wiring and visible output still need separate checks. The generic
-non-SAM memory-access discussion must not become a CoCo screen-write restriction.
+non-SAM memory-access discussion must not become a CoCo screen-write
+restriction.
 
 Read Blochowiak's January 1988 SMOOTHY article and its April 1988 correction.
 It concerns CoCo 3 text scrolling, with distinct 128K and 512K requirements.
 The GIME cross-check is complete: Tandy PDF 13 and Tepolt PDF 29, 33, and 58
 explain the physical-address fields and 128K alias behind the 512K correction.
-The scrolling guide labels the address calculation as our cross-source explanation.
+The scrolling guide labels the address calculation as our cross-source
+explanation.
 An original display-address probe now checks all eight address/RAM-size cases
 at an instrumented XRoar 1.12.1 GIME fetch boundary. Each produced 40 matching
 reads and a ready snapshot; the unreachable-trap control produced no snapshot.
@@ -271,11 +279,13 @@ The separate emulator build and diagnostic are documented in
 SMOOTHY, rendered appearance, timing, firmware compatibility, and physical
 hardware remain unverified.
 The datasheet and paired article/correction are now checksum-pinned resources.
-Converted MC6847 PDF 19–22, January PDF 80/82, April PDF 14, and Matthews PDF 47.
+Converted MC6847 PDF 19–22, January PDF 80/82, April PDF 14, and Matthews PDF
+47.
 Exported images were checked. Sideways tables and dense listings still need
 image-first reading. Sixty-one setup/reference specifications pass.
 October pages 44/46 were read as source images but remain outside the active
-converter profile. Their older checkpoints do not establish current Markdown coverage.
+converter profile. Their older checkpoints do not establish current Markdown
+coverage.
 
 The original [moving-object example](examples/moving-objects/README.md) implements
 full background redraw and ordered opaque objects. Thirteen frame checks pass
@@ -283,7 +293,8 @@ on each defined non-T1 CoCo 1 and CoCo 2 configuration. They cover overlap,
 separation, changed scenery, complete-object bounds, and memory guards.
 A separate static review found the CI firmware-provisioning gap for CoCo 2;
 CI now provisions CoCo 2 alongside CoCo 3 before running pytest.
-The full suite passes: 133 tests with 93.99% combined coverage. Ruff checks pass.
+The full suite passes: 133 tests with 93.99% combined coverage. Ruff checks
+pass.
 That pass did not verify visual output, timing, masks, clipping, or physical
 hardware. Later masking and static-renderer checks are recorded below.
 
@@ -350,7 +361,8 @@ turn-state, single-switch menu and small-animation sources.
 [CoCo 3 source research](guidance/coco3-game-source-research.md) examines Gloom
 and Symmetry; [expanded legacy research](guidance/legacy-tile-research.md#three-game-source-candidates)
 assesses Droid War, Dunkey Munkey and Sea Quest. Useful findings are linked
-through the technique guides. These source-only passes did not run the historical
+through the technique guides. These source-only passes did not run the
+historical
 programs or validate the proposed adaptations. They broaden selected coverage;
 the archive survey remains incomplete.
 The [bounded tile-source follow-up](guidance/tile-source-followup.md) inspected
@@ -404,106 +416,54 @@ machine gaps after every pass.
 
 ### Prior dispatched batch: completed within recorded bounds
 
-The entries below retain the completed batch and its evidence limits.
+Completed bounded checks cover [keyboard input](guidance/keyboard-controls-validation.md),
+[target assets](guidance/asset-loading-validation.md),
+[CoCo 3 state](guidance/game-state-coco3-validation.md),
+[CoCo 2 sound](guidance/sound-coco2-validation.md),
+[animation cadence](guidance/animation-cadence-validation.md),
+[input source reading](guidance/input-hardware-research.md), and
+[sudo-policy recovery](guidance/sudo-policy-validation.md).
+The linked reports retain configurations, counts, controls and reproduction
+instructions. These results do not establish physical input/output, host
+smoothness, a complete game or native desktop onboarding.
 
-- Keyboard input (completed, bounded CoCo 1/2B scope).
-  [Report and reproduction commands](guidance/keyboard-controls-validation.md)
-  record 21 tests and 97.06% runner coverage. All 16 update records match on
-  both profiles, including held input, release/repress, simultaneous keys and
-  return from boundaries. Injection uses XRoar's keyboard API through its
-  matrix/PIA and 6809 scanner; OS events and physical keys remain untested.
-- Target assets (completed, bounded CoCo 1/2 scope).
-  [Report](guidance/asset-loading-validation.md) and
-  [reproduction guide](experiments/asset-loading/README.md) record 35 tests,
-  all 6,144 framebuffer bytes matching on each target, guards and failure
-  controls. The separate consumer uses the unchanged host bundle. General
-  loaders, banked storage, compression and rendered output remain unverified.
-- CoCo 3 state subset (completed, bounded 128/512 KiB scope).
-  [Report](guidance/game-state-coco3-validation.md) and
-  [reproduction guide](experiments/game-state-coco3/README.md) record 35 tests
-  and 44 matching checkpoints at both RAM sizes, including valid sends after
-  rejection without resetting the world. Two friendly planets and two slots
-  cover sending, arrivals and phase/turn limits. The 60-case host model remains
-  separate; combat, production, menus, display and input are outside the subset.
-- CoCo 2 sound (completed, bounded non-T1 NTSC scope).
-  [Report](guidance/sound-coco2-validation.md) and
-  [reproduction guide](experiments/sound-coco2/README.md) record 19 tests and
-  98.13% scoped Python coverage. All three cases pass seven checkpoints, with
-  exact DAC samples, framebuffer state and modeled write intervals. Delayed
-  work adds exactly 80,003 slow cycles at each of 63 inter-block boundaries.
-  Scripted input substitutes logical states after the PIA read; it does not
-  establish physical-button behavior, listening quality or worst-case timing.
-- Animation cadence (completed, bounded renderer evidence). The
-  [experiment](guidance/animation-cadence-validation.md) checks 150 consecutive
-  frames per case, exact repeat timestamps and pixels, and added workload.
-  Two partial-erasure frames are demonstrated in the original animation.
-  All 27 tests pass after independent review corrections. This establishes
-  neither host smoothness, physical tearing nor worst-case timing.
-- Input source crosscheck (completed). [Primary manual findings](guidance/input-hardware-research.md)
-  record 18 examined pages, matrix coordinates, board distinctions and unresolved
-  conflicts. Source interpretation alone is not an executed
-  keyboard driver or a claim of archive-wide errata coverage.
-- Denied sudo (completed, prerequisite scope). [Validation](guidance/sudo-policy-validation.md)
-  covers password-required and denied policies, followed by administrator
-  correction and real curl/CA/HTTPS recovery. The original contract was to
-  exercise present-but-denied noninteractive sudo as an ordinary
-  user in an isolated Ubuntu case; require nonzero exit, actionable diagnostics
-  and no false readiness. The published missing-sudo control is different;
-  neither case proves interactive password handling or native desktop
-  onboarding.
+### Current bounded batch: completed within recorded bounds
 
-### Current bounded batch: in progress
+- Audio output: independently reviewed fixes are published. The
+  [report](guidance/audio-output-validation.md) records 33 tests with 95.44%
+  scoped statement/branch coverage, capture-completeness controls and verified
+  build provenance. Evidence reaches XRoar's digital mixer PCM on CoCo 1/2,
+  before a host audio driver. Listening and physical output remain untested.
+- Frame-publication source research: [published reading](guidance/frame-publication-research.md)
+  separates SAM/PIA and native GIME contracts, source conflicts and proposed
+  checks. It supplies no runtime publication result or physical safe-switch
+  deadline.
+- Clean CoCo 1/2 animation: published on `main`; [reviewed validation](guidance/clean-animation-validation.md)
+  passes 38 tests with 97.01% scoped coverage. Both targets pass the 150-frame
+  acceptance window; cross-sequence chronology rejects premature buffer reuse.
+- Clean CoCo 3 presentation: published on `main`; [published validation](guidance/clean-animation-coco3-validation.md)
+  passes 28 tests with 93.51% coverage. Normal acceptance requires 42 complete
+  frames and ordered scenes 0–4 on both RAM capacities. Physical latch timing
+  and safe-write budgets remain unresolved.
+- Playable collection game: [review corrections](examples/collect-room/README.md#review-corrections)
+  pass 33 scoped tests and 95 checkpoints per profile, including reverse-order
+  collection, three wins and restart. Full starter integration passed; the game
+  is committed and published on `main`.
+- Claude 03: independent assessment is complete in the external onboarding
+  [evaluation record](/Users/svetzal/Work/Experiments/coco-starter-onboarding/claude-03-evaluation.json).
+  Four original specs and 24 independent alternate-order checkpoints passed
+  across both profiles. Tests substitute logical input after the PIA scan and
+  check only sound-call counts. Actual keyboard delivery, audio output and
+  continuous display remain unverified. Display primary sources were not reread,
+  project notes were written late, and artwork expectations reused observed RAM.
+  These are
+  guidance and validation gaps, not demonstrated game-runtime defects.
 
-These six items are acceptance contracts, not completed results. Parent review
-and integration must check the delivered evidence before changing their status.
-
-- Clean CoCo 1/2 animation. Require continuous consecutive rendered frames on
-  each declared target, with independent pixel expectations, cadence checks and
-  a failure control that exposes partial erasure or incomplete publication.
-  Completed framebuffer RAM alone cannot establish clean animation. State the
-  capture window and workload; do not infer unlimited or host-display smoothness.
-- Playable collection game. Require a complete start, movement, collection,
-  score/progress, completion and restart journey, followed by playable movement
-  and collection in the fresh game. Check visible state, held/released input,
-  boundaries and rejected actions against independent expectations. A reset
-  checkpoint alone does not prove restart; state the input-injection boundary.
-- Clean CoCo 3 presentation. Require continuous rendered frames for the declared
-  RAM sizes and display configuration, including transitions and restoration.
-  Compare against independent expected scenes and a broken-publication control;
-  correct final RAM or an isolated screenshot is insufficient.
-- Actual emulated audio output. Capture the emulator's produced audio at an
-  explicitly named output boundary and verify non-silent signal, duration and
-  expected waveform/frequency properties with silence or disconnected-output
-  controls. DAC writes and modeled intervals alone do not satisfy this item.
-  Identify whether evidence reaches emulator samples, a host audio backend,
-  listening or physical output; claim only the boundary actually observed.
-- Primary frame-publication reading. Read applicable primary passages on frame
-  preparation, display publication and synchronization, including relevant
-  figures and corrections. Cite title, edition/issue, exact PDF pages and source
-  URL beside each fact. Separate published facts, our adaptations and measured
-  results; carry unresolved machine-specific conflicts into the relevant guide.
-- Claude Code beginner trial and rubric. The rubric is in preparation; the
-  first launch was rejected by workspace routing before any trial ran. Run a
-  bounded independent trial from
-  a beginner prompt and assess setup, primary-source use, configuration/ROM
-  provenance, complete play/restart, continuous display and audio evidence,
-  recovery from failure and reproducibility. Record assistance and limitations;
-  a build or RAM check cannot substitute for the rubric's visible/play outcomes.
-
-For this batch, retain original implementation and reproduction instructions
-in Git; keep downloads and generated evidence ignored. Use explicit isolated
-machine configurations and verified ROM bytes. Require scoped outcome tests
-with independent expectations and failure controls, Ruff checks, and Markdown
-fix/check. Record RAM, renderer output, emulated timing, audio, host presentation
-and physical evidence separately. Existing host and physical-machine limits
-remain open unless directly tested. Link deliverables only after they exist;
-no planned output is completed evidence.
-
-Retain original code and reproduction instructions in Git; keep downloads and
-generated evidence ignored. Before any worker emulator run, verify ROM bytes
-and declare an isolated machine configuration. Report assembly, execution,
-framebuffer, rendered output, audio and hardware evidence separately. This
-plan/index update performs no runtime work and adds no runtime result.
+Keep original code and reproduction instructions in Git, generated evidence
+ignored, and machine configurations isolated with verified ROMs. Parent
+integration passed the full root suite and published the collection game. Record RAM, renderer, timing, mixer PCM, host
+presentation and physical evidence separately. This status update adds no
+runtime result.
 
 ## Next increments
 
@@ -514,14 +474,16 @@ plan/index update performs no runtime work and adds no runtime result.
    target. The first books are shared 6809 and CoCo 1/2 background, not a
    complete CoCo 3 library.
 3. Extend native-tool installation to other Linux distributions and disk tools.
-   The original first-screen example now supplies an assembly and emulator baseline.
+   The original first-screen example now supplies an assembly and emulator
+  baseline.
 4. Extend host evidence beyond completed Ubuntu ARM64 root and passwordless-sudo
    container runs to native desktop, complete bootstrap after restricted-sudo
    recovery, GUI journeys and clean macOS onboarding.
    x86-64 Linux and Intel Mac compatibility need separate checks.
 5. Extend beginner trials after addressing observed failures. The first Claude
    Code trial built a demo and passed runtime checks; Claude 02 now has an
-   independent assessment above. Visual evidence remains incomplete.
+   independent assessment above. Claude 03 is assessed with the validation and
+   guidance gaps recorded in the current batch above.
    Leave Stacey's `coco-lines` project untouched.
 
 ## Acceptance evidence
@@ -534,19 +496,23 @@ content, model weights, or virtual environment.
 
 ## Verification status
 
-The published independent full-suite run on the development Mac passed
-239 tests with 95.28% combined statement and branch coverage. That run preceded
-two configuration regression tests; it does not establish a full-suite result
-for the later test set. The tile-room example records its separate scoped run.
+The full root starter suite passed 274 tests with 95.06% combined statement
+and branch coverage in 269.96 seconds, including collection-game integration.
+The run logged six Docling/Pydantic warnings in `build/batch-final-tests.log`.
+Ruff lint and format checks passed for all 151 files. The collection game is
+committed on `main`; the parent is confirming publication. The animation
+reports retain their separate scoped evidence.
 The co-located specifications cover real Docling OCR
-of an original image-only PDF, original PDF page provenance for a selected range,
+of an original image-only PDF, original PDF page provenance for a selected
+range,
 interruption and resume, converter-version cache separation, invalid checkpoint
 rejection, download failures, project-note preservation, and native executable
 discovery. Ruff checks pass.
 The locked environment synchronizes successfully and package compatibility
 checks pass. The audit of all locked dependency groups found no known
 vulnerabilities. Four newer transitive releases are excluded by current
-upstream constraints (huggingface-hub, mpmath, semchunk, and typer). Docling emits
+upstream constraints (huggingface-hub, mpmath, semchunk, and typer). Docling
+emits
 upstream deprecation warnings during conversion.
 
 PDF pages 10 through 12 of both archive books were converted with Docling.
@@ -563,7 +529,8 @@ converted and visually checked. The graphics instruction table has merged OCR
 cells. The technical manual preserves its mode-table rows but loses two SAM
 column labels. Reference guidance identifies these limitations and page ranges.
 
-LWTOOLS and XRoar are discoverable on this Mac. ToolShed's `decb` is not on PATH;
+LWTOOLS and XRoar are discoverable on this Mac. ToolShed's `decb` is not on
+PATH;
 the original project uses an explicit private path that this template does not
 inherit. Full-book conversion quality remains unverified.
 

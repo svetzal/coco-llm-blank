@@ -163,6 +163,23 @@ These finite windows are not worst-case bounds or evidence of sound quality,
 physical GIME timing, or interrupt safety during bank changes. The linked
 record provides controls and tracked fresh-clone reproduction instructions.
 
+## Check the emulator's produced audio
+
+The independently reviewed [audio-output validation](../guidance/audio-output-validation.md)
+and [reproduction procedure](../experiments/audio-output/README.md) now cover
+CoCo 1 sound-slots and its CoCo 2 adaptation. Published fixes add capture
+completeness and build-provenance checks; the revised scoped suite passes
+33 tests with 95.44% combined statement/branch coverage.
+
+A private XRoar build captures signed PCM from the digital mixer's output
+callback, before any host audio driver. Independent pitch and duration
+expectations, muted-mux and constant-DAC controls, and whole-fragment-loss
+checks test a boundary beyond DAC writes. The report distinguishes the earlier
+captures from the rerun with verified provenance and completeness checks.
+This does not test the CoCo 3 timer example, host playback, listening quality
+or physical audio output. Use the report's exact configurations and controls
+before extending that claim to another workload.
+
 ## Resolve the timer-clock conflict explicitly
 
 Tandy PDF 12 and Tepolt PDF 50 describe a fast clock near 14 MHz.
@@ -190,8 +207,9 @@ These are our next implementation steps, not a completed music engine:
 5. Check handler accessibility before introducing banked assets.
 6. Listen to the running result and inspect the display.
 
-The existing experiments have no confirmed listening or display inspection.
-A successful emulator launch and correct memory are narrower evidence.
+The sound experiments have no confirmed listening or display inspection.
+The CoCo 1/2 PCM capture establishes modeled mixer output; successful execution
+and correct memory alone do not establish even that audio boundary.
 For banked memory, read [scrolling and memory](scrolling.md#keep-interrupt-code-reachable).
 For complete measurements and source exclusions, read the
 [sound research notes](../guidance/sound-research.md).

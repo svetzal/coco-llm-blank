@@ -300,10 +300,8 @@ def inspect():
             else (Path("local/references") / name / "source.pdf")
         )
         if not source.exists() and name in EXTRA:
-            url = (
-                "https://colorcomputerarchive.com/repo/Documents/Datasheets/"
-                + quote(EXTRA[name])
-            )
+            base = "https://colorcomputerarchive.com/repo/Documents/Datasheets/"
+            url = base + quote(EXTRA[name])
             with urlopen(url, timeout=60) as response:
                 data = response.read()
             verify(data, expected)
@@ -323,16 +321,10 @@ def inspect():
             for number in pages:
                 path = OUTPUT / f"{name}-{number}.png"
                 document[number - 1].render(scale=1.5).to_pil().save(path)
-                images[path.name] = hashlib.sha256(
-                    path.read_bytes()
-                ).hexdigest()
-    (OUTPUT / "page-images.json").write_text(
-        json.dumps(images, indent=2) + "\n"
-    )
-    print(
-        f"Verified {len(verified)} PDFs; rendered {len(images)} cited pages; "
-        "controls passed"
-    )
+                images[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (OUTPUT / "page-images.json").write_text(json.dumps(images, indent=2) + "\n")
+    summary = f"Verified {len(verified)} PDFs; rendered {len(images)} cited pages"
+    print(summary + "; controls passed")
 
 
 if __name__ == "__main__":
