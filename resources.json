@@ -1,0 +1,14 @@
+[
+  {
+    "id": "6809-programming",
+    "title": "6809 Assembly Language Programming (Lance Leventhal)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Books/6809%20Assembly%20Language%20Programming%20%28Lance%20Leventhal%29.pdf",
+    "sha256": "022da9b939f61be4d612d23f52a2f3599280c12a60b46ea96b906fb150f5189e"
+  },
+  {
+    "id": "assembly-graphics",
+    "title": "Assembly Language Graphics for the TRS-80 Color Computer (Don Inman, Kurt Inman with Dymax)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf",
+    "sha256": "c1259497b7d1505e6908fd3c8a250d47e0c4b549140e308bdc6bf8e345b6ce01"
+  }
+]
