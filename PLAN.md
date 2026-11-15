@@ -13,8 +13,7 @@ Read [AGENTS.md](AGENTS.md), then choose one open item below. Use the
 Preserve ignored `local/`, `build/` and the prepared `.venv`. Do not treat a previous report as a new validation run. The repository
 is public, uses `main`, and remains unregistered with Foundry. Leave the separate
 `coco-lines` project and its processes untouched. Start no new beginner-agent
-trial without a new request; the completed Claude 03 assessment is under
-`/Users/svetzal/Work/Experiments/coco-starter-onboarding/claude-03-evaluation.json`.
+trial without a new request.
 
 ## Open work
 
