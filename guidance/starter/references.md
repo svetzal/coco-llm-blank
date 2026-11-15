@@ -8,6 +8,44 @@ For game and demo techniques, start with [the technique guides](../techniques/RE
 The sources and open questions in each guide record what we read, what we
 rejected, and what is still open.
 
+## Cite each kind of evidence
+
+A CoCo fact has one of three kinds of evidence. Say which kind, beside the
+fact.
+
+**A published source that you read.** It can be a local reference or a page at
+a URL. Read the passage itself, not a search summary. Check that it applies
+to the selected machine.
+
+- A local reference: give the title and the PDF page. In a guide, also give
+  the resource ID.
+- A page at a URL: give the author, the title, the place and date of
+  publication, the URL and the date that you read it. Examples are a magazine
+  scan, a blog post, a Usenet post and a datasheet.
+- Say what the source is: a document from the maker, the report of one person,
+  or a discussion. One post is a report, not a specification.
+- A page can change or go away. Write the fact in your own words beside the
+  citation, so the guide still states it. Do not copy the passage.
+
+**A check in this repository.** When no source establishes a fact, measure it.
+An agent that measures a fact is the source of that fact.
+
+- Cite the example and its `coco.py check`, or the control in
+  `scripts/coco_spec.py`. Do not cite a lab. The lab folder does not stay.
+- Include a negative control that fails when the fact is false.
+- Name the target, and write "the pinned XRoar" for the emulator.
+- The fact holds while the check passes. It is a fact about the emulator, not
+  about a physical CoCo.
+- If the check contradicts a published source, record both. Say which one the
+  code obeys.
+- Some results cannot be a check, such as a listening test or a physical
+  machine. Then write the method in the guide so that a person can repeat it.
+  Say who measured the result, on what, and when.
+
+**Neither.** The fact is an open question. Write it in the open questions of
+its guide, with the evidence that would settle it. Do not write code that
+depends on it. If code depends on it already, put a comment there that says so.
+
 ## Choose a source before making a hardware claim
 
 Do a reference lookup before you rely on a CoCo-specific fact. A familiar

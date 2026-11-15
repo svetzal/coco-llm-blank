@@ -39,6 +39,12 @@ trial without a new request.
   Keep it current with
   [the XRoar patch procedure](guidance/starter/xroar-patch.md). Submit nothing
   and contact no one until the owner asks.
+- Bring the measured claims that cite a closed lab under the
+  [evidence rules](guidance/starter/references.md#cite-each-kind-of-evidence).
+  The animation, assets, controls-and-collision and sound guides have results
+  that are "not rerun". Give each one a check, a method to repeat it, or an
+  entry in the open questions. Do the same for the CoCo 3 examples: label the
+  facts that only their checks establish.
 - Host keyboard delivery, window presentation, listening, and physical-machine
   validation where required by a guide's claim. Emulator-only checks must keep
   their stated limits.
@@ -56,10 +62,13 @@ guide states:
 - The task, the machines and configurations it applies to, and their limits.
 - Practical steps, memory and timing tradeoffs, and likely failure cases.
 - Inline citations beside sourced claims: author, title, edition or issue,
-  PDF page (printed page when known) and resource ID. Cite only read passages.
+  PDF page (printed page when known) and resource ID. For a page at a URL,
+  give the author, title, date, URL and the date read. Cite only read passages.
   Inspect diagrams and listings as images when conversion is uncertain.
 - Which claims are published explanations, our adaptations, derived
   calculations, measured results or untested proposals.
+- For each measured result, the check that reruns it. If no check can, the
+  method to repeat it.
 - The example that shows it, and what that example's check proves.
 - Unresolved conflicts and the evidence that would settle them.
 

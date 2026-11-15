@@ -30,7 +30,8 @@ between sessions until the lab is closed.
 ## Explore
 
 - Read primary sources with the [reference lookup](references.md) procedure.
-  Write each fact in `LAB.md` with its title and PDF page.
+  Write each fact in `LAB.md` with its citation: the title and PDF page, or
+  the author, title, date and URL.
 - Test ideas as small experiments. An experiment is a folder in the lab with
   `main.asm`, `coco.toml` and, where it helps, `expected.py`. Run it with
   `scripts/coco.py`. Keep each experiment small enough to answer one
@@ -70,9 +71,18 @@ Turn the answer into lasting, committed changes:
   better than prose. Its `coco.py check` is the reproducible evidence.
 - Commit any new `coco.py` ability with its tests.
 
-Do not commit lab notes, experiment folders, logs or captures. If a result
-cannot be rerun cheaply, give it one paragraph in its guide. That paragraph
-summarises what was measured and its limits.
+Do not commit lab notes, experiment folders, logs or captures. You delete the
+lab folder, so nothing that you commit can cite it.
+
+A finding that the lab measured must leave a check that reruns. That check is
+an example's `coco.py check` or a control in `scripts/coco_spec.py`. Cite the
+check in the guide, as
+[reference lookup](references.md#cite-each-kind-of-evidence) describes.
+
+Some results cannot be a check, such as a listening test. Then give the result
+one paragraph in its guide. Write the method so that a person can repeat it,
+what was measured, and its limits. If you can do neither, record the finding
+as an open question, not as a fact.
 
 ## Close the lab
 

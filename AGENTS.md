@@ -82,21 +82,31 @@ it a successful launch. A checkerboard alone does not identify the cause.
 
 Model memory is a search hint, not evidence about CoCo hardware. Before writing
 hardware-dependent code or explaining a CoCo-specific detail, read the relevant
-local reference passage and check that it applies to the selected machine.
+passage and check that it applies to the selected machine.
 This includes graphics modes, register addresses and bit meanings, memory maps,
 pixel packing, palettes, ROM calls, and instruction behavior or timing.
+
+Evidence for a CoCo fact is a published source that you read, or a check in
+this repository that shows the fact. A published source can be a local
+reference or a page at a URL, such as a magazine, a blog post or a Usenet post.
+Cite each kind as
+[reference lookup](guidance/starter/references.md#cite-each-kind-of-evidence)
+describes. A fact with neither is an open question.
 
 For graphics, start with the [graphics guide](guidance/techniques/graphics.md)
 and the datasheet pages it cites. Then read
 `local/references/assembly-graphics/text.md`, using the
 [reference lookup procedure](guidance/starter/references.md). Read the relevant table
 or diagram as an image when OCR leaves any doubt. Before implementation, state
-the facts you will rely on with book title and PDF page citations. Reuse facts
+the facts you will rely on, each with its citation. Reuse facts
 already checked in this session. Do not invent page numbers or cite unread text.
 
 If the needed pages are missing, obtain or convert them first. If the source
-covers a different machine or remains ambiguous, leave the claim unresolved
-and defer the code that depends on it. Never substitute a confident recollection
+covers a different machine or remains ambiguous, measure the fact with a check
+that you commit. If you cannot, leave the claim unresolved and defer the code
+that depends on it.
+
+Never substitute a confident recollection
 for missing evidence. Follow the [graphics checks](guidance/starter/development.md#graphics-before-code)
 before choosing a mode or writing display setup, including setup copied from
 an example. Read its cited primary passages. The example is not a substitute.

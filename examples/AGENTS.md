@@ -84,8 +84,12 @@ When you know of other ways, name them in the README.
 - Read the cited pages before you write hardware-dependent code. Obey
   [reference lookup](../guidance/starter/references.md). Model memory is not
   evidence.
-- Cite the book title and the PDF page in `main.asm` and in the README, beside
-  each fact.
+- Cite the source in `main.asm` and in the README, beside each fact. Give the
+  title and the PDF page, or the author, title, date and URL.
+- When no source establishes a fact and the check shows it, say that the check
+  is the evidence. Name the negative control that fails when the fact is false.
+  [Reference lookup](../guidance/starter/references.md#cite-each-kind-of-evidence)
+  gives the form.
 - Read a table as an image when the conversion is not clear.
 - When two sources disagree, let the check settle it in the emulator. Then
   write the result and its limits. First-screen did this for the size of RG2.
@@ -105,4 +109,5 @@ skill and run its checker. Use these sections, in this order:
    variation that the reader can copy and paste, with a comment that names
    the variation. Say that the commands start in the starter folder. Give
    the `check` command in its own block.
-5. The sources, with PDF pages.
+5. The sources, with PDF pages or URLs, and the facts that only the check
+   establishes.
