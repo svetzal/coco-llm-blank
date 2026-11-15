@@ -18,11 +18,6 @@ trial without a new request.
 
 ## Open work
 
-- Finish closing the old labs. Every topic is closed. Two items remain:
-  1. Delete `experiments/README.md`. Decide whether
-     `scripts/validate_repository.py` still earns its place now that it has
-     only the root scope.
-  2. Add a size check to CI so growth is a deliberate decision.
 - Remove the over-testing from the examples. Most examples have a
   `*_spec.py` that tests the example's `expected.py` or `scripts/coco.py`, not
   the program. The oracle in `expected.py` and `coco.py check` are the test of
