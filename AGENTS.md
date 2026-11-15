@@ -106,6 +106,8 @@ an example. Read its cited primary passages; the example is not a substitute.
   target named in the request; ask for it only when it is unspecified. Use the documented emulator
   defaults in [development practice](guidance/starter/development.md#establish-the-contract)
   where applicable, and record them as defaults rather than owner choices.
+- Writing, changing or reviewing an example: read
+  [the rules for examples](examples/AGENTS.md) first.
 - Choosing game or demo techniques: read the [technique index](guidance/techniques/README.md),
   then only the relevant guide. Separate published facts, our adaptations, and
   measured results. Use its cited pages before hardware-dependent
