@@ -241,7 +241,7 @@ patches. Its captures are the reference for the next trial.
 
 The move from 1.12.1 had one conflict: the trap code moved to `src/trap.c`.
 Every check passed. Every rendered frame, sound recording, key script and
-result record was identical to 1.12.1. These differences were accepted:
+result record was identical to 1.12.1. The adoption accepted these differences:
 
 - RAM snapshots: 4 to 13 bytes are different. They are one byte at `$0113`
   and bytes from `$7F14` to `$7F20`, in the stack area that the examples
@@ -254,7 +254,7 @@ result record was identical to 1.12.1. These differences were accepted:
   TSTA, TSTB", commit `cbad6b5e`. TSTA and TSTB are now one cycle shorter.
   A control build of 1.13 without that commit gave RAM, frames, sound and
   ticks identical to 1.12.1.
-- XRoar logs: the "Colour BASIC CRC32 valid" lines are gone. Cause: commit
+- XRoar logs: 1.13 does not write the "Colour BASIC CRC32 valid" lines. Cause: commit
   `6e9eb4f6`, "machines: remove old ROM CRC verification". The ChangeLog does
   not list it.
 
