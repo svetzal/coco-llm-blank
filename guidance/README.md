@@ -40,7 +40,6 @@ For practical implementation advice, start with the [technique guides](technique
 
 - [Research for games and demos](techniques/research/README.md).
 - [Rendering sources examined](techniques/research/rendering-sources.md).
-- [CoCo keyboard and shared input hardware](techniques/research/input-hardware.md).
 - [Tile-map rendering and collision research](techniques/research/tile-map.md).
 - [Legacy CoCo maze and tile research](techniques/research/legacy-tile.md).
 - [Follow-up search for a legacy bitmap tile renderer](techniques/research/tile-source-followup.md).
@@ -67,8 +66,6 @@ lists the reproduction code. Example-specific checks are also in the
 ### Controls, state and assets
 
 - [Collection-game keyboard, renderer and PCM journey](techniques/validation/collect-room-output.md).
-- [Controls and collision policy validation](techniques/validation/controls-collision.md).
-- [Keyboard matrix to movement and action](techniques/validation/keyboard-controls.md).
 - [Host validation of scheduled journeys and menu transitions](techniques/validation/game-state.md).
 - [CoCo 3 bounded game-state validation](techniques/validation/game-state-coco3.md).
 - [Original host asset preparation validation](techniques/validation/assets.md).

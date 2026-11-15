@@ -1,246 +1,209 @@
 # Separate controls, collision, and artwork
 
-Read this when held movement must coexist with single-press actions.
-Read it also when changing a picture must not change what blocks the player.
-The proposals below use logical controls and collision coordinates.
-They can inform CoCo 1/2/3 designs.
+Read this when held movement must work together with single-press actions,
+or when a change to a picture must not change what blocks the player. The
+keyboard facts apply to CoCo 1 and the named CoCo 2 NTSC boards. The CoCo 3
+manual describes the same scan. The checked examples run on CoCo 1 and CoCo 2
+only. The policies are original adaptations for all three machines.
 
-The host model checks bounded collision policies.
-The separate [keyboard experiment](validation/keyboard-controls.md) now
-supplies a bounded scanner and execution check for CoCo 1/2B.
-The examined articles concern the original CoCo generation.
-Broader target compatibility needs its own checks.
+## Read the keyboard matrix
+
+**Published explanation.** The manuals give these facts. Each cell is a PDF
+page in that machine's manual.
+
+| Fact | CoCo 1 | CoCo 2 | CoCo 3 |
+| --- | --- | --- | --- |
+| `$FF02` drives eight columns. `$FF00` bits 0–6 read seven rows. Bit 7 is the joystick comparator. | [13][coco1map] | 11 | 9 |
+| Control bit 2 (`$FF01`, `$FF03`) selects the data register when set, the DDR when clear. | [13][coco1map] | 11 | 9 |
+| Scan: write zero to one column bit, ones to the others. A pressed key reads zero on its row. | [40][coco1scan] | 36 | 40 |
+| Matrix diagram | [75][coco1matrix] | [36, figure 4-10][coco2matrix] | 40, figure 5-9 |
+| Fire buttons pull rows low: right fire PA0, left fire PA1. | [13, 37][coco1fire] | 11 | 9, also PA2/PA3 |
+| The analog select bits (bit 3) choose the joystick axis and the sound source. | [37–38][coco1fire] | 37–38 | 42–43 |
+
+A DDR bit of zero makes a line an input, and one makes it an output.
+[MC6821 datasheet, PDF 7–8][pia]
+
+The diagrams give these positions, as zero-based port bits:
+
+| Keys | Row | Columns, in key order |
+| --- | --- | --- |
+| Up, Down, Left, Right, Space | PA3 | PB3, PB4, PB5, PB6, PB7 |
+| X, Y, Z | PA3 | PB0, PB1, PB2 |
+| A, B, C | PA0 | PB1, PB2, PB3 |
+| M | PA1 | PB5 |
+| Enter, Clear, Break | PA6 | PB0, PB1, PB2 |
+| Either Shift | PA6 | PB7 |
+| Alt, Ctrl, F1, F2 (CoCo 3 only) | PA6 | PB3, PB4, PB5, PB6 |
+
+Both Shift keys share one position, so a scanner cannot tell them apart.
+
+**Our adaptation**, used in [keyboard-controls](../../examples/keyboard-controls/README.md)
+and [collect-room](../../examples/collect-room/README.md):
+
+1. Clear control bit 2 and write the DDR. Then set bit 2 again. Keep the
+   other control bits. Rows are inputs (`$00`) and columns are outputs (`$FF`).
+2. Strobe one column at a time: `$F7`, `$EF`, `$DF`, `$BF` and `$7F` for the
+   arrows and Space.
+3. Test only the bit of the row that you need. Do not compare the whole byte.
+4. Write `$FF` to the columns after the scan.
+
+A write to `$FF02` is not a column strobe until bit 2 of `$FF03` is set.
+Both examples mask IRQ and FIRQ. They make no claim to work beside a ROM
+interrupt handler.
+
+### Shared inputs
+
+A held fire button can look like a key in every column of its row. Joystick
+conversion uses the DAC and the select bits of the sound path. Our adaptation:
+decide which routine owns the mux and the DAC. A scan does not restore the DAC
+value or the sound routing. Decide if the game supports fire buttons and keys
+on rows PA0 and PA1 at the same time. See the [sound guide](sound.md).
+
+### Several keys at once
+
+The diagrams show no diode for each key. **Our deduction:** three held
+corners of a rectangle can connect the fourth. A, B and I hold (PA0,PB1),
+(PA0,PB2) and (PA1,PB1), so J at (PA1,PB2) can read as held. No result for
+this probe exists. Define the chords that the game supports. Test same-row
+pairs, same-column pairs and opposite arrows.
 
 ## Sample controls before choosing actions
 
-Larry Landwehr's "Read the Keyboard in Assembly," *Hot CoCo*, October 1983,
-compares complete keyboard-read bytes.
-It branches on left before checking right or space.
-Its demonstration therefore has an early-branch priority.
-[Printed/PDF 106 and 108][keyboard].
+**Published explanation.** Larry Landwehr's assembly demonstration compares
+the complete row byte with a constant. It branches on left before it checks
+right or Space. [Landwehr, *Hot CoCo*, October 1983, printed/PDF 106 and 108][keyboard]
+Our inference: a whole-byte test can reject a key when another row bit
+changes, and the early branch gives left priority.
 
-Our inference is that whole-byte equality can also reject an intended key when
-another input bit changes.
-Neither behaviour is a suitable default for movement plus fire.
-
-Keep the printed discrepancies visible.
-
-Landwehr's M-key example says 233, but the table places M under 223
-(printed/PDF 106).
-The continuation says eight rows by eight columns, while the table has seven
-labelled row values (printed/PDF 106, 108).
-[Landwehr, "Read the Keyboard in Assembly"][keyboard].
-These conflicts remain unresolved here.
-
-Before you write a scanner, check the target hardware reference for these
-items:
-
-- PIA setup
-- row masks
-- shared input bits
-- supported key combinations
-
-Use the [primary input-hardware findings](research/input-hardware.md)
-for board-specific matrix coordinates and shared-input limits.
-This article alone is not a register recipe.
-
-Our adaptation is to sample every required control, then apply an explicit
-policy.
-Use held state for movement and a rising edge for a single action.
-This original pseudocode chooses neutral movement when left and right are
-both held, allows movement plus fire, and suppresses a startup-held fire key:
+**Our adaptation:** sample every control, then apply an explicit policy. Use
+held state for movement and a rising edge for a single action:
 
 ```text
-previous = input.sample_required_controls()  # Before the first update.
+previous = sample_required_controls()   # before the first update
 
 each update:
-    held = input.sample_required_controls()
+    held = sample_required_controls()
     pressed = held AND NOT previous
-    horizontal = integer(held.right) - integer(held.left)
-    request_movement(horizontal)
+    request_movement(integer(held.right) - integer(held.left))
     if pressed.fire:
         request_one_shot()
-    previous = held
+    previous = held      # also after a rejected move
 ```
 
-The adapter returns logical booleans, independent of electrical polarity.
+This policy cancels opposite arrows and allows movement plus fire. It ignores
+a fire key held at startup. To count a startup-held key, start `previous` at
+all false. For automatic fire, use held state with a repeat interval. These
+are game choices, not Landwehr's rules.
 
-For startup-held buttons to count as presses, initialize `previous` to all
-false instead.
-For automatic fire, use held state with a chosen repeat interval.
-Define the same opposing-direction rule for a vertical axis.
-Choose whether to allow diagonal movement before adding it.
-These are game policies, not Landwehr's rules.
-
-Edge detection neither debounces switches nor repairs matrix ghosting.
-It can also miss a press released between samples.
+Edge detection does not debounce a switch or repair ghosting. The program
+cannot see a press and release between two samples. For phase changes, read
+the [game-loop guide](game-loop.md).
 
 ## Give scenery and objects different collision questions
 
-Matt Togliatti's "Attacker," *Hot CoCo*, October 1983, uses four screen-point
-tests around the player in line 150.
-Its projectile code combines screen tests with coordinate comparisons against
-the player in lines 530–550 and 650–660.
+**Published explanation.** Matt Togliatti's *Attacker* tests four screen
+points around the ship (line 150). Its projectile code combines screen tests
+with coordinate comparisons against the player (lines 530–550 and 650–660).
+It is one game, not a general collision method.
+[Togliatti, *Hot CoCo*, October 1983, printed/PDF 86 and 88][attacker]
 
-This is an examined example of mixing scenery and object tests,
-not a general collision library. [Printed/PDF 86 and 88][attacker].
+**Our adaptation:**
 
-Our proposed division is:
+- Ask the scenery if a location is solid. Screen colours can answer if the
+  drawing defines the world. Then colour, erasure and drawing order are part
+  of the collision rule. Use a separate occupancy map when decoration must
+  change alone. Then each edit to solid scenery must change the map and the
+  picture.
+- Ask objects if their collision shapes intersect. Use this for a projectile
+  that hits an actor. A bounding box is a deliberate approximation.
 
-- Ask scenery whether a location is solid.
-  Screen colours can answer this when drawing intentionally defines the world.
-  Then colour choices, erasure, and drawing order are part of collision
-  behaviour.
-  Use a separate occupancy map when decoration must change independently.
-  That needs storage and a rule that scenery edits update both collision data
-  and the picture.
+Decide the collision units, the world edges, whether touching counts and the
+response: stop, slide, damage or collect. A test of one actor's new position
+against another actor's old position adds an update-order rule.
 
-- Ask objects whether their explicit collision shapes intersect. Use this for
-  a projectile hitting an actor, even if their pictures have transparent holes
-  or overlap decorative scenery. Bounds are a deliberate approximation.
-  They do not imply pixel-perfect contact.
+[Tile-room](../../examples/tile-room/README.md) and collect-room keep a map
+apart from the drawing and reject a move into a wall or past the room edge.
+See also the [moving-object guide](moving-objects.md#decide-whether-the-picture-is-also-the-collision-map).
 
-Choose these items:
+### Probes and steps
 
-- collision units
-- world boundaries
-- whether touching counts
-- the response to contact (stop, slide, damage, or collect)
-
-Decide which positions object tests compare within an update.
-Testing one actor's new position against another's old position introduces
-update-order policy.
-Rendering should follow the resolved state when collision is independent of
-artwork.
-
-The [moving-object guide](moving-objects.md#decide-whether-the-picture-is-also-the-collision-map)
-explains the rendering side and distinguishes visibility from solidity.
-Its full-redraw and masked-object examples do not implement collision.
-
-## Use sparse probes only where gaps are acceptable
-
-A few probe offsets are easy to inspect for a small ship in broad tunnels.
-Keep those offsets as collision data, separate from the sprite.
-Togliatti's four screen tests motivate this choice.
-The separate scenery query and substeps below are our additions, with bounded
-host-model checks linked below.
-[Matt Togliatti, "Attacker," October 1983, printed/PDF 86, line 150][attacker].
-
-This original pseudocode deliberately handles integer, horizontal movement
-against stationary scenery. It assumes a valid starting position, solid cells
-on a unit grid, and a policy that stops at the first blocked candidate:
+A few probe points are easy to check for a small ship in wide tunnels. Keep
+the probe offsets as collision data, apart from the sprite. Move one grid cell
+at a time and stop at the first blocked step:
 
 ```text
-function blocked(position, probes, scenery):
-    for offset in probes:
-        point = position + offset
-        if outside_world(point) OR scenery.is_solid(point):
-            return true
-    return false
-
 function move_horizontal(position, dx, probes, scenery):
-    for step in 1 through abs(dx):  # No iterations when dx is zero.
+    for step in 1 through abs(dx):
         candidate = position + (sign(dx), 0)
-        if blocked(candidate, probes, scenery):
+        if any probe of candidate is outside the world or solid:
             break
         position = candidate
     return position
 ```
 
-Unit steps prevent a probe from skipping a solid grid cell along this path.
-They do not fill gaps between probes.
-A one-cell obstacle can lie between two probe tracks throughout the move.
+Unit steps stop a probe from skipping a solid cell on its own track. They do
+not fill the gaps between probes: a one-cell post can pass between two probe
+tracks. Thin posts and corners need every relevant edge cell or a shape test.
+Do not extend the loop to diagonal motion without a corner rule. If you limit
+the steps in one update, drop or defer the remaining steps. Do not jump to the
+destination. Two moving objects need a relative-motion test.
 
-Thin posts, corners, and irregular obstacles need all relevant edge cells or
-an explicit shape-intersection method.
-A larger sprite also needs a deliberate collision-shape review.
+**Measured result, not rerun here.** A host Python model of these policies
+passed 26 cases (Python 3.13). No example uses it, it ran no 6809 code and
+it shows nothing about speed or arbitrary shapes. Its cases agree with the
+advice above:
 
-Do not extend this loop to diagonal motion without defining the path and corner
-rule.
-Axis-by-axis movement introduces axis priority.
-Diagonal endpoint tests can miss intervening contact.
+- A destination-only test crossed a thin wall. Unit steps stopped at it.
+- Probes at offsets 0 and 2 missed a one-cell obstacle. Offset 1 found it.
+- Wall-coloured decoration changed art-derived movement, not map movement.
+- Two objects that swap places in one update overlap at neither end. A
+  relative sweep of the two intervals found the contact.
+- A new-against-old position test reported a false contact.
 
-Moving objects need relative-motion checks or a separately specified shared
-stepping scheme.
-Arbitrary fractional geometry needs a step bound derived from that geometry,
-or a swept collision test.
-Simply adding more substeps is not a completeness proof.
+## What the examples check
 
-If an update caps its substeps, do not jump to the destination.
-Defer or reject remaining movement.
+`uv run python scripts/coco.py check examples/keyboard-controls` plays a key
+script through the pinned instrumented XRoar's keyboard matrix and PIA to the
+6809 scanner, on CoCo 1 (`cocous`) and CoCo 2 (`coco2bus`). It compares 16
+update records with the model. The build without keys must stay idle.
+Integration tests in `scripts/coco_spec.py` break the scanner four ways: a
+wrong column, a DDR left selected, a held-fire count and a stale history.
 
-## Minimum checks before adopting either proposal
+Collect-room's `journey` variant plays 95 scans with arrows, walls, a locked
+exit and restarts. Both examples deliver keys through XRoar's API. They are
+not evidence for host key events, physical keys, switch bounce, joystick
+buttons or CoCo 3. The A+B+I probe and most chords are not tested.
 
-Use expected positions and events written independently of the renderer:
+## Unresolved source conflicts
 
-1. Hold a direction across updates. Then release it. Movement continues only
-   while held. Hold fire across those same updates. Expect one shot, then
-   another only after release and a new press.
-   Check the chosen startup policy.
+- Landwehr's M-key prose gives 233, but his table puts M under 223 (PDF 106).
+  His text gives eight rows, but the table has seven (PDF 106 and 108). The
+  manuals give seven rows.
+- The CoCo 1 schematic labels the lower PIA port PA0–PA7 (PDF 75). The prose
+  and the block diagram (PDF 36) call it port B. The register roles settle
+  this for software.
+- The CoCo 2 manual names the PIA IC15 on PDF 11 and IC7 on PDF 34–36. Use
+  the register addresses, not the label. A board schematic would settle this.
 
-2. Press direction plus fire, and both opposing directions plus fire. Expect
-   movement plus one shot in the first case, neutral movement plus one shot
-   in the second. Test the real input adapter on each claimed machine too.
+## Sources
 
-3. Accept a clear path and stop before a wall. Cross a thin wall with a large
-   displacement. A destination-only failure control must miss it.
-   The unit-step version detects it when a probe track crosses the wall.
+- Tandy manuals: CoCo 1 *Technical Reference Manual* (`coco1-technical`),
+  CoCo 2 *NTSC Service Manual, 26-3134/3136* (`coco2-service`), CoCo 3
+  *Service Manual* (`coco3-service`).
+- Motorola, *MC6821 PIA* datasheet, outside the manifest, SHA-256
+  `1fa14d31bb39172610d63fd05ee6624cca50c7adb8ec3114579e7018222c3872`.
+- *Hot CoCo*, Vol. 1 No. 5, October 1983: Landwehr, "Read the Keyboard in
+  Assembly", and Togliatti, "Attacker". PDF pages equal printed pages. The
+  [Hot CoCo reading](research/hot-coco-game.md#sources-and-reading-coverage)
+  records the hash, the reading coverage and a search for errata.
 
-4. Put a one-cell obstacle between probe tracks. Show the sparse method's
-   miss. Then require the chosen fuller shape test to detect it if that
-   obstacle belongs in the game. Check boundaries and corner policy.
+The examples are our original work. They copy no magazine listing.
 
-5. Change decoration without changing collision data. Expect identical
-   movement with an independent map. Change solid scenery. Check both
-   representations. Check projectile/actor contact separately from scenery,
-   including crossing paths between updates and the chosen touching rule.
-
-A [host reference model](validation/controls-collision.md) now checks
-26 bounded scenarios for logical input, horizontal grid movement and one-axis
-sweeps, including naive failure controls.
-That does not validate a CoCo input adapter, arbitrary geometry, performance,
-display or physical hardware.
-The broader target-specific checks above remain required.
-
-The separate [keyboard report and reproduction commands](validation/keyboard-controls.md)
-record 21 passing tests with 97.06% runner coverage.
-Original 6809 code scans left, right and space on explicit NTSC, 32 KiB,
-stock-clock CoCo 1 and CoCo 2B profiles.
-Both match all 16 update records.
-The records include these cases:
-
-- startup-held suppression
-- movement plus action
-- opposing directions
-- blocked release/repress
-- return from both boundaries
-
-Wrong-column, wrong-register-selection, held-action and stale-history controls
-fail the independent expectations.
-
-Injection calls XRoar's `keyboard_press`/`keyboard_release` API.
-Its real matrix and PIA feed the 6809 scanner.
-The hook does not write logical input or RAM.
-
-This is not OS key-event, physical-key, debounce or general chord evidence.
-There is no cadence, rendered-output, sound or CoCo 3 result.
-The host collision model remains separate.
-These bounded position checks do not port that model.
-
-Source reading and page-image inspection support the historical descriptions
-only.
-The [research provenance](research/hot-coco-game.md#sources-and-reading-coverage)
-records these items:
-
-- local evidence
-- hashes
-- full reading coverage
-- research-local IDs `hot-coco-games-keyboard` and `hot-coco-games-attacker`
-
-These are not manifest IDs.
-Its bounded correction search does not establish that no later errata exist.
-Citations here use one-based PDF pages, equal to printed pages in the
-linked October 1983 OCR edition, Vol. 1 No. 5.
-
+[coco1map]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=13>
+[coco1fire]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=37>
+[coco1scan]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=40>
+[coco1matrix]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=75>
+[coco2matrix]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf#page=36>
+[pia]: <https://deramp.com/downloads/mfe_archive/050-Component%20Specifications/Motorola/Motorola%206821.pdf#page=7>
 [keyboard]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Hot%20Coco%20%28OCR%29/HotCoCo-1983-10.pdf#page=106>
 [attacker]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Hot%20Coco%20%28OCR%29/HotCoCo-1983-10.pdf#page=86>

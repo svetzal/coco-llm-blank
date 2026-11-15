@@ -215,8 +215,8 @@ Keep that useful test separate from keyboard delivery.
 
 XRoar API injection does not establish OS key delivery, window focus or physical
 keys. Claim those only after you check those paths. The
-[keyboard experiment's report](../techniques/validation/keyboard-controls.md#actual-injection-boundary)
-records how this injection boundary was first established.
+[keyboard-controls example](../../examples/keyboard-controls/README.md) shows
+the method with four broken scanners that must fail.
 
 ### Sound
 

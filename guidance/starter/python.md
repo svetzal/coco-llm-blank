@@ -165,7 +165,7 @@ Experiment names select only that experiment. Coverage uses its `coverage.ini`
 where present. Otherwise, coverage uses the root configuration with the
 documented module targets.
 
-The light experiment scopes are `assets`, `controls-collision`, `game-state`,
+The light experiment scopes are `assets`, `game-state`,
 `linux-onboarding`, and `sudo-policy`. The last two run host specifications with
 controlled process boundaries, not the Docker onboarding or sudo journeys.
 `linux-onboarding`, `macos-onboarding`, and `sudo-policy` have no scoped
@@ -201,7 +201,6 @@ Some scopes have their own prerequisites:
 - `collect-room-output` builds a private emulator from `COLLECT_ARCHIVE`
   (default `local/research/audio-timing/xroar-1.12.1.tar.gz`). It needs
   CoCo 1/2 ROMs.
-- `keyboard-controls` needs its prepared private emulator.
 
 The runner does not prepare these inputs, launch experiment setup scripts, or
 start an interactive GUI. Missing prerequisites follow the behavior of the

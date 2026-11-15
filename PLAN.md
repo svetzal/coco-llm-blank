@@ -22,7 +22,7 @@ trial without a new request; the completed Claude 03 assessment is under
   `guidance/techniques/research/` and both `validation/` folders are leftover
   lab material from before [the lab workflow](guidance/starter/lab.md). Close
   them as that workflow describes, in order:
-  1. One topic at a time (controls, game state, assets, tiles, setup):
+  1. One topic at a time (game state, assets, tiles, setup):
      codify what its experiments, research notes and
      validation reports established into the technique guide and examples,
      moving useful assembly programs into `examples/`. Then delete that
@@ -33,7 +33,9 @@ trial without a new request; the completed Claude 03 assessment is under
      [animation guide](guidance/techniques/animation.md) and the page-flip
      examples. We closed the sound topic. Its evidence is in the
      [sound guide](guidance/techniques/sound.md) and the sound-slots and
-     timer-sound examples. `experiments/display-validation/` and
+     timer-sound examples. We closed the controls topic. Its evidence is in
+     the [controls guide](guidance/techniques/controls-and-collision.md) and
+     the keyboard-controls example. `experiments/display-validation/` and
      `experiments/audio-output/` keep only `instrument.py`, which
      `collect-room-output` uses. Delete them with that experiment.
   2. Add a size check to CI so growth is a deliberate decision.

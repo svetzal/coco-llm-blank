@@ -18,8 +18,6 @@ The links below describe existing work; they do not claim a new validation run.
 | Check a collection-game output journey | [collect-room-output](collect-room-output/README.md) | [Evidence and limits](../guidance/techniques/validation/collect-room-output.md) |
 | Pack original artwork | [assets](assets/README.md) | [Evidence and limits](../guidance/techniques/validation/assets.md) |
 | Consume prepared artwork on CoCo 1/2 | [asset-loading](asset-loading/README.md) | [Evidence and limits](../guidance/techniques/validation/asset-loading.md) |
-| Check logical controls and collisions | [controls-collision](controls-collision/) | [Evidence and limits](../guidance/techniques/validation/controls-collision.md) |
-| Exercise the keyboard matrix path | [keyboard-controls](keyboard-controls/) | [Evidence and limits](../guidance/techniques/validation/keyboard-controls.md) |
 | Model turns and menu transitions on the host | [game-state](game-state/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state.md) |
 | Check a bounded CoCo 3 state subset | [game-state-coco3](game-state-coco3/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state-coco3.md) |
 | Check current-host macOS recovery | [macos-onboarding](macos-onboarding/) | [Evidence and limits](../guidance/starter/validation/macos-onboarding.md) |
