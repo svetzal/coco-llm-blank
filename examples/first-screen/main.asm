@@ -16,6 +16,7 @@
 *       to the odd address to set it. $FFC6-$FFD3 is the display offset.
 *     PDF 14: $FF22 bit 3 = CSS, bits 4..7 = GM0, GM1, GM2, A/G.
 *     PDF 15: SAM bit addresses; offset in 1/2K units; V bits per mode.
+*     PDF 30: the size of each mode; pixel width and height in clocks.
 *     PDF 31 Table 1: SAM V2..V0 and $FF22 bits for each mode.
 *       $FF22 bits 2..0 are "do not change".
 *   Motorola, MC6847 datasheet, PDF 18-21: sizes, colours, pixel order.

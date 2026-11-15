@@ -63,6 +63,7 @@ reverse jsr object_b
         jsr object_a
 * The check takes one snapshot each time the program reaches this label.
 frame_ready
+* Wait so that a person can see each scene in `run`. A project removes it.
         ldy #$FFFF
 pause   leay -1,y
         bne pause

@@ -81,8 +81,9 @@ Read these pages before you change a value. Use
 [reference lookup](../../guidance/starter/references.md) to get them.
 
 - Tandy, *Color Computer Technical Reference Manual*: PDF page 11 (SAM
-  control), 14 (`$FF22` bits), 15 (SAM bits for each mode) and 31, Table 1
-  (SAM and `$FF22` values for each mode).
+  control), 14 (`$FF22` bits), 15 (SAM bits for each mode), 30 (the size of
+  each mode and its pixels in dot clocks and scan lines) and 31, Table 1 (SAM
+  and `$FF22` values for each mode).
 - Motorola, *MC6847 Video Display Generator* datasheet, PDF pages 18 to 21:
   sizes, colours and the order of the pixels in a byte.
 - *The Rainbow*, October 1986, PDF page 119: the `PMODE` number of each mode.
