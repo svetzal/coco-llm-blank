@@ -11,13 +11,12 @@ was assembled, loaded or executed. There are no runtime, timing, framebuffer,
 visual or physical-hardware results. The pseudocode below is our original,
 untested adaptation. It contains no historical code or artwork.
 
-Neither source supplies an incremental scrolling tile renderer. Gloom changes
-the view by projecting a map into wall columns; Symmetry plots a pattern on a
-fixed screen. Their useful contribution to a scrolling project is narrower:
-keep rendered-state records, invalidate them deliberately, and preserve packed
-neighbour pixels when updating memory. Hardware scrolling remains covered by
-[the scrolling guide](../scrolling.md); tile-map evidence remains in
-[the tile research](tile-map.md).
+Gloom changes the view by projecting a map into wall columns. Symmetry plots
+a pattern on a fixed screen. Their useful contribution to a scrolling project
+is narrower. Keep records of the rendered state and invalidate them on
+purpose. Keep the packed neighbour pixels when you update memory. The
+[scrolling guide](../scrolling.md) covers hardware scrolling. The
+[tile-map guide](../tile-maps.md) covers tiles.
 
 ## Evidence and citation convention
 
@@ -103,12 +102,6 @@ external writes invalidate the premise that the description still matches
 the framebuffer. Either include those changes in the description, restore the
 background first, or invalidate the affected region.
 
-For a tile scroller, the analogous proposal is to associate a visible cell
-with its world-cell identity **and content revision**. A camera move can place
-a different tile in the same screen cell, while a door can change without the
-camera moving. Do not skip either update just because one key is unchanged.
-This is our adaptation; Gloom does not implement a tile revision system.
-
 ### Memory and execution assumptions that must not disappear in a port
 
 The README's map representation has two bytes per cell: wall/distance metadata
@@ -178,10 +171,7 @@ memory[address] = (memory[address] AND (255 XOR mask))
                   OR (colour_index << shift)
 ```
 
-A single-pixel change must preserve its neighbour. For a tile writer that
-covers both pixels of a byte, compose the whole byte instead; the masking
-operation is useful when an update covers only one nibble. That tile-writer
-advice is our deduction, not a routine found in Symmetry.
+A single-pixel change must keep its neighbour pixel.
 
 Keep palette choice outside geometry generation. Define art in colour indices,
 then choose a display-specific mapping at setup. A later palette-animation
@@ -239,13 +229,10 @@ These are proposed checks, not completed experiments:
 2. Alternate two framebuffers and alter the world between frames. Verify each
    buffer's description matches its own pixels. Add an external pixel change
    to demonstrate why invalidation is required.
-3. For tile adaptation, change a tile without moving the camera, cross a tile
-   boundary, reverse direction and jump multiple cells. Compare against a full
-   redraw; one-column updates alone do not prove jump handling.
-4. For packed pixels, start with distinct neighbour nibbles, update each parity
+3. For packed pixels, start with distinct neighbour nibbles, update each parity
    and check that only the intended nibble changes. Check all edges and reject
    out-of-bounds input without changing guard bytes.
-5. Establish the chosen CoCo 3 RAM, ROM, CPU, clock, display and video-standard
+4. Establish the chosen CoCo 3 RAM, ROM, CPU, clock, display and video-standard
    contract before execution. Check hardware facts in the cited technical
    references, then test assembly, loading, framebuffer bytes and visible
    output separately. Measure write counts and elapsed time before claiming

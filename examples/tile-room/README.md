@@ -1,6 +1,6 @@
 # A small room with persistent map state
 
-This original demo implements the fixed-room proposal in
+This original demo implements the fixed-room adaptation in
 [Build a room from tiles](../../guidance/techniques/tile-maps.md).
 It is an adaptation of that guide's design, not a historical reproduction or
 a PacDude port. All code, map data, and byte-aligned artwork here are original.
@@ -57,9 +57,6 @@ and a non-T1 MC6847. Both checks use XRoar's `cocous` architecture with explicit
 CoCo 1 uses verified `bas11.rom` and `extbas10.rom`. CoCo 2 uses verified
 `bas12.rom` and `extbas11.rom`. These are defined emulator configurations, not
 evidence for every board revision.
-
-The scoped local contract is `local/research/tile-room/contract.txt`.
-Shared project notes are untouched.
 
 The display is RG6, 256×192, one bit per pixel, with 32 bytes per row and
 6,144 bytes total. CSS is zero (black/green).
@@ -174,17 +171,16 @@ SHA-256 values identify the exact PDFs that were examined locally.
   - Pixel order runs L7 through L0 across the byte.
   - SHA-256 `2d4586d2fd3c82c60071bbe4cc3930e561c00dce1e43245b0c7ffd5e081fe88c`.
 
-The guide's reading of the PacDude source motivated the separation of map
-addressing, display addressing and movement rules.
-This example does not reimplement its renderer or diagonal-path collision.
-Its archive citations remain in the
-[guide's reading record](../../guidance/techniques/tile-maps.md#source-and-reading-record).
+The guide's reading of the PacDude source gave the separation of map
+addressing, display addressing and movement rules. This example does not
+copy its renderer or its diagonal-path collision. The guide lists the
+[archive sources](../../guidance/techniques/tile-maps.md#sources).
 
 ## Evidence and limits
 
-The scoped run passed all 12 specifications, including all 42 checkpoints on
-each defined target. Combined statement and branch coverage of the former
-runner was 98.67%. Ruff lint/format and scoped Markdown lint passed.
+`coco.py check` compares all 42 checkpoints on each defined target. The
+specifications in `tile_room_spec.py` test the model and the conversion. The
+full starter suite runs them with `uv run pytest`.
 
 The two result files record the same binary SHA-256 and each target's
 checkpoint list.
@@ -227,7 +223,6 @@ The failed check did not write a success record. This was a correction to the
 test budget, not a speed claim.
 
 Assembly and emulator RAM evidence are distinct from rendered-display evidence.
-No GUI was launched for this task.
 
 Later, the pictures moved from hand-written bytes to `tiles.png` and
 `prepare.py`, and the check started to compare XRoar's rendered picture.
@@ -252,8 +247,6 @@ These items remain untested:
 - CoCo 3
 - audio
 - performance
-
-The full starter suite is intentionally outside this worker's scope.
 
 [technical]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf>
 [service]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf>

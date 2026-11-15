@@ -1,319 +1,224 @@
 # Build a room from tiles
 
-Use a tile map when your game has repeated scenery, passages, walls, or objects
-that change a small part of the room. Store the room as tile numbers. Let those
-numbers select both the scenery to draw and the movement rules to apply.
+Read this when a game has repeated scenery or items that change one cell of a
+room. Store the room as tile numbers. Let each number select a picture and,
+through a separate table, a movement rule.
 
-Brian O'Neill's *PacDude Monster Maze* supplies the examined example. Its
-renderer and movement routines share a map, but use separate address and rule
-calculations.
+We measured the method on CoCo 1 and CoCo 2 in RG6, in the
+[tile-room example](../../examples/tile-room/README.md). The main historical
+source, Brian O'Neill's *PacDude Monster Maze*, is a CoCo 3 program. We read
+it but did not run it. Its drawing path does not transfer to CoCo 1/2.
 
-This guide explains that separation. Then it proposes a smaller original game
-design.
+Each claim below has one of these labels:
 
-Evidence: PacDude source reading only. We did not run that historical program. A
-separate original [tile-room example](../../examples/tile-room/README.md) checks
-a bounded adaptation on defined CoCo 1/2 configurations.
-
-The examined historical renderer targets CoCo 3. Its compatibility does not
-follow from our example.
+- **Published:** what a cited source does, from our reading of it.
+- **Adaptation:** our design, which the example uses.
+- **Derived:** our arithmetic from cited values. We did not run it.
+- **Measured:** a result of `coco.py check`, which you can run again.
+- **Proposal:** our design, which nothing tests.
 
 ## Keep three kinds of position separate
 
-A cell is one entry in the map. A logical position locates an actor within the
-world. A display address locates bytes that draw part of that world.
+A map cell, an actor position and a display address are different values.
 
-| Quantity | PacDude example | What it answers |
+| Quantity | PacDude | What it tells you |
 | --- | --- | --- |
-| Map row and column | One-byte entries, 80 bytes between row starts | Which scenery entry is here? |
-| Logical actor position | Eight coordinate units per cell in `LEGAL` | Where can the actor move within this cell? |
-| Display destination | `BLOCK` writes eight rows, 16 bytes per row | Where must the tile image be copied? |
+| Map row and column | One-byte entries, 80 bytes between row starts | Which scenery is here |
+| Logical actor position | Eight coordinate units for each cell, in `LEGAL` | Where the actor can go in the cell |
+| Display destination | `BLOCK` writes eight rows of 16 bytes | Where to copy the tile picture |
 
-These numbers describe different layouts. Eight logical units do not prove an
-8×8-pixel tile. Sixteen copied bytes do not establish the pixel width without
-the display encoding. Do not derive a CoCo 1/2 graphics mode from these values.
+**Published.** The values come from `PAC2PT01.SRC` (`CNVRT2` 17170–17240,
+`BLOCK` 17250–18330) and `PAC2PT02.SRC` (`LEGAL` 19060–19420). Line numbers
+are the five-digit numbers in the source files. Eight units do not prove an
+8×8-pixel tile. Do not derive a CoCo 1/2 mode from these values. Use the
+[graphics checks](../starter/development.md#graphics-before-code).
 
-The source basis is `PAC2PT01.SRC`, `CNVRT2` 17170–17240 and `BLOCK`
-17250–18330, plus `PAC2PT02.SRC`, `LEGAL` 19060–19420. All line references in
-this guide use the five-digit numbers inside the original source, not editor
-line numbers.
+## Store the room apart from its picture
 
-The [source and reading record](#source-and-reading-record) identifies the exact
-package.
+**Published.** PacDude puts `GRDBUF` at `$4000` (`PAC2PT01.SRC`
+04430–04510). `MAKMAZ` (16260–16910) clears `$1900` bytes. It copies 52
+entries for each row from `GRDBUF + $46E`, with 80 bytes between rows.
+`CNVRT2` calculates `GRDBUF + row × 80 + column`.
 
-## Store a room independently of its picture
+**Derived.** `$1900` is 80 rows of 80 entries. The level is a 52×52 area from
+row 14, column 14 (`$446E`). A stride of 52 reads wrong entries after one row.
 
-PacDude defines `GRDBUF` at `$4000` (`PAC2PT01.SRC` 04430–04510). `MAKMAZ`,
-16260–16910, clears `$1900` bytes before it copies the level data. It starts the
-destination at `GRDBUF + $46E`, copies 52 entries per row, and advances the
-destination by 80 bytes between rows.
-
-Our arithmetic gives 6,400 cleared bytes, or 80 rows of 80 one-byte entries. The
-first copied entry is at row 14, column 14, with zero-based coordinates. The
-loop copies 52 rows.
-
-Thus the level occupies a central 52×52 area inside a padded map. The row stride
-remains 80, even inside that smaller area.
-
-`MAKMAZ` also adjusts entries at offsets from `POWLOC` before it returns.
-
-`CNVRT2`, 17170–17240, calculates this map address:
-
-```text
-map address = GRDBUF + row × 80 + column
-```
-
-For example, row 14, column 14 gives `$4000 + 1134 = $446E`.
-The next row at the same column is `$44BE`, 80 bytes later.
-Using 52 as the stride would read the wrong entries after the first row.
-These are calculated examples, not runtime observations.
-
-For your own map, write down the width, height, entry size, and row stride. A
-tightly packed map with one-byte entries can use its width as the stride.
-
-Padding is optional. It does not replace a check that each requested row and
-column is within the allocated map.
+For your map, write down the width, the height, the entry size and the row
+stride. Padding does not replace a bounds check of each row and column.
 
 ## Turn a tile number into drawing work
 
-PacDude keeps map addressing separate from display addressing.
+**Published.** `CNVRT1` (16920–17160) calculates a display destination from
+the grid position, the horizontal origin and the work page. `BLOCK` selects
+the picture at `tile number × 128` in the active mapping. It copies eight rows
+of 16 bytes, with 256 bytes between destination rows.
 
-`CNVRT1` in `PAC2PT01.SRC`, 16920–17160, selects a mapped display page. It
-calculates a destination from the grid position, horizontal origin, and work
-page. `CNVRT2` calculates the map address instead.
-
-`BLOCK`, 17250–18330, selects tile data at an offset of `tile number × 128` in
-the active source mapping. It copies eight rows of 16 bytes each. It advances
-the destination by 256 bytes between rows.
-
-That is 128 bytes of tile data, spread over eight destination rows, not one
-contiguous span.
-
-This gives a useful implementation boundary for an original game:
+**Adaptation.** Keep four steps apart:
 
 1. Read the tile number from the map.
-2. Find that tile's image in your original artwork.
-3. Calculate the display destination for the cell.
-4. Copy each image row with the display's row stride.
+2. Find the picture of that tile through a table.
+3. Calculate the display destination of the cell.
+4. Copy each picture row with the row stride of the screen.
 
-For a proposed byte-aligned tile format, define `tile_row_bytes`, `tile_height`,
-and `screen_row_bytes` from the selected mode. A compact image then needs
-`tile_row_bytes × tile_height` bytes.
+Tile-room uses one-byte map entries with an 8-byte row stride. Its scenery IDs
+are floor 0, wall 1, collectible 2 and exit 3. The actor picture is ID 4 and is
+never in the map. A table of four bytes gives the movement rule of each scenery
+ID. Each picture is eight rows of one byte.
 
-Image row `r` starts at `image_base + r × tile_row_bytes`. Its destination
-starts at `destination + r × screen_row_bytes`.
+**Derived.** In RG6, cell column `c`, row `r` starts at `$0400 + r × 256 + c`.
+Picture rows are 32 bytes apart. The lower-right cell starts at `$0907`. The
+[example README](../../examples/tile-room/README.md#source-facts-and-provenance)
+cites the RG6 facts.
 
-That formula is our proposed layout, not a transcription of PacDude. Choose the
-actual pixel dimensions and encoding only after the
-[graphics checks](../starter/development.md#graphics-before-code).
+**Proposal.** For wider tiles, copy `tile_row_bytes` for each picture row.
+A tile that starts inside a byte needs masks, so start with byte-aligned tiles.
 
-A tile that starts partway through a byte needs more packing or masking. Start
-with byte-aligned tiles to keep the first renderer small.
+## Redraw from the map
 
-## Redraw changes without losing the map
+**Published.** `FILSCN` (`PAC2PT01.SRC` 18340–18700) fills both buffers
+with repeated `GRID` calls. `CENTMV` and `GRID` (18890–20280) compare the grid
+position with the saved position of the work page. After a change, they draw
+the strip of 14 entries that comes into view. Entries with bit 7 set go
+through `POWTOP` or `POWBOT`, which we did not read.
 
-PacDude first builds its display through repeated `GRID` calls. `FILSCN`,
-`PAC2PT01.SRC` 18340–18700, changes the screen-page state to populate both
-buffers. This matters because an update to one buffer does not update the other.
+**Published.** When the player takes a dot, the player code (08990–09980)
+changes a pair of map entries. Then `REMOVE` (19930–20380), called from the
+interrupt path (15950–16010), changes the display bytes. The map change keeps
+the dot gone.
 
-For later drawing, `CENTMV` and `GRID`, 18890–20280, derive grid positions from
-the centre coordinates. They compare these with saved positions for the selected
-work page. A changed row or column causes the routines to draw an entering
-strip.
+**Adaptation.** Tile-room redraws the full screen from the current map at
+each move, then draws the actor. No saved background can bring back a
+collected item. This does more work than a redraw of changed cells only. It
+does not wait for vertical blanking, and we did not measure its time. The map
+is 48 bytes and the five pictures are 40 bytes.
 
-The horizontal strip contains 14 map entries. Vertical processing uses `HITOP`
-to choose its range.
-
-`GRID` also handles horizontal wrapping and a mapped-page transition during
-vertical drawing. Entries with the high bit set take special paths through
-`POWTOP` or `POWBOT`. We did not examine those complete overlay routines for
-this guide.
-
-The plain `BLOCK` copy is not an explanation of every visible tile.
-
-For a first game, use a fixed room. Redraw the complete background. Treat this
-as our simpler adaptation.
-
-When that works, redraw only cells whose contents changed or whose pictures an
-actor covered. Restore those cells from the current map before you draw actors
-again. See [moving objects](moving-objects.md) for the related background
-problem.
-
-A collectible must change map state as well as its picture. PacDude's player
-code, `PAC2PT02.SRC` 08990–09980, changes a pair of map entries when it collects
-a dot and prepares `REMDOT`.
-
-The interrupt path at 15950–16010 calls `REMOVE`, 19930–20380, to update display
-bytes. Erasing only the display would leave the old map entries available for a
-later redraw.
-
-In your adaptation, replace a collected item with its floor tile in the map.
-Redraw that cell. Then move the player away and back. The item must remain gone.
-
-If you later use two buffers, update each buffer before it becomes visible.
+**Proposal.** After the full redraw works, redraw only the cells that changed
+or that an actor covered. Restore them from the map before you draw actors.
+For a scroller, key each screen cell with its world cell and a revision of its
+content. Then a camera move and a door change each cause a redraw. Gloom's
+column records suggested this key
+([CoCo 3 source reading](research/coco3-game-source.md)).
 
 ## Decide which positions permit movement
 
-PacDude's movement test is more specific than a wall/passable lookup. `LEGAL`,
-`PAC2PT02.SRC` 19060–19420, uses the candidate `XPOS` and `YPOS`. For its
-intended nonnegative coordinate range, our reading gives:
+**Published.** `LEGAL` takes the candidate `XPOS` and `YPOS`. For nonnegative
+coordinates, our reading of its instructions is:
 
 ```text
 column = floor(x / 8)
 row = floor(y / 8)
 local_x = x mod 8
 local_y = y mod 8
-class = map[row × 80 + column] AND $1F
-rule = table selected by LEGLOC, indexed by class
+rule = table at LEGLOC, indexed by (map[row × 80 + column] AND $1F)
 ```
 
-The source defines `LEGLOC` at 00270. `LEGTAB` and `LEGTB2`, 02500–02810,
-provide the rule bytes.
+A zero rule rejects the position. The rule `$FF` accepts only
+`local_y = 7 - local_x`. Other rules accept only `local_y = local_x`. In the
+same file, `LEGLOC` is at 00270, and `LEGTAB` and `LEGTB2` are at
+02500–02810. This is a diagonal path through each cell, not a wall test.
 
-`LEGAL` rejects zero. For `$FF`, it accepts only `local_y = 7 - local_x`. For
-other nonzero values, it accepts only `local_y = local_x`. The caller accepts
-equality through the condition flags.
+`BEPAC` (07790–08980) tries the requested move and some near alternatives.
+If none passes, it restores the old coordinates. `BECAGE` (07380–07560) and
+control code (13260–13280) change `LEGTAB` entries during play. `VALID`
+(19430–19710) omits the test in the cell, so it is not a copy of `LEGAL`.
 
-For example, local position `(2, 2)` passes the latter rule. Position `(2, 5)`
-passes the `$FF` rule. A zero rule rejects both.
+**Adaptation.** Tile-room moves one cell at a time. It rejects a move off the
+map before it calculates an address. Then the rule of the tile accepts or
+rejects the move. A collectible becomes floor in the map when the actor moves onto it.
+Do not treat tile number zero as passable by default.
 
-These examples follow from the instructions. They are not tests we ran.
+**Proposal.** For smooth movement, define the collision shape of the actor
+first. Test every cell that it covers. For a move that can cross a cell, test
+the path or use short substeps.
 
-This constrains a point to a diagonal path through a logical cell. It does not
-test a filled triangular area, the visible pixels, or the actor's full extent.
+## What the tile-room example checks
 
-`BEPAC`, 07790–08980, tries the requested move and nearby alternatives in
-several branches. If none qualifies, it restores the previous coordinates. These
-small offsets do not establish safe movement at arbitrary speeds.
+**Measured.** `uv run python scripts/coco.py check examples/tile-room` runs
+41 scripted moves on CoCo 1 and CoCo 2. Both are NTSC, 32 KiB, normal-clock,
+non-T1 configurations of the pinned instrumented XRoar. At each of the 42
+frames, the check compares these items with `expected.py`:
 
-The rules can change. `BECAGE`, 07380–07560, writes particular `LEGTAB` entries.
-Control code at 13260–13280 clears those entries too. Initial table values alone
-cannot describe every game state.
+- all 6,144 screen bytes and every map byte
+- four guard bytes, the actor position, the accept flag and the script step
+- all 98,304 samples of the rendered 512×192 frame
 
-`VALID`, 19430–19710, does a related lookup for an offset position but omits the
-within-cell comparison. If you replace `LEGAL` with `VALID`, do not assume that
-the movement remains equivalent.
+The moves hit all four edges and walls from four sides. They collect the
+item, leave, return and cross the exit. `expected.py` walks the room from text
+drawings and does not read the assembly, the PNG or RAM. Integration tests in
+`scripts/coco_spec.py` change one pixel, write past the screen, remove the
+actor picture and convert 16×16 pictures. Each one must fail.
 
-## Build a smaller original game
+The check does not show a television, a physical CoCo or keyboard input. It
+does not measure timing or cover PAL, T1 VDGs or the CoCo 3.
 
-The following is our original adaptation, not PacDude's implementation.
+## What other sources show
 
-The [tile-room example](../../examples/tile-room/README.md) checks scripted cell
-movement, walls, collection and return on defined NTSC, 32 KiB, non-T1 CoCo 1/2
-configurations. Each target passes 42 complete framebuffer/map checkpoints with
-guards and negative controls.
+We read the cited parts of these sources. We ran none of them.
 
-It has no keyboard or victory system. Visual appearance, smooth movement and
-physical hardware remain untested.
+| Source | What it shows for tiles |
+| --- | --- |
+| William Barden Jr., "An A 'maze' ing Adventure", *The Rainbow* 7:7, February 1988, PDF 173–183 (printed 171–181) | A room graph for 16K ECB (PDF 173). Each room value holds six opening bits (Figure 6, PDF 176). NEWMAZE redraws the full view from room data with LINE, CIRCLE and PAINT. It checks each move against the same bits (lines 340–690, PDF 181–182). FINDMAZE opens each door from both sides (lines 340–410, PDF 182). No bitmap tiles. |
+| Benjamin W. Brunotte, "Rat Maze", *The Rainbow* 4:10, May 1985, PDF 107–120 (printed 105–118) | A 16K ECB passage grid: west 1, north 2, east 4, south 8, border 100 (PDF 107–109). The overhead view draws the outer top and left edges once, then the south and east edges of each cell (Listing 1, lines 1200–1250). Movement reads the same values (lines 1020–1180). No tile pictures. |
+| Bob Withers, Stephen O'Dea and others, *Sea Search* (`ADVENT01.ASM` 380–405, `ADVENT.ASM` 409–556) and *Calixto Island* (`ADVENT01.ASM` 446–477, `ADVENT.ASM` 408–543) | A room record holds one background ID and eight overlay slots. A decoder writes the background bytes. Each overlay has a row, a column and a byte width. It is written with a 32-byte stride and whole-byte stores. Not a tile grid. |
+| Harvey Brofman, *Dunkey Munkey*, `SCREN2.TXT` 674–735, `GRAPH2.TXT` 83–180 | Placement records repeat a girder shape pixel by pixel. Not a packed tile copy. Our reading of the clear and copy loops (`GRAPH2.TXT` 34–59): they do one more two-byte step at the buffer end. Use exclusive bounds. |
+| Lou Fiorino, *Ice Hockey* (`SK.TXT` 50–63). *Droid War* (`DroidWar.asm` 22–73, 533–551). John Crawford, *Space Raiders* (`SR3.TXT` 1–8, 657–759) | Coordinate limits, semigraphics shapes and a CoCo 3 object list. None reads a tile map. |
+| Hugo Dufort, [coco3game blog, April 2015][dufort] | On his CoCo 3 project, restore a stationary object by drawing its underlying tile again. An article, not a listing. |
 
-Start with a single room, original tiles, and one actor that occupies one cell.
-Use cell-by-cell movement first. Then you do not need a pixel-sized collision
-shape before the map and input loop work.
+**Derived.** Prose and listings disagree. Barden's PDF 179 says to AND X and
+A, but line 590 tests C and A. His PDF 180 says that the program refuses an
+exit until it has used about 30 percent of the rooms. Lines 490, 630 and 700
+do not support that. Rat Maze's printed 108 says that line 1230 draws the
+right side, but it draws the bottom edge (PDF 114).
 
-1. Define a small, asymmetric room with floor, wall, collectible, and exit
-   tiles.
-2. Define each tile's image and movement property separately.
-3. Place the actor in a passable cell.
-4. Draw every map cell. Then draw the actor.
-5. Convert an input direction into a candidate row and column.
-6. Reject candidates outside the map before you calculate an address.
-7. Reject candidates whose tile property blocks movement.
-8. Accept the remaining candidate as the actor's new cell.
-9. Apply collection or exit rules to the accepted cell.
-10. Redraw the background and actor from the resulting state.
+We found no correction in the `rainbow-index` entries (PDF 19, 22, 28, 53,
+57, 62–63, 109, 195 and 204), `rainbow-1988-04` (PDF 14 and 30), or the June
+and July 1985 corrections (PDF 228 and 231).
 
-Reject a left move at column zero before you subtract from an unsigned column.
-Apply the same rule at the top edge. Check the right and bottom limits before
-you read their candidates.
+**Proposal.** For a maze without textures, Rat Maze's shared-edge drawing
+fits. Store reciprocal openings, then let each cell draw its south and east
+walls. Refuse a map whose two sides of one opening disagree.
 
-This makes the boundary rule explicit. It does not rely on padding or accidental
-integer wrap.
+## Open questions
 
-Use a distinct property for movement. Do not treat tile number zero as
-inherently passable.
+**We stopped the historical tile-ID hunt.** We looked for a CoCo 1/2 program
+that goes from grid cell to tile ID to packed picture to bitmap address.
+PacDude has that chain, but on the CoCo 3. The other sources above, and Cubix,
+do not have it. This finding is about those sources only, not the archive.
 
-Two pictures can share a movement rule. A door can change its picture and rule
-together. The map remains the source for later redraws.
+Reopen the hunt only when both of these are true:
 
-If you add smooth movement, define the actor's collision shape first. An
-anchor-point test permits different movement from a rectangle test.
+- A builder needs something that the tile-room method does not give.
+- A credit, listing or index entry shows that a named CoCo 1/2 program or
+  article draws bitmap tiles from a map.
 
-For a rectangle, test all map cells that its proposed extent overlaps. For moves
-that can cross a cell, test the intervening path or use bounded substeps.
-Endpoint-only checks can skip a wall.
+A title or a directory name is not a lead. Read only the cited routines of
+that lead.
 
-These are proposed design requirements, not behavior established by PacDude's
-small-step caller.
+Nothing tests dirty-cell redraw, strip scrolling, two buffers, smooth
+movement, PacDude's diagonal rule, overlays or transparent tiles. For each,
+compare the result with a full redraw from the map. Include crossings,
+reversals, map changes and camera jumps of more than one cell.
 
-Add scrolling only after the fixed room works. Before you adopt strip updates,
-compare them with a complete redraw.
+## Sources
 
-A camera jump can reveal several rows or columns. A routine that draws one strip
-does not prove that case works.
+- Brian O'Neill, *PacDude Monster Maze* 2.1A, 1992, source ZIP
+  ([archive][pac]), SHA-256
+  `14be444700af1a75feca5211c2da25ce9ccc4727ac6f88d3681f390409c3fed8`.
+  `PAC2.SRC` 00040–00080 names the game and author. The loader (`PAC2.SRC`
+  00110–01280) and the setup (`PAC2PT01.SRC` 04530–04980) use the CoCo 3
+  display and mapping. Some routines change their own operands.
+- *The Rainbow* February 1988 ([archive][feb]), SHA-256
+  `7e870a622d5104fc4f1298f384a3163c0304f4ed8d97e809ade83efa5794ce2d`.
+- *The Rainbow* May 1985 ([archive][may]), SHA-256
+  `dc36fcbfbb3e651f4a4cea9ebd51da0e10b03a67e5ed252ecd5de812a05e4f36`.
 
-## Prove the adaptation on its selected target
-
-These checks are proposals. None is a completed result for this guide. Use the
-actual assembly and framebuffer where the renderer's behavior matters.
-
-- Draw an asymmetric map with distinctive edge tiles. Compare framebuffer bytes
-  with independently calculated rows, including the final row and column.
-
-- Test movement in all four directions into walls, through passages, and beyond
-  each map edge. Check actor positions and guard bytes around allocated buffers.
-
-- Collect an item. Leave its cell. Redraw the room. Check that the item stays
-  absent from the map and display. Repeat for an opened door.
-
-- If you add PacDude-style constraints, test all 64 local positions for each
-  diagonal rule and the blocked rule. Include cell crossings and rule changes.
-
-- If you add scrolling or two buffers, compare incremental output with full
-  redraws. Do this after crossings, reversals, buffer changes, map edits, and
-  camera jumps.
-
-- Inspect the display and input on the declared emulator target. Measure timing
-  there before you claim that an update method is fast enough.
-
-Record build, emulator, visual, and physical-machine evidence separately. A CoCo
-3 source reading does not prove that a CoCo 1 or CoCo 2 adaptation works.
-
-## Source and reading record
-
-The [PacDude Monster Maze source ZIP][pac] contains a `PacDude3D` directory. The
-loader `PAC2.SRC`, 00040–00080, names PACDUDE2/PACDUDE-MONSTER MAZE and credits
-Brian O'Neill, copyright 1992.
-
-Both main source headers name version 2.1A. Use the named source file and
-embedded line numbers for every citation.
-
-The loader, `PAC2.SRC` 00110–01280, and main initialization, `PAC2PT01.SRC`
-04530–04980, use the CoCo 3 display and mapping machinery. The examined drawing
-path depends on that machinery.
-
-Some routines also modify their own instruction operands. This is not a drop-in
-CoCo 1/2 renderer or a ROM-resident example.
-
-These items remain unverified:
-
-- minimum RAM
-- complete memory allocation
-- ROM dependencies
-- interrupt safety
-- assembler compatibility
-
-We make no 128K or 512K compatibility claim. No runtime results or measured
-performance follow from this source reading.
-
-The [research note](research/tile-map.md) retains provenance, alternative
-sources, and unresolved questions. Downloads and normalized text remain under
-ignored `local/research/tile-maps/`. The archive and member hashes are in
-`sources.json` and `members.json`.
-
-We read the cited passages directly. This guide reproduces no copyright listing
-or artwork. We found no reuse license in the examined headers or archive member
-list.
-
-Get permission before you use that code or artwork in a distributable game.
+Neither issue is in `resources.json`, so they have no resource ID. We read
+the page images of both articles and their complete listings. Ignored
+`local/research/` keeps the other ZIP hashes in `tile-maps/`,
+`legacy-tiles-game-sources/` and `tile-source-followup/`. We found no reuse
+licence in these sources. The example uses original code and art.
 
 [pac]: https://colorcomputerarchive.com/repo/Programming/Source/PacDude%20Monster%20Maze/PacDude%20Monster%20Maze%20source%20code%20(Brian%20O'Neill).zip
+[feb]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow%2C%20The%20%28OCR%29/The%20Rainbow%20Vol.%2007%20No.%2007%20-%20February%201988.pdf
+[may]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow%2C%20The%20%28OCR%29/The%20Rainbow%20Vol.%2004%20No.%2010%20-%20May%201985.pdf
+[dufort]: https://coco3game.wordpress.com/2015/04/07/planning-for-the-road-ahead-of-palettes-and-graphical-objects/

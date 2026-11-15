@@ -20,12 +20,11 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Match CoCo 2 artifact colours | [Colour guide](../colour.md#coco-2-artifact-colours); Tandy, `coco2-service`, PDF 31–33 | Examined hardware discussion. Specific NTSC models, not all CoCo 2 variants. |
 | Choose CoCo 3 colours for a display | Tandy, `coco3-service`, PDF 17 | Examined palette tables. RGB and composite encodings differ; PAL caveat applies. |
 | Sound alongside animation and controls | [Sound guide](../sound.md) | Examined hardware for all three models; sound-slots on CoCo 1/2 and timer-sound on CoCo 3 checked with mixer output. |
-| Keep map state separate from actors | [Tile-map guide](../tile-maps.md) and [tile-room result](../../../examples/tile-room/README.md#evidence-and-limits) | Original CoCo 1/2 implementation, 42 checkpoints per defined target; historical tile-ID source gap remains. |
+| Keep map state separate from actors | [Tile-map guide](../tile-maps.md) | PacDude and other sources examined. Tile-room example checked on CoCo 1/2. We stopped the historical tile-ID hunt. |
 | Redraw only changed regions | [Animation guide](../animation.md#decide-what-to-redraw), [CoCo 3 source reading](coco3-game-source.md) | Gloom and Symmetry examined; one RAM-only lab result. |
 | Combine held controls and collision rules | [Controls and collision](../controls-and-collision.md), [Hot CoCo reading](hot-coco-game.md) | Examined articles and manuals; keyboard-controls example checked on CoCo 1/2. No general collision engine. |
 | Schedule turns and menu transitions | [Game state](../game-state.md) | Examined articles; turn-queue example checked on CoCo 3. Menu and input adapters remain open. |
 | Accumulate a picture without storing every shape | [Animation guide](../animation.md#budget-the-storage-for-animation) | Undercolor source examined; adaptation untested. |
-| Find legacy bitmap composition sources | [Expanded legacy reading](legacy-tile.md#three-game-source-candidates) | Selected Droid War, Dunkey Munkey and Sea Quest paths examined; no historical program run or tile-ID map established. |
 | Decide whether OCR is usable | [Conversion-quality inspection](../../starter/conversion-quality.md) | Six selected pages and eleven exported images checked; no book-wide accuracy claim. |
 | Find more magazine techniques | `rainbow-index` | Discovery only. Find the issue, then inspect the actual article and corrections. |
 
@@ -229,8 +228,8 @@ port needs its own budget and machine contract.
   a product review. They do not establish its rendering algorithm.
 - COMPUTE! results for GET/PUT and XOR concerned IBM BASIC; collision-register
   results concerned Atari. Archive location alone does not make them CoCo evidence.
-- This pass supplied neither a sourced tile engine nor a tested mask routine.
-  The follow-up below records subsequent tile reading and masking validation.
+- This pass supplied no tested mask routine. The follow-up below records
+  the later masking validation.
 
 The Rainbow index PDF 87 locates the October 1992 articles. Its introduction
 warns about the final issues' OCR. Targeted title/author correction searches
@@ -265,27 +264,12 @@ removal and changed scenery against all framebuffer bytes and guards.
 This is original bounded full redraw, not a reproduction of a magazine renderer,
 a collision system, clipping or evidence for all CoCo 2 revisions.
 
-The [tile-map guide](../tile-maps.md) documents examined PacDude CoCo 3
-map addressing, tile copying and movement rules. The
-[legacy tile reading](legacy-tile.md) completes Barden's February 1988
-article and both BASIC listings (PDF 173–174, 176, 178–183). Its room graph and
-perspective redraw do not supply bitmap tiles or sprite restoration. Reading
-is complete for these selected passages. Expanded reading of Droid War,
-Dunkey Munkey and Sea Quest adds narrower shape and bitmap-composition findings,
-but the historical CoCo 1/2 tile-ID map-renderer source gap remains open.
-None of these historical programs was run.
+The [tile-map guide](../tile-maps.md) holds the tile readings, the
+tile-room evidence and the boundary of the stopped tile-ID hunt.
 
-The original [tile-room example](../../../examples/tile-room/README.md#evidence-and-limits)
-now checks 42 checkpoints on each explicit NTSC, 32 KiB, normal-clock, non-T1
-CoCo 1/2 target. It verifies persistent collection after departure and return,
-blocked movement, state, map bytes, framebuffer and guards. The runner enforces
-NTSC and excludes user configuration. This is an original full-redraw
-implementation, not a historical reproduction or evidence for selective redraw,
-physical controls, visible appearance, timing or physical hardware.
-
-The [plan](../../../PLAN.md) retains the remaining source survey and validation scope,
-including broader magazine and errata reading, CoCo 1/2 bitmap tile sources,
-selected original reproductions, and display/audio/hardware limits.
+The [plan](../../../PLAN.md) keeps the remaining source survey and validation
+scope. This includes broader magazine and errata reading, selected original
+reproductions, and display, audio and hardware limits.
 
 ## Conversion evidence
 

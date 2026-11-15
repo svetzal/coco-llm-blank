@@ -40,9 +40,6 @@ For practical implementation advice, start with the [technique guides](technique
 
 - [Research for games and demos](techniques/research/README.md).
 - [Rendering sources examined](techniques/research/rendering-sources.md).
-- [Tile-map rendering and collision research](techniques/research/tile-map.md).
-- [Legacy CoCo maze and tile research](techniques/research/legacy-tile.md).
-- [Follow-up search for a legacy bitmap tile renderer](techniques/research/tile-source-followup.md).
 - [CoCo 3 demos: update less memory and separate colour from geometry](techniques/research/coco3-game-source.md).
 - [Hot CoCo game techniques](techniques/research/hot-coco-game.md).
 - [Undercolor techniques for small updates](techniques/research/undercolor-game.md).

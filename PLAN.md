@@ -21,7 +21,7 @@ trial without a new request.
   `guidance/techniques/research/` and both `validation/` folders are leftover
   lab material from before [the lab workflow](guidance/starter/lab.md). Close
   them as that workflow describes, in order:
-  1. One topic at a time (tiles, setup):
+  1. One topic at a time (setup):
      codify what its experiments, research notes and
      validation reports established into the technique guide and examples,
      moving useful assembly programs into `examples/`. Then delete that
@@ -38,6 +38,8 @@ trial without a new request.
      evidence is in the [game-state guide](guidance/techniques/game-state.md)
      and the turn-queue example. We closed the assets topic. Its evidence is
      in the [assets guide](guidance/techniques/assets.md) and the tile-room
+     example. We closed the tiles topic. Its evidence is in the
+     [tile-map guide](guidance/techniques/tile-maps.md) and the tile-room
      example. `experiments/display-validation/` and
      `experiments/audio-output/` keep only `instrument.py`, which
      `collect-room-output` uses. Delete them with that experiment.
@@ -50,8 +52,9 @@ trial without a new request.
 - Target-specific reference groups and further difficult-page conversion checks.
   Existing page samples do not establish whole-book OCR quality.
 - Technique-driven source and errata reading, especially scrolling and broader
-  sound/input integration. Continue only against a concrete builder need;
-  the stopped historical tile-ID hunt is not reopened.
+  sound/input integration. Continue only against a concrete builder need.
+  Do not reopen the stopped historical tile-ID hunt without a lead that
+  meets its boundary.
 - Make the instrumented XRoar's patch series acceptable to XRoar upstream, as
   [Toward upstream](guidance/starter/xroar-patch.md#toward-upstream) lists:
   XRoar-native trap actions and an audio module instead of environment
@@ -63,8 +66,9 @@ trial without a new request.
   validation where required by a guide's claim. Emulator-only checks must keep
   their stated limits.
 
-The historical tile-source hunt remains stopped unless a substantive new lead
-meets its documented boundary. Intel Mac support is excluded.
+The historical tile-ID hunt remains stopped unless a new lead meets the
+boundary in the [tile-map guide](guidance/techniques/tile-maps.md#open-questions).
+Intel Mac support is excluded.
 
 ## Guide contract
 

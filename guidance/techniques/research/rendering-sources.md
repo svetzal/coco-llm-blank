@@ -155,18 +155,13 @@ restoration method.
   not establish a rendering algorithm. They were not used as technical evidence.
 - A Dragon User sprite article lead was not promoted to a CoCo recipe. The full
   article and its machine assumptions remain unexamined.
-- The archive's Ice Hockey source directory is a possible follow-up. Its ZIP was
-  not downloaded or reviewed, so no technique is attributed to it here.
-- The Pac Dude Monster Maze source directory returned an HTTP 429 response.
-  Its contents were not inspected.
 - General search matches for Cocos2d, the COCO vision dataset and non-CoCo
   TRS-80
   graphics hardware were excluded as different systems.
 
-No directly examined tile-map or tile-collision implementation resulted from
-this pass. Magazine coverage remains incomplete; a search match is not a
-completed
-source reading. These two sources add useful detail without filling that gap.
+Magazine coverage remains incomplete. A search match is not a completed
+source reading. The [tile-map guide](../tile-maps.md) records the later
+readings of tile sources.
 
 ## Retrieval and reference coverage
 
