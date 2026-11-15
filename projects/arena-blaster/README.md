@@ -57,16 +57,22 @@ both screens, the game state, the rendered picture and the mixer output with
 
 ## Status
 
-Increment 3: sound effects and the A, D, W, S and K, semicolon, O, L keys. There is
-no score and no game over yet. When an enemy touches you, the level starts
-again.
+Increment 4, in progress: faster drawing. Increment 3 added sound effects and
+the A, D, W, S and K, semicolon, O, L keys. There is no score and no game over
+yet. When an enemy touches you, the level starts again.
 
-Measured speed in XRoar (increment 2): on levels 1 and 2, most frames take
-one field of the picture (60 frames each second). With 20 grunts on level 10,
-most frames take two or three fields (30 or 20 frames each second). The game
-slows down when the arena is full, because each step is one frame.
+Measured speed in XRoar, in fields of the picture for each frame (one field is
+1/60 second):
 
-Measured sound in XRoar: the sound plays only while the program waits for the
+| Build | Before increment 4 | Now |
+| --- | --- | --- |
+| `main` (level 1, 6 grunts) | 1.71 | 1.01 |
+| `level10` (20 grunts) | 3.02 | 2.01 |
+
+The game still slows down when the arena is full, because each step is one
+frame. See [Drawing](#drawing).
+
+Measured sound in XRoar (increment 3): the sound plays only while the program waits for the
 end of the picture. During an effect, the sound is present in 56% of each
 millisecond slice with a light load, and in 23% with 20 grunts. So the sound
 has gaps 60 times each second, and it gets weaker when the arena is full.
@@ -102,7 +108,7 @@ The CoCo 1 defaults come from
 | Addresses | Use |
 | --- | --- |
 | `$0400`-`$1BFF` | Screen A, 6144 bytes |
-| `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`) |
+| `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`). An erase-list entry is the first screen byte and the erase routine of a sprite. |
 | `$2000`-`$23FF` | Stack, from `$2400` down |
 | `$2400`-`$3BFF` | Screen B, 6144 bytes |
 | `$3C00`-`$7FFF` | Code and sprite data |
@@ -112,8 +118,33 @@ The CoCo 1 defaults come from
 - Rows 0-11 and 188-191 are blue. They are for the score in a later increment.
 - A red wall is on rows 12 and 187, and on pixel columns 3 and 124.
 - Objects stay inside pixel columns 4-123 and rows 13-186. These are byte
-  columns 1-30. Each shifted copy of a sprite is only as wide as the bytes
-  that its pixels touch, so an erase never touches the wall.
+  columns 1-30. An erase routine stores the floor only in the bytes that
+  its draw routine changes, so an erase never touches the wall.
+
+### Drawing
+
+Each frame erases all that the hidden screen showed two frames before. Then
+it draws all objects again. `assets.py` turns each sprite in `sprites.txt`
+into code: a draw routine and an erase routine for each of the 4 pixel shifts
+in a byte.
+
+- A byte that the sprite fills gets a plain store of the picture.
+- An edge byte keeps the screen bits where the mask is 1 and adds the
+  picture: screen = (screen AND mask) OR picture.
+- A byte that the sprite does not use gets no code.
+- The erase routine stores the floor in each byte that the draw routine
+  changes.
+
+Measured with a counter of the idle passes in the wait, frames 41-100 of
+`level10`: the rules of the game take about 9,600 CPU cycles each frame. The
+drawing took about 31,400 cycles with a loop over mask and picture data, and
+takes about 12,600 cycles with this code. A field is about 14,900 cycles.
+
+We also tried to draw only the objects that changed. Each screen kept a record
+of each object, and a map of damaged areas told which unchanged objects to
+draw again. On `level10` it drew 14 objects and erased 10 objects each frame,
+not 21 of each. But the compares and the map took as much time as this saved,
+so we removed it.
 
 ### Levels and enemies
 
@@ -189,8 +220,7 @@ for each frame: a mode (square wave or noise), a period and a volume (0-63).
    enemy is left, start the next level. A new level puts the player back at
    the start and removes all shots.
 9. Take the next sound record. Erase what this screen showed two frames
-   before. Draw the shots, the
-   enemies. Draw the player last.
+   before. Draw the shots and the enemies. Draw the player last.
 10. Wait for the end of the picture, then show the new screen.
 
 ### Sources for the hardware facts
@@ -258,4 +288,5 @@ measured in these captures.
 
 Negative controls, run on copies: no DAC write in the square wave fails at
 frame 16 (`moves`). No rectangle rule fails at frame 77 (`moves`). A copy
-with no hunters failed at frame 90 (increment 2).
+with no hunters failed at frame 90 (increment 2). Erase routines without
+their last store fail at frame 3 (`main`): the screen keeps a trail.

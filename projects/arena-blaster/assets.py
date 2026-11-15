@@ -5,19 +5,26 @@ this file.
 
 CG6 packs four pixels in a byte, leftmost pixel in bits 7 and 6 (MC6847 PDF 19
 Table 3). A sprite at pixel x starts in byte x // 4 at pixel x % 4 of that byte.
-So each sprite gets four copies, one for each shift 0-3. Each copy is as wide as
-the bytes that its pixels touch: ceil((shift + width) / 4). The erase fills the same
-bytes, so it never touches a byte that the sprite does not use, such as the wall.
+So each sprite gets four copies, one for each shift 0-3.
 
-Each copy is rows x bytes pairs of (mask, picture). The draw keeps the screen bits
-where the mask is 1 and adds the picture: screen = (screen AND mask) OR picture.
+Each copy is code, not data. X holds the screen byte of the sprite's top-left
+corner. The draw routine handles each byte that the sprite uses:
+
+- a byte that the sprite fills: store the picture (LDA #, STA; or LDD #, STD for
+  two neighbours);
+- an edge byte: keep the screen bits where the mask is 1 and add the picture:
+  screen = (screen AND mask) OR picture;
+- a byte that the sprite does not use: no code.
+
+The erase routine stores the floor in each byte that the draw routine changes,
+and in no other byte, such as the wall. FLOOR comes from main.asm.
 
 Output for a sprite NAME:
 
-    NAME     fcb rows
-             fcb bytes_0
-             fdb NAME_0      (and the same for shifts 1, 2 and 3)
-    NAME_0   fcb mask,picture,...
+    NAME     fdb NAME_draw_0,NAME_erase_0, ... (the same for shifts 1, 2 and 3)
+    NAME_draw_0
+             lda 0,x ...
+             rts
 """
 
 from pathlib import Path
@@ -65,21 +72,101 @@ def shifted(rows: list[str], shift: int, nbytes: int) -> bytes:
     return bytes(out)
 
 
+def cells(rows: list[str], shift: int) -> list[tuple[int, int, int]]:
+    """(offset from the first byte, mask, picture) of each byte that the sprite uses."""
+    nbytes = (shift + len(rows[0]) + 3) // 4
+    data = shifted(rows, shift, nbytes)
+    out = []
+    for r in range(len(rows)):
+        for c in range(nbytes):
+            i = 2 * (r * nbytes + c)
+            mask, picture = data[i], data[i + 1]
+            if mask != 0xFF:
+                out.append((r * 32 + c, mask, picture))
+    return out
+
+
+class Code:
+    """Lines of one routine. X holds the first byte. Each access uses an 8-bit
+    offset from X; when an offset gets too large, X moves on."""
+
+    def __init__(self, label: str) -> None:
+        self.lines = [label]
+        self.base = 0
+
+    def offset(self, at: int) -> int:
+        if at - self.base > 127:
+            new = at + 128
+            self.lines.append(f"        leax {new - self.base},x")
+            self.base = new
+        return at - self.base
+
+    def add(self, op: str, at: int | None = None) -> None:
+        if at is None:
+            self.lines.append(f"        {op}")
+        else:
+            self.lines.append(f"        {op} {self.offset(at)},x")
+
+
+def pairs(used: list[tuple[int, int, int]]) -> list[list[tuple[int, int, int]]]:
+    """Groups of one byte, or of two neighbours in one row (one 16-bit store)."""
+    groups: list[list[tuple[int, int, int]]] = []
+    for cell in used:
+        last = groups[-1] if groups else None
+        if (last and len(last) == 1 and last[0][0] + 1 == cell[0]
+                and last[0][0] // 32 == cell[0] // 32
+                and (last[0][1] == 0) == (cell[1] == 0)):
+            last.append(cell)
+        else:
+            groups.append([cell])
+    return groups
+
+
+def draw_code(name: str, used: list[tuple[int, int, int]]) -> list[str]:
+    code = Code(name)
+    for group in pairs(used):
+        at = group[0][0]
+        if group[0][1] == 0 and len(group) == 2:      # two full bytes
+            code.add(f"ldd #${group[0][2]:02x}{group[1][2]:02x}")
+            code.add("std", at)
+        elif group[0][1] == 0:                       # one full byte
+            code.add(f"lda #${group[0][2]:02x}")
+            code.add("sta", at)
+        else:                                        # edge bytes: keep the floor
+            for i, (_, mask, picture) in enumerate(group):
+                code.add("lda", at + i)
+                code.add(f"anda #${mask:02x}")
+                if picture:                          # green (code 0) needs no OR
+                    code.add(f"ora #${picture:02x}")
+                code.add("sta", at + i)
+    code.add("rts")
+    return code.lines
+
+
+def erase_code(name: str, used: list[tuple[int, int, int]]) -> list[str]:
+    code = Code(name)
+    code.add("ldd #FLOOR*257")
+    groups: list[list[int]] = []
+    for at, _, _ in used:
+        if groups and len(groups[-1]) == 1 and groups[-1][0] + 1 == at and at % 32:
+            groups[-1].append(at)
+        else:
+            groups.append([at])
+    for group in groups:
+        code.add("std" if len(group) == 2 else "sta", group[0])
+    code.add("rts")
+    return code.lines
+
+
 def assembly(sprites: dict[str, list[str]]) -> str:
     lines = []
     for name, rows in sprites.items():
-        lines.append(f"{name} fcb {len(rows)}")
+        lines.append(f"{name} fdb " + ",".join(
+            f"{name}_draw_{s},{name}_erase_{s}" for s in range(4)))
         for shift in range(4):
-            lines.append(f"        fcb {(shift + len(rows[0]) + 3) // 4}")
-            lines.append(f"        fdb {name}_{shift}")
-        for shift in range(4):
-            nbytes = (shift + len(rows[0]) + 3) // 4
-            data = shifted(rows, shift, nbytes)
-            lines.append(f"{name}_{shift}")
-            lines.extend(
-                "        fcb " + ",".join(f"${b:02x}" for b in data[i : i + 16])
-                for i in range(0, len(data), 16)
-            )
+            used = cells(rows, shift)
+            lines += draw_code(f"{name}_draw_{shift}", used)
+            lines += erase_code(f"{name}_erase_{shift}", used)
     return "\n".join(lines) + "\n"
 
 

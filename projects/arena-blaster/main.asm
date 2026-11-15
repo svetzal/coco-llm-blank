@@ -1,6 +1,7 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
-* Increment 3: sound effects and the A/D/W/S and K/;/O/L keys. README.md
-* has the contract, the rules for each frame and the memory map.
+* Increment 4: compiled sprites from assets.py. Increment 3 added sound and
+* the A/D/W/S and K/;/O/L keys. README.md has the contract, the rules
+* for each frame and the memory map.
 *
 * Sources (all read as page images):
 *   Tandy, Color Computer Technical Reference Manual:
@@ -32,7 +33,7 @@
 SCREEN_A equ $0400
 SCREEN_B equ $2400
 STATE   equ $1C00
-LIST_A  equ $1D00               ; erase list of screen A, 4 bytes each
+LIST_A  equ $1D00               ; erase list of screen A: first byte, erase routine
 LIST_B  equ $1E00               ; erase list of screen B
 STACK   equ $2400
 
@@ -485,19 +486,8 @@ df_erase
         std <temp
 er_next cmpy <temp
         beq er_done
-        ldx ,y
-        lda 2,y
-        sta <rows
-er_row  ldb 3,y
-        lda #FLOOR
-er_byte sta ,x+
-        decb
-        bne er_byte
-        ldb #32
-        subb 3,y
-        abx
-        dec <rows
-        bne er_row
+        ldx ,y                  ; the first byte
+        jsr [2,y]               ; the erase routine keeps Y
         leay 4,y
         bra er_next
 er_done
@@ -540,7 +530,9 @@ df_enemy_skip
         rts
 
 * --- Draw sprite U at pixel x = A, row y = B in the hidden screen.
-* screen = (screen AND mask) OR picture, for each byte.
+* U holds a draw and an erase routine for each shift (assets.py). Keep
+* the first byte and the erase routine in the erase list, then jump to
+* the draw routine. Its RTS returns to the caller.
 draw_sprite
         sta <temp
         lda #32
@@ -551,37 +543,17 @@ draw_sprite
         lsra
         lsra
         leax a,x                ; + x / 4
-        lda ,u+
-        sta <rows
         ldb <temp
         andb #3                 ; shift x % 4
-        lda #3
-        mul
-        leau b,u                ; its record: width, then the copy
-        lda ,u
-        sta <width
-        ldu 1,u
+        lslb
+        lslb
+        leau b,u                ; its routines: draw, then erase
         ldy <next
-        stx ,y
-        lda <rows
-        sta 2,y
-        lda <width
-        sta 3,y
-        leay 4,y
+        stx ,y++
+        ldd 2,u
+        std ,y++
         sty <next
-ds_row  ldb <width
-ds_byte lda ,x
-        anda ,u+
-        ora ,u+
-        sta ,x+
-        decb
-        bne ds_byte
-        ldb #32
-        subb <width
-        abx
-        dec <rows
-        bne ds_row
-        rts
+        jmp [,u]
 
 * --- Show the finished screen at the end of the picture, as in the
 * page-flip example. Then select the other screen for drawing.
@@ -1123,8 +1095,6 @@ move_keys rmb 1
 fire_keys rmb 1
 delay   rmb 1
 frames  rmb 2
-rows    rmb 1
-width   rmb 1
 temp    rmb 2
 next    rmb 2                   ; next free erase-list entry
 end_ptr rmb 2                   ; address of end_a or end_b
