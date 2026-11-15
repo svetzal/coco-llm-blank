@@ -196,10 +196,13 @@ supply its account and key.
 
 - Mode sizes, colour sets, bit order and the clock come from the datasheet.
   We read them from the page images.
-- We measured the `xroar` palette on the CoCo 1 target, in CG6 and RG6, for
-  both colour sets. The rendered check fails for each negative control: a
-  changed colour set, two exchanged colours and a reversed bit order.
-- We did not measure the border colour, other modes, CoCo 2 or other XRoar
+- We measured the `xroar` palette in CG6 and RG6, for both colour sets, on
+  the CoCo 1 target and the non-T1 CoCo 2 target. The rendered check fails
+  for each negative control: a changed colour set, two exchanged colours, a
+  reversed bit order, a mirrored or shifted picture and a wrong SAM mode.
+- The [display test](colour.md#make-a-display-test-before-making-the-art)
+  lists those controls and their limits.
+- We did not measure the border colour, other modes, a T1 VDG or other XRoar
   video paths in a capture.
 - The `ntsc` pixel shape is a deduction. Nobody has tuned the dither settings.
 - Nobody has checked a colour or a shape on real hardware or a television.

@@ -180,7 +180,7 @@ check. These commands explicitly opt into expensive work:
 ```sh
 uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
 uv run --locked --no-sync python scripts/validate_repository.py run \
-  display-coco2 --heavy
+  animation-cadence --heavy
 uv run --locked --no-sync python scripts/validate_repository.py run all --heavy
 ```
 
@@ -188,7 +188,7 @@ Before you opt in, read the README or validation guide of the selected
 experiment.
 
 Root with `--heavy` needs the complete starter environment described above.
-Docling can download model weights. Display and animation suites can download
+Docling can download model weights. Animation and output suites can download
 pinned XRoar sources and compile private emulators. Native runs need the
 assembler, build tools, and verified ROMs for their documented machines.
 

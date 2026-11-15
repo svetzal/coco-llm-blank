@@ -68,8 +68,6 @@ lists the reproduction code. Example-specific checks are also in the
 
 ### Display and animation
 
-- [Validate the rendered display](techniques/validation/display.md).
-- [Validate static CoCo 2 display output](techniques/validation/display-coco2.md).
 - [Measure continuous animation](techniques/validation/animation-cadence.md).
 - [Hidden drawing and field-boundary publication](techniques/validation/clean-animation.md).
 - [Native CoCo 3 hidden-buffer publication](techniques/validation/clean-animation-coco3.md).

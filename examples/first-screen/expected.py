@@ -4,9 +4,9 @@ import numpy as np
 
 SCREEN_BYTES = 6144
 READY_MARKER = 0x2FFF
-# XRoar 1.12.1 palette for this mode's two colours (colour set 0: black and green)
-# through coco.py's renderer settings. These are the emulator's RGB values, measured
-# in experiments/display-validation, not a measurement of a real monitor.
+# The pinned XRoar's palette for this mode's two colours (colour set 0: black and
+# green) through coco.py's renderer settings: the `xroar` palette in scripts/graphics.py,
+# measured by examples/palette-swatches. These are emulator RGB values, not a monitor.
 BLACK, GREEN = (0, 31, 0), (46, 188, 36)
 # The renderer draws each of the 256 pixels as two horizontal samples, 192 rows.
 SAMPLES_PER_PIXEL = 2

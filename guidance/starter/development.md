@@ -282,8 +282,8 @@ records the two for its mode.
 
 Include a control that the memory check cannot catch, such as a wrong SAM mode
 or a reversed bit order. Also open the PNG with an image viewer. The
-[display-validation experiment](../../experiments/display-validation/README.md#acceptance-and-negative-controls)
-first established this renderer method.
+[display test](../techniques/colour.md#make-a-display-test-before-making-the-art)
+lists the controls that the examples already run.
 
 Static captures do not establish animation cadence or tearing.
 For those tasks, obey the [animation guide](../techniques/animation.md).

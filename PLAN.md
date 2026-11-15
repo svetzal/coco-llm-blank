@@ -22,11 +22,15 @@ trial without a new request; the completed Claude 03 assessment is under
   `guidance/techniques/research/` and both `validation/` folders are leftover
   lab material from before [the lab workflow](guidance/starter/lab.md). Close
   them as that workflow describes, in order:
-  1. One topic at a time (animation, display, sound, controls, game state,
-     assets, tiles, setup): codify what its experiments, research notes and
+  1. One topic at a time (animation, sound, controls, game state, assets,
+     tiles, setup): codify what its experiments, research notes and
      validation reports established into the technique guide and examples,
      moving useful assembly programs into `examples/`. Then delete that
      topic's leftover files. Setup checks become `scripts/` tests.
+     We closed the display topic. Its evidence is in the
+     [display test](guidance/techniques/colour.md#make-a-display-test-before-making-the-art).
+     `experiments/display-validation/` keeps only two XRoar build helpers,
+     which four animation and output experiments use. Delete it with them.
   2. Add a size check to CI so growth is a deliberate decision.
 - Clean Apple Silicon host and native Linux desktop onboarding, including
   x86-64 Linux. Intel Mac support is excluded. Current container and configured

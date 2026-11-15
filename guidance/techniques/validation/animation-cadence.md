@@ -78,8 +78,8 @@ background-byte store in an ignored source copy. It retains the same completed
 scene specification and adds CPU work. Its expected effect is fewer completed
 scene states in the same number of video frames.
 
-Our capture adapts the guarded renderer initialization from
-[display validation](display.md). It replaces the overwrite-only PPM
+Our capture adapts the guarded renderer initialization in
+`experiments/display-validation/instrument.py`. It replaces the overwrite-only PPM
 writer with a bounded sequence of RGB buffers and emulated event timestamps.
 The machine's normal SAM/VDG and renderer paths still create every sample.
 The [audio timing experiment](audio-timing.md) supplied the approach

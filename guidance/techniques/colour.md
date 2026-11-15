@@ -84,62 +84,75 @@ tearing.
 
 ## Make a display test before making the art
 
-A bounded [static display experiment](validation/display.md) now
-checks CoCo 1 renderer geometry with an asymmetric probe, first-screen output
-and three frozen moving-object frames.
-All five positive cases matched every renderer sample.
+Correct screen bytes do not prove a correct picture. With a wrong SAM mode or
+a reversed bit order, every byte stays correct, but the picture is wrong.
+Add `--video` to `scripts/coco.py check` to compare XRoar's rendered frame
+with `expected_frame`.
 
-A deliberately wrong SAM mode matched RAM but failed the renderer comparison.
-Correct framebuffer bytes alone are therefore not enough.
+These checks already run on the examples:
 
-This covers only the documented software-renderer configuration for CoCo 1.
-It does not establish CoCo 2/3 output, composite artifact colours, animation
-cadence, tearing or physical appearance.
-The linked record contains the exact display path, controls and tracked
-reproduction package.
+| Check | Target | What it proves |
+| --- | --- | --- |
+| [First screen](../../examples/first-screen/README.md) `check --video` | CoCo 1 | Border pixels at each edge and a square, RG6. |
+| [Palette swatches](../../examples/palette-swatches/README.md) `check --video` | CoCo 1 and CoCo 2 | Every colour of CG6 and RG6 in both colour sets, bit order, byte boundaries and orientation. |
+| Wrong SAM mode, in `scripts/coco_spec.py` | CoCo 1 and CoCo 2 | The memory check passes and the rendered check fails. |
+| Mirrored, upside-down or shifted frames, in the palette spec | Model only | The expected picture is not symmetric, so orientation and row errors fail. |
 
-The [CoCo 2 display experiment](validation/display-coco2.md) adds
-12 positive static cases: an asymmetric probe and eleven frozen tile-room and
-masked-object scenes.
+The wrong-SAM control writes `$FFC4` in place of `$FFC5`. That write clears
+SAM bit V2, so the mode bits are not `110`, the value for CG6 and RG6.
+[Tandy, PDF 15 and PDF 31 Table 1][technical]
 
-The experiment used an explicit NTSC, 32 KiB, normal-clock, non-T1 CoCo 2
-configuration.
-On that configuration, every framebuffer byte and renderer sample matched after
-both 0.5 and 1.0 emulated seconds of settling.
-A wrong-SAM control retained correct RAM but changed the rendered image at both
-intervals.
+Every `check` also sets a trap on an address that the program must never
+reach. A fired trap or a missing checkpoint fails the check. A plausible
+image alone is not evidence that the program ran.
 
-This measures static geometry through XRoar's S-video software-renderer path
-with composite artifact decoding disabled.
-It does not establish animation cadence, tearing, artifact colours, PAL/T1,
-CoCo 3 or physical display behaviour.
-The two settling times check stationary output, not drawing speed.
+The CoCo 2 target is an explicit configuration: XRoar `cocous`, NTSC, 32 KiB,
+a normal-clock 6809, a non-T1 MC6847, and BASIC 1.2 with Extended BASIC 1.1.
+XRoar's `coco2bus` profile selects a T1 VDG instead. The palette-swatches
+results do not apply to it.
 
-Colour swatches and cross-display comparisons remain proposed checks.
-For your project's mode and display, use this procedure:
+### Limits of the rendered check
 
-1. Record the machine revision, video standard, connection, and emulator
-   settings.
-2. Make an asymmetric pattern with isolated pixels and alternating pixel pairs.
-3. Include labelled colour swatches for the selected mode and palette.
-4. Check the bitmap and palette values independently of the displayed image.
-5. Inspect the running display and record the observed colours.
+- The capture uses S-video colours with cross-colour off, and shows the active
+  area only. It does not show the border or artifact colours.
+- Each RG6 pixel is two samples wide in a 512x192 frame. There is no 4:3
+  stretch.
+- The RGB values are XRoar's palette, not a monitor or a television.
+- The capture is one still frame. It does not show cadence or tearing. Read
+  the [animation guide](animation.md) for those.
+- PAL, the MC6847T1, CoCo 3 and physical hardware are not tested.
+
+An earlier private XRoar 1.12.1 build also captured frozen animation frames.
+A self-loop at the checkpoint stopped each scene after a completed draw.
+
+On CoCo 1, moving-objects frames 1, 35 and 65 matched every renderer sample. On
+the CoCo 2 target above, tile-room steps 0, 5, 39 and 41 and masked-object
+scenes 0, 2, 3 and 8 to 11 matched. Captures after half a second and after one
+emulated second were identical. They show selected still scenes, not motion.
+The examples do not run them again.
+
+### Test your own display path
+
+1. Record the machine, the video standard, the connection and the emulator
+   settings in the project contract.
+2. Write `expected_frame` from your pixel layout, not from the assembled
+   bytes.
+3. Make the picture asymmetric, with pixels at the edges.
+4. Add a negative control that the memory check cannot catch.
+5. Open the PNG, then look at the `run` window.
 6. Repeat for each display path that the project promises to support.
 
-The asymmetric pattern helps expose phase or orientation differences.
-The swatches provide a reference when drawing later assets.
-These are reasons for those checks.
-The linked experiments measured static geometry on their named configurations,
-not labelled swatches across display paths.
-
 If physical hardware is a target, repeat the test on that hardware.
-An emulator screenshot establishes only that emulator configuration's output.
-A RAM snapshot establishes the stored values, not their visible colour.
+An emulator capture shows only that emulator configuration.
+A RAM snapshot shows the stored values, not their visible colour.
 
 ## Sources and provenance
 
 - Tandy, *Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)*,
   printed/PDF 31–33. Resource `coco2-service`. [Archive][coco2]
+
+- Tandy, *Color Computer Technical Reference Manual*, PDF 15 (printed 8) and
+  PDF 31 Table 1. Resource `coco1-technical`. [Archive][technical]
 
 - Tandy, *Color Computer 3 Service Manual*, printed/PDF 17.
   Resource `coco3-service`. [Archive][coco3]
@@ -154,8 +167,7 @@ A RAM snapshot establishes the stored values, not their visible colour.
 
 We examined these source pages as images.
 We have not compared colours across physical displays.
-The [research notes](research/README.md#coco-2-display-differences)
-record the narrower board scope and conversion limitations.
+The [research notes](research/README.md) record the source selection.
 
 [coco2]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf#page=31>
 
@@ -168,3 +180,5 @@ record the narrower board scope and conversion limitations.
 [mc6847-sync]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=8>
 
 [mc6847-system]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=22>
+
+[technical]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=15>

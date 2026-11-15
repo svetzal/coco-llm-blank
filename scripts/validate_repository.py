@@ -35,8 +35,6 @@ SCOPES = {
         "cached COLLECT_ARCHIVE, C build, CoCo 1/2 ROMs",
     ),
     "controls-collision": (("controls_collision",), ""),
-    "display-coco2": (("experiments/display-coco2",), "fresh XRoar download/build, CoCo 2 ROMs"),
-    "display-validation": (("experiments/display-validation",), "fresh XRoar download/build, ROMs"),
     "game-state": (("experiments/game-state",), ""),
     "game-state-coco3": (("validate", "vectors"), "native tools, CoCo 3 ROM, headless execution"),
     "keyboard-controls": (("keyboard_run",), "prepared private XRoar, CoCo 1/2 ROMs"),

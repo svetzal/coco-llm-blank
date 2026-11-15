@@ -18,7 +18,7 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Alternate prepared frames | Matthews, `rainbow-1987-10`, PDF 44 and 46–47 | Examined explanation and listing. Hidden drawing screen versus visible screen. |
 | Smooth horizontal scrolling on CoCo 3 | Tepolt, `tepolt-coco3`, PDF 59 | Examined page image. Pre-shifted buffers trade memory for motion granularity. |
 | Banked assets with interrupts on CoCo 3 | Tepolt, `tepolt-coco3`, PDF 59–60 | Examined page images. Keep interrupt tables and handlers accessible. |
-| Match CoCo 2 artifact colours | Tandy, `coco2-service`, PDF 31–33 | Examined hardware discussion. Specific NTSC models, not all CoCo 2 variants. |
+| Match CoCo 2 artifact colours | [Colour guide](../colour.md#coco-2-artifact-colours); Tandy, `coco2-service`, PDF 31–33 | Examined hardware discussion. Specific NTSC models, not all CoCo 2 variants. |
 | Choose CoCo 3 colours for a display | Tandy, `coco3-service`, PDF 17 | Examined palette tables. RGB and composite encodings differ; PAL caveat applies. |
 | Sound alongside animation and controls | [Sound research](sound.md) | Examined hardware for all three models; CoCo 1 cooperative and CoCo 3 timer experiments. |
 | Keep map state separate from actors | [Tile-map guide](../tile-maps.md) and [tile-room result](../../../examples/tile-room/README.md#evidence-and-limits) | Original CoCo 1/2 implementation, 42 checkpoints per defined target; historical tile-ID source gap remains. |
@@ -72,22 +72,6 @@ system. Its BASIC delays are not an assembly timing contract.
 
 Scope: the article labels its example 16K ECB. Recheck memory budgets for other
 modes, larger assets, or more frames.
-
-## CoCo 2 display differences
-
-Tandy's **Color Computer 2 NTSC Service Manual**, models 26-3134 and 26-3136,
-PDF/printed pages 31–33, explains video generation and artifact circuitry.
-[Archive manual][coco2-service].
-
-The discussion ties artifact appearance to the colour burst and its phase.
-That makes it useful when a recreation has correct bitmap bytes but wrong
-colours on the chosen display. Treat NTSC, PAL, RGB, and emulator display
-settings as separate cases. This manual covers the named NTSC models. Do not
-use it as evidence for every CoCo 2 board or VDG revision.
-
-A later implementation check should use asymmetric pixel patterns and record
-the display path. A framebuffer comparison alone cannot establish artifact
-colour appearance.
 
 ## CoCo 3 graphics and memory
 
@@ -367,17 +351,11 @@ NTSC and excludes user configuration. This is an original full-redraw
 implementation, not a historical reproduction or evidence for selective redraw,
 physical controls, visible appearance, timing or physical hardware.
 
-[Static display validation](../validation/display.md) checks five CoCo 1 renderer
-cases, including frozen moving-object frames 1, 35 and 65. A wrong-SAM control
-passes the RAM comparison but fails rendered geometry. The result covers only
-the named software-renderer path, not CoCo 2/3, animation, composite artifact
-appearance or physical displays.
-
 [DAC interval validation](../validation/audio-timing.md) measures eleven CoCo 1/3
 cases with calibration, deferred-interrupt and repeatability controls. The
 observed timer jitter is nonzero despite stable average throughput. It is a
 finite-window result, not a worst-case bound, listening test or physical timing
-measurement. Both private experiments now have tracked reproduction code and
+measurement. The private experiment has tracked reproduction code and
 fresh-clone instructions. Audio's empty-output reproduction reused the existing
 checkout and environment; it did not establish fresh-host onboarding.
 
@@ -453,7 +431,6 @@ PDFs, extracted text, and images stay under ignored `local/`.
 [rainbow-index]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20-%20Text%20Searchable%20Index/The%20Rainbow%20-%20Text%20Searchable%20Index.pdf
 [clark-graphics]: https://colorcomputerarchive.com/repo/Documents/Books/Color%20Computer%20Graphics%20(Ron%20Clark).pdf
 [coco3-service]: https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf
-[coco2-service]: https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf
 [mc6847]: https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf
 [tepolt-coco3]: https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf
 [rainbow-1987-10]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf

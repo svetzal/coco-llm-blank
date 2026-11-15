@@ -23,8 +23,6 @@ The links below describe existing work; they do not claim a new validation run.
 | Model turns and menu transitions on the host | [game-state](game-state/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state.md) |
 | Check a bounded CoCo 3 state subset | [game-state-coco3](game-state-coco3/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state-coco3.md) |
 | Compare selective and full redraw RAM | [selective-redraw](selective-redraw/README.md) | [Evidence and limits](../guidance/techniques/validation/selective-redraw.md) |
-| Capture static CoCo 1 software-renderer output | [display-validation](display-validation/README.md) | [Evidence and limits](../guidance/techniques/validation/display.md) |
-| Capture static non-T1 CoCo 2 output | [display-coco2](display-coco2/README.md) | [Evidence and limits](../guidance/techniques/validation/display-coco2.md) |
 | Measure consecutive animation frames | [animation-cadence](animation-cadence/README.md) | [Evidence and limits](../guidance/techniques/validation/animation-cadence.md) |
 | Check CoCo 1/2 hidden-buffer publication | [clean-animation](clean-animation/README.md) | [Evidence and limits](../guidance/techniques/validation/clean-animation.md) |
 | Check native CoCo 3 hidden-buffer publication | [clean-animation-coco3](clean-animation-coco3/README.md) | [Evidence and limits](../guidance/techniques/validation/clean-animation-coco3.md) |
