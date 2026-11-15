@@ -1066,7 +1066,7 @@ class DescribeExamplesInXRoar:
         machine = re.search(r"^machine cocous\n((?:[ \t].*\n)*)", printed, re.MULTILINE)
         assert machine and "tv-type ntsc" in machine.group(1)
 
-    @pytest.mark.parametrize("target", ["coco1"])
+    @pytest.mark.parametrize("target", ["coco1", "coco2b"])
     @pytest.mark.parametrize(
         "control,step",
         [
@@ -1294,7 +1294,7 @@ class DescribeEquipmentInXRoar:
         with pytest.raises(ProjectError, match="Frame 15: .* screen bytes differ"):
             coco.check_variant(project, Host(), model, "coco1", "journey", equipment)
 
-    @pytest.mark.parametrize("target", ["coco1", "coco2", "coco3"])
+    @pytest.mark.parametrize("target", ["coco1", "coco2", "coco2b", "coco3"])
     @pytest.mark.parametrize(
         "control,message",
         [
@@ -1307,7 +1307,7 @@ class DescribeEquipmentInXRoar:
     def should_reject_each_broken_collect_room_build(
         self, target: str, control: str, message: str
     ) -> None:
-        if not instrumented_ready("coco1", "coco2", "coco3"):
+        if not instrumented_ready("coco1", "coco2", "coco2b", "coco3"):
             pytest.skip("Native tools, CoCo 1/2/3 firmware or instrumented build tools are missing")
         example = ROOT / "examples/collect-room"
         project = coco.load_project(example)
@@ -1344,11 +1344,11 @@ class DescribeEquipmentInXRoar:
 
     @pytest.fixture
     def keyboard_controls(self) -> Path:
-        if not instrumented_ready("coco1", "coco2", "coco3"):
+        if not instrumented_ready("coco1", "coco2", "coco2b", "coco3"):
             pytest.skip("Native tools, CoCo 1/2/3 firmware or instrumented build tools are missing")
         return ROOT / "examples/keyboard-controls"
 
-    @pytest.mark.parametrize("target", ["coco1", "coco2", "coco3"])
+    @pytest.mark.parametrize("target", ["coco1", "coco2", "coco2b", "coco3"])
     @pytest.mark.parametrize(
         "control,update",
         [("WRONG_COLUMN", 4), ("WRONG_SELECT", 1), ("HELD_FIRE", 1), ("STALE_HISTORY", 6)],
@@ -1363,17 +1363,15 @@ class DescribeEquipmentInXRoar:
         )
         equipment = coco.equipment_for(broken, "keys")
         model = coco.load_expected(keyboard_controls)
-        # CoCo 3 BASIC leaves the field-sync IRQ on; with the DDR selected the
-        # handler cannot clear the flag, so the program never finishes.
-        hangs = (target, control) == ("coco3", "WRONG_SELECT")
-        failure = "did not reach 'finished'" if hangs else f"Update {update} "
+        # WRONG_SELECT masks IRQ with the DDR selected, so on every target the
+        # fault shows in the records instead of as a hang in BASIC's handler.
 
-        with pytest.raises(ValueError, match=failure):
+        with pytest.raises(ValueError, match=f"Update {update} "):
             coco.check_variant(broken, Host(), model, target, "keys", equipment)
 
     @pytest.fixture
     def sound_slots(self, tmp_path: Path) -> Path:
-        if not instrumented_ready("coco1", "coco2", "coco3"):
+        if not instrumented_ready("coco1", "coco2", "coco2b", "coco3"):
             pytest.skip("Native tools, CoCo firmware or instrumented build tools are missing")
         directory = tmp_path / "sound-slots-copy"
         shutil.copytree(ROOT / "examples/sound-slots", directory)

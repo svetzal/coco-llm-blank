@@ -124,8 +124,8 @@ A cutscene that reads no input is a valid choice.
 Write that choice down instead of promising controls that the loop cannot read.
 
 **Measured.** The [collect-room example](../../examples/collect-room/README.md)
-applies this table to a title, play and won phase on CoCo 1, CoCo 2B and
-CoCo 3. Its check plays 95 key steps through the emulated keyboard. A Space key that is
+applies this table to a title, play and won phase on CoCo 1, CoCo 2,
+CoCo 2B and CoCo 3. Its check plays 95 key steps through the emulated keyboard. A Space key that is
 held at startup or across a phase change does not start or restart the game.
 
 ## Commit once, then present the result
@@ -166,8 +166,9 @@ Read [sound scheduling](sound.md) before you combine them.
 
 **Measured result.** On the pinned XRoar, `coco.py check examples/turn-queue`
 matches all 44 records of 19 cases on each target.
-The targets are a 32 KiB CoCo 1 with Color BASIC 1.1, a 32 KiB CoCo 2 with
-Color BASIC 1.2 and a 128 KiB CoCo 3.
+The targets are a 32 KiB CoCo 1 with Color BASIC 1.1, two 32 KiB CoCo 2
+models with Color BASIC 1.2 and 1.3, and a 128 KiB CoCo 3.
+The CoCo 1 and CoCo 2 targets also load Extended Color BASIC 1.1.
 The same program runs on each. Only the place of the records in the snapshot
 changes.
 The records cover these items:
@@ -176,8 +177,10 @@ The records cover these items:
 - slot reuse, landing once, overdue landing and saturation at 255
 - phase guards and the turn limit at 65535
 
-Five broken builds fail at their named steps.
+Five broken builds fail at their named steps on CoCo 1 and on the CoCo 2
+with the MC6847T1.
 The program keeps the machine state that BASIC sets, with interrupts on.
+On each target, BASIC's field-sync interrupt handler runs once in each field.
 No interrupt handler reads the world.
 This is RAM state only.
 

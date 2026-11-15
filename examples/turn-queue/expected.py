@@ -22,6 +22,7 @@ RECORD_BYTES = WORLD_BYTES + 2
 LAYOUTS = {
     "coco1": (32 * 1024, 0),
     "coco2": (32 * 1024, 0),
+    "coco2b": (32 * 1024, 0),
     "coco3": (128 * 1024, 0x10000),
 }
 

@@ -5,9 +5,13 @@ Variants: "" (CG6, CSS=0), "css1" (CG6, CSS=1), "rg6" (RG6, CSS=0) and
 "rg6-css1" (RG6, CSS=1). Every variant writes the same screen bytes.
 
 The rendered frame uses scripts/graphics.py's unpack and render with its `xroar`
-palette on the CoCo 1 and 2, and its `xroar-coco3` palette on the CoCo 3. So
+palette on coco1, coco2 and coco2b, and its `xroar-coco3` palette on coco3. So
 `check --video` tests those palettes, the pixel order in a byte and the pixel sizes
 against XRoar's renderer. This example is the evidence for both palettes.
+
+coco2b has the MC6847T1. Its graphics modes and the colour of each code and colour
+set are the same as the MC6847's (MC6847T1 datasheet, PDF 15 Table 1 and PDF 25
+Figure 26(c)); the T1 differs only in text and semigraphics (PDF 15-16).
 
 On the CoCo 3 the same bytes and mode bits give the same picture, but each colour code
 selects a palette register (Tepolt, Assembly Language Programming for the CoCo3, PDF 46).
@@ -33,7 +37,7 @@ VARIANTS = {"": ("CG6", 0), "css1": ("CG6", 1), "rg6": ("RG6", 0), "rg6-css1": (
 # scripts/coco.py's capture: two samples per VDG half-clock, one row per scan line.
 # Measured in XRoar: the CoCo 3 capture has the same size and position.
 SAMPLES_PER_HALF_CLOCK = 2
-PALETTES = {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}
+PALETTES = {"coco1": XROAR, "coco2": XROAR, "coco2b": XROAR, "coco3": XROAR_COCO3}
 
 
 def expected_screen(frame: int, variant: str) -> bytes:

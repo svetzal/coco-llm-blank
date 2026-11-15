@@ -188,3 +188,12 @@ The [sound guide](../../guidance/techniques/sound.md) gives the source links.
 - John Kowalski, *GIME register reference*, `$FF91` and `$FF94`–`$FF95`:
   279.365 ns for each count, and the period on each GIME revision. This
   reference is outside the archive.
+
+- Tim Lindner, "CoCo 3 GIME Timer Tests", his web log, 12 May 2021,
+  <https://tlindner.macmess.org/?p=762>
+  ([Wayback copy](http://web.archive.org/web/20260519163613/https://tlindner.macmess.org/?p=762)),
+  read 15 November 2026. The report of one person, with a video of a real
+  1986 GIME. In his TEST2, the timer with TINS set agrees with 279.365 ns
+  for each count, not with 70 ns. No such report exists for the 1987 GIME.
+  The [timer-clock conflict](../../guidance/techniques/sound.md#resolve-the-timer-clock-conflict)
+  gives the details.

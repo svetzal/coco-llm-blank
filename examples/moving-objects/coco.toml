@@ -2,6 +2,7 @@
 source = "main.asm"
 
 # The first target is the default. Firmware is checked against roms.json.
+# The tables are the standard targets of guidance/starter/toolchain.md.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -9,15 +10,25 @@ tv = "ntsc"
 vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
+extended = "extbas11.rom"
 
-# NTSC CoCo 2B with Color BASIC 1.2. XRoar's coco2bus profile selects an
-# MC6847T1 VDG.
 [targets.coco2]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
+[targets.coco2b]
 machine = "coco2bus"
 cpu = "6809"
 tv = "ntsc"
+vdg = "6847t1"
 ram_kib = 32
-basic = "bas12.rom"
+basic = "bas13.rom"
+extended = "extbas11.rom"
 
 # NTSC CoCo 3, 128 KiB, GIME 1986, in its VDG-compatible RG6 mode. Each bit
 # selects a palette register that BASIC loads; the program keeps them.

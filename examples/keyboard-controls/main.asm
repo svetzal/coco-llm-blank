@@ -25,14 +25,25 @@ clear   clr ,x+
         sta $ff01
         lda $ff03
         sta control_b_before
+* Mask IRQ while $FF03 bit 2 selects DDRB. Extended BASIC leaves the
+* field-sync IRQ on ($FF03 bit 0; Color Basic Unravelled II, PDF 23-24).
+* Its handler at $894C (IRQ vector, the same book, PDF 20) reads $FF02 to
+* clear the flag. With DDRB selected that read does not clear it: only a
+* data-register read does (MC6821 datasheet, PDF 7). The flag stays set
+* and the handler runs again forever. Restore BASIC's mask afterwards.
+        pshs cc
+        orcc #$10
         anda #$fb
         sta $ff03
         ldb #$ff
         stb $ff02
         ora #4
         sta $ff03
+        puls cc
         stb $ff02
         ifdef WRONG_SELECT
+* The mask stops a hang, so the fault shows in the update records.
+        orcc #$10
         anda #$fb
         sta $ff03
         endc

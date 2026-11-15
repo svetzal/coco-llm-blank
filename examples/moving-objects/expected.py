@@ -14,7 +14,7 @@ OBJECT_WIDTH, OBJECT_HEIGHT = 16, 8
 # On the CoCo 3 each bit selects palette register 8 or 9, which BASIC loads at reset
 # (Tepolt, Assembly Language Programming for the CoCo3, PDF 46 and 57). The RGB values
 # are scripts/graphics.py's palettes, measured in XRoar's renderer, not a monitor.
-PALETTES = {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}
+PALETTES = {"coco1": XROAR, "coco2": XROAR, "coco2b": XROAR, "coco3": XROAR_COCO3}
 # coco.py's capture: two samples per RG6 pixel, one row per scan line. Measured in
 # XRoar: the CoCo 3 capture has the same size and position.
 SAMPLES_PER_PIXEL = 2

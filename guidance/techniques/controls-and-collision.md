@@ -42,15 +42,24 @@ and [collect-room](../../examples/collect-room/README.md):
 
 1. Clear control bit 2 and write the DDR. Then set bit 2 again. Keep the
    other control bits. Rows are inputs (`$00`) and columns are outputs (`$FF`).
+   Mask IRQ while `$FF03` bit 2 is clear.
 2. Strobe one column at a time: `$F7`, `$EF`, `$DF`, `$BF` and `$7F` for the
    arrows and Space.
 3. Test only the bit of the row that you need. Do not compare the whole byte.
 4. Write `$FF` to the columns after the scan.
 
 A write to `$FF02` is not a column strobe until bit 2 of `$FF03` is set.
-Keyboard-controls keeps the interrupt state that BASIC sets. Collect-room
-masks IRQ and FIRQ. Neither check establishes safe sharing with another
-keyboard scanner or a handler that changes the column port.
+
+Extended BASIC turns on the field-sync IRQ with `$FF03` bit 0 (*Color Basic
+Unravelled II*, PDF 23–24). Its handler reads `$FF02` to clear the flag (IRQ
+vector `$894C`, the same book, PDF 20). Only a read of the data register
+clears the flag (*MC6821* datasheet, PDF 7). If a field sync occurs while
+`$FF03` selects the DDR, the flag stays set and the handler runs forever.
+
+Keyboard-controls masks IRQ for that window only. Otherwise it keeps the
+interrupt state that BASIC sets. Collect-room masks IRQ and FIRQ. Neither
+check establishes safe sharing with another keyboard scanner or a handler that
+changes the column port.
 
 ### Shared inputs
 
@@ -166,12 +175,19 @@ advice above:
 
 `uv run python scripts/coco.py check examples/keyboard-controls` plays a key
 script through the pinned instrumented XRoar's keyboard matrix and PIA to the
-6809 scanner, on CoCo 1 (`cocous`), CoCo 2 (`coco2bus`) and CoCo 3
-(`coco3`). It compares 16 update records with the model. The build without
-keys must stay idle. Integration tests in `scripts/coco_spec.py` break the
-scanner four ways: a wrong column, a DDR left selected, a held-fire count and
-a stale history. On CoCo 3 the DDR fault stops the program instead, because
-BASIC leaves the field-sync interrupt on there (measured in XRoar).
+6809 scanner. It uses four targets:
+
+- CoCo 1 (`cocous`)
+- CoCo 2 (`cocous` with Color BASIC 1.2)
+- CoCo 2B (`coco2bus`, MC6847T1)
+- CoCo 3 (`coco3`)
+
+The check compares 16 update
+records with the model. The build without keys must stay idle. Integration
+tests in `scripts/coco_spec.py` break the scanner four ways: a wrong column, a
+DDR left selected, a held-fire count and a stale history. Each fault fails at
+the expected update on all four targets. The DDR fault masks IRQ, so it fails
+in the records and not as a hang in BASIC's handler.
 
 Collect-room's `journey` variant plays 95 scans with arrows, walls, a locked
 exit and restarts. Its check compares memory, the rendered frame and the

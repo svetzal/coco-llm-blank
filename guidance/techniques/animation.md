@@ -41,6 +41,10 @@ The flag records an event, not the current level. Let one routine only read
 `$FF02`. A keyboard scan or a ROM interrupt handler can clear the flag first.
 Keep the other `$FF03` bits when you change bits 0 and 1.
 
+Extended BASIC turns on the field-sync IRQ at cold start, and its handler
+reads `$FF02`. So clear `$FF03` bit 0 before you poll the flag. The
+[page flip](../../examples/page-flip/README.md) README gives the evidence.
+
 The example's check runs eight checkpoints on the CoCo 1, CoCo 2 and CoCo 3
 targets. At each checkpoint it compares both screens and every rendered
 sample.
@@ -48,9 +52,13 @@ sample.
 On a CoCo 3 the same SAM writes flip the same screens in the VDG modes. In
 those modes the SAM bits F6 to F0 give the physical address bits Y15 to Y9,
 and `$FF9D` bits 7 to 5 give Y18 to Y16. [Tepolt, PDF 44][tepolt-44] BASIC
-loads `$FF9D` with `$E0`. [Tepolt, PDF 56][tepolt-56] The PIA interrupts stay
-on the CoCo 3. [Tepolt, PDF 49][tepolt-49] No source that we read gives the
-timing of field sync on the CoCo 3. The FS wait works in XRoar (measured).
+loads `$FF9D` with `$E0`. [Tepolt, PDF 56][tepolt-56]
+
+The PIA interrupts stay on the CoCo 3. [Tepolt, PDF 49][tepolt-49] VSYNC is
+still a PIA interrupt source. [Tandy CoCo 3, PDF 37][coco3-37] No source that
+we read gives the timing of field sync on the CoCo 3. The FS wait works in
+XRoar (measured). The XRoar model of that timing is an
+[open question](#what-the-sources-do-not-settle).
 
 ### Flip pages in the GIME native modes
 
@@ -89,6 +97,26 @@ The pinned XRoar loads the SAM offset at the rising edge of field sync. So the
 CoCo 1/2 example also passes without the wait in step 2. The examples keep the
 conservative waits. Only a physical test with a sweep of the write time can
 settle these limits.
+
+**Open question: the timing of field sync on the CoCo 3.** Evidence kind:
+the XRoar model only. No published source that we read gives this timing.
+The *Color Computer 3 Service Manual* says only that VSYNC is still a PIA
+interrupt source. [Tandy CoCo 3, PDF 37][coco3-37] We read the source of the
+pinned XRoar 1.13:
+
+- CoCo 1 and 2 (`src/mc6847/mc6847.h` lines 64-70, `src/mc6847/mc6847.c`
+  lines 385-393): a frame has 262 lines. FS falls at line 230, the end of the
+  active display. FS is low for 32 lines. The active display starts 70 lines
+  after the fall.
+- CoCo 3 (`src/tcc1014/tcc1014.c` lines 1192-1257, at 60 Hz in the CoCo
+  modes): a frame has 263 lines. FS falls at the start of vertical sync,
+  about 28 lines after the end of the active display. Thus it falls about 28
+  lines later than on the VDG. FS is low for 4 lines. The active display
+  starts about 43 lines after the fall.
+
+A program that starts work at the fall of FS has less time before the active
+display on a CoCo 3 in XRoar. Only a measurement on a physical CoCo 3 can
+settle the real timing.
 
 The `--video` check sees one frame: the second frame after each checkpoint.
 A fault that shows only in later frames can pass it.
@@ -204,7 +232,11 @@ changes or delays into assembly.
 - Motorola, *MC6847/MC6847Y Video Display Generator*, PDF 22. Resource `mc6847`.
 - Motorola, *MC6883 Synchronous Address Multiplexer*, PDF 8. Its advance
   information, PDF 15.
-- Tandy, *Color Computer 3 Service Manual*, PDF 11-18. Resource `coco3-service`.
+- Tandy, *Color Computer 3 Service Manual*, PDF 11-18 and 37. Resource
+  `coco3-service`.
+- XRoar 1.13 source, the pinned emulator: `src/mc6847/mc6847.h`,
+  `src/mc6847/mc6847.c` and `src/tcc1014/tcc1014.c`. A model of the
+  hardware, not a published hardware source.
 - Laurence A. Tepolt, *Assembly Language Programming for the CoCo3* (1987),
   PDF 29, 39, 44, 49, 50 and 56. Resource `tepolt-coco3`.
 - John Kowalski, *Gloom 3-D V1.2* (1996), read in full, cited routines
@@ -233,6 +265,7 @@ not reproduce the historical listings.
 [sam-advance]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6883%20Synchronous%20Address%20Multiplexer%20Advance%20Information%20%28Motorola%29.pdf#page=15>
 [coco3-11]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=11>
 [coco3-13]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=13>
+[coco3-37]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=37>
 [tepolt-29]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=29>
 [tepolt-39]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=39>
 [tepolt-44]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=44>

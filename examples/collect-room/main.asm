@@ -22,6 +22,13 @@
 *     PDF 14: $FF20 bits 7..2 = 6-bit DAC, $FF23 bit 3 = sound enable.
 *     PDF 31 Table 1: RG6 is SAM V=110 and $FF22 bits 7..3 = 1111 CSS.
 *     PDF 38 Table 4: SNDEN 1, SEL 1 = 0 and SEL 2 = 0 select the DAC.
+*   Motorola, MC6821 PIA datasheet, PDF 10, Figure 18: control bit 2 = 0
+*     selects the DDR; only a read of the output register clears the flag.
+*   Color Basic Unravelled II, PDF 42: Color BASIC's IRQ handler reads
+*     $FF02 to reset the field-sync flag. On every target that IRQ is on
+*     when the program starts: TIMER ($0112) counts in each snapshot, and
+*     without the mask below a delay in the DDR window stops the program
+*     (both measured in the pinned XRoar).
 *   Tandy, Color Computer 2 NTSC Service Manual, PDF 36 figure 4-10:
 *     Up, Down, Left, Right and Space are row PA3, columns PB3 to PB7.
 *   The CoCo 3 needs no other setup:
@@ -76,13 +83,21 @@ blank   clr ,x+
         clr $ff00
         ora #4
         sta $ff01
+* BASIC's IRQ handler reads $FF02 to clear the field-sync flag; with the DDR
+* selected it reads DDRB, so the flag stays set and the handler runs forever.
+* So mask IRQ only while $FF03 selects DDRB. A field sync in that window
+* runs the handler after PULS CC, when $FF02 is the data register again.
+* PULS CC restores BASIC's mask.
         lda $ff03
+        pshs cc
+        orcc #$10
         anda #$f3
         sta $ff03
         ldb #$ff
         stb $ff02
         ora #4
         sta $ff03
+        puls cc
         stb $ff02
         lda $ff21
         anda #$fb

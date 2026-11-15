@@ -16,10 +16,13 @@ LOW_STEP, HIGH_STEP = 0x0800, 0x1000
 # Service Manual, PDF 10).
 # Sawtooth: phase bits 15..10. Square: phase bit 15 only.
 WAVE_MASK = {"": 0xFC, "square": 0x80}
-# The CPU clock is 14.31818 MHz / 16 (Tandy, Technical Reference Manual, PDF 26).
-# The CoCo 3 gives the slow rate as 0.89 MHz, rounded (CoCo 3 Service Manual,
-# PDF 31), and BASIC leaves it at that rate (Tepolt, PDF 56 step 14 and PDF 62).
-# The same model applies to every target; the tolerance covers the rounding.
+# CoCo 1/2: the CPU clock is 14.31818 MHz / 16 (Tandy, Technical Reference
+# Manual, PDF 26).
+# CoCo 3: crystal X1 is 28.63636 MHz (CoCo 3 Service Manual, PDF 85) on the
+# GIME (PDF 103), whose oscillator divider makes E and Q (PDF 96) at 0.89 or
+# 1.78 MHz (PDF 31). BASIC leaves the slow rate (Tepolt, PDF 56 step 14 and
+# PDF 62). Divide by 32 is our inference, shared by XRoar 1.13 (src/events.h,
+# src/tcc1014/tcc1014.c), and gives the same 894,886.25 Hz on every target.
 CPU_HZ = 14_318_180 / 16
 # The sample loop takes 41 cycles (Leventhal, Appendix C, PDF 553-555):
 # LDD 6, ADDD 7, STD 6, ANDA # 2, ORA 5, STA 5, DEC 7, BNE 3, all extended.

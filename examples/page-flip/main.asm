@@ -118,7 +118,9 @@ start   sta $FFC6
         sta $FF92
         else
 * $FF03 bit 0 = 0: no IRQ, so no interrupt handler reads $FF02 and takes the
-* flag. Bit 1 = 0: set the flag at the falling edge of FS, the end of the
+* flag. Extended BASIC turns this IRQ on at cold start ($809E), and its
+* handler ($894C on the CoCo 1 and 2) reads $FF02 (read from the ROM bytes;
+* $FF03 = $35 at entry, measured in the pinned XRoar). Bit 1 = 0: set the flag at the falling edge of FS, the end of the
 * active display. Bit 2 = 1: $FF02 is the data register. Keep bits 5..3.
         lda $FF03
         anda #%11111100

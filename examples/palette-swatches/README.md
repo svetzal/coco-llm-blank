@@ -4,7 +4,8 @@ This example selects one of the two colour sets of the CoCo 1/2 video chip
 (VDG) in a full-graphics mode. It shows a bar of each colour code, so you can
 see which colour each code gives. It stops when the picture is on the screen.
 
-The same program runs on a CoCo 1, a CoCo 2 and a CoCo 3. The CoCo 3 shows
+The same program runs on a CoCo 1, two CoCo 2 models and a CoCo 3. One CoCo 2
+model has the MC6847 and one has the MC6847T1. The CoCo 3 shows
 these modes with its VDG-compatible modes. On a CoCo 3, each colour code
 selects a palette register. Thus the RGB values on a CoCo 3 are different.
 [Machines](#machines) tells what is different.
@@ -43,7 +44,7 @@ of the `xroar` palette (CoCo 1 and 2) and the `xroar-coco3` palette (CoCo 3).
 They are measured in XRoar. The check compares them with XRoar's rendered
 frame.
 
-| Colour | RGB, CoCo 1 and 2 | RGB, CoCo 3 | CoCo 3 register and BASIC code |
+| Colour | RGB, CoCo 1 and 2 (both VDGs) | RGB, CoCo 3 | CoCo 3 register and BASIC code |
 | --- | --- | --- | --- |
 | green | 46, 188, 36 | 71, 145, 5 | 0 and 9: `$12` |
 | yellow | 255, 255, 151 | 255, 200, 46 | 1: `$24` |
@@ -67,6 +68,11 @@ The program, the screen bytes and the picture are the same on each machine.
 Only the RGB values are different.
 
 - CoCo 1 and CoCo 2: the MC6847 gives each code a fixed colour.
+- CoCo 2 with the MC6847T1: the T1 has the same graphics modes. Each code
+  and colour set gives the same colour (MC6847T1 datasheet, PDF 15 and 25).
+  The T1 is different only in the text and semigraphics modes (PDF 15 and
+  16). In XRoar, the `coco2b` frames agree with the `xroar` palette in all
+  four variants (measured).
 - CoCo 3: the `$FF22` and SAM values select the same G6C (CG6) and G6R (RG6)
   modes. A CG code selects palette register 0 to 3 with CSS=0, or 4 to 7 with
   CSS=1. An RG bit selects register 8 or 9 with CSS=0, or 10 or 11 with
@@ -109,7 +115,15 @@ The `--- CONTEXT` blocks are not part of the practice:
   with its own main loop.
 
 The program keeps the interrupts, stack, direct page and CPU clock that BASIC
-sets.
+sets. On each target, BASIC's field-sync interrupt is on and runs each field.
+The program needs no change for it. It writes only `$FF22` and the SAM, and
+it does not select a PIA direction register. Its timing is not important.
+The check passes with the interrupt on (measured).
+
+The screen at `$0400` to `$1BFF` uses memory that BASIC keeps for its text
+screen and its graphics pages. The program does not use BASIC after it
+starts, so this is safe here. A project that goes back to BASIC must not use
+this memory.
 
 ## See and check each colour set
 
@@ -123,6 +137,13 @@ uv run python scripts/coco.py run examples/palette-swatches --variant rg6       
 uv run python scripts/coco.py run examples/palette-swatches --variant rg6-css1    # RG6, CSS=1
 ```
 
+To see a colour set on the CoCo 2 with the MC6847T1, add `--target coco2b`:
+
+```sh
+uv run python scripts/coco.py run examples/palette-swatches --target coco2b                     # CG6, CSS=0
+uv run python scripts/coco.py run examples/palette-swatches --target coco2b --variant rg6-css1  # RG6, CSS=1
+```
+
 To see a colour set on the CoCo 3, add `--target coco3`:
 
 ```sh
@@ -134,7 +155,7 @@ uv run python scripts/coco.py run examples/palette-swatches --target coco3 --var
 
 Look at the border in the `run` window. The check does not capture the border.
 
-To check all four variants on all three machines, paste this line:
+To check all four variants on all four machines, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/palette-swatches --video
@@ -145,15 +166,22 @@ The `--video` option needs the
 The colour set is not in screen memory. Without `--video`, the check cannot
 find a wrong colour set.
 
-The check runs each variant on three targets in [coco.toml](coco.toml). Each
+The check runs each variant on four targets in [coco.toml](coco.toml). They
+are the standard target tables in the
+[toolchain guide](../../guidance/starter/toolchain.md#target-tables). Each
 target has NTSC and a normal-clock 6809:
 
-- `coco1`: a CoCo 1 with Color BASIC 1.1, 32 KiB and the non-T1 MC6847.
-- `coco2`: a CoCo 2 with Color BASIC 1.2, 32 KiB and the non-T1 MC6847.
-  XRoar's `coco2bus` profile has a T1 VDG, so this target uses `cocous` with
-  an explicit `6847`.
+- `coco1`: a CoCo 1 with Color BASIC 1.1, Extended Color BASIC 1.1, 32 KiB
+  and the MC6847.
+- `coco2`: a CoCo 2 with Color BASIC 1.2, Extended Color BASIC 1.1, 32 KiB
+  and the MC6847.
+- `coco2b`: a CoCo 2 with Color BASIC 1.3, Extended Color BASIC 1.1, 32 KiB
+  and the MC6847T1.
 - `coco3`: a CoCo 3 with Super Extended Color BASIC, 128 KiB and the 1986
   GIME.
+
+The program does not need Extended BASIC. Before the targets loaded Extended
+BASIC, the check passed with Color BASIC only.
 
 For each variant, the check compares these with [expected.py](expected.py):
 
@@ -161,8 +189,8 @@ For each variant, the check compares these with [expected.py](expected.py):
 - All 512x192 samples of XRoar's rendered frame.
 
 The model draws the frame with the `unpack` and `render` functions of
-`scripts/graphics.py`. It uses the `xroar` palette on `coco1` and `coco2`, and
-the `xroar-coco3` palette on `coco3`. Thus the check tests these items:
+`scripts/graphics.py`. It uses the `xroar` palette on `coco1`, `coco2` and
+`coco2b`, and the `xroar-coco3` palette on `coco3`. Thus the check tests these items:
 
 - The palette values.
 - The pixel order in a byte.
@@ -174,7 +202,7 @@ not match it.
 
 The capture uses S-video colours with cross-colour off, and the active area
 only. It does not prove the result on a television, an RGB monitor, a
-physical CoCo, PAL or the MC6847T1.
+physical CoCo or PAL.
 
 ## Sources
 
@@ -187,6 +215,13 @@ Read these pages before you change a value. Use
     colour.
   - PDF page 21, Figure 22(c): the colour of each code for each colour set.
   - PDF page 19, Table 3: the leftmost pixel is in the high bits of a byte.
+- Motorola, *MC6847T1 Video Display Generator* datasheet:
+  - PDF page 15, Table 1: the T1 has the same graphics modes as the MC6847.
+    Its other changes are in the alpha and semigraphics modes.
+  - PDF page 16, Tables 2 and 3: the enhanced alpha modes and border colours.
+    They apply only to text modes.
+  - PDF page 25, Figure 26(c): the colour of each code for each colour set.
+    It is the same as on the MC6847.
 - Tandy, *Color Computer Technical Reference Manual*:
   - PDF page 14: `$FF22` bit 3 is CSS. Bits 4 to 7 are GM0, GM1, GM2 and A/G.
   - PDF page 31, Table 1: CG6 and RG6 use SAM V2..V0 = `110`, and `$FF22`

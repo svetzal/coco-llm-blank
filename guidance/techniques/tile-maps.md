@@ -139,11 +139,12 @@ the path or use short substeps.
 ## What the tile-room example checks
 
 **Measured.** `uv run python scripts/coco.py check examples/tile-room --video`
-runs 41 scripted moves on three NTSC targets with the pinned instrumented
-XRoar: CoCo 1 (32 KiB, MC6847), CoCo 2 (32 KiB, MC6847T1) and CoCo 3
-(128 KiB, GIME 1986). It runs both redraw methods on each target. Only the
-rendered colours differ: on the CoCo 3, XRoar shows the colours of the
-palette registers that BASIC loads.
+runs 41 scripted moves with the pinned instrumented XRoar. It uses four NTSC
+targets: CoCo 1 (32 KiB, MC6847), CoCo 2 (32 KiB, MC6847), CoCo 2 (32 KiB,
+MC6847T1) and CoCo 3 (128 KiB, GIME 1986). It runs both redraw methods on each
+target. The CoCo 1 and CoCo 2 targets load Extended Color BASIC, which turns
+on the field-sync interrupt. Only the rendered colours differ: on the
+CoCo 3, XRoar shows the colours of the palette registers that BASIC loads.
 
 At each of the 42
 frames, the check compares all 6,144 screen bytes and all 98,304 samples of

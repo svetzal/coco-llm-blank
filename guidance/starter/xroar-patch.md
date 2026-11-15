@@ -155,9 +155,9 @@ build again as a control, and on the trial build.
 
 | Check | What it covers |
 | --- | --- |
-| `examples/first-screen --video` | CoCo 1, 2 and 3 rendered frames |
-| `examples/collect-room` | CoCo 1, 2 and 3 frames and mixer sound, main and key-journey variants |
-| `examples/sound-slots` | CoCo 1, 2 and 3 mixer sound, main and square variants |
+| `examples/first-screen --video` | CoCo 1, 2, 2B and 3 rendered frames |
+| `examples/collect-room` | CoCo 1, 2, 2B and 3 frames and mixer sound, main and key-journey variants |
+| `examples/sound-slots` | CoCo 1, 2, 2B and 3 mixer sound, main and square variants |
 | `examples/timer-sound --video` | CoCo 3, both GIME revisions, four variants |
 
 It compares every file that each run wrote in `build/<example>/`, byte for

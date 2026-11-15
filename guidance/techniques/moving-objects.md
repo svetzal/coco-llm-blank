@@ -157,11 +157,16 @@ pixel-perfect collision or blend loop. [Manual, PDF 20][graf-shapes]
 ## What the examples check
 
 **Measured result.** Both examples run with NTSC and a normal-clock 6809 on
-three XRoar targets:
+four XRoar targets:
 
-- a CoCo 1 with 32 KiB and the non-T1 MC6847
+- a CoCo 1 with 32 KiB and the MC6847
+- a CoCo 2 with 32 KiB and the MC6847
 - a CoCo 2B with 32 KiB and the MC6847T1
 - a CoCo 3 with 128 KiB and the 1986 GIME
+
+The CoCo 1 and CoCo 2 targets load Extended Color BASIC, so the field-sync
+interrupt (IRQ) is on, as on the CoCo 3. Neither example waits for field sync
+or times a loop, so both keep the IRQ on.
 
 The screen bytes are the same on each machine. On the CoCo 3, the RGB
 values are different, because each RG6 bit selects a palette register that

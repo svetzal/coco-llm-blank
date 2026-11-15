@@ -28,12 +28,22 @@ TITLE = (0, 0, 0, 2, 0, 0, 0, 0, 0)
 # other RGB values. Measured in XRoar: the CoCo 3 capture has the same size.
 COLOURS = {
     target: palette_rgb(MODES["RG6"], 0, palette)
-    for target, palette in {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}.items()
+    for target, palette in {
+        "coco1": XROAR,
+        "coco2": XROAR,
+        "coco2b": XROAR,
+        "coco3": XROAR_COCO3,
+    }.items()
 }
-RAM_SIZES = {"coco1": (32768, 65536), "coco2": (32768, 65536), "coco3": (131072,)}
+RAM_SIZES = {
+    "coco1": (32768, 65536),
+    "coco2": (32768, 65536),
+    "coco2b": (32768, 65536),
+    "coco3": (131072,),
+}
 # The CoCo 3 snapshot is physical memory. Under BASIC's map, logical $xxxx is
 # at 0x10000 + $xxxx (Tepolt, Assembly Language Programming for the CoCo3, PDF 58).
-SNAPSHOT_OFFSET = {"coco1": 0, "coco2": 0, "coco3": 0x10000}
+SNAPSHOT_OFFSET = {"coco1": 0, "coco2": 0, "coco2b": 0, "coco3": 0x10000}
 # Each effect is 32 alternating DAC writes. The game's requirement: the pickup
 # tone is highest and the win tone lowest, each within its own band.
 EFFECT_WRITES = 32

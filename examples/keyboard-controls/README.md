@@ -1,7 +1,7 @@
 # Read held keys and single presses
 
 This example reads controls from the CoCo keyboard matrix. It runs on CoCo 1,
-CoCo 2 and CoCo 3 without changes. It samples all controls before it chooses
+both CoCo 2 targets and CoCo 3 without changes. It samples all controls before it chooses
 actions. It shows held movement and one action for
 each new Space press, including movement and action together.
 
@@ -56,6 +56,8 @@ The five `>>> EXAMPLE` parts of [main.asm](main.asm) show the input practice:
 1. Set the PIA directions before the first scan. Clear control bit 2 to select
    each direction register. Set the rows to inputs and the columns to outputs.
    Set control bit 2 to select the data registers. Keep the other control bits.
+   Mask IRQ while `$FF03` selects the column direction register. The next
+   section gives the reason.
 
 2. Take one startup sample. Copy `held` to `previous` to ignore startup-held
    Space as a new press.
@@ -79,37 +81,60 @@ record the results. The position starts at 2. These blocks are demonstration
 code, not a collision technique.
 
 The raw row copies and final PIA copies exist only for the check.
-The program keeps the interrupts, stack, direct page and CPU clock that BASIC
-sets.
+The program keeps the stack, direct page and CPU clock that BASIC sets. It
+keeps BASIC's interrupts, except for the short mask in part 1.
 
-[coco.toml](coco.toml) declares these targets: NTSC, 6809, normal clock and
-direct DECB loading. Each target uses the keyboard layout of its machine.
+[coco.toml](coco.toml) copies the standard target tables: NTSC, 6809, normal
+clock and direct DECB loading. Each target adds the keyboard layout of its
+machine for the key script. The program does not use Extended BASIC. The
+standard tables load it because it sets the machine state at entry.
 
 | Target | XRoar machine | Memory | Firmware |
 | --- | --- | --- | --- |
-| `coco1` | `cocous` | 32 KiB | Color BASIC 1.1 |
-| `coco2` | `coco2bus` | 32 KiB | Color BASIC 1.2 |
+| `coco1` | `cocous`, MC6847 | 32 KiB | Color BASIC 1.1, Extended BASIC 1.1 |
+| `coco2` | `cocous`, MC6847 | 32 KiB | Color BASIC 1.2, Extended BASIC 1.1 |
+| `coco2b` | `coco2bus`, MC6847T1 | 32 KiB | Color BASIC 1.3, Extended BASIC 1.1 |
 | `coco3` | `coco3`, GIME 1986 | 128 KiB | CoCo 3 ROM |
+
+## Mask IRQ while the direction register is selected
+
+Extended BASIC turns on the field-sync interrupt (IRQ) on every target.
+`$FF03` bit 0 enables it (*Color Basic Unravelled II*, PDF 23–24). The IRQ
+vector points to BASIC's handler at `$894C` (the same book, PDF 20). The
+handler reads `$FF02` to clear the field-sync flag. Only a read of the data
+register clears the flag (Motorola, *MC6821 PIA* datasheet, PDF 7).
+
+When `$FF03` bit 2 is 0, `$FF02` is the direction register (*Color Basic
+Unravelled II*, PDF 24). If a field sync occurs in that window, the handler
+reads the direction register. The flag stays set, and the CPU runs the handler
+again forever. Thus part 1 sets the IRQ mask before it selects the direction
+register. It restores the mask that BASIC set after it selects the data
+register again. The window is a few instructions, so the hang is rare, but
+it is possible on every target.
+
+Port A needs no mask. BASIC leaves the `$FF01` interrupt off (bit 0), so no
+port A flag must be cleared. We measured `$FF01` as `$B4` and `$FF03` as `$35`
+at entry on all four targets in the pinned XRoar. The program does not change
+`$FF03` bit 0. Between scans, BASIC's handler runs every field and reads
+`$FF02`. That read does not change the column outputs.
 
 ## What is different on the CoCo 3
 
-The program and the expected results are the same on all three machines.
+The program and the expected results are the same on all four targets.
 These items are different on the CoCo 3:
 
 - The RAM snapshot is physical memory. Under BASIC's memory map, logical
   `$xxxx` is at snapshot offset `0x10000 + $xxxx` (Tepolt, PDF 58).
   [expected.py](expected.py) adds this offset for the `coco3` target.
-- BASIC leaves the field-sync interrupt on. We measured `$FF03` as `$35`
-  on `coco3` and `$34` on `coco1` and `coco2` in XRoar. Bit 0 enables that
-  interrupt (*Color Computer 3 Service Manual*, PDF 9). The program does not
-  change it.
 - Row PA3 is also left joystick switch 2 (*Color Computer 3 Service Manual*,
   PDF 9). A held second button on the left joystick reads as a key in every
   column of row PA3. The check uses no joystick.
 
 Code and state start at `$3000` and end below `$4000`. The check records use
-`$4000..$406F`. [keys.txt](keys.txt) and [expected.py](expected.py) are only
-check context. Their expected positions and action counts come from the policy.
+`$4000..$406F`. Extended BASIC does not use that memory at entry (measured:
+the check passes on all four targets). [keys.txt](keys.txt) and
+[expected.py](expected.py) are only check context. Their expected positions
+and action counts come from the policy.
 
 ## Run and check the variations
 
@@ -122,11 +147,16 @@ uv run python scripts/coco.py snapshot examples/keyboard-controls --target coco1
 # CoCo 1, scripted keys
 uv run python scripts/coco.py snapshot examples/keyboard-controls \
   --target coco1 --variant keys
-# CoCo 2B, no input
+# CoCo 2, no input
 uv run python scripts/coco.py snapshot examples/keyboard-controls --target coco2
-# CoCo 2B, scripted keys
+# CoCo 2, scripted keys
 uv run python scripts/coco.py snapshot examples/keyboard-controls \
   --target coco2 --variant keys
+# CoCo 2B, no input
+uv run python scripts/coco.py snapshot examples/keyboard-controls --target coco2b
+# CoCo 2B, scripted keys
+uv run python scripts/coco.py snapshot examples/keyboard-controls \
+  --target coco2b --variant keys
 # CoCo 3, no input
 uv run python scripts/coco.py snapshot examples/keyboard-controls --target coco3
 # CoCo 3, scripted keys
@@ -134,7 +164,7 @@ uv run python scripts/coco.py snapshot examples/keyboard-controls \
   --target coco3 --variant keys
 ```
 
-To compare both variations on all three targets, use this command:
+To compare both variations on all four targets, use this command:
 
 ```sh
 uv run python scripts/coco.py check examples/keyboard-controls
@@ -153,7 +183,7 @@ The script checks startup-held Space, release and repress, both arrows,
 movement with action, rejected moves and M held with Right. Line 1 supplies
 the startup sample. The next 16 lines supply the updates.
 
-Four negative controls in `scripts/coco_spec.py` must fail on all three
+Four negative controls in `scripts/coco_spec.py` must fail on all four
 targets:
 
 | Define | Fault | First failed update |
@@ -163,11 +193,11 @@ targets:
 | `HELD_FIRE` | Count held Space on every update | 1: startup-held Space counts |
 | `STALE_HISTORY` | Skip history after a rejected move | 6: history is stale |
 
-On `coco3`, `WRONG_SELECT` fails differently: the program never reaches
-`finished`. The field-sync interrupt stays on. While the direction register is
-selected, a read of `$FF02` cannot clear the interrupt flag. Only a read of the
-data register clears it (Motorola, *MC6821 PIA* datasheet, PDF 7–8). We
-measured that this fault fails at update 1 when the program masks IRQ.
+`WRONG_SELECT` also sets the IRQ mask. Without the mask, the fault can stop
+the program in BASIC's handler before `finished`. Whether it stops depends on
+when the next field sync occurs. With the mask, the fault fails at update 1
+on every target (measured). Thus the control shows that the check rejects a
+wrong register selection through the records.
 
 The check delivers keys through XRoar's keyboard matrix, PIA and the 6809
 scanner.
@@ -201,7 +231,11 @@ gives the source links and the wider matrix.
 
 - Motorola, *MC6821 PIA* datasheet: PDF 7–8 gives the direction bits,
   register selection, writable control bits and how a read clears an
-  interrupt flag.
+  interrupt flag. PDF 7 says that only a read of the data register clears
+  the flag.
 
-- Spectral Associates, *Color Basic Unravelled II*: PDF 29 describes the
-  keyboard routine in Color BASIC 1.2. This example does not call it.
+- Spectral Associates, *Color Basic Unravelled II*: PDF 20 gives the IRQ
+  vector, `$894C` under Extended BASIC. PDF 23–24 give the `$FF01` and `$FF03`
+  bits: bit 0 enables the interrupt, and bit 2 selects the direction register.
+  PDF 29 describes the keyboard routine in Color BASIC 1.2. This example does
+  not call it.

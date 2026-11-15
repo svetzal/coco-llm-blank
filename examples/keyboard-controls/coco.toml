@@ -1,35 +1,49 @@
 # Settings for scripts/coco.py. Paths are relative to this folder.
 source = "main.asm"
 
-# NTSC machines with explicit 6809, keyboard layout and firmware. The program
+# The standard target tables from guidance/starter/toolchain.md. The program
 # does not set a display mode, so the VDG choice does not matter here.
-# Each target uses the keyboard layout of its own machine.
+# Each table adds the keyboard layout of its own machine for the key script.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
-keyboard = "coco"
 tv = "ntsc"
+vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
+extended = "extbas11.rom"
+keyboard = "coco"
 
 [targets.coco2]
-machine = "coco2bus"
+machine = "cocous"
 cpu = "6809"
-keyboard = "coco"
 tv = "ntsc"
+vdg = "6847"
 ram_kib = 32
 basic = "bas12.rom"
+extended = "extbas11.rom"
+keyboard = "coco"
+
+[targets.coco2b]
+machine = "coco2bus"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847t1"
+ram_kib = 32
+basic = "bas13.rom"
+extended = "extbas11.rom"
+keyboard = "coco"
 
 # The CoCo 3 RAM snapshot is physical memory; expected.py adds the offset.
 [targets.coco3]
-firmware = "coco3"
 machine = "coco3"
 cpu = "6809"
-keyboard = "coco3"
 tv = "ntsc"
 vdg = "gime1986"
 ram_kib = 128
 extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+screen = 0x10400         # logical $0400 in the physical RAM snapshot
+keyboard = "coco3"
 
 [memory]
 at = { start = 0x3000 }

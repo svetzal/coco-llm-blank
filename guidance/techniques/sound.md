@@ -49,7 +49,9 @@ names `BNE` at the end of the table loop, but the listing uses `BLS`.
 The [collect-room example](../../examples/collect-room/README.md) plays its
 effects in the same blocking way: 32 alternating DAC writes, then a return to
 the game. Its check finds every effect in XRoar's mixer output and tests its
-pitch band. The game cannot read keys during an effect.
+pitch band. The game cannot read keys during an effect. BASIC's field-sync
+IRQ handler can interrupt an effect. The effect does not mask IRQ: in the
+pinned XRoar, each pitch stays in its band on every target (measured).
 
 ROM SOUND and PLAY calls can help a BASIC-hosted prototype. Nee's PLAY example
 saves the BASIC text pointer and runs from BASIC. His prose and listing give
@@ -81,20 +83,22 @@ The [sound-slots example](../../examples/sound-slots/README.md) plays a tone
 from the main loop.
 After each block of 256 samples, a short slot moves a marker and changes the
 note.
-It runs on CoCo 1, on a non-T1 CoCo 2 (26-3134/26-3136, 64 KiB) and on CoCo 3
-(GIME 1986, 128 KiB), all NTSC with the 6809 at the slow rate.
+It runs on the four standard targets (`coco1`, `coco2`, `coco2b` and
+`coco3`), all NTSC with the 6809 at the slow rate.
 The pitch needs the slow rate. On CoCo 3, a write to `$FFD8` selects it, and
 the reset program clears all SAM registers, so BASIC starts at that rate.
 [Tepolt, PDF 56 and 62][tepoltrate]
 
-It masks interrupts.
+It masks interrupts. Without the mask, BASIC's field-sync IRQ handler puts
+about 100 cycles into one sample gap in each field. The tone becomes 0.67%
+lower, and the pitch check fails (measured).
 A sawtooth and a square wave are its two variants.
 
 ```sh
 uv run python scripts/coco.py check examples/sound-slots
 ```
 
-**Measured result.** On all three targets, the check compares every DAC value
+**Measured result.** On all four targets, the check compares every DAC value
 with an independent model.
 The mixer output has the tone that 41 cycles for each sample predicts.
 The slot takes up to 24 instructions between two DAC writes, against a budget of
@@ -147,7 +151,21 @@ the 1987 GIME. The examples use that later account. [Kowalski][kowalski]
 
 The pinned XRoar models the later account in `src/tcc1014/tcc1014.c`
 (`schedule_timer`, `timer_offset`), and the measured tone agrees. This supports
-the emulator, not a physical GIME. Record which account your timing uses.
+the emulator, not a physical GIME.
+
+One report from a real machine agrees with the later account for the 1986
+GIME. Tim Lindner tested a CoCo 3 with a 1986 GIME and published his
+programs and videos. [Lindner][lindner] His TEST2 sets TINS (`$FF91` bit 5)
+and loads `$FFF` into the timer. Each time the timer ends, the program
+increments a screen byte.
+
+In his video, the byte goes up about 850 times a second (our count from the
+video frames). That agrees with 279.365 ns for each count. A 70 ns count
+gives about 3,100 a second. This is the report of one person on one machine,
+not a specification.
+
+No report from a real 1987 GIME is known. For that revision, only Kowalski
+and XRoar support the later account. Record which account your timing uses.
 
 ## Measurements the examples do not rerun
 
@@ -218,6 +236,10 @@ has listened to these examples, and no physical CoCo result exists.
   June 1985 (`hotcoco-1985-06`).
 - John Kowalski (SockMaster), *GIME register reference*, an author reference
   outside the archive.
+- Tim Lindner, "CoCo 3 GIME Timer Tests", his web log, 12 May 2021
+  ([Wayback copy](http://web.archive.org/web/20260519163613/https://tlindner.macmess.org/?p=762)),
+  read 15 November 2026. The report of one person, with test programs and
+  videos of a CoCo 3 with a 1986 GIME.
 
 The examples are our original work. They do not reproduce the magazine programs.
 
@@ -235,3 +257,4 @@ The examples are our original work. They do not reproduce the magazine programs.
 [cartridge]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Hot%20Coco%20(OCR)/HotCoCo-1985-06.pdf#page=75>
 [speechmanual]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Speech-Sound%20Cartridge%20(Tandy).pdf#page=10>
 [kowalski]: https://www.6809.org.uk/twilight/sock/gime.html
+[lindner]: https://tlindner.macmess.org/?p=762

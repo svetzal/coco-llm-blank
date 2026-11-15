@@ -24,10 +24,15 @@ KEYBOARD_ROWS = 0x7F
 # Writable PIA control bits; bits 7 and 6 are interrupt flags.
 CONTROL_BITS = 0x3F
 START_POSITION = 2
-RAM_SIZES = {"coco1": (32768, 65536), "coco2": (32768, 65536), "coco3": (131072,)}
+RAM_SIZES = {
+    "coco1": (32768, 65536),
+    "coco2": (32768, 65536),
+    "coco2b": (32768, 65536),
+    "coco3": (131072,),
+}
 # The CoCo 3 snapshot is physical memory. Under BASIC's map, logical $xxxx is
 # at 0x10000 + $xxxx (Tepolt, Assembly Language Programming for the CoCo3, PDF 58).
-SNAPSHOT_OFFSET = {"coco1": 0, "coco2": 0, "coco3": 0x10000}
+SNAPSHOT_OFFSET = {"coco1": 0, "coco2": 0, "coco2b": 0, "coco3": 0x10000}
 
 
 def script(variant: str) -> list[tuple[str, int, int]]:

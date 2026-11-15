@@ -38,6 +38,12 @@ def verify_ram(data: bytes, symbols: dict[str, int], frame: int, variant: str) -
 # Sound timing. The emulated clocks come from XRoar's 14,318,180 Hz event clock:
 # the slow 6809 cycle is 16 ticks, and the GIME timer counts reload + 2 (1986) or
 # reload + 1 (1987) steps of 4 ticks each (Kowalski's GIME reference, $FF94-$FF95).
+# One report from a real 1986 GIME agrees with 4 ticks (279.365 ns) for each count,
+# not the 70 ns of Tandy (CoCo 3 Service Manual, PDF 11-12) and Tepolt (PDF 50):
+# Tim Lindner, "CoCo 3 GIME Timer Tests", 12 May 2021, https://tlindner.macmess.org/?p=762
+# (http://web.archive.org/web/20260519163613/https://tlindner.macmess.org/?p=762).
+# In his TEST2 video, timer $FFF with TINS = 1 increments a screen byte about 850
+# times a second; 70 ns would give about 3,100. The 1987 GIME has no such report.
 TICK_HZ = 14_318_180
 CPU_HZ = TICK_HZ / 16
 TIMER_RELOAD = 510

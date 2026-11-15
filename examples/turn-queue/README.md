@@ -101,7 +101,10 @@ The `--- CONTEXT` parts are not part of the practice:
 
 The program keeps the machine state that BASIC sets: the interrupts, the
 stack, the direct page, the CPU rate and the memory map. No routine writes a
-hardware register.
+hardware register. On each target, Extended BASIC turns on the field-sync
+interrupt, and its handler runs once in each field during the cases. The
+program does not wait for field sync, so it needs no change for the
+interrupt. The check passes with the interrupt on.
 
 The `script` label is data. The check fails if the CPU runs it.
 
@@ -118,7 +121,7 @@ print the path of the file. It uses the first target, the CoCo 1:
 uv run python scripts/coco.py snapshot examples/turn-queue   # default design
 ```
 
-To check the state on the CoCo 1, the CoCo 2 and the CoCo 3, paste this line:
+To check the state on all four targets, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/turn-queue
@@ -141,7 +144,8 @@ The cases include these steps:
 - Reject each routine in the wrong phase. Stop at turn 65535 without a wrap.
 
 Five negative controls in `scripts/coco_spec.py` assemble a faulty program
-and run it on the CoCo 1 target. Each must fail first at the named step:
+and run it on the `coco1` and `coco2b` targets. Each must fail first at the
+named step:
 
 | Define | Fault | First failed step |
 | --- | --- | --- |
@@ -153,15 +157,19 @@ and run it on the CoCo 1 target. Each must fail first at the named step:
 
 ## Machines
 
-The example runs on the CoCo 1, the CoCo 2 and the CoCo 3. The routines use
-only 6809 instructions and RAM. The program is the same on each machine.
+The example runs on the CoCo 1, two CoCo 2 models and the CoCo 3. The
+routines use only 6809 instructions and RAM. The program is the same on each machine.
 [coco.toml](coco.toml) declares these targets:
 
 | Target | Machine | RAM | Firmware |
 | --- | --- | --- | --- |
-| `coco1` | `cocous`, NTSC | 32 KiB | Color BASIC 1.1 |
-| `coco2` | `coco2bus`, NTSC | 32 KiB | Color BASIC 1.2 |
+| `coco1` | `cocous`, NTSC, MC6847 | 32 KiB | Color BASIC 1.1, Extended Color BASIC 1.1 |
+| `coco2` | `cocous`, NTSC, MC6847 | 32 KiB | Color BASIC 1.2, Extended Color BASIC 1.1 |
+| `coco2b` | `coco2bus`, NTSC, MC6847T1 | 32 KiB | Color BASIC 1.3, Extended Color BASIC 1.1 |
 | `coco3` | `coco3`, NTSC, GIME 1986 | 128 KiB | CoCo 3 ROM |
+
+The program does not use Extended BASIC. The targets load it because most
+machines had it.
 
 The memory layout fits a 32 KiB machine:
 
@@ -172,11 +180,21 @@ The memory layout fits a 32 KiB machine:
 - At a cold start, Color BASIC puts its stack 200 bytes below the top of RAM.
   This is above the records. (Color Basic Unravelled II, PDF 27, a listing of
   Color BASIC 1.2)
+- BASIC keeps three pointers in the direct page. `TXTTAB` at `$19` is the
+  start of the BASIC program. `FRETOP` at `$21` is the start of string space.
+  `MEMSIZ` at `$27` is the top of string space. (Color Basic Unravelled II,
+  PDF 27)
+- We measured these pointers in the pinned XRoar on `coco1`, `coco2` and
+  `coco2b`, after the last case. `TXTTAB` is `$1E01`, `FRETOP` is `$7F36` and
+  `MEMSIZ` is `$7FFE`. The words at `$1B`, `$1D` and `$1F` are `$1E03`: no
+  BASIC program or variable is in memory.
+- Thus the program, the world and the records are above BASIC's program area
+  and below its stack. They are in no area that BASIC uses.
 
 Only the place of the records in the RAM snapshot is different:
 
-- On the CoCo 1 and the CoCo 2, the 32 KiB snapshot holds the CPU addresses
-  `$0000-$7FFF`.
+- On the CoCo 1 and both CoCo 2 models, the 32 KiB snapshot holds the CPU
+  addresses `$0000-$7FFF`.
 - On the CoCo 3, the snapshot is the 128 KiB of physical RAM. At reset, BASIC
   maps the CPU addresses `$0000-$FFFF` to physical pages `$38-$3F`, the top
   64 KiB. (Tepolt, PDF 56 and 57, Fig. 7-2 on PDF 58)

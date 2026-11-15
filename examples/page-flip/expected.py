@@ -20,7 +20,7 @@ SCREENS = {0: 0x0400, 1: 0x2400}
 # The snapshot holds physical RAM. On a CoCo 3, BASIC's map puts CPU $xxxx at
 # physical $7xxxx (Tepolt PDF 56, step 6). A 128 KiB CoCo 3 holds the same
 # RAM at $1xxxx (Tepolt PDF 29), and its snapshot has 128 KiB.
-OFFSETS = {"coco1": 0, "coco2": 0, "coco3": 0x10000, "coco3-512": 0x70000}
+OFFSETS = {"coco1": 0, "coco2": 0, "coco2b": 0, "coco3": 0x10000, "coco3-512": 0x70000}
 # coco.py's capture: two samples per pixel at 256 pixels across. Measured in
 # XRoar: the CoCo 3 captures, native mode too, have the same size and position.
 SAMPLES_PER_PIXEL = 2

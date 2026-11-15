@@ -57,8 +57,14 @@ Other ways to play sound:
 The example is the four `>>> EXAMPLE` parts of [main.asm](main.asm):
 
 1. At `start`, mask the interrupts. Nothing must take CPU time between two
-   samples. An enabled interrupt, such as the 60 Hz field-sync IRQ, adds a
-   gap at a time that the loop cannot plan.
+   samples. BASIC leaves the 60 Hz field-sync IRQ on, and its handler runs
+   once in each field. Without the mask, the check measured this result on
+   the four targets:
+
+   - Each IRQ puts about 100 cycles into one gap between two samples: the
+     IRQ entry and about 15 instructions of the handler at `$894C`.
+   - The tone becomes 0.67% lower: 673.7 Hz instead of 678.2 Hz at block 16.
+   - The pitch check fails at block 32.
 
 2. Make `$FF20` bits 7 to 2 outputs. Clear `$FF21` bit 2 to select the
    direction register. Set bits 7 to 2. Set `$FF21` bit 2 again. Keep bits 1
@@ -81,21 +87,28 @@ After each block, they move the marker one byte along row 96.
 The check takes its snapshot at `frame_ready`.
 [expected.py](expected.py) is only check context.
 
-The example runs on three NTSC targets with a 6809 at the slow rate:
+The example runs on the four standard NTSC targets with a 6809 at the slow
+rate. The example does not use Extended BASIC. The targets load it because
+most machines had it, and it sets the state at entry.
 
-| Target | XRoar machine | RAM | Firmware |
-| --- | --- | --- | --- |
-| `coco1` | `cocous` | 32 KiB | Color BASIC 1.1 |
-| `coco2` | `cocous`, CoCo 2 boards 26-3134/26-3136 | 64 KiB | Color BASIC 1.2 |
-| `coco3` | `coco3`, GIME 1986 | 128 KiB | CoCo 3 ROM |
+| Target | XRoar machine | VDG | RAM | Firmware |
+| --- | --- | --- | --- | --- |
+| `coco1` | `cocous` | 6847 | 32 KiB | Color BASIC 1.1, Extended BASIC 1.1 |
+| `coco2` | `cocous` | 6847 | 32 KiB | Color BASIC 1.2, Extended BASIC 1.1 |
+| `coco2b` | `coco2bus` | 6847T1 | 32 KiB | Color BASIC 1.3, Extended BASIC 1.1 |
+| `coco3` | `coco3` | GIME 1986 | 128 KiB | CoCo 3 ROM |
 
-The program and the check model are the same on the three targets:
+The program and the check model are the same on the four targets:
 
-- The CoCo 2 boards and the CoCo 3 put the DAC and the audio mux in one IC.
-  The register addresses and bits are the same as on the CoCo 1.
-- The CoCo 3 manual gives the slow CPU rate as 0.89 MHz, a rounded value.
-  The model uses 894,886.25 Hz. The 15 Hz pitch tolerance covers the
-  difference.
+- The CoCo 2 boards 26-3134/26-3136 and the CoCo 3 put the DAC and the
+  audio mux in one IC. The register addresses and bits are the same as on
+  the CoCo 1. No source in the archive covers the `coco2b` board. On that
+  target, the check is the evidence.
+- The CPU clock is 894,886.25 Hz on all four targets. On the CoCo 1 and 2,
+  it is 14.31818 MHz divided by 16. On the CoCo 3, a 28.63636 MHz crystal
+  drives the GIME, and its oscillator divider makes the CPU clock. The
+  manual gives only the rounded rate, 0.89 MHz. Division by 32 is our
+  inference. XRoar uses the same division, and the result is the same rate.
 - The context writes `$FFD8`, which selects the slow rate. At reset, the
   CoCo 3 ROM also clears all SAM registers, so BASIC starts at the slow rate.
 - On the CoCo 3, the check reads the screen at offset `$10400` of the RAM
@@ -116,6 +129,11 @@ uv run python scripts/coco.py run examples/sound-slots --target coco2
 # Square, CoCo 2
 uv run python scripts/coco.py run examples/sound-slots --target coco2 \
   --variant square
+# Sawtooth, CoCo 2 with the 6847T1
+uv run python scripts/coco.py run examples/sound-slots --target coco2b
+# Square, CoCo 2 with the 6847T1
+uv run python scripts/coco.py run examples/sound-slots --target coco2b \
+  --variant square
 # Sawtooth, CoCo 3
 uv run python scripts/coco.py run examples/sound-slots --target coco3
 # Square, CoCo 3
@@ -123,7 +141,7 @@ uv run python scripts/coco.py run examples/sound-slots --target coco3 \
   --variant square
 ```
 
-To check both variations on the three targets, use this command:
+To check both variations on the four targets, use this command:
 
 ```sh
 uv run python scripts/coco.py check examples/sound-slots
@@ -171,6 +189,7 @@ Read these pages before you change a register value. Use
   - PDF 14: `$FF20` bits 2 to 7 are the 6-bit DAC, and bit 1 is the RS-232
     output. `$FF21` bit 2 selects the direction register. `$FF23` bit 3
     enables six-bit sound.
+  - PDF 13: `$FF03` bit 0 enables the field-sync IRQ.
   - PDF 26: the CPU clock is 14.31818 MHz divided by 16.
   - PDF 37: the 60 Hz field-sync interrupt.
   - PDF 38, Table 4: SNDEN 1 with SEL 1 and SEL 2 at 0 selects the DAC.
@@ -181,8 +200,11 @@ Read these pages before you change a register value. Use
   - PDF 10: `$FF20` bits 2 to 7 are the 6-bit DAC, and bit 1 is the RS-232
     output. `$FF21` bit 2 selects the direction register. `$FF23` bit 3
     enables sound.
-  - PDF 31: the CPU clock is 0.89 MHz or 1.78 MHz.
+  - PDF 31: the GIME supplies the E and Q clocks at 0.89 MHz or 1.78 MHz.
   - PDF 42–43: Sel B 0 and Sel A 0 select the DAC, and SNDEN must be high.
+  - PDF 85: crystal X1 is 28.63636 MHz.
+  - PDF 96: the GIME has an oscillator divider with E and Q outputs.
+  - PDF 103: X1 connects to the GIME.
 - Tepolt, *Assembly Language Programming for the CoCo3*:
   - PDF 56, step 14: the reset program clears all SAM registers.
   - PDF 58: BASIC's memory map, for the screen offset.
@@ -190,3 +212,12 @@ Read these pages before you change a register value. Use
     `$FFD9` selects the fast rate.
 - Leventhal, *6809 Assembly Language Programming*, Appendix C, PDF 553–555:
   the cycle count of each instruction in the sample loop.
+- XRoar 1.13: `src/events.h` counts time at 14,318,180 Hz, and
+  `src/tcc1014/tcc1014.c` gives the slow CPU cycle 16 of those counts. This
+  is an emulator, not a source about the hardware.
+
+The check is the only evidence for these facts:
+
+- The interrupt cost in step 1. Remove the `orcc` line, and the pitch check
+  fails at block 32.
+- The DAC and the audio mux on the `coco2b` target.

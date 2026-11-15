@@ -3,6 +3,9 @@ source = "main.asm"
 prepare = "prepare.py"   # writes tiles.asm from tiles.png into the build folder
 
 # The first target is the default. Firmware is checked against roms.json.
+# The four tables are the standard targets in guidance/starter/toolchain.md.
+# Measured in XRoar: RG6 with colour set 0 shows the same picture on the
+# MC6847T1 of coco2b as on the MC6847.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -10,27 +13,35 @@ tv = "ntsc"
 vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
+extended = "extbas11.rom"
 
-# NTSC CoCo 2 with its MC6847T1 VDG and CoCo 2 firmware. Measured in XRoar:
-# RG6 with colour set 0 renders the same on the T1 as on the 6847.
 [targets.coco2]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
+[targets.coco2b]
 machine = "coco2bus"
 cpu = "6809"
 tv = "ntsc"
+vdg = "6847t1"
 ram_kib = 32
-basic = "bas12.rom"
+basic = "bas13.rom"
+extended = "extbas11.rom"
 
-# NTSC CoCo 3, 128 KiB, GIME 1986, in its VDG-compatible RG6 mode. The program
-# keeps the palette registers that BASIC loads.
+# The program keeps the palette registers that BASIC loads.
 [targets.coco3]
-firmware = "coco3"
 machine = "coco3"
 cpu = "6809"
 tv = "ntsc"
 vdg = "gime1986"
 ram_kib = 128
 extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
-screen = 0x10400         # the snapshot is physical memory: $0400 is at $10400
+screen = 0x10400         # logical $0400 in the physical RAM snapshot
 
 [memory]
 at = { start = 0x3000 }

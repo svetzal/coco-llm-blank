@@ -214,19 +214,22 @@ supply its account and key.
 - Mode sizes, colour sets, bit order and the clock come from the datasheet.
   We read them from the page images.
 - We measured the `xroar` palette in CG6 and RG6, for both colour sets, on
-  the CoCo 1 target and the non-T1 CoCo 2 target. We measured the
+  the `coco1`, `coco2` and `coco2b` (MC6847T1) targets. We measured the
   `xroar-coco3` palette in the same way on the CoCo 3 target. The rendered check fails
   for each negative control. The controls are a changed colour set, two exchanged colours, a
   reversed bit order, a mirrored or shifted picture and a wrong SAM mode.
+- The MC6847T1 has the same graphics modes and the same colour for each code
+  and colour set as the MC6847. It is different only in the text and
+  semigraphics modes. [MC6847T1 datasheet, PDF 15, 16 and 25][mc6847t1]
 - The [display test](colour.md#make-a-display-test-before-making-the-art)
   lists those controls and their limits.
 - [Tile-room](../../examples/tile-room/README.md) converts its pictures with
   `sheet` at each build. Its check compares 42 rendered frames on CoCo 1 and
   CoCo 2 with text drawings.
-- First-screen's rendered check passes for all eight modes on the CoCo 1
-  target with colour set 0.
-- We did not measure the border colour, colour set 1 outside CG6 and RG6, a T1
-  VDG or other XRoar video paths in a capture.
+- First-screen's rendered check passes for all eight modes on the `coco1`,
+  `coco2` and `coco2b` (MC6847T1) targets with colour set 0.
+- We did not measure the border colour, colour set 1 outside CG6 and RG6, or
+  other XRoar video paths in a capture.
 - The `ntsc` pixel shape is a deduction. Nobody has tuned the dither settings.
 - Nobody has checked a colour or a shape on real hardware or a television.
 
@@ -234,6 +237,8 @@ supply its account and key.
 
 - Motorola, *MC6847/MC6847Y Video Display Generator*, 1984, DS9823-R1, PDF 8,
   13, 18–21. Resource `mc6847`.
+- Motorola, *MC6847T1 Video Display Generator*, PDF 15, 16 and 25. Archive
+  copy only. It is not a converted resource.
 - Tandy, *Color Computer Technical Reference Manual*, PDF 30–31. Resource
   `coco1-technical`.
 - Laurence A. Tepolt, *Assembly Language Programming for the CoCo3*, 1987,
@@ -246,4 +251,5 @@ supply its account and key.
 [mc6847-sync]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=8>
 [tepolt-46]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=46>
 [tepolt-57]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=57>
+[mc6847t1]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Motorola%20MC6847T1%20VDG%20Spec.pdf#page=15>
 [coco-modes]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=31>

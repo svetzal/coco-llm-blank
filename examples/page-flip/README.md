@@ -11,7 +11,8 @@ If a program draws into the screen that the display shows, the display can
 show a frame that is not complete. Correct screen memory does not prove a
 correct picture.
 
-The example runs on the CoCo 1, the CoCo 2 and the CoCo 3. It has two builds:
+The example runs on the CoCo 1, the CoCo 2 (MC6847 or MC6847T1) and the
+CoCo 3. It has two builds:
 
 - The main build flips RG6 screens with the SAM and waits for the field-sync
   flag of the PIA. It runs on the CoCo 1, the CoCo 2 and the CoCo 3.
@@ -27,7 +28,7 @@ changed. The program does not return to BASIC.
 
 | Build | Machines | Graphics modes | Write to show a screen | Wait for |
 | --- | --- | --- | --- | --- |
-| Main | CoCo 1, CoCo 2, CoCo 3 (128 and 512 KiB) | The VDG modes, such as RG6 and CG6 | One SAM offset bit, here F4 | FS flag, `$FF03` bit 7 |
+| Main | CoCo 1, CoCo 2 (MC6847 and MC6847T1), CoCo 3 (128 and 512 KiB) | The VDG modes, such as RG6 and CG6 | One SAM offset bit, here F4 | FS flag, `$FF03` bit 7 |
 | `coco3` variant | CoCo 3 (128 and 512 KiB) | The GIME native modes | `$FF9D` (and `$FF9E`) | VBORD flag, `$FF92` bit 3 |
 
 - Use the main build in a program that uses the VDG modes. The same code runs
@@ -116,10 +117,11 @@ The example is the three `>>> EXAMPLE` parts of [main.asm](main.asm). The
    `VIEW_B` and `VIEW_LO` are the `$FF9D` and `$FF9E` values of the two
    screens.
 2. After the mode setup, set up the flag:
-   - Main build: in `$FF03`, clear bit 0 to turn off the PIA interrupt. Clear
-     bit 1, so that the flag sets at the falling edge of FS. Set bit 2 to
-     select the data register at `$FF02`. [Tandy, PDF 13][tandy-13] FS goes
-     low at the end of the active display. [MC6847, PDF 22][mc6847-22]
+   - Main build: in `$FF03`, clear bit 0 to turn off the field-sync
+     interrupt. Clear bit 1, so that the flag sets at the falling edge of FS.
+     Set bit 2 to select the data register at `$FF02`.
+     [Tandy, PDF 13][tandy-13] FS goes low at the end of the active display.
+     [MC6847, PDF 22][mc6847-22] Keep bits 7 to 3.
    - `COCO3`: mask IRQ in the CPU. Write `$6E` to `$FF90`: BASIC's `$CE`
      without the CoCo modes and with the GIME IRQ on.
      [Tandy CoCo 3, PDF 11][coco3-11] [Tepolt, PDF 57][tepolt-57] Then
@@ -138,6 +140,23 @@ The example is the three `>>> EXAMPLE` parts of [main.asm](main.asm). The
       the flag and waits for the rising edge of FS. Then it clears bit 1
       again. `COCO3` waits for one more VBORD.
    5. Change `drawing` to the other screen.
+
+The main build turns off the field-sync interrupt because BASIC turns it on.
+On every target, the program starts with `$FF03` bit 0 set and the CPU IRQ
+mask clear. `$FF03` holds `$35` at entry, measured in the pinned XRoar.
+The [toolchain guide](../../guidance/starter/toolchain.md#target-tables)
+records the measurement.
+BASIC's IRQ handler then runs at each falling edge of FS and reads `$FF02`.
+That read clears the flag. [MC6821, PDF 10][mc6821]
+
+We read this code in the Extended BASIC 1.1 ROM of the CoCo 1 and 2. The cold
+start sets bit 0 at `$809E`, and the handler at `$894C` reads `$FF02`.
+
+If the handler reads `$FF02` before the wait loop reads `$FF03`, the loop does
+not see that edge. It waits for the next field. The picture stays correct,
+but the program loses a field. The check cannot see this. It passes with the
+interrupt left on (measured on `coco2b`). With bit 0 clear, the flag still
+sets, and only the wait loop reads `$FF02`.
 
 The `$FF92` flag sets only when `$FF90` bit 5 sends the GIME IRQ to the CPU.
 [Tepolt, PDF 50][tepolt-50] The variant masks IRQ, so no interrupt handler
@@ -182,7 +201,7 @@ BASIC loads the palette registers. [Tepolt, PDF 57][tepolt-57] The program
 does not change them.
 
 The main build keeps the CPU interrupt mask, the stack, the direct page and
-the CPU clock that BASIC sets. The variant keeps the stack, the direct page
+the CPU clock that BASIC sets. It changes only the field-sync interrupt bit. The variant keeps the stack, the direct page
 and the CPU clock. The `state` label is data. The check fails if the CPU runs
 it.
 
@@ -194,6 +213,7 @@ page flip in XRoar. Close the window to stop it.
 ```sh
 uv run python scripts/coco.py run examples/page-flip                     # SAM flip, CoCo 1
 uv run python scripts/coco.py run examples/page-flip --target coco2      # SAM flip, CoCo 2
+uv run python scripts/coco.py run examples/page-flip --target coco2b     # SAM flip, CoCo 2 (MC6847T1)
 uv run python scripts/coco.py run examples/page-flip --target coco3      # SAM flip, CoCo 3
 uv run python scripts/coco.py run examples/page-flip --variant coco3     # GIME flip, CoCo 3
 ```
@@ -208,8 +228,8 @@ The `[capture]` table in [coco.toml](coco.toml) turns on the rendered check,
 so `check` needs the
 [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar).
 
-The check runs the main build on the targets `coco1`, `coco2`, `coco3` and
-`coco3-512`. It runs the `coco3` variant on `coco3` and `coco3-512`. It takes
+The check runs the main build on the targets `coco1`, `coco2`, `coco2b`,
+`coco3` and `coco3-512`. It runs the `coco3` variant on `coco3` and `coco3-512`. It takes
 a snapshot at `published` after frames 1 to 4, 32, 33, 64 and 65. It compares
 these items with [expected.py](expected.py):
 
@@ -222,7 +242,7 @@ CPU addresses for each target:
 
 | Target | Screen A | Screen B |
 | --- | --- | --- |
-| `coco1`, `coco2` | `$0400` | `$2400` |
+| `coco1`, `coco2`, `coco2b` | `$0400` | `$2400` |
 | `coco3` (128 KiB) | `$10400` | `$12400` |
 | `coco3-512` | `$70400` | `$72400` |
 
@@ -239,16 +259,23 @@ memory check accepts. The rendered check fails for each:
 - Add 1 to the `$FF9D` value of the variant. The GIME then shows memory 2 KiB
   after the screen.
 
-The check uses NTSC machines with the 6809: a CoCo 1 and a CoCo 2 with the
-non-T1 MC6847, and a CoCo 3 with the GIME 1986. It sees one rendered frame
-for each checkpoint, not every field. It does not prove the result on a
-television, a monitor, a physical CoCo, PAL, the MC6847T1, the GIME 1987 or
-the 6309.
+The check uses NTSC machines with the 6809 and Extended Color BASIC. They are
+a CoCo 1, a CoCo 2 with the MC6847, a CoCo 2 with the MC6847T1 and a CoCo 3
+with the GIME 1986. The example does not need Extended BASIC. The targets
+load it because most machines have it. The check sees one rendered frame for
+each checkpoint, not every field. It does not prove the result on a television, a
+monitor, a physical CoCo, PAL, the GIME 1987 or the 6309.
 
 On the CoCo 3, the main build uses the field-sync flag of the PIA. The PIA
-interrupts stay on the CoCo 3. [Tepolt, PDF 49][tepolt-49] The sources that
-we read do not give the timing of FS on the CoCo 3. The check shows that the
+interrupts stay on the CoCo 3. [Tepolt, PDF 49][tepolt-49] VSYNC is still a
+PIA interrupt source. [Tandy CoCo 3, PDF 37][coco3-37] The sources that we
+read do not give the timing of FS on the CoCo 3. The check shows that the
 flag works in XRoar (measured).
+
+In the XRoar source, FS falls later on the CoCo 3 than on the VDG and stays
+low for a shorter time. The
+[animation guide](../../guidance/techniques/animation.md#what-the-sources-do-not-settle)
+gives the numbers as an open question.
 
 ## Sources
 
@@ -275,6 +302,8 @@ Read these pages before you change the screens or the wait. Use
   [Link][coco3-13]
 - The same manual, PDF 18: the table of resolutions. 256 pixels with two
   colours is HRES `010` and CRES `00`. [Link][coco3-18]
+- The same manual, PDF 37: on the CoCo 3, VSYNC is still an interrupt source
+  of the PIA. [Link][coco3-37]
 - Laurence A. Tepolt, *Assembly Language Programming for the CoCo3* (1987),
   PDF 29: a 128 KiB CoCo 3 has the same RAM in each group of pages.
   [Link][tepolt-29]
@@ -302,6 +331,7 @@ Read these pages before you change the screens or the wait. Use
 [coco3-11]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=11>
 [coco3-13]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=13>
 [coco3-18]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=18>
+[coco3-37]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=37>
 [tepolt-29]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=29>
 [tepolt-31]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=31>
 [tepolt-39]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=39>

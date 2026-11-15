@@ -89,8 +89,10 @@ The RG6 paragraph on PDF 20 says 256×193, but its heading and the tables on PDF
 
 This is chip-level evidence for MC6847/MC6847Y, not a complete CoCo setup.
 Check the board's data wiring and selected mode before applying it.
-It does not establish MC6847T1, PAL adaptations, or native CoCo 3 GIME
-behaviour.
+It does not establish PAL adaptations or native CoCo 3 GIME behaviour.
+The MC6847T1 has the same graphics modes and the same colour for each code
+and colour set. It is different only in the text and semigraphics modes.
+[MC6847T1 datasheet, PDF 15, 16 and 25][mc6847t1]
 An asymmetric pattern remains useful to check the complete emulator or display
 path.
 
@@ -134,7 +136,7 @@ These checks already run on the examples:
 | Check | Target | What it proves |
 | --- | --- | --- |
 | [First screen](../../examples/first-screen/README.md) `check --video` | CoCo 1, CoCo 2 and CoCo 3 | Border pixels at each edge and four bars, in each of the eight modes. On the CoCo 3, the check does not run RG1, RG2 and RG3. |
-| [Palette swatches](../../examples/palette-swatches/README.md) `check --video` | CoCo 1 and CoCo 2 | Every colour of CG6 and RG6 in both colour sets, bit order, byte boundaries and orientation. The picture is not symmetric, so a mirrored, upside-down or shifted frame fails. |
+| [Palette swatches](../../examples/palette-swatches/README.md) `check --video` | `coco1`, `coco2`, `coco2b` and `coco3` | Every colour of CG6 and RG6 in both colour sets, bit order, byte boundaries and orientation. The picture is not symmetric, so a mirrored, upside-down or shifted frame fails. |
 | Wrong SAM mode, in `scripts/coco_spec.py` | CoCo 1 and CoCo 2 | The memory check passes and the rendered check fails. |
 
 The wrong-SAM control writes `$FFC4` in place of `$FFC5`. That write clears
@@ -145,10 +147,11 @@ Every `check` also sets a trap on an address that the program must never
 reach. A fired trap or a missing checkpoint fails the check. A plausible
 image alone is not evidence that the program ran.
 
-The CoCo 2 target is an explicit configuration: XRoar `cocous`, NTSC, 32 KiB,
-a normal-clock 6809, a non-T1 MC6847, and Color BASIC 1.2.
-XRoar's `coco2bus` profile selects a T1 VDG instead. The palette-swatches
-results do not apply to it.
+There are two CoCo 2 targets. Each has NTSC, 32 KiB, a normal-clock 6809 and
+Extended Color BASIC 1.1. `coco2` is XRoar `cocous` with the MC6847 and Color
+BASIC 1.2. `coco2b` is XRoar `coco2bus` with the MC6847T1 and Color BASIC 1.3.
+The palette-swatches check passes on both with the same `xroar` palette in all
+four variants (measured).
 
 ### Limits of the rendered check
 
@@ -159,7 +162,8 @@ results do not apply to it.
 - The RGB values are XRoar's palette, not a monitor or a television.
 - The capture is one still frame. It does not show cadence or tearing. Read
   the [animation guide](animation.md) for those.
-- PAL, the MC6847T1, CoCo 3 and physical hardware are not tested.
+- PAL and physical hardware are not tested. T1 text and semigraphics modes
+  are not tested.
 
 An earlier private XRoar 1.12.1 build also captured frozen animation frames.
 A self-loop at the checkpoint stopped each scene after a completed draw.
@@ -204,6 +208,10 @@ A RAM snapshot shows the stored values, not their visible colour.
   Resource `mc6847`. Archive filename: *MC6847 MOS Video Display Generator
   (Motorola)*. It is not the separate MC6847T1 datasheet. [Archive][mc6847-pixels]
 
+- Motorola, *MC6847T1 Video Display Generator*, PDF 15 Table 1, PDF 16
+  Tables 2 and 3, and PDF 25 Figure 26(c). Archive copy only. It is not a converted
+  resource. [Archive][mc6847t1]
+
 - Robert Gault, *Symmetry* (1993). We read all of `SYM.ASM` and `SYMMETRY.BAS`
   and analysed the cited routines. `SYM.ASM` cites use the embedded source
   numbers. ZIP SHA-256
@@ -216,6 +224,7 @@ We have not compared colours across physical displays.
 [coco2]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf#page=31>
 [coco3]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf#page=17>
 [tepolt]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=59>
+[mc6847t1]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Motorola%20MC6847T1%20VDG%20Spec.pdf#page=15>
 [mc6847-pixels]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=19>
 [mc6847-sync]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=8>
 [mc6847-system]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=22>

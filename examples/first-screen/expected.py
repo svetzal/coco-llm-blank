@@ -29,8 +29,9 @@ CSS = 0
 FOUR_COLOURS = [VdgColour.GREEN, VdgColour.YELLOW, VdgColour.BLUE, VdgColour.RED]
 TWO_COLOURS = [VdgColour.BLACK, VdgColour.GREEN]
 # RGB values are measured in XRoar's renderer by examples/palette-swatches, not
-# sourced: `xroar` on the CoCo 1 and 2, `xroar-coco3` on the CoCo 3.
-PALETTES = {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}
+# sourced: `xroar` on the CoCo 1 and 2, `xroar-coco3` on the CoCo 3. The rendered
+# check measures the same `xroar` values with the MC6847T1 of the coco2b target.
+PALETTES = {"coco1": XROAR, "coco2": XROAR, "coco2b": XROAR, "coco3": XROAR_COCO3}
 # coco.py's capture: two samples per VDG half-clock, one row per scan line.
 SAMPLES_PER_HALF_CLOCK = 2
 

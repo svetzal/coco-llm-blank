@@ -89,7 +89,10 @@ Object B has the opposite colours. The top row, the bottom row and the centre
 of each object are transparent.
 
 The program keeps the interrupts, stack, direct page and CPU clock that BASIC
-sets. The `state` label is data. The check fails if the CPU runs it.
+sets. On all four targets, Extended Color BASIC turns on the field-sync
+interrupt (IRQ) at cold start. The program does not wait for field sync and
+has no timed loop, so it keeps the IRQ on. The check passes with the IRQ on
+(measured). The `state` label is data. The check fails if the CPU runs it.
 
 ## See and check each method
 
@@ -110,9 +113,10 @@ uv run python scripts/coco.py run examples/masked-objects --target coco3 --varia
 uv run python scripts/coco.py run examples/masked-objects --target coco3 --variant xor     # xor
 ```
 
-Use `--target coco2` to see a method on the CoCo 2.
+Use `--target coco2` or `--target coco2b` to see a method on a CoCo 2 or a
+CoCo 2B.
 
-To check all three methods on all three machines, paste this line:
+To check all three methods on all four targets, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/masked-objects --video
@@ -136,14 +140,19 @@ The scenes include these cases:
 - Scenes with no objects, after scenes with objects.
 - Objects over the inverted background.
 
-The check runs each method on three targets in [coco.toml](coco.toml). Each
+The check runs each method on four targets in [coco.toml](coco.toml). Each
 target has NTSC and a normal-clock 6809:
 
-- `coco1`: a CoCo 1 with Color BASIC 1.1, 32 KiB and the non-T1 MC6847.
-- `coco2`: a CoCo 2B (XRoar `coco2bus`) with Color BASIC 1.2, 32 KiB and the
-  MC6847T1 that this XRoar profile selects.
+- `coco1`: a CoCo 1 with Color BASIC 1.1, Extended Color BASIC 1.1, 32 KiB
+  and the MC6847.
+- `coco2`: a CoCo 2 with Color BASIC 1.2, Extended Color BASIC 1.1, 32 KiB and
+  the MC6847.
+- `coco2b`: a CoCo 2B (XRoar `coco2bus`) with Color BASIC 1.3, Extended Color
+  BASIC 1.1, 32 KiB and the MC6847T1.
 - `coco3`: a CoCo 3 with Super Extended Color BASIC, 128 KiB and the 1986
   GIME.
+
+The program does not use Extended Color BASIC.
 
 These items are different on the CoCo 3. The program does not change:
 

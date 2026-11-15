@@ -67,7 +67,12 @@ WIDTH, HEIGHT, CELL = 256, 192, 8
 # shows other RGB values.
 COLOURS = {
     target: palette_rgb(MODES["RG6"], 0, palette)
-    for target, palette in {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}.items()
+    for target, palette in {
+        "coco1": XROAR,
+        "coco2": XROAR,
+        "coco2b": XROAR,
+        "coco3": XROAR_COCO3,
+    }.items()
 }
 # coco.py's capture: two samples per RG6 pixel, one row per scan line.
 # Measured in XRoar: the CoCo 3 capture has the same size and position.

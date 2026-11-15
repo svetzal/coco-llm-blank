@@ -10,18 +10,21 @@ The example does not show the keyboard scan, the room drawing or the sound.
 Those are context. It does not show pause, menus, a time limit, interrupt
 input or key repeat.
 
-The context is a whole small game for CoCo 1, CoCo 2B and CoCo 3. It has an
+The context is a whole small game for CoCo 1, CoCo 2 and CoCo 3. It has an
 8×6 room in RG6, two stars to collect, an exit, phase messages and short DAC
 effects.
 
 ## Machines
 
-The same program runs on the three targets, with no extra setup:
+The same program runs on the four standard targets, with no extra setup.
+Each target starts the program from Extended Color BASIC. The program does
+not use Extended BASIC.
 
 | Target | Machine | What is different |
 | --- | --- | --- |
-| `coco1` | CoCo 1, 32 KiB, Color BASIC 1.1 | Nothing |
-| `coco2` | CoCo 2B, 32 KiB, Color BASIC 1.2 | Nothing |
+| `coco1` | CoCo 1, 32 KiB, MC6847, Color BASIC 1.1 | Nothing |
+| `coco2` | CoCo 2, 32 KiB, MC6847, Color BASIC 1.2 | Nothing |
+| `coco2b` | CoCo 2B, 32 KiB, MC6847T1, Color BASIC 1.3 | Nothing |
 | `coco3` | CoCo 3, 128 KiB, GIME 1986 | The colours on the screen and the place of RAM in the snapshot |
 
 On the CoCo 3, these items are the same as on the CoCo 1:
@@ -95,10 +98,14 @@ The `--- CONTEXT` blocks are not part of the practice:
 - They set up RG6 at `$0400` with colour set 0, as in
   [first-screen](../first-screen/README.md).
 - They set the keyboard directions and scan the arrows and Space, as in
-  [keyboard-controls](../keyboard-controls/README.md).
+  [keyboard-controls](../keyboard-controls/README.md). IRQ is masked only
+  while `$FF03` selects the direction register. The text after this list
+  gives the reason.
 - They route the DAC to the sound output and play 32 DAC writes for each
   effect. The game reads no keys during an effect. The
   [sound guide](../../guidance/techniques/sound.md) explains this limit.
+  BASIC's IRQ handler can interrupt an effect. The effects do not mask IRQ,
+  because each pitch stays in its band (measured, see the check).
 - They draw the phase message, the room and the actor after each change.
 
 These files are only context:
@@ -112,8 +119,21 @@ These files are only context:
 The guard bytes and the `accepted`, `starts`, `effects`, `last_effect` and
 `sample_count` values exist only for the check. Remove them in a project.
 
-The program keeps the interrupts, stack, direct page and CPU clock that BASIC
-sets. The `room` label is data. The check fails if the CPU runs it.
+The program keeps the stack, direct page and CPU clock that BASIC sets. It
+also keeps the field-sync IRQ that BASIC turns on, with one exception:
+
+- BASIC's IRQ handler reads `$FF02` to clear the field-sync flag. While
+  `$FF03` bit 2 is 0, `$FF02` is the direction register DDRB. A read of DDRB
+  does not clear the flag. The flag stays set, and the handler runs again
+  and again. The program stops.
+- Thus the keyboard setup saves the CPU flags (`PSHS CC`) and masks IRQ
+  (`ORCC #$10`) before it selects DDRB. It restores the flags (`PULS CC`)
+  after it selects the data register again. A field sync in that window runs
+  the handler after `PULS CC`.
+- We saw the stop on `coco2b`: with a long delay in that window and no mask,
+  the program did not reach `frame_ready`. With the mask, the check passed.
+
+The `room` label is data. The check fails if the CPU runs it.
 
 ## Play and check the game
 
@@ -124,17 +144,19 @@ to stop.
 ```sh
 # CoCo 1
 uv run python scripts/coco.py run examples/collect-room --target coco1
-# CoCo 2B
+# CoCo 2
 uv run python scripts/coco.py run examples/collect-room --target coco2
+# CoCo 2B
+uv run python scripts/coco.py run examples/collect-room --target coco2b
 # CoCo 3
 uv run python scripts/coco.py run examples/collect-room --target coco3
 ```
 
-The CoCo 2B and CoCo 3 targets need their own firmware. If it is missing,
-run `uv run python scripts/setup.py --roms-only --target coco2`, or the same
-line with `--target coco3`.
+Each target needs its own firmware. If it is missing, run
+`uv run python scripts/setup.py --roms-only --target coco2b`. Replace
+`coco2b` with the name of the target.
 
-To check both builds on all three targets, paste this line:
+To check both builds on all four targets, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/collect-room
@@ -160,6 +182,12 @@ At each snapshot, the check compares these items with
 - each effect in XRoar's sound output: 32 steps, in the pitch band for its
   kind
 
+BASIC's IRQ handler runs during the effects. In the pinned XRoar, the start
+effects measure 971 to 972 Hz (band 900 to 1,100 Hz). The pickup effects
+measure 1,717 to 1,744 Hz (band 1,550 to 1,950 Hz). The win effects measure
+673 to 678 Hz (band 600 to 800 Hz). The values are the same on each target
+to within 2%. The `SILENT` control fails when an effect is missing.
+
 The journey includes these cases:
 
 - Space held at startup, then released and pressed again
@@ -172,7 +200,7 @@ The journey includes these cases:
 The model in `expected.py` draws each pixel from the art rows and the letters.
 It does not read the tables in `main.asm`.
 
-Negative controls in `scripts/coco_spec.py` must fail on all three targets:
+Negative controls in `scripts/coco_spec.py` must fail on all four targets:
 
 | Define | Fault |
 | --- | --- |
@@ -204,6 +232,20 @@ you change the context.
     sound.
   - PDF 31, Table 1: RG6 is SAM V=`110` with `$FF22` bits 7 to 4 `1111`.
   - PDF 38, Table 4: sound enabled with SEL 1 and SEL 2 at 0 selects the DAC.
+
+- Motorola, *MC6821 Peripheral Interface Adapter* datasheet, PDF 10,
+  Figure 18: control bit 2 at 0 selects the direction register. Only a read
+  of the output register clears the interrupt flag (bit 7).
+
+- *Color Basic Unravelled II*, PDF 42: the IRQ handler of Color BASIC 1.2
+  reads `$FF02` to reset the field-sync flag. The book does not include the
+  Extended BASIC handler. The stop on `coco2b` (measured, see above) shows
+  the same effect with the handler that runs on the targets.
+
+- On each target, the field-sync IRQ is on when the program starts. BASIC's
+  TIMER at `$0112` counts up from one snapshot to the next (measured). The
+  guard bytes and all screen and state bytes match at every checkpoint while
+  the handler runs (measured).
 
 - Tandy, *Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)*, PDF 36,
   figure 4-10: Up, Down, Left, Right and Space are row PA3 at columns PB3 to

@@ -2,6 +2,9 @@
 source = "main.asm"
 
 # The first target is the default. Firmware is checked against roms.json.
+# The four standard targets (guidance/starter/toolchain.md, "Target tables").
+# The DAC and the audio mux use the same bits on all four (README sources;
+# on coco2b the check is the evidence). The program uses only 32 KiB.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -9,29 +12,34 @@ tv = "ntsc"
 vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
+extended = "extbas11.rom"
 
-# The named CoCo 2 NTSC boards (26-3134/26-3136) with the 64 KiB upgrade, an
-# explicit non-T1 6847 and CoCo 2 firmware. Their DAC and audio mux are one IC.
 [targets.coco2]
 machine = "cocous"
 cpu = "6809"
 tv = "ntsc"
 vdg = "6847"
-ram_kib = 64
+ram_kib = 32
 basic = "bas12.rom"
+extended = "extbas11.rom"
 
-# NTSC CoCo 3, 128 KiB, GIME 1986. The same PIA bits select the DAC
-# (Color Computer 3 Service Manual, PDF 9-10 and 42-43). BASIC leaves the
-# 6809 at the slow rate (Tepolt, PDF 56 step 14 and PDF 62).
+[targets.coco2b]
+machine = "coco2bus"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847t1"
+ram_kib = 32
+basic = "bas13.rom"
+extended = "extbas11.rom"
+
 [targets.coco3]
-firmware = "coco3"
 machine = "coco3"
 cpu = "6809"
 tv = "ntsc"
 vdg = "gime1986"
 ram_kib = 128
 extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
-screen = 0x10400         # logical $0400 under BASIC's map (Tepolt PDF 58)
+screen = 0x10400         # logical $0400 in the physical RAM snapshot
 
 [memory]
 at = { start = 0x3000 }

@@ -16,8 +16,8 @@ The context plays a fixed script of 41 moves. The
 [tile-map guide](../../guidance/techniques/tile-maps.md) gives the method and
 its sources.
 
-The same program runs on a CoCo 1, a CoCo 2 and a CoCo 3. The CoCo 3 shows
-RG6 in its VDG-compatible mode. [Machines](#machines) tells what is
+The same program runs on a CoCo 1, two CoCo 2 models and a CoCo 3. The
+CoCo 3 shows RG6 in its VDG-compatible mode. [Machines](#machines) tells what is
 different.
 
 ## Choose how to redraw after a move
@@ -104,14 +104,18 @@ The `--- CONTEXT` blocks are not part of the practice:
 - They play the 41 moves in `moves`, with a pause after each move.
 
 The program keeps the interrupts, stack, direct page and CPU clock that BASIC
-sets. The `state` label is data. The check fails if the CPU runs it.
+sets. On each target, Extended BASIC turns on the field-sync interrupt, and
+its handler runs once in each field. The program does not wait for field sync
+and does not write the PIA. The pause is a counted loop, so the interrupt only
+makes the pause a little longer. The `state` label is data. The check fails
+if the CPU runs it.
 
 ## Machines
 
 The program, the map, the screen bytes and the picture are the same on each
 machine. Only the RGB values of the colours are different.
 
-- CoCo 1 and CoCo 2: the VDG gives each colour a fixed value. With colour
+- CoCo 1 and the two CoCo 2 models: the VDG gives each colour a fixed value. With colour
   set 0, a 0 bit is black and a 1 bit is green.
 - CoCo 3: the same `$FF22` and SAM writes select RG6. A 0 bit selects palette
   register 8 and a 1 bit selects register 9. BASIC loads these registers at
@@ -125,7 +129,8 @@ The CoCo 3 snapshot is physical memory, so the check reads the screen at
 the 128 KiB starts at `$60000`. The offset `$10400` is our arithmetic from
 these values.
 
-In XRoar, black and green are (0, 31, 0) and (46, 188, 36) on the CoCo 1 and 2.
+In XRoar, black and green are (0, 31, 0) and (46, 188, 36) on the CoCo 1 and
+on both CoCo 2 models, with the MC6847 and with the MC6847T1.
 On the CoCo 3 they are (20, 20, 20) and (71, 145, 5). These values are
 measured in XRoar, in [palette-swatches](../palette-swatches/README.md). They
 are not the colours of a monitor or a physical CoCo.
@@ -141,15 +146,15 @@ uv run python scripts/coco.py run examples/tile-room                 # changed c
 uv run python scripts/coco.py run examples/tile-room --variant full  # full
 ```
 
-To see a method on another machine, add `--target coco2` or
-`--target coco3`:
+To see a method on another machine, add `--target coco2`,
+`--target coco2b` or `--target coco3`:
 
 ```sh
 uv run python scripts/coco.py run examples/tile-room --target coco3                 # changed cells
 uv run python scripts/coco.py run examples/tile-room --target coco3 --variant full  # full
 ```
 
-To check both methods on all three machines, paste this line:
+To check both methods on all four targets, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/tile-room --video
@@ -178,13 +183,17 @@ target has NTSC and a normal-clock 6809:
 
 | Target | Machine | RAM | Video | Firmware |
 | --- | --- | --- | --- | --- |
-| `coco1` | CoCo 1 | 32 KiB | MC6847 | Color BASIC 1.1 |
-| `coco2` | CoCo 2 | 32 KiB | MC6847T1 | Color BASIC 1.2 |
+| `coco1` | CoCo 1 | 32 KiB | MC6847 | Color BASIC 1.1, Extended Color BASIC 1.1 |
+| `coco2` | CoCo 2 | 32 KiB | MC6847 | Color BASIC 1.2, Extended Color BASIC 1.1 |
+| `coco2b` | CoCo 2 | 32 KiB | MC6847T1 | Color BASIC 1.3, Extended Color BASIC 1.1 |
 | `coco3` | CoCo 3 | 128 KiB | GIME 1986 | Super Extended Color BASIC |
 
-The model uses the `xroar` palette for the CoCo 1 and 2, and the
-`xroar-coco3` palette for the CoCo 3. The check does not prove the result on
-a television, a physical CoCo or PAL.
+The program does not use Extended BASIC. The targets load it because most
+machines had it.
+
+The model uses the `xroar` palette for the CoCo 1 and both CoCo 2 targets,
+and the `xroar-coco3` palette for the CoCo 3. The check does not prove the
+result on a television, a physical CoCo or PAL.
 
 The program draws into the screen that the VDG shows, with no vertical sync.
 The check does not measure the time of a redraw.

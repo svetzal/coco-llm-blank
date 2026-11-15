@@ -2,33 +2,45 @@
 source = "main.asm"
 prepare = "prepare.py"   # writes script.inc from turns.txt into the build folder
 
-# NTSC machines. The program sets no display mode and writes no hardware
-# register, so the VDG choice does not matter here. The first target is the
-# default.
+# The four standard targets in guidance/starter/toolchain.md. The program sets
+# no display mode and writes no hardware register, so the VDG does not matter
+# here. The first target is the default. On the CoCo 3 the snapshot is physical
+# RAM: expected.py adds the offset of BASIC's map.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
 tv = "ntsc"
+vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
+extended = "extbas11.rom"
 
 [targets.coco2]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
+[targets.coco2b]
 machine = "coco2bus"
 cpu = "6809"
 tv = "ntsc"
+vdg = "6847t1"
 ram_kib = 32
-basic = "bas12.rom"
+basic = "bas13.rom"
+extended = "extbas11.rom"
 
-# CoCo 3, 128 KiB, GIME 1986. The snapshot is physical RAM: expected.py adds
-# the offset of BASIC's map.
 [targets.coco3]
-firmware = "coco3"
 machine = "coco3"
 cpu = "6809"
 tv = "ntsc"
 vdg = "gime1986"
 ram_kib = 128
 extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+screen = 0x10400         # logical $0400 in the physical RAM snapshot
 
 [memory]
 at = { start = 0x3000 }

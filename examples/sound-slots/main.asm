@@ -24,7 +24,11 @@
 *     PDF 10: $FF20 bits 2..7 = the 6-bit DAC, bit 1 = RS-232 out.
 *       $FF21 bit 2 = 0 selects the direction register. $FF23 bit 3 =
 *       sound enable.
-*     PDF 31: the slow CPU clock is 0.89 MHz.
+*     PDF 31: the GIME gives E and Q at 0.89 MHz or 1.78 MHz.
+*     PDF 85: crystal X1 is 28.63636 MHz. PDF 103: X1 drives the GIME.
+*     PDF 96: the GIME's oscillator divider makes E and Q.
+*     Divide by 32 for the slow rate is our inference, which XRoar 1.13
+*     shares (src/tcc1014/tcc1014.c). It equals 14.31818 MHz / 16.
 *     PDF 42-43: Sel B 0 and Sel A 0 select the DAC; SNDEN must be high.
 *   Tepolt, Assembly Language Programming for the CoCo3:
 *     PDF 56, step 14: reset clears all SAM registers.
@@ -34,8 +38,12 @@
 
         org $3000
 * >>> EXAMPLE 1 of 4: Mask interrupts so that nothing delays a sample.
-* The sample rate comes from the cycles of the loop. BASIC's interrupt
-* handler would add a gap at unknown times.
+* The sample rate comes from the cycles of the loop. BASIC leaves the
+* field-sync IRQ on (Technical Reference PDF 13: $FF03 bit 0), and its
+* handler at $894C runs once each field. Measured in XRoar without this
+* line, on all four targets: each IRQ puts its entry and about 15 handler
+* instructions (about 100 cycles) into one sample gap. The tone drops by
+* 0.67% (678.2 to 673.7 Hz at block 16), and the check fails at block 32.
 start   orcc #$50
 * <<< END EXAMPLE
 
