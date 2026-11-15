@@ -9,6 +9,12 @@ other hand, in eight directions. The game uses four-colour graphics.
 > E and C move. J, L, I and the comma key fire in that direction. It must be
 > fast, with audio and four-colour graphics, in the style of PMODE 3.
 
+> Level by level, starting with slow enemies that increase in number on each
+> level. Then hunters that come at times: not often on the low levels, and
+> more often as the levels go up.
+
+> Change the keys to A, D, W, S and K, semicolon, O, L. Then add sound.
+
 The game, its name, its art and its rules are our own. They are not a copy of
 another game.
 
@@ -16,17 +22,23 @@ another game.
 
 | Key | Action |
 | --- | --- |
-| E | Move up |
-| C | Move down |
-| S | Move left |
-| F | Move right |
-| I | Shoot up |
-| , (comma) | Shoot down |
-| J | Shoot left |
-| L | Shoot right |
+| W | Move up |
+| S | Move down |
+| A | Move left |
+| D | Move right |
+| O | Shoot up |
+| L | Shoot down |
+| K | Shoot left |
+| ; (semicolon) | Shoot right |
 
 Hold two keys of the same hand to move or shoot on a diagonal. Hold a shoot key
 to shoot again and again.
+
+A limit of these keys: K, O, S and W are the corners of a rectangle in the
+keyboard matrix. When three of them are held, the fourth reads as held too.
+So when you shoot up and left (O and K), the game cannot see whether you hold
+W or S. It keeps the vertical movement of the last frame. To change from up
+to down while you shoot up and left, release O or K for a moment.
 
 ## How to run it
 
@@ -39,23 +51,26 @@ uv run python scripts/coco.py check projects/arena-blaster
 
 The `run` command opens XRoar. Close the window to stop it.
 
-The check runs three builds for 300 frames each. It compares both screens,
-the game state and the rendered picture with `expected.py` at each frame:
-
-- `main`: no keys. The grunts reach the player, and the level starts again.
-- `journey`: the keys in `journey.txt`. They clear levels 1 and 2.
-- `hunters`: starts at level 10 and plays `hunters.txt`. Hunters come at
-  frames 90 and 251, and level 10 is clear at frame 161.
+The check runs six builds for 200 frames each. At each frame it compares
+both screens, the game state, the rendered picture and the mixer output with
+`expected.py`. See [Checks](#checks).
 
 ## Status
 
-Increment 2: levels of enemies. There is no sound, no score and no game over
-yet. When an enemy touches you, the level starts again.
+Increment 3: sound effects and the A, D, W, S and K, semicolon, O, L keys. There is
+no score and no game over yet. When an enemy touches you, the level starts
+again.
 
-Measured speed in XRoar: on levels 1 and 2, most frames take one field of
-the picture (60 frames each second). With 20 grunts on level 10, most frames
-take two or three fields (30 or 20 frames each second). The game slows down
-when the arena is full, because each step is one frame.
+Measured speed in XRoar (increment 2): on levels 1 and 2, most frames take
+one field of the picture (60 frames each second). With 20 grunts on level 10,
+most frames take two or three fields (30 or 20 frames each second). The game
+slows down when the arena is full, because each step is one frame.
+
+Measured sound in XRoar: the sound plays only while the program waits for the
+end of the picture. During an effect, the sound is present in 56% of each
+millisecond slice with a light load, and in 23% with 20 grunts. So the sound
+has gaps 60 times each second, and it gets weaker when the arena is full.
+Nobody has listened to it yet.
 
 ## Contract
 
@@ -69,10 +84,11 @@ when the arena is full, because each step is one frame.
 - Graphics: CG6, the mode of PMODE 3: 128x192 pixels, four colours (owner
   request). Colour set 0: green, yellow, blue and red (agent choice). The
   floor of the arena is blue, because CG6 has no black (agent choice).
-- Controls: S, F, E and C move. J, L, I and comma shoot (owner request). Two
+- Controls: A, D, W and S move. K, semicolon, O and L shoot (owner request). Two
   keys give a diagonal, opposite keys cancel, and a held shoot key repeats
-  (agent choice).
-- Sound: the six-bit DAC (owner request for audio). Not yet in the game.
+  (agent choice). The rule for the K, O, S and W rectangle is an agent choice.
+- Sound: the six-bit DAC (owner request for audio). One effect at a time,
+  played in the wait for the end of the picture (agent choice).
 - Loader: XRoar runs the DECB binary directly (starter default). There is no
   disk image yet.
 
@@ -130,9 +146,33 @@ choices:
   above 114. A random y is 13 + byte, and tries again above 164. A random
   side is byte AND 3: top, bottom, left, right.
 
+### Sound
+
+One effect plays at a time. A new effect replaces the current one only if its
+priority is the same or higher. Each effect is a list of records, one record
+for each frame: a mode (square wave or noise), a period and a volume (0-63).
+
+| Effect | Priority | When | Sound |
+| --- | --- | --- | --- |
+| Shot | 1 | A shot starts | Square, periods 8, 10, 13, 17, 22; volume 24 down to 10 |
+| Explosion | 2 | A shot removes an enemy | Noise, periods 2-6; volume 44 down to 6 |
+| Hunter | 3 | A hunter comes | Square, periods 10 and 14 in turn, 8 frames; volume 26 |
+| Level | 4 | The arena is clear | Square, periods 30, 22, 16, 11, 3 frames each; volume 28 |
+| Death | 5 | An enemy touches the player | Noise, periods 1-10, 14 frames; volume 60 down to 8 |
+
+- The sound plays only while the program waits for the falling edge and
+  the rising edge of field sync. Each frame starts at DAC 0.
+- A square wave changes the output after `period` passes of the wait loop.
+  A pass takes 17 cycles, and a pass with a change takes 52 cycles. So the
+  pitch is 894,886 / (2 x (17 x period + 35)) Hz: period 8 is 2617 Hz and
+  period 30 is 816 Hz.
+- Noise: after `period` passes, an 8-bit shift register steps (exclusive OR
+  with `$1D` when a 1 bit falls out). A 1 bit changes the output.
+
 ### Rules for each frame
 
-1. Do one step of the random numbers. Read the keys.
+1. Do one step of the random numbers. Read the keys. If O and K are held
+   and both W and S read as held, use the vertical keys of the last frame.
 2. Move the player 1 pixel across and 2 rows down or up. Stop the player at
    the arena edge. The player is 6 pixels wide and 10 rows high. It starts at
    pixel 61, row 95.
@@ -148,7 +188,8 @@ choices:
 8. If an enemy overlaps the player, start the level again. If not, and no
    enemy is left, start the next level. A new level puts the player back at
    the start and removes all shots.
-9. Erase what this screen showed two frames before. Draw the shots, the
+9. Take the next sound record. Erase what this screen showed two frames
+   before. Draw the shots, the
    enemies. Draw the player last.
 10. Wait for the end of the picture, then show the new screen.
 
@@ -168,9 +209,53 @@ choices:
   `$FF02` clears the flag. Tandy manual, PDF 13. The method is the
   [page flip](../../examples/page-flip/README.md) example.
 - Keys: `$FF02` drives the columns and `$FF00` reads the rows. A pressed key
-  reads 0. Tandy manual, PDF 13 and the keyboard diagram on PDF 75. E, F and C
-  are row PA0 at columns PB5, PB6 and PB3. I, J and L are row PA1 at PB1, PB2
-  and PB4. S is row PA2 at PB3. Comma is row PA5 at PB4.
-- Our deduction from the diagram: no three of these eight keys make a
-  rectangle with a fourth key of the set. Thus the keys cannot make a false
-  press of a game key. No check tests this.
+  reads 0. Tandy manual, PDF 13 and the keyboard diagram on PDF 75. A and D
+  are row PA0 at columns PB1 and PB4. K, L and O are row PA1 at PB3, PB4 and
+  PB7. S and W are row PA2 at PB3 and PB7. Semicolon is row PA5 at PB3.
+- The diagram has no diode for each key. K, O, S and W make a rectangle, so
+  three of them make the fourth read as held. The pinned XRoar models this
+  (`keyboard_read_matrix` in `src/keyboard.c`), and the `moves` check
+  measures it.
+- Sound: `$FF20` bits 7-2 are the DAC. `$FF21` bit 2 = 0 selects its
+  direction register. SEL 1 (`$FF01` bit 3) = 0, SEL 2 (`$FF03` bit 3) = 0
+  and sound enable (`$FF23` bit 3) = 1 select the DAC. Tandy manual, PDF
+  13-14 and PDF 38, Table 4.
+- The CPU clock is 14.31818 MHz / 16. Tandy manual, PDF 26.
+- Cycle counts of the sound loop: Leventhal, *6809 Assembly Language
+  Programming*, Appendix C, PDF 553-555.
+
+## Checks
+
+`expected.py` holds the rules of the game. Each check build except `main`
+uses test-harness controls: assembler defines, only for the check, that
+remove one part of the game. The key scripts are short and written by hand.
+
+| Build | Controls | Keys | What it checks |
+| --- | --- | --- | --- |
+| `main` | none | none | The real start. The grunts reach the player at frame 77: death sound, level again. |
+| `moves` | `NO_ENEMIES` | `moves.txt` | Movement, walls, shots, the wrong key C, the K/O/S/W rectangle rule, shot sounds |
+| `hit` | `FIXED_GRUNTS` `STILL` | `hit.txt` | Shot hits (frames 15 and 58), explosion and level sounds, level 2 |
+| `touch` | `FIXED_GRUNTS` | none | A grunt reaches the player at frame 133: death sound |
+| `hunter` | `NO_ENEMIES` `HUNTER_SOON` `NO_DEATH` | none | A hunter each 30 frames, its place and the hunter sound |
+| `level10` | `FIRST_LEVEL=10` | none | 20 grunts and the level-10 hunter wait |
+
+The controls:
+
+- `NO_ENEMIES`: no grunts, and an empty arena does not end the level.
+- `FIXED_GRUNTS`: two grunts, at x 100, y 90 and at x 100, y 40. No hunters.
+- `STILL`: enemies do not move.
+- `HUNTER_SOON`: the hunter wait is 30 frames.
+- `NO_DEATH`: a touch does not start the level again.
+- `FIRST_LEVEL=N`: the game starts at level N.
+
+The sound check looks at the last 4 ms of the mixer output at each frame.
+That is the end of the wait, where the record of the frame plays. It checks
+the volume of each step, the pitch of a square wave (within 5%) and that
+noise is not regular. On a heavy frame the wait can be shorter than 4 ms
+(measured), so `main`, `level10` and `hunter` after frame 150 check only the
+silence between effects. The mixer scale, 352.5 for each DAC step, is
+measured in these captures.
+
+Negative controls, run on copies: no DAC write in the square wave fails at
+frame 16 (`moves`). No rectangle rule fails at frame 77 (`moves`). A copy
+with no hunters failed at frame 90 (increment 2).

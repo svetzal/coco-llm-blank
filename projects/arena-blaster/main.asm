@@ -1,6 +1,6 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
-* Increment 2: levels of slow grunts and fast hunters. README.md has the
-* contract, the rules for each frame and the memory map.
+* Increment 3: sound effects and the A/D/W/S and K/;/O/L keys. README.md
+* has the contract, the rules for each frame and the memory map.
 *
 * Sources (all read as page images):
 *   Tandy, Color Computer Technical Reference Manual:
@@ -13,8 +13,15 @@
 *       $FFC6-$FFD3 in 512-byte units (even address clears, odd sets).
 *     PDF 31, Table 1: 128x192 colour graphics (CG6) is V = 110 and
 *       $FF22 bits 7-4 = 1110.
-*     PDF 75: keyboard matrix. Row PA0: E=PB5, F=PB6, C=PB3.
-*       Row PA1: I=PB1, J=PB2, L=PB4. Row PA2: S=PB3. Row PA5: comma=PB4.
+*     PDF 75: keyboard matrix. Row PA0: A=PB1, D=PB4. Row PA1: K=PB3,
+*       L=PB4, O=PB7. Row PA2: S=PB3, W=PB7. Row PA5: semicolon=PB3.
+*     PDF 13-14: $FF01/$FF03 bit 3 = SEL 1/SEL 2, $FF20 bits 7-2 = the
+*       six-bit DAC, $FF21 bit 2 = 0 selects its direction register,
+*       $FF23 bit 3 = sound enable.
+*     PDF 26: the CPU clock is 14.31818 MHz / 16 = 0.894886 MHz.
+*     PDF 38, Table 4: SNDEN 1, SEL 1 0, SEL 2 0 select the DAC.
+*   Leventhal, 6809 Assembly Language Programming, Appendix C, PDF 553-555:
+*     the cycles of each instruction in the sound loop.
 *   Motorola MC6847 datasheet, PDF 19-21 (through the graphics guide):
 *     CG6 = 2 bits for each pixel, leftmost pixel in bits 7-6, 32 bytes for
 *     each row. Colour set 0: 0 green, 1 yellow, 2 blue, 3 red.
@@ -66,6 +73,23 @@ SEED    equ $ACE1               ; start value of the random sequence
         ifndef FIRST_LEVEL
 FIRST_LEVEL equ 1               ; a test variant can start at another level
         endc
+* Test-harness controls, only for the check (README.md lists them):
+*   NO_ENEMIES   a level starts with no grunts, and an empty arena is not
+*                a clear arena.
+*   FIXED_GRUNTS a level starts with two grunts, at x 100, y 90 and at
+*                x 100, y 40, and no hunter comes.
+*   STILL        enemies do not move.
+*   HUNTER_SOON  the hunter wait is 30 frames on every level.
+*   NO_DEATH     a touch does not start the level again.
+
+* Sound effects: one record a frame (README.md "Sound").
+NOISE   equ $80                 ; record mode: noise; 0 is a square wave
+FX_END  equ $FF                 ; record mode: end of the effect
+P_SHOT  equ 1                   ; priorities: a new effect replaces the
+P_BOOM  equ 2                   ; current one only if its priority is
+P_HUNTER equ 3                  ; the same or higher
+P_LEVEL equ 4
+P_DEATH equ 5
 
 * Key bits. The same bits for movement and for shots.
 UP      equ 1
@@ -143,6 +167,37 @@ clear   clr ,x+
         ora #%00000100
         sta $FF03
 
+* Sound: $FF20 bits 7-2 are outputs. Keep bits 1-0 and the other control
+* bits. This follows the sound-slots example.
+        lda $FF21
+        anda #$FB
+        sta $FF21
+        lda $FF20
+        ora #$FC
+        sta $FF20
+        lda $FF21
+        ora #4
+        sta $FF21
+        lda $FF20
+        anda #3
+        sta <level_out          ; DAC 0, bits 1-0 kept
+        sta $FF20
+* Select the DAC: SEL 1 = 0, SEL 2 = 0, sound enable = 1.
+        lda $FF01
+        anda #$F7
+        sta $FF01
+        lda $FF03
+        anda #$F7
+        sta $FF03
+        lda $FF23
+        ora #8
+        sta $FF23
+        lda #1
+        sta <scount
+        sta <period
+        lda #$5A
+        sta <noise
+
 * Draw the floor and the wall into both screens.
         ldx #SCREEN_A
         jsr prepare_screen
@@ -188,18 +243,28 @@ frame   jsr rand_step           ; one step of the random sequence a frame
         jsr hit_enemies
         jsr hit_player
         bcc frame_clear
+        ldx #fx_death
+        lda #P_DEATH
+        jsr start_sound
         jsr start_level         ; touched: the same level again
         bra frame_draw
 frame_clear
+        ifdef NO_ENEMIES        ; check only: an empty arena is not clear
+        bra frame_draw
+        endc
         ldx #enemies
 fc_slot tst E_TYPE,x
         bne frame_draw          ; an enemy is left
         leax E_SIZE,x
         cmpx #enemies_end
         blo fc_slot
+        ldx #fx_level
+        lda #P_LEVEL
+        jsr start_sound
         inc <level              ; arena clear: the next level
         jsr start_level
 frame_draw
+        jsr sound_frame
         jsr draw_frame
         jsr show
         ldd <frames
@@ -211,79 +276,90 @@ frame_draw
 * A key script line takes effect each time the program reaches 'scan'.
 scan    clr <move_keys
         clr <fire_keys
-* Column PB1: I (row PA1) shoots up.
+* Column PB1: A (row PA0) moves left.
         lda #%11111101
         sta $FF02
         lda $FF00
-        bita #%00000010
-        bne scan_pb2
-        lda <fire_keys
-        ora #UP
-        sta <fire_keys
-* Column PB2: J (row PA1) shoots left.
-scan_pb2
-        lda #%11111011
-        sta $FF02
-        lda $FF00
-        bita #%00000010
+        bita #%00000001
         bne scan_pb3
-        lda <fire_keys
-        ora #LEFT
-        sta <fire_keys
-* Column PB3: C (row PA0) moves down, S (row PA2) moves left.
+        lda #LEFT
+        sta <move_keys
+* Column PB3: S (row PA2) moves down. K (row PA1) shoots left.
+* Semicolon (row PA5) shoots right.
 scan_pb3
         lda #%11110111
         sta $FF02
         ldb $FF00
-        bitb #%00000001
-        bne scan_s
+        bitb #%00000100
+        bne scan_k
         lda <move_keys
         ora #DOWN
         sta <move_keys
-scan_s  bitb #%00000100
-        bne scan_pb4
-        lda <move_keys
+scan_k  bitb #%00000010
+        bne scan_semicolon
+        lda <fire_keys
         ora #LEFT
-        sta <move_keys
-* Column PB4: L (row PA1) shoots right, comma (row PA5) shoots down.
+        sta <fire_keys
+scan_semicolon
+        bitb #%00100000
+        bne scan_pb4
+        lda <fire_keys
+        ora #RIGHT
+        sta <fire_keys
+* Column PB4: D (row PA0) moves right. L (row PA1) shoots down.
 scan_pb4
         lda #%11101111
         sta $FF02
         ldb $FF00
-        bitb #%00000010
-        bne scan_comma
-        lda <fire_keys
+        bitb #%00000001
+        bne scan_l
+        lda <move_keys
         ora #RIGHT
-        sta <fire_keys
-scan_comma
-        bitb #%00100000
-        bne scan_pb5
+        sta <move_keys
+scan_l  bitb #%00000010
+        bne scan_pb7
         lda <fire_keys
         ora #DOWN
         sta <fire_keys
-* Column PB5: E (row PA0) moves up.
-scan_pb5
-        lda #%11011111
+* Column PB7: W (row PA2) moves up. O (row PA1) shoots up.
+scan_pb7
+        lda #%01111111
         sta $FF02
-        lda $FF00
-        bita #%00000001
-        bne scan_pb6
+        ldb $FF00
+        bitb #%00000100
+        bne scan_o
         lda <move_keys
         ora #UP
         sta <move_keys
-* Column PB6: F (row PA0) moves right.
-scan_pb6
-        lda #%10111111
-        sta $FF02
-        lda $FF00
-        bita #%00000001
+scan_o  bitb #%00000010
         bne scan_done
-        lda <move_keys
-        ora #RIGHT
-        sta <move_keys
+        lda <fire_keys
+        ora #UP
+        sta <fire_keys
 scan_done
         lda #$FF
         sta $FF02
+* K, O, S and W are the corners of a rectangle in the matrix: rows PA1
+* and PA2, columns PB3 and PB7. Three held keys make the fourth read as
+* held. So when K and O are held and both W and S read as held, the
+* vertical movement cannot be known. Keep the one of the last frame.
+        lda <fire_keys
+        anda #UP+LEFT
+        cmpa #UP+LEFT
+        bne scan_vertical
+        lda <move_keys
+        anda #UP+DOWN
+        cmpa #UP+DOWN
+        bne scan_vertical
+        lda <move_keys
+        anda #LEFT+RIGHT
+        ora <last_vertical
+        sta <move_keys
+        rts
+scan_vertical
+        lda <move_keys
+        anda #UP+DOWN
+        sta <last_vertical
         rts
 
 * --- X = the direction record for the key bits in B.
@@ -388,7 +464,9 @@ fire_start
         std S_W,u               ; S_W and S_H
         lda #SHOT_DELAY
         sta <delay
-        rts
+        ldx #fx_shot
+        lda #P_SHOT
+        jmp start_sound
 
 * --- Erase what the hidden screen showed two frames before. Then draw
 * the shots and the player, and keep their rectangles for the next erase.
@@ -508,9 +586,7 @@ ds_byte lda ,x
 * --- Show the finished screen at the end of the picture, as in the
 * page-flip example. Then select the other screen for drawing.
 show    lda $FF02               ; clear an old flag
-show_wait
-        lda $FF03
-        bpl show_wait           ; wait for the falling edge of FS
+        jsr play_until_fs       ; wait for the falling edge of FS
         lda <drawing
         cmpa #SCREEN_B/256
         bne show_a
@@ -523,9 +599,7 @@ published
         ora #%00000010          ; rising edge
         sta $FF03
         lda $FF02
-show_new
-        lda $FF03
-        bpl show_new
+        jsr play_until_fs       ; wait for the rising edge of FS
         lda $FF03
         anda #%11111101         ; falling edge again
         sta $FF03
@@ -602,8 +676,33 @@ sl_calc ldb #60
         std <temp
         ldd #660
         subd <temp
-sl_wait std <hunter_wait
+sl_wait
+        ifdef HUNTER_SOON       ; check only: a hunter each 30 frames
+        ldd #30
+        endc
+        ifdef FIXED_GRUNTS      ; check only: no hunter
+        ldd #0
+        endc
+        std <hunter_wait
         std <hunter_timer
+        ifdef NO_ENEMIES        ; check only: no grunts
+        rts
+        endc
+        ifdef FIXED_GRUNTS      ; check only: two grunts at fixed places
+        ldu #enemies
+        lda #GRUNT
+        sta E_TYPE,u
+        sta E_SIZE+E_TYPE,u
+        ldd #100*256+90
+        std E_X,u
+        ldd #100*256+40
+        std E_SIZE+E_X,u
+        lda #1
+        sta E_TICK,u
+        lda #2
+        sta E_SIZE+E_TICK,u
+        rts
+        endc
 * Grunts: 4 + 2 * level, but not more than 20.
         lda #MAX_GRUNTS
         ldb <level
@@ -691,6 +790,9 @@ random_y
 * --- Each enemy counts down its tick. At 0 it steps toward the player:
 * 1 pixel across and up to 2 rows down or up.
 move_enemies
+        ifdef STILL             ; check only: enemies do not move
+        rts
+        endc
         ldu #enemies
 me_slot lda E_TYPE,u
         beq me_next
@@ -738,6 +840,8 @@ me_next leau E_SIZE,u
 * a random side of the arena. If no slot is free, or the place is near the
 * player, try again in the next frame.
 spawn_hunter
+        ldd <hunter_wait
+        beq sh_done             ; a wait of 0: no hunters (check only)
         ldd <hunter_timer
         beq sh_try
         subd #1
@@ -791,7 +895,9 @@ sh_place
         sta E_TICK,u
         ldd <hunter_wait
         std <hunter_timer
-        rts
+        ldx #fx_hunter
+        lda #P_HUNTER
+        jmp start_sound
 
 * --- A shot that overlaps an enemy removes the enemy and the shot. Shots
 * in slot order; each shot removes the first enemy in slot order.
@@ -823,6 +929,11 @@ he_enemy
         bls he_next_enemy
         clr E_TYPE,u
         clr S_ON,x
+        pshs x,u
+        ldx #fx_boom
+        lda #P_BOOM
+        jsr start_sound
+        puls x,u
         bra he_next_shot
 he_next_enemy
         leau E_SIZE,u
@@ -837,6 +948,10 @@ he_next_shot
 * --- Carry set if an enemy overlaps the player. Both are 6x10, so they
 * overlap when they are less than 6 pixels across and 10 rows apart.
 hit_player
+        ifdef NO_DEATH          ; check only: no touch
+        andcc #$FE
+        rts
+        endc
         ldu #enemies
 hp_slot tst E_TYPE,u
         beq hp_next
@@ -860,6 +975,98 @@ hp_next leau E_SIZE,u
 hp_touch
         orcc #$01               ; carry set: touched
         rts
+
+* --- Start effect X with priority A, if A is the same as or higher
+* than the priority of the effect that plays now.
+start_sound
+        cmpa <priority
+        blo ss_done
+        sta <priority
+        stx <effect
+ss_done rts
+
+* --- Once a frame: take the next record of the effect. Each record is
+* mode, period and volume. Mode 0 is a square wave and NOISE is noise.
+* Volume is the DAC step, 0-63, shifted left 2 for $FF20 bits 7-2.
+sound_frame
+        lda <level_out          ; start each frame at DAC 0
+        anda #3
+        sta <level_out
+        sta $FF20
+        ldx <effect
+        beq sf_silent
+        lda ,x
+        cmpa #FX_END
+        beq sf_end
+        sta <mode
+        ldd 1,x
+        sta <period
+        lslb
+        lslb
+        stb <volume
+        leax 3,x
+        stx <effect
+        rts
+sf_end  ldx #0
+        stx <effect
+        clr <priority
+sf_silent
+        clr <volume
+        rts
+
+* --- Play the sound until the FS flag ($FF03 bit 7) sets.
+* A pass without a change takes 17 cycles: LDA ext 5, BMI 3, DEC dir 6,
+* BNE 3. A pass that changes the output takes 52 cycles. So a half wave
+* of P passes is 17 x P + 35 cycles, and a square wave is
+* 894886 / (2 x (17 x P + 35)) Hz.
+play_until_fs
+        lda $FF03
+        bmi pf_done
+        dec <scount
+        bne play_until_fs
+        ldb <period             ; 4
+        stb <scount             ; 4
+        lda <mode               ; 4
+        bmi pf_noise            ; 3
+        lda <level_out          ; 4
+        eora <volume            ; 4
+        sta <level_out          ; 4
+        sta $FF20               ; 5
+        bra play_until_fs       ; 3
+* Noise: an 8-bit shift register. When a 1 bit falls out, change the
+* output. Our choice of taps: exclusive OR with $1D.
+pf_noise
+        lda <noise
+        lsla
+        bcc pf_noise_keep
+        eora #$1D
+        sta <noise
+        lda <level_out
+        eora <volume
+        sta <level_out
+        sta $FF20
+        bra play_until_fs
+pf_noise_keep
+        sta <noise
+        bra play_until_fs
+pf_done rts
+
+* --- Sound effects. Records: mode, period, volume. One record a frame.
+* Square-wave pitch: 894886 / (2 x (17 x period + 35)) Hz.
+fx_shot fcb 0,8,24,0,10,22,0,13,18,0,17,14,0,22,10,FX_END
+fx_boom fcb NOISE,2,44,NOISE,2,40,NOISE,3,34,NOISE,3,28,NOISE,4,22
+        fcb NOISE,4,16,NOISE,5,10,NOISE,6,6,FX_END
+fx_hunter
+        fcb 0,10,26,0,10,26,0,14,26,0,14,26,0,10,26,0,10,26
+        fcb 0,14,26,0,14,26,FX_END
+fx_level
+        fcb 0,30,28,0,30,28,0,30,28,0,22,28,0,22,28,0,22,28
+        fcb 0,16,28,0,16,28,0,16,28,0,11,28,0,11,28,0,11,28
+        fcb 0,11,20,0,11,12,FX_END
+fx_death
+        fcb NOISE,1,60,NOISE,1,56,NOISE,2,52,NOISE,2,48,NOISE,3,44
+        fcb NOISE,3,40,NOISE,4,36,NOISE,4,32,NOISE,5,28,NOISE,6,24
+        fcb NOISE,7,20,NOISE,8,16,NOISE,9,12,NOISE,10,8,FX_END
 
 * --- Tables.
 * Direction number for each combination of key bits (UP=1, DOWN=2,
@@ -935,5 +1142,14 @@ hunter_wait rmb 2               ; frames between two hunters on this level
 hunter_timer rmb 2              ; frames until the next hunter
 enemies rmb ENEMIES*E_SIZE
 enemies_end
+last_vertical rmb 1             ; UP, DOWN or both, from the last frame
+effect  rmb 2                   ; next record, or 0 for no effect
+priority rmb 1
+mode    rmb 1
+period  rmb 1
+volume  rmb 1                   ; the DAC step, shifted left 2
+level_out rmb 1                 ; the value in $FF20
+scount  rmb 1                   ; passes until the next change
+noise   rmb 1
 state_end
         end start

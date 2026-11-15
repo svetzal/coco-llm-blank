@@ -11,6 +11,7 @@ other screen still holds frame N - 1 (or only the arena, at frame 1).
 """
 
 import copy
+import functools
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -31,8 +32,12 @@ PLAYER_W, PLAYER_H = 6, 10
 START = (61, 95)
 SHOT_SLOTS, SHOT_DELAY = 6, 5
 # Movement keys and shoot keys: (dx, dy) for each key letter in the key script.
-MOVE = {"E": (0, -1), "C": (0, 1), "S": (-1, 0), "F": (1, 0)}
-SHOOT = {"I": (0, -1), ",": (0, 1), "J": (-1, 0), "L": (1, 0)}
+MOVE = {"W": (0, -1), "S": (0, 1), "A": (-1, 0), "D": (1, 0)}
+SHOOT = {"O": (0, -1), "L": (0, 1), "K": (-1, 0), ";": (1, 0)}
+# (row, column) of each script key in the matrix: Tandy PDF 75. C is the
+# wrong-key control.
+MATRIX = {"A": (0, 1), "D": (0, 4), "C": (0, 3), "K": (1, 3), "L": (1, 4), "O": (1, 7),
+          "S": (2, 3), "W": (2, 7), ";": (5, 3)}
 # The scanner's labels in RAM that the check compares.
 STATE_FIELDS = ("px", "py", "delay")
 SLOT_SIZE = 11  # on, x, y, vx, vy, sprite (2), maxx, maxy, w, h
@@ -43,8 +48,30 @@ GRUNT, HUNTER = 1, 2
 PERIOD = {GRUNT: 4, HUNTER: 2}
 SPRITE = {GRUNT: "grunt", HUNTER: "hunter"}
 SEED = 0xACE1
-START_LEVEL = {"": 1, "journey": 1, "hunters": 10}
-SCRIPTS = {"journey": "journey.txt", "hunters": "hunters.txt"}
+# Test-harness controls of each variant (coco.toml), and its first level.
+CONTROLS = {
+    "": set(),
+    "moves": {"NO_ENEMIES"},
+    "hit": {"FIXED_GRUNTS", "STILL"},
+    "touch": {"FIXED_GRUNTS"},
+    "hunter": {"NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"},
+    "level10": set(),
+}
+START_LEVEL = {"level10": 10}
+SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt"}
+# Sound effects from README.md "Sound": one (mode, period, volume) record a frame.
+SQUARE, NOISE = 0, 0x80
+EFFECTS = {
+    "shot": (1, [(SQUARE, p, v) for p, v in ((8, 24), (10, 22), (13, 18), (17, 14), (22, 10))]),
+    "boom": (2, [(NOISE, p, v) for p, v in
+                 ((2, 44), (2, 40), (3, 34), (3, 28), (4, 22), (4, 16), (5, 10), (6, 6))]),
+    "hunter": (3, [(SQUARE, p, 26) for p in (10, 10, 14, 14, 10, 10, 14, 14)]),
+    "level": (4, [(SQUARE, p, 28) for p in (30,) * 3 + (22,) * 3 + (16,) * 3 + (11,) * 3]
+              + [(SQUARE, 11, 20), (SQUARE, 11, 12)]),
+    "death": (5, [(NOISE, p, v) for p, v in
+                  ((1, 60), (1, 56), (2, 52), (2, 48), (3, 44), (3, 40), (4, 36), (4, 32),
+                   (5, 28), (6, 24), (7, 20), (8, 16), (9, 12), (10, 8))]),
+}
 SAFE_X, SAFE_Y = 28, 45
 
 
@@ -94,6 +121,27 @@ class Game:
     hunter_wait: int = 0
     hunter_timer: int = 0
     enemies: list[Enemy | None] = field(default_factory=lambda: [None] * ENEMY_SLOTS)
+    controls: frozenset = frozenset()
+    last_vertical: tuple[int, ...] = ()
+    effect: str = ""
+    record: int = 0
+    priority: int = 0
+    sound: tuple[int, int, int] | None = None  # the record of this frame
+
+    def start_sound(self, name: str) -> None:
+        if EFFECTS[name][0] >= self.priority:
+            self.priority = EFFECTS[name][0]
+            self.effect, self.record = name, 0
+
+    def sound_frame(self) -> None:
+        self.sound = None
+        if self.effect:
+            records = EFFECTS[self.effect][1]
+            if self.record < len(records):
+                self.sound = records[self.record]
+                self.record += 1
+            else:
+                self.effect, self.priority = "", 0
 
     def rand_step(self) -> None:
         """16-bit shift right; a 1 bit out gives exclusive-or with $B400."""
@@ -124,6 +172,15 @@ def start_level(game: Game) -> None:
     game.slots = [None] * SHOT_SLOTS
     game.enemies = [None] * ENEMY_SLOTS
     game.hunter_wait = game.hunter_timer = max(90, 660 - 60 * game.level)
+    if "HUNTER_SOON" in game.controls:
+        game.hunter_wait = game.hunter_timer = 30
+    if "FIXED_GRUNTS" in game.controls:
+        game.hunter_wait = game.hunter_timer = 0
+        game.enemies[0] = Enemy(GRUNT, 100, 90, 1)
+        game.enemies[1] = Enemy(GRUNT, 100, 40, 2)
+        return
+    if "NO_ENEMIES" in game.controls:
+        return
     for slot in range(min(20, 4 + 2 * game.level)):
         while True:
             x = game.random_x()
@@ -134,7 +191,7 @@ def start_level(game: Game) -> None:
 
 
 def new_game(variant: str) -> Game:
-    game = Game(level=START_LEVEL[variant])
+    game = Game(level=START_LEVEL.get(variant, 1), controls=frozenset(CONTROLS[variant]))
     start_level(game)
     return game
 
@@ -144,6 +201,8 @@ def toward(value: int, target: int, most: int) -> int:
 
 
 def move_enemies(game: Game) -> None:
+    if "STILL" in game.controls:
+        return
     for enemy in game.enemies:
         if enemy:
             enemy.tick -= 1
@@ -154,6 +213,8 @@ def move_enemies(game: Game) -> None:
 
 
 def spawn_hunter(game: Game) -> None:
+    if game.hunter_wait == 0:
+        return
     if game.hunter_timer > 0:
         game.hunter_timer -= 1
     if game.hunter_timer > 0 or None not in game.enemies:
@@ -168,6 +229,7 @@ def spawn_hunter(game: Game) -> None:
         return
     game.enemies[game.enemies.index(None)] = Enemy(HUNTER, x, y, PERIOD[HUNTER])
     game.hunter_timer = game.hunter_wait
+    game.start_sound("hunter")
 
 
 def overlap(ax: int, ay: int, aw: int, ah: int, bx: int, by: int, bw: int, bh: int) -> bool:
@@ -183,10 +245,13 @@ def hit_enemies(game: Game) -> None:
             if enemy and overlap(shot.x, shot.y, w, h, enemy.x, enemy.y, ENEMY_W, ENEMY_H):
                 game.enemies[j] = None
                 game.slots[i] = None
+                game.start_sound("boom")
                 break
 
 
 def touched(game: Game) -> bool:
+    if "NO_DEATH" in game.controls:
+        return False
     return any(
         e and overlap(e.x, e.y, ENEMY_W, ENEMY_H, game.x, game.y, PLAYER_W, PLAYER_H)
         for e in game.enemies
@@ -220,6 +285,12 @@ def inside(x: int, y: int, name: str) -> bool:
 def step(game: Game, keys: str) -> None:
     """One frame of the rules in README.md."""
     game.rand_step()
+    keys = read_keys(keys)
+    if {"O", "K", "W", "S"} <= set(keys):
+        # K and O held, and W and S read as held: keep the last vertical keys.
+        keys = "".join(k for k in keys if k not in "WS") + "".join(game.last_vertical)
+    else:
+        game.last_vertical = tuple(k for k in "WS" if k in keys)
     dx, dy = direction(keys, MOVE)
     game.x = min(max(game.x + dx, MIN_X), END_X - PLAYER_W)
     game.y = min(max(game.y + 2 * dy, MIN_Y), END_Y - PLAYER_H)
@@ -234,10 +305,34 @@ def step(game: Game, keys: str) -> None:
     spawn_hunter(game)
     hit_enemies(game)
     if touched(game):
+        game.start_sound("death")
         start_level(game)
-    elif not any(game.enemies):
+    elif not any(game.enemies) and "NO_ENEMIES" not in game.controls:
+        game.start_sound("level")
         game.level += 1
         start_level(game)
+    game.sound_frame()
+
+
+def read_keys(held: str) -> str:
+    """The keys that the scanner reads: a key reads as held when its row and its column
+    connect through held keys (the matrix has no diodes; Tandy PDF 75)."""
+    pressed = {MATRIX[k] for k in held if k in MATRIX}
+    rows = {r for r, _ in pressed}
+    reach = {r: {r} for r in rows}
+    changed = True
+    while changed:
+        changed = False
+        for r in rows:
+            cols = {c for rr, c in pressed if rr in reach[r]}
+            more = {rr for rr, c in pressed if c in cols} - reach[r]
+            if more:
+                reach[r] |= more
+                changed = True
+    return "".join(
+        k for k, (r, c) in MATRIX.items()
+        if r in rows and any((rr, c) in pressed for rr in reach[r])
+    )
 
 
 def fire(game: Game, keys: str) -> None:
@@ -252,6 +347,7 @@ def fire(game: Game, keys: str) -> None:
     shot = Shot(game.x + (PLAYER_W - w) // 2, game.y + (PLAYER_H - h) // 2, 3 * fx, 6 * fy, name)
     game.slots[game.slots.index(None)] = shot
     game.delay = SHOT_DELAY
+    game.start_sound("shot")
 
 
 def journey(name: str = "journey.txt") -> list[tuple[str, tuple[int, int] | None]]:
@@ -267,6 +363,14 @@ def journey(name: str = "journey.txt") -> list[tuple[str, tuple[int, int] | None
 
 def games(frames: int, variant: str) -> list[Game]:
     """The state after each frame 0..frames. Frame 0 is the start."""
+    return _games(MAX_FRAMES, variant)[: frames + 1]
+
+
+MAX_FRAMES = 200
+
+
+@functools.cache
+def _games(frames: int, variant: str) -> list[Game]:
     script = journey(SCRIPTS[variant]) if variant in SCRIPTS else []
     game = new_game(variant)
     result = [copy.deepcopy(game)]
@@ -354,3 +458,61 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
 def expected_frame(frame: int, variant: str) -> np.ndarray:
     """XRoar's picture of the shown screen: CG6, colour set 0, measured xroar palette."""
     return render(picture(games(frame, variant)[frame]), MODES["CG6"], 0, XROAR, 2)
+
+
+# --- Sound. The sound plays only while the program waits for the end of the picture.
+# The capture ends at the checkpoint, at the end of that wait, so the last part of the
+# capture holds the record of the frame.
+CPU_HZ = 14_318_180 / 16  # Tandy PDF 26
+# Measured in this project's captures, not sourced: one DAC unit is about 352.5 in
+# XRoar's 16-bit mixer output.
+MIXER_PER_DAC = 352.5
+# Variants with a light load, and the last frame of the light load: the wait at the
+# end of each frame is longer than 4 ms (measured, about 7 ms), so the last 4 ms hold
+# only the record of the frame. In the hunter build a hunter comes each 30 frames and
+# none dies; at frame 180, with six hunters, the wait was shorter (measured).
+LIGHT = {"moves": MAX_FRAMES, "hit": MAX_FRAMES, "touch": MAX_FRAMES, "hunter": 150}
+WINDOW_S = 0.004
+
+
+def square_hz(period: int) -> float:
+    """A half wave is 17 x period + 35 cycles (main.asm play_until_fs; Leventhal
+    Appendix C, PDF 553-555)."""
+    return CPU_HZ / (2 * (17 * period + 35))
+
+
+def steps(samples: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    jumps = np.abs(np.diff(samples.astype(np.int32)))
+    where = np.nonzero(jumps > MIXER_PER_DAC * 3)[0]
+    return where, jumps[where]
+
+
+def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
+    game = games(frame, variant)[frame]
+    record = game.sound
+    window = sound.samples[-int(WINDOW_S * sound.rate):]
+    where, sizes = steps(window)
+    if record is None or record[2] == 0:
+        if len(where):
+            raise ValueError(f"Frame {frame}: {len(where)} DAC steps, expected silence.")
+        return {"frame": frame, "sound": "silent"}
+    mode, period, volume = record
+    want = volume * MIXER_PER_DAC
+    if frame > LIGHT.get(variant, 0):
+        # Measured: on a heavy frame the wait at the end can be close to 0, so the
+        # record of the frame can be silent. The heavy builds judge only silence.
+        return {"frame": frame, "sound": f"{game.effect}: not judged (heavy frame)"}
+    if len(where) < 3 or not np.all(np.abs(sizes - want) < 0.1 * want):
+        raise ValueError(
+            f"Frame {frame}: {len(where)} steps of {sizes.tolist()[:4]}, expected volume "
+            f"{volume} ({want:.0f}) for {game.effect}.")
+    gaps = np.diff(where)
+    if mode == SQUARE:
+        hz = (len(where) - 1) / (2 * (where[-1] - where[0]) / sound.rate)
+        if abs(hz / square_hz(period) - 1) > 0.05:
+            raise ValueError(f"Frame {frame}: {hz:.0f} Hz, expected {square_hz(period):.0f} Hz "
+                             f"for {game.effect}.")
+        return {"frame": frame, "sound": game.effect, "hz": round(hz)}
+    if gaps.min() == gaps.max():
+        raise ValueError(f"Frame {frame}: regular steps, expected noise for {game.effect}.")
+    return {"frame": frame, "sound": game.effect, "noise_steps": len(where)}

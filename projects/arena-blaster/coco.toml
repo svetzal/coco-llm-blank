@@ -18,30 +18,39 @@ basic = "bas11.rom"
 at = { start = 0x3C00, state = 0x1C00 }
 below = { state_end = 0x1D00, program_end = 0x7000 }
 
-# Scripted keys take effect at the scanner entry: one journey.txt line per
-# frame. Each line's first word lists the held keys by these letters.
-# D is not a game key: it is the wrong-key control.
+# Scripted keys take effect at the scanner entry: one script line per frame.
+# Each line's first word lists the held keys by these letters. C is not a
+# game key: it is the wrong-key control.
 [keys]
 at = "scan"
-letters = { E = "e", C = "c", S = "s", F = "f", I = "i", J = "j", L = "l", "," = "comma", D = "d" }
+letters = { W = "w", S = "s", A = "a", D = "d", O = "o", L = "l", K = "k", ";" = "semicolon", C = "c" }
 
 [capture]
 video = true
+audio = true
 
-# The plain build gets no keys: the player stays at the start and no shot
-# starts. The journey build plays journey.txt through the emulated keyboard.
-[variants.journey]
-keys = "journey.txt"
+# The main build has no controls and gets no keys. The variants below use
+# test-harness controls (README.md "Checks"), each for one game element.
+[variants.moves]
+defines = ["NO_ENEMIES"]
+keys = "moves.txt"
 
-# Starts at level 10, where a hunter comes every 90 frames, and plays
-# hunters.txt. It tests the hunter rules and a full arena of 20 grunts.
-[variants.hunters]
+[variants.hit]
+defines = ["FIXED_GRUNTS", "STILL"]
+keys = "hit.txt"
+
+[variants.touch]
+defines = ["FIXED_GRUNTS"]
+
+[variants.hunter]
+defines = ["NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"]
+
+[variants.level10]
 defines = ["FIRST_LEVEL=10"]
-keys = "hunters.txt"
 
 [check]
 checkpoint = "published"   # reached once for each frame, after the flip
-frames = ["1-300"]       # covers journey.txt and hunters.txt
+frames = ["1-200"]       # covers the longest script, moves.txt
 unreachable = "state"      # a data label: executing it is a fault
 screen = 0x0400
 emulated_seconds = 20
