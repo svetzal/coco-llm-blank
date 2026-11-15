@@ -4,7 +4,7 @@ Read this when a game has repeated scenery or items that change one cell of a
 room. Store the room as tile numbers. Let each number select a picture and,
 through a separate table, a movement rule.
 
-We measured the method on CoCo 1 and CoCo 2 in RG6, in the
+We measured the method on CoCo 1 in RG6, in the
 [tile-room example](../../examples/tile-room/README.md). The main historical
 source, Brian O'Neill's *PacDude Monster Maze*, is a CoCo 3 program. We read
 it but did not run it. Its drawing path does not transfer to CoCo 1/2.
@@ -67,7 +67,7 @@ ID. Each picture is eight rows of one byte.
 
 **Derived.** In RG6, cell column `c`, row `r` starts at `$0400 + r × 256 + c`.
 Picture rows are 32 bytes apart. The lower-right cell starts at `$0907`. The
-[example README](../../examples/tile-room/README.md#source-facts-and-provenance)
+[example README](../../examples/tile-room/README.md#sources)
 cites the RG6 facts.
 
 **Proposal.** For wider tiles, copy `tile_row_bytes` for each picture row.
@@ -86,16 +86,20 @@ changes a pair of map entries. Then `REMOVE` (19930–20380), called from the
 interrupt path (15950–16010), changes the display bytes. The map change keeps
 the dot gone.
 
-**Adaptation.** Tile-room redraws the full screen from the current map at
-each move, then draws the actor. No saved background can bring back a
-collected item. This does more work than a redraw of changed cells only. It
-does not wait for vertical blanking, and we did not measure its time. The map
-is 48 bytes and the five pictures are 40 bytes.
+**Adaptation.** Tile-room draws the full room from the map once. After each
+accepted move, it draws the cell that the actor left from the map, then the
+actor. Its `full` variant draws all 48 cells and the actor after each move.
 
-**Proposal.** After the full redraw works, redraw only the cells that changed
-or that an actor covered. Restore them from the map before you draw actors.
-For a scroller, key each screen cell with its world cell and a revision of its
-content. Then a camera move and a door change each cause a redraw. Gloom's
+No saved background can bring back a collected item, because each cell comes
+from the map. Neither method waits for vertical blanking, and we did not
+measure their time. The map is 48 bytes and the five pictures are 40 bytes.
+
+**Proposal.** When a map change can occur away from the actor, such as a door
+that opens, draw that cell too. Restore cells from the map before you draw
+actors.
+
+For a scroller, key each screen cell with its world cell and a revision of
+its content. Then a camera move and a door change each cause a redraw. Gloom's
 column records suggested this key
 ([animation guide](animation.md#decide-what-to-redraw)).
 
@@ -133,19 +137,22 @@ the path or use short substeps.
 
 ## What the tile-room example checks
 
-**Measured.** `uv run python scripts/coco.py check examples/tile-room` runs
-41 scripted moves on CoCo 1 and CoCo 2. Both are NTSC, 32 KiB, normal-clock,
-non-T1 configurations of the pinned instrumented XRoar. At each of the 42
-frames, the check compares these items with `expected.py`:
+**Measured.** `uv run python scripts/coco.py check examples/tile-room --video`
+runs 41 scripted moves on CoCo 1: NTSC, 32 KiB, normal clock, non-T1, with
+the pinned instrumented XRoar. It runs both redraw methods.
 
-- all 6,144 screen bytes and every map byte
-- four guard bytes, the actor position, the accept flag and the script step
-- all 98,304 samples of the rendered 512×192 frame
+At each of the 42
+frames, the check compares all 6,144 screen bytes and all 98,304 samples of
+the rendered 512×192 frame with `expected.py`.
+
+The collected item shows on the screen, so the screen also checks the map change. Both methods must match
+the same model.
 
 The moves hit all four edges and walls from four sides. They collect the
 item, leave, return and cross the exit. `expected.py` walks the room from text
-drawings and does not read the assembly, the PNG or RAM. Integration tests in
-`scripts/coco_spec.py` change one pixel, write past the screen, remove the
+drawings and does not read the assembly, the PNG or RAM.
+
+Integration tests in `scripts/coco_spec.py` change one pixel, remove the
 actor picture and convert 16×16 pictures. Each one must fail.
 
 The check does not show a television, a physical CoCo or keyboard input. It
@@ -194,8 +201,8 @@ Reopen the hunt only when both of these are true:
 A title or a directory name is not a lead. Read only the cited routines of
 that lead.
 
-Nothing tests dirty-cell redraw, strip scrolling, two buffers, smooth
-movement, PacDude's diagonal rule, overlays or transparent tiles. For each,
+Nothing tests a redraw of cells away from the actor, strip scrolling, two
+buffers, smooth movement, PacDude's diagonal rule, overlays or transparent tiles. For each,
 compare the result with a full redraw from the map. Include crossings,
 reversals, map changes and camera jumps of more than one cell.
 

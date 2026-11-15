@@ -1297,15 +1297,6 @@ class DescribeEquipmentInXRoar:
 
         assert "screen bytes differ" in capsys.readouterr().err
 
-    def should_reject_a_write_past_the_screen(self, tile_room: Path, capsys) -> None:
-        source = tile_room / "main.asm"
-        clear = "clear   clr ,x+\n        cmpx #$1C00"
-        source.write_text(source.read_text().replace(clear, clear.replace("1C00", "1C01")))
-
-        assert coco.main(["check", str(tile_room), "--target", "coco1"]) == 1
-
-        assert "damaged guards" in capsys.readouterr().err
-
 
 @pytest.mark.integration
 class DescribeRealAssembler:

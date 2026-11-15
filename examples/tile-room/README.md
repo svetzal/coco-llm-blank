@@ -1,254 +1,172 @@
-# A small room with persistent map state
+# Keep the room in a tile map, and draw it from the map
 
-This original demo implements the fixed-room adaptation in
-[Build a room from tiles](../../guidance/techniques/tile-maps.md).
-It is an adaptation of that guide's design, not a historical reproduction or
-a PacDude port. All code, map data, and byte-aligned artwork here are original.
+This example keeps the state of a room in a map of tile numbers. Drawing and
+movement both read the map. One table gives the picture of each tile number. A
+second table gives its movement rule: the program refuses a move onto a wall.
 
-The actor follows a finite script through an asymmetric room. Walls block
-movement. Collecting the diamond changes its map entry to floor.
+To change the room, the program changes the map. When the actor moves onto
+the collectible, the program writes floor to its cell in the map. The next
+redraw of that cell shows floor.
 
-Walking away and returning does not restore the diamond. The exit is a
-distinct passable picture. It has no victory rule. There is no keyboard system.
+The example does not read the keyboard, scroll, animate or time the frames.
+It has no victory rule: the exit is only a different picture. It does not
+draw a tile at a pixel position inside a byte or with transparent pixels.
 
-## Run and check
+The context plays a fixed script of 41 moves. The
+[tile-map guide](../../guidance/techniques/tile-maps.md) gives the method and
+its sources.
 
-Run these commands from the repository root, with the existing native tools
-and verified firmware:
+## Choose how to redraw after a move
+
+Redraw only the changed cells. This is the default. It suits most games: the
+work for each move does not increase with the size of the room.
+
+| Method | Variant | Cells drawn after a move | Bytes copied | Shows a map change at |
+| --- | --- | --- | --- | --- |
+| Changed cells | (none) | 2: the cell that the actor left, then the actor | 16 | The cells that you draw |
+| Full | `full` | 49: all 48 cells, then the actor | 392 | Every cell |
+
+- After a refused move, the changed-cells method draws nothing. The full
+  method draws all 49 cells again.
+- With changed cells, draw each cell whose map entry changes. In this
+  example, only the cell under the actor changes, so the cell that the actor
+  left is enough. A door that opens away from the actor needs its own
+  draw.
+- Use the full method when many cells change at a time, or to find a bug in
+  a changed-cells redraw.
+
+Both methods must show the same picture after each move. The check uses the
+same model for both.
+
+The map uses one byte for each cell. The tile numbers are:
+
+| Number | Tile | Picture | Movement rule |
+| --- | --- | --- | --- |
+| 0 | Floor | Blank | Permit |
+| 1 | Wall | Brick | Refuse |
+| 2 | Collectible | Diamond | Permit, then becomes floor |
+| 3 | Exit | Box | Permit |
+| 4 | Actor | Figure | Not in the map |
+
+Other ways that this example does not show:
+
+- Keep the movement rule in bits of the tile number, not in a table.
+- Use wider pictures, such as 16×16 pixels, with two or more bytes for each
+  picture row.
+- Keep a copy of the screen cells, and draw only the cells that differ from
+  the map.
+
+## Keep the room in the map
+
+The example is the five `>>> EXAMPLE` parts of [main.asm](main.asm):
+
+1. At `start`, after the screen setup, copy `initial_map` to `room`. Then
+   draw the full room. The room map is in RAM, because a move changes it.
+
+2. At `draw_room`, `draw_cell` and `draw_picture`, draw from the map:
+   1. Read the tile number at `room + row × 8 + column`.
+   2. Find its picture in the `pictures` table.
+   3. Find the screen address of the cell: `$0400 + row × 256 + column`.
+      RG6 has 32 bytes in each pixel row, and a cell is 8 pixel rows.
+   4. Copy the 8 rows of the picture, 32 bytes apart.
+
+   `draw_actor` draws picture 4 at the actor's cell.
+
+3. At `move`, try a move to the next cell:
+   1. Refuse a move past the room edge before you calculate a map address.
+      One unsigned test finds both edges, because -1 is `$FF`.
+   2. Read the tile number of the new cell. Refuse the move if its entry in
+      `passable` is 0.
+   3. If the tile is the collectible, write floor to the map.
+   4. Keep the old cell in `old_x` and `old_y`. Set `accepted` to 1.
+
+4. At `redraw`, show the move. The plain build draws the cell that the actor
+   left, from the map, then the actor. The `full` variant calls `draw_room`.
+
+5. At `pictures`, `passable`, `deltas`, `initial_map` and `room`, keep the
+   tables and the map.
+
+The `--- CONTEXT` blocks are not part of the practice:
+
+- They set up RG6 at `$0400` with colour set 0, as in
+  [first-screen](../first-screen/README.md). They clear the screen once.
+- They include `tiles.asm`, which [prepare.py](prepare.py) converts from
+  [tiles.png](tiles.png) before each build.
+
+  The drawing has five cells. From left to right, they are floor, wall,
+  collectible, exit and actor. The
+  [assets guide](../../guidance/techniques/assets.md#convert-the-pictures-at-each-build)
+  gives this method.
+- They play the 41 moves in `moves`, with a pause after each move.
+
+The program keeps the interrupts, stack, direct page and CPU clock that BASIC
+sets. The `state` label is data. The check fails if the CPU runs it.
+
+## See and check each method
+
+Open a terminal in the starter folder. Copy one line and paste it to see that
+method in XRoar. The actor plays the script once and stops. Close the window
+to stop XRoar.
 
 ```sh
-uv run python scripts/coco.py check examples/tile-room
-uv run python scripts/coco.py run examples/tile-room --target coco1
+uv run python scripts/coco.py run examples/tile-room                 # changed cells
+uv run python scripts/coco.py run examples/tile-room --variant full  # full
 ```
 
-`check` covers both targets declared in [coco.toml](coco.toml) and keeps a
-result file for each target. Add `--target coco2` to check one target.
-Frame N of the check shows the room after N - 1 moves.
-
-At each frame, `check` compares screen memory and also XRoar's rendered picture, so it uses the
-instrumented XRoar.
-
-`check` runs headlessly. `run` opens XRoar, moves through the script once,
-and holds the final picture. Close XRoar to stop it.
-
-There is no return to BASIC. This is direct DECB auto-run, not disk-loading
-evidence. `--help` and invalid arguments do not build or launch anything.
-
-A check removes the previous success record of the target before it builds.
-The independent model and its specifications are [expected.py](expected.py)
-and [tile_room_spec.py](tile_room_spec.py):
+To check both methods, paste this line:
 
 ```sh
-COVERAGE_FILE=build/tile-room/.coverage \
-  uv run pytest examples/tile-room \
-  --basetemp=build/tile-room/pytest --cov=examples/tile-room --cov-report=term-missing
+uv run python scripts/coco.py check examples/tile-room --video
 ```
 
-Generated binaries, symbols, snapshots, logs, and success records stay under
-ignored `build/tile-room/`. No firmware or downloaded source is distributed.
+The `--video` option needs the
+[instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar).
 
-## Target and layout
+The check takes a snapshot at the start and after each of the 41 moves. It
+compares all 6,144 screen bytes and XRoar's rendered picture with
+[expected.py](expected.py).
 
-The task specifies CoCo 1 and CoCo 2, NTSC, 32 KiB, a normal-clock 6809,
-and a non-T1 MC6847. Both checks use XRoar's `cocous` architecture with explicit
-`-vdg-type 6847`, `-machine-cpu 6809`, `-tv-type ntsc`, and `-ram 32`.
-`scripts/coco.py` passes `-no-c` to exclude user configuration.
+The model in `expected.py` walks the room from a text drawing of the map and
+the move script. It draws each picture from a text drawing. It does not read
+`main.asm`, `tiles.png` or the converted bytes.
 
-CoCo 1 uses verified `bas11.rom`. CoCo 2 uses verified `bas12.rom`. Neither
-target loads Extended BASIC. These are defined emulator configurations, not
-evidence for every board revision.
+The moves include these cases:
 
-The display is RG6, 256×192, one bit per pixel, with 32 bytes per row and
-6,144 bytes total. CSS is zero (black/green).
+- A move past each of the four room edges.
+- A move into a wall from each of the four sides.
+- A move onto the collectible, away from it, and back onto its cell.
+- A move onto the exit, away from it, and back.
 
-The 8×6 room occupies the upper left 64×48 pixels. The program clears the rest
-of the screen. This deliberately small room keeps the map, drawing, and
-movement rules easy to inspect.
+The check uses the CoCo 1 target in [coco.toml](coco.toml): NTSC, 32 KiB,
+normal clock, the non-T1 MC6847 and Color BASIC 1.1. It does not prove the
+result on a television, a physical CoCo, PAL, the MC6847T1 or the CoCo 3.
 
-| Allocation | Address interval |
-| --- | --- |
-| Framebuffer | `$0400–$1BFF` |
-| Framebuffer guards | `$03FF`, `$1C00` |
-| Code, art, script and state | `$3000` to `program_end - 1` |
-| Map | `room` through `room + 47`, with adjacent guards |
-| Stack reservation | `$7E00–$7EFF`, initial S=`$7F00` |
+The program draws into the screen that the VDG shows, with no vertical sync.
+The check does not measure the time of a redraw.
 
-The build rejects incorrect placement or overlap with the stack reservation.
-The program masks IRQ/FIRQ and initializes its state even with nonzero RAM.
-PIA setup selects the data register and preserves the low three shared bits.
+## Sources
 
-SAM strobes select base `$0400`, mode `110`, page zero, and normal clock.
-The program calls no ROM routines after entry.
+Read these pages before you change the screen setup, the bit order or the
+screen address of a cell. Use
+[reference lookup](../../guidance/starter/references.md) to get them.
 
-## Separate the map, movement and picture
+- Inman, Inman and Dymax, *Assembly Language Graphics for the TRS-80 Color
+  Computer*, PDF 106–107: mode 6R is 256×192 at `$0400`–`$1BFF` and uses
+  6 KiB. Each byte gives eight pixels. With colour set 0, a 0 bit shows black
+  and a 1 bit shows green.
 
-The map uses one byte per cell, with an eight-byte row stride. Tile IDs are
-floor 0, wall 1, collectible 2, and exit 3.
+- Motorola, *MC6847 Video Display Generator* datasheet, PDF 19, Table 3: RG6
+  has 256 pixels in each row and uses 6,144 bytes. Bit 7 is the leftmost
+  pixel of a byte.
 
-The actor image is 4 but is never stored in the map. A separate property table
-says which scenery permits travel.
+- Tandy, *Color Computer Technical Reference Manual*, PDF 14–15: the `$FF22`
+  bits, and the SAM offset and mode bits. PDF 31: RG6 uses SAM V=`110` and
+  `$FF22` bits 7 to 4 `1111`.
 
-```text
-..#.....
-.*#..#..
-..#.....
-....##..
-.#......
-......E.
-```
+The cell address is our arithmetic from these values. The map, the tables,
+the pictures and the moves are our own design.
 
-The actor starts at column 0, row 0. Each move proposes an adjacent cell.
-The program rejects unsigned underflow and upper limits before it indexes the
-map.
-
-Then the tile's property permits or rejects the move. An accepted collectible
-becomes floor in the map before rendering.
-
-Each tile is eight bytes: one byte for each of eight pixel rows. For cell
-column `c` and row `r`, map offset is `r * 8 + c`.
-
-## Prepare the pictures from a drawing
-
-The five pictures are the cells of [tiles.png](tiles.png), left to right:
-floor, wall, collectible, exit and actor. Each cell is 8×8 source pixels, one
-source pixel for each RG6 pixel.
-
-Before each build, [prepare.py](prepare.py)
-deletes the old output and converts the drawing with `scripts/graphics.py`.
-The result is `tiles.asm` in the build folder, with the labels `tiles_r0c0` to
-`tiles_r0c4`. The [assets guide](../../guidance/techniques/assets.md) gives
-the method.
-
-The `pictures` table in `main.asm` gives the picture label for each image ID.
-The assembly stops in these conditions:
-
-- The table names a picture that the drawing does not have.
-- A picture is not eight rows of one byte. The program tests the `_bpr` and
-  `_rows` values that `graphics.py` writes.
-- The conversion failed. Then there is no `tiles.asm`.
-
-The first display byte is `$0400 + r * 256 + c`. The image rows after the
-first are 32 bytes apart. The lower-right cell starts at `$0907`, with its
-final row at `$09E7`.
-
-These address calculations are derived. The complete framebuffer oracle checks
-them independently.
-
-Every checkpoint redraws the entire framebuffer from current map state. It
-then draws the actor. No saved background can reintroduce a collected item.
-
-This approach is simple but does more work than dirty-cell drawing. It does
-not synchronize to vertical blanking. This README makes no claim about
-smoothness or frame rate.
-
-## Source facts and provenance
-
-The following hardware page images were read before implementation. Their
-facts support the display setup. The room and movement rules are our design.
-
-SHA-256 values identify the exact PDFs that were examined locally.
-
-- Tandy, [Color Computer Technical Reference Manual][technical].
-  - PDF 14 (printed 7): `$FF22` video fields and `$FF23` data-register
-    selection.
-  - PDF 15 (printed 8): SAM display-offset, video-mode, page and CPU-rate
-    strobes.
-  - PDF 31 (printed 24): 256×192 uses SAM `110` and PIA bits 7–4 `1111`.
-  - SHA-256 `8c4ed0c6de6e54f941932999d6750202f75102bff061f215b2dd3f757067cc64`.
-
-- Tandy, [Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)][service],
-  PDF/printed 31: MC6847 video, SAM addressing, and PIA-controlled mode inputs.
-  SHA-256 `7210e7a0da2b5211bc95a5833759a15fb575a5cc5787a0d9cbfa3c09b1622447`.
-
-- Don Inman, Kurt Inman with Dymax,
-  [Assembly Language Graphics for the TRS-80 Color Computer][graphics],
-  PDF 107 (printed 98).
-  - Eight graphic elements per byte and black/green color set zero.
-  - SHA-256 `c1259497b7d1505e6908fd3c8a250d47e0c4b549140e308bdc6bf8e345b6ce01`.
-
-- Motorola, [MC6847 datasheet][vdg], PDF/printed 19, Table 3.
-  - RG6 is 256×192 and 6,144 bytes.
-  - Pixel order runs L7 through L0 across the byte.
-  - SHA-256 `2d4586d2fd3c82c60071bbe4cc3930e561c00dce1e43245b0c7ffd5e081fe88c`.
-
-The guide's reading of the PacDude source gave the separation of map
-addressing, display addressing and movement rules. This example does not
-copy its renderer or its diagonal-path collision. The guide lists the
-[archive sources](../../guidance/techniques/tile-maps.md#sources).
-
-## Evidence and limits
-
-`coco.py check` compares all 42 checkpoints on each defined target. The
-specifications in `tile_room_spec.py` test the model and the conversion. The
-full starter suite runs them with `uv run pytest`.
-
-The two result files record the same binary SHA-256 and each target's
-checkpoint list.
-
-The independent host oracle walks a graph of passable cells. It then composes
-pixels from text drawings. To derive its expectations, it does not read the
-assembly map, art, script, or captured RAM.
-
-The specifications also assert literal positions at selected checkpoints. They
-do not trust the oracle alone.
-
-All 42 checkpoints cover every scripted move and the initial picture:
-
-- Left and top boundary rejection at steps 1 and 2, right at 20, bottom at 26.
-- Walls approached from left, below, above and right at steps 4, 9, 17 and 35.
-- Collection at 5, departure at 6, return at 39, departure at 40 and return
-  at 41.
-- Exit traversal at 27, departure at 28, and return at 29.
-- At every checkpoint on both targets:
-  - every map byte
-  - all 6,144 framebuffer bytes
-  - four guards
-  - actor coordinates
-  - acceptance flag
-  - script step
-
-The check starts with nonzero RAM and needs a completed-frame PC trap.
-A data-address trap must never fire.
-
-Negative controls corrupt the screen, map, guards and state, and deliberately
-select missing or unexpected traps. Firmware tests cover missing, partial and
-corrupt installations. Help and argument tests intercept process execution to
-prevent accidental launches.
-
-Initial CoCo 1 checking reached step 34 but missed 35 under a budget of
-ten seconds of emulated time. Raising that budget to 60 allowed the complete
-script. The host still limits each capture to 30 seconds.
-
-The failed check did not write a success record. This was a correction to the
-test budget, not a speed claim.
-
-Assembly and emulator RAM evidence are distinct from rendered-display evidence.
-
-Later, the pictures moved from hand-written bytes to `tiles.png` and
-`prepare.py`, and the check started to compare XRoar's rendered picture.
-
-With the pinned XRoar, all 42 frames on both targets match `expected_frame`
-in all 98,304 samples. The art in `expected.py` is text drawings, not the
-drawing or the converted bytes. Integration tests in `scripts/coco_spec.py`
-make sure that these changes fail:
-
-- One changed pixel in `tiles.png` (7 screen bytes differ at frame 1).
-- A clear loop that writes one byte past the screen (a damaged guard).
-- A drawing without the actor's cell (the assembler stops).
-- Pictures converted at 16×16 (the assembler stops).
-
-These items remain untested:
-
-- appearance on a television or monitor
-- real keyboard input
-- physical hardware
-- PAL
-- T1
-- CoCo 3
-- audio
-- performance
-
-[technical]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf>
-[service]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf>
-[graphics]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf>
-[vdg]: <https://people.ece.cornell.edu/land/courses/ece4760/ideas/mc6847.pdf>
+The
+[tile-map guide](../../guidance/techniques/tile-maps.md#sources) gives the
+historical sources that we read, such as *PacDude Monster Maze*. This example
+does not copy their code.

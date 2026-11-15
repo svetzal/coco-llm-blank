@@ -159,12 +159,12 @@ results from the articles.
 
 ## What the examples check
 
-`uv run python scripts/coco.py check examples/tile-room` converts `tiles.png`,
-assembles, and runs 42 moves on CoCo 1 and CoCo 2 with the pinned instrumented
-XRoar. At each move it compares all 6,144 screen bytes, the map, four guards
-and the rendered frame with the model in `expected.py`. Integration tests in
-`scripts/coco_spec.py` cause a changed pixel, a missing cell, 16×16 pictures
-and a write past the screen. Each one must fail.
+`uv run python scripts/coco.py check examples/tile-room --video` converts
+`tiles.png`, assembles, and runs 41 moves on CoCo 1 with the pinned
+instrumented XRoar. At the start and after each move, it compares all 6,144
+screen bytes and the rendered frame with the model in `expected.py`.
+Integration tests in `scripts/coco_spec.py` cause a changed pixel, a missing
+cell and 16×16 pictures. Each one must fail.
 
 Collect-room's check runs its converted terrain through a key journey on
 CoCo 1 and CoCo 2B. Neither check shows a television or a physical CoCo.

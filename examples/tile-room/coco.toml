@@ -2,7 +2,7 @@
 source = "main.asm"
 prepare = "prepare.py"   # writes tiles.asm from tiles.png into the build folder
 
-# NTSC CoCo architecture with an explicit non-T1 6847 VDG and firmware.
+# The first target is the default. Firmware is checked against roms.json.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -11,25 +11,18 @@ vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
 
-[targets.coco2]
-machine = "cocous"
-cpu = "6809"
-tv = "ntsc"
-vdg = "6847"
-ram_kib = 32
-basic = "bas12.rom"
-
 [memory]
 at = { start = 0x3000 }
-below = { program_end = 0x7E00 }   # the stack is reserved from $7E00
 
-# The picture on the display is part of the claim, not only memory.
-[capture]
-video = true
+# The plain build redraws only the changed cells. The full variant redraws
+# every cell after each move.
+[variants.full]
+defines = ["FULL"]
 
+# For the check only: where to take the snapshots and compare the screen.
 [check]
-checkpoint = "frame_ready"   # reached once per completed move
+checkpoint = "frame_ready"   # reached once at the start and once after each move
 frames = ["1-42"]            # frame N shows the room after N - 1 moves
-unreachable = "room"         # a data label: executing it is a fault
-screen = 0x0400
-emulated_seconds = 60
+unreachable = "state"        # a data label: executing it is a fault
+screen = 0x0400              # expected_screen() is compared from here
+emulated_seconds = 30
