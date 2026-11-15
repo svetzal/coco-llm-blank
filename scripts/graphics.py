@@ -168,7 +168,8 @@ class Palette(BaseModel):
 XROAR = Palette(
     name="xroar",
     description=(
-        "Measured from XRoar 1.12.1 (with this starter's instrumented patch series) through "
+        "Measured from XRoar 1.12.1 (with this starter's instrumented patch series; the "
+        "palette-swatches rendered check also passes on 1.13) through "
         "scripts/coco.py's rendered-frame capture: S-video input, cross-colour off, active "
         "area only (-tv-input svideo -ccr none), machine cocous, NTSC, VDG 6847. "
         "examples/palette-swatches shows every colour in CG6 and RG6 with both colour sets. "
@@ -188,7 +189,8 @@ XROAR = Palette(
 )
 """XRoar's rendered colours, measured from captures of examples/palette-swatches.
 
-XRoar 1.12.1, instrumented build, `scripts/coco.py` renderer path: S-video palette without
+XRoar 1.12.1, instrumented build (the palette-swatches rendered check also passes on 1.13),
+`scripts/coco.py` renderer path: S-video palette without
 cross-colour artifacts (`-tv-input svideo -ccr none`), active area only, NTSC `cocous` with a
 6847 VDG. Black in the two-colour modes is shown as (0, 31, 0) with CSS=0 and (13, 13, 13)
 with CSS=1. They approximate one emulator path, not a real television.

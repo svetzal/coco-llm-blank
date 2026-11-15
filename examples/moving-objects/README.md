@@ -136,7 +136,8 @@ The selected boundaries and their following frames check motion reversal.
 Tests also reject corrupted RAM, guards, positions, and frame counters.
 
 XRoar 1.12.1 passed these checks for both defined configurations on the
-development Mac with Apple Silicon.
+development Mac with Apple Silicon. On 2026-11-14 they also passed on
+XRoar 1.13.
 
 Native tests start with nonzero RAM. `-no-ratelimit` accelerates host execution.
 The emulated CPU remains at its normal clock.

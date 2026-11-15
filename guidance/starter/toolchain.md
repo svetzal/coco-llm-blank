@@ -205,6 +205,14 @@ items:
 - The URL and SHA-256 of the source archive
 
 The native installer's Ubuntu build of the ordinary XRoar reads the same file.
+On macOS, Homebrew supplies the ordinary XRoar, so its version can differ from
+the pin. `uv run python scripts/xroar_upstream.py report` shows both versions.
+When the pin moves, run `brew upgrade xroar`.
+
+In guidance and example READMEs, write "the pinned XRoar" for a current claim.
+Name a release only in a record of a measurement, such as "XRoar 1.12.1 passed
+these checks". Do not edit that record when the pin moves. Add the new release
+only after you run the check again on it.
 The archive is cached under `local/toolchain-sources/` and must match the
 pinned SHA-256.
 

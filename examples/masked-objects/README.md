@@ -162,7 +162,8 @@ stack overlap are rejected too.
 
 XRoar 1.12.1 passed all 12 scenes on both configurations. The scoped suite
 passed 18 tests with 96.09% combined statement and branch coverage. Ruff and
-Markdown checks passed.
+Markdown checks passed. On 2026-11-14 the `coco.py check` also passed on
+XRoar 1.13.
 
 Independent integration review passed the full suite with 195 tests, zero
 skips and 94.65% coverage. Later regression checks for stale evidence and

@@ -128,7 +128,9 @@ It saves each completed frame and uses the last snapshot to bound throughput.
 The incomplete final frame accounts for the 256-sample uncertainty.
 Host acceleration changes test duration, not the selected CoCo clock.
 
-Results on XRoar 1.12.1 on Apple Silicon macOS:
+Results on XRoar 1.12.1 on Apple Silicon macOS. On 2026-11-14 the
+`coco.py check` also passed on XRoar 1.13, and the patch trial for 1.13 gave
+identical sound captures. We did not measure these counts again on 1.13.
 
 - Normal input: 11–30 instructions between DAC writes.
 - Scripted input: 11–38 instructions. The extra instructions belong to the fixture.
