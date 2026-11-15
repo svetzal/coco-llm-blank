@@ -22,6 +22,18 @@ to the selected machine.
 - A page at a URL: give the author, the title, the place and date of
   publication, the URL and the date that you read it. Examples are a magazine
   scan, a blog post, a Usenet post and a datasheet.
+- Add a Wayback Machine link to a URL citation. Then the source stays readable
+  when the page changes or goes away. This command finds the copy nearest the
+  date that you read the page:
+
+  ```sh
+  curl -s "https://archive.org/wayback/available?url=<address>&timestamp=<YYYYMMDD>"
+  ```
+
+  The answer holds a `web.archive.org` link and the date of that copy. Open
+  the link and make sure that the copy shows the passage that you cite. If
+  there is no copy, write "no archived copy" in the citation. Do not ask the
+  service to save a page unless the owner asks.
 - Say what the source is: a document from the maker, the report of one person,
   or a discussion. One post is a report, not a specification.
 - A page can change or go away. Write the fact in your own words beside the

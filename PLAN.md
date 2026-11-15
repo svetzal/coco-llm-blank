@@ -63,7 +63,8 @@ guide states:
 - Practical steps, memory and timing tradeoffs, and likely failure cases.
 - Inline citations beside sourced claims: author, title, edition or issue,
   PDF page (printed page when known) and resource ID. For a page at a URL,
-  give the author, title, date, URL and the date read. Cite only read passages.
+  give the author, title, date, URL, date read and Wayback Machine link. Cite
+  only read passages.
   Inspect diagrams and listings as images when conversion is uncertain.
 - Which claims are published explanations, our adaptations, derived
   calculations, measured results or untested proposals.
