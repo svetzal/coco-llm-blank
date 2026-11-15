@@ -997,6 +997,45 @@ class DescribeEquipmentInXRoar:
 
         assert "Frame 1: rendered display:" in capsys.readouterr().err
 
+    def should_show_partial_erasure_when_the_shown_screen_is_redrawn(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        if not instrumented_ready("coco1"):
+            pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
+        directory = tmp_path / "page-flip-copy"
+        shutil.copytree(ROOT / "examples/page-flip", directory)
+        source = directory / "main.asm"
+        source.write_text(source.read_text().replace("eora #$20", "eora #0"))
+        settings = directory / "coco.toml"
+        single = settings.read_text().replace("frames = [1, 2, 15,", "frames = [1] # ")
+
+        settings.write_text(single.replace("video = true", "video = false"))
+        assert coco.main(["check", str(directory), "--target", "coco1"]) == 0
+        settings.write_text(single)
+        assert coco.main(["check", str(directory), "--target", "coco1"]) == 1
+
+        assert "Frame 1: rendered display:" in capsys.readouterr().err
+
+    def should_reject_a_wrong_coco3_display_base_that_memory_accepts(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        if not instrumented_ready("coco3"):
+            pytest.skip("Native tools, CoCo 3 firmware or instrumented build tools are missing")
+        directory = tmp_path / "page-flip-coco3-copy"
+        shutil.copytree(ROOT / "examples/page-flip-coco3", directory)
+        source = directory / "main.asm"
+        source.write_text(source.read_text().replace(" sta $FF9D", " inca\n sta $FF9D"))
+        settings = directory / "coco.toml"
+        shown = settings.read_text().replace('frames = ["1-6"]', "frames = [1]")
+        arguments = ["check", str(directory), "--target", "coco3-128"]
+
+        settings.write_text(shown.replace("video = true", "video = false"))
+        assert coco.main(arguments) == 0
+        settings.write_text(shown)
+        assert coco.main(arguments) == 1
+
+        assert "Frame 1: rendered display:" in capsys.readouterr().err
+
     def should_reject_an_expected_frame_with_reversed_bit_order(
         self, first_screen: Path, capsys
     ) -> None:

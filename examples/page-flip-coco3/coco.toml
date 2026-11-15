@@ -1,0 +1,36 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# NTSC CoCo 3, 6809 at the normal low rate, GIME 1986. The two tables differ
+# only in RAM size; both use physical pages 2 and 3 for the buffers.
+[targets.coco3-128]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"
+
+[targets.coco3-512]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 512
+extended = "coco3.rom"
+
+[memory]
+at = { start = 0x3000 }
+below = { state_end = 0x40FF }   # buffer A's guard
+
+# The point of this example is the picture on the display, not only memory.
+[capture]
+video = true
+
+[check]
+checkpoint = "published"         # reached once per scene, after the flip
+frames = ["1-6"]                 # scenes 0-4 on both buffers, then the wrap to 0
+unreachable = "state"            # a data label: executing it is a fault
+emulated_seconds = 10

@@ -109,9 +109,10 @@ Every frame draws the complete current background before either object.
 There is no saved image that can accidentally restore old scenery.
 Changing layer order and inverting the background exercise that distinction.
 
-This simplicity costs a full framebuffer redraw per frame. The program does
-not synchronize with vertical blanking, so it may flicker or tear.
-No frame-rate or smoothness measurement is claimed.
+This simplicity costs a full framebuffer redraw per frame. The program draws
+into the screen that the display shows, so the display can show a frame that is
+not complete. The [page flip](../page-flip/README.md) example draws the same
+scene into a hidden screen. Its rendered check shows the difference.
 
 ## Emulator checks
 

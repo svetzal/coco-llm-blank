@@ -1,0 +1,37 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# NTSC CoCo architecture with an explicit non-T1 6847 VDG and firmware.
+# Do not use the CoCo 2B T1 default for the non-T1 board reference.
+[targets.coco1]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas11.rom"
+extended = "extbas10.rom"
+
+[targets.coco2]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
+[memory]
+at = { start = 0x4000 }
+below = { program_end = 0x7E00 }   # the stack is reserved from $7E00
+
+# The point of this example is the picture on the display, not only memory.
+[capture]
+video = true
+
+[check]
+checkpoint = "published"           # reached once per frame, after the flip
+# Both screens, overlap swaps, edge reflections and the scenery change.
+frames = [1, 2, 15, 16, 17, 31, 32, 46, 64, 65, 185, 186, 369, 370]
+unreachable = "state"              # a data label: executing it is a fault
+emulated_seconds = 60

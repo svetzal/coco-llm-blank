@@ -13,6 +13,8 @@ instructions for playing.
 | Check a first CoCo 1 screen | [First screen](first-screen/README.md) | Border and square. A setup checkpoint, not a game. |
 | See every VDG graphics colour | [Palette swatches](palette-swatches/README.md) | CG6 and RG6 bars for both colour sets. The evidence for the `xroar` palette in `scripts/graphics.py`. |
 | Redraw objects over scenery | [Moving objects](moving-objects/README.md) | Ordered opaque rectangles over a changing background. |
+| Show only finished frames | [Page flip](page-flip/README.md) | The moving-objects scene, drawn into a hidden screen on CoCo 1/2. Rendered check at every flip. |
+| Show only finished frames on CoCo 3 | [Page flip on CoCo 3](page-flip-coco3/README.md) | Native GIME buffers at 128 and 512 KiB. Rendered check at every flip. |
 | Draw transparent and opaque pixels | [Masked objects](masked-objects/README.md) | Software masks over patterned scenery. |
 | Keep room state separate from drawing | [Tile room](tile-room/README.md) | Scripted movement and collection. No keyboard or victory rule. |
 | Combine sound, drawing and input | [Sound slots](sound-slots/README.md) | Cooperative scheduling probe, not a music engine. |
