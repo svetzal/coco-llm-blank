@@ -1,5 +1,6 @@
-# Held keys for each frame of the hit variant: two still grunts, at x 100,
-# y 90 and at x 100, y 40. The player starts at 61 95. Written by hand:
+# Held keys for each frame of the hit variant: a still grunt at x 100, y 90
+# and a still hunter at x 100, y 40. The score starts at 990. The player
+# starts at 61 95. Written by hand:
 # a right shot starts at x 62, row y + 4, and moves 6 pixels a frame. It
 # overlaps a grunt at x 100 when x + 4 > 100, 6 frames after it starts.
 -      61 95
@@ -10,11 +11,11 @@
 ;
 ;
 ;
-;      61 95  frame 9: shot 1 hits (explosion sound)
+;      61 95  frame 9: shot 1 hits: 1000 points, an extra life (extra sound)
 ;
 ;
 ;
-W      61 91  up toward the y 40 grunt
+W      61 91  up toward the y 40 hunter
 W
 W
 W
@@ -26,14 +27,14 @@ W
 W
 W
 W
-W      61 43  row 47 is inside the grunt (rows 40-49)
+W      61 43  row 47 is inside the hunter (rows 40-49)
 ;      61 43  frame 26: a shot at row 47; hits at frame 32
 ;
 ;
 ;
 ;
 ;
-;      61 95  frame 32: the last grunt is hit: level 2 starts (level sound)
+;      61 95  frame 32: the hunter is hit: 1050 points, level 2 (level sound)
 ;
 ;
 ;

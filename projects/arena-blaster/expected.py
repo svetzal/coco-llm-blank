@@ -52,34 +52,54 @@ SEED = 0xACE1
 CONTROLS = {
     "": set(),
     "moves": {"NO_ENEMIES"},
-    "hit": {"FIXED_GRUNTS", "STILL"},
-    "touch": {"FIXED_GRUNTS"},
+    "hit": {"FIXED_ENEMIES", "STILL"},
+    "touch": {"FIXED_ENEMIES"},
     "hunter": {"NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"},
     "level10": set(),
+    "over": set(),
 }
 START_LEVEL = {"level10": 10}
+START_LIVES = {"over": 1}
+START_SCORE = {"hit": 990}
+# Score and lives (README.md "Score and lives").
+POINTS = {1: 10, 2: 50}  # grunt, hunter
+EXTRA_EVERY = 1000
+LIVES = 3
+DYING_FRAMES, OVER_FRAMES = 45, 90
+HUD_ROW, ICONS = 3, 6
 SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt"}
-# Sound effects from README.md "Sound": one (mode, period, volume) record a field,
-# so two records a frame.
+# Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
+# field plays one record, so each frame plays two.
 SQUARE, NOISE = 0, 0x80
+
+
+def square(*notes: tuple[int, int, int]) -> list[tuple[int, int, int, int]]:
+    return [(SQUARE, p, v, f) for p, v, f in notes]
+
+
 EFFECTS = {
-    "shot": (1, [(SQUARE, p, v) for p, v in ((8, 24), (10, 22), (13, 18), (17, 14), (22, 10))]),
-    "boom": (2, [(NOISE, p, v) for p, v in
+    "shot": (1, square((8, 24, 1), (10, 22, 1), (13, 18, 1), (17, 14, 1), (22, 10, 1))),
+    "boom": (2, [(NOISE, p, v, 1) for p, v in
                  ((2, 44), (2, 40), (3, 34), (3, 28), (4, 22), (4, 16), (5, 10), (6, 6))]),
-    "hunter": (3, [(SQUARE, p, 26) for p in (10, 10, 14, 14, 10, 10, 14, 14)]),
-    "level": (4, [(SQUARE, p, 28) for p in (30,) * 3 + (22,) * 3 + (16,) * 3 + (11,) * 3]
-              + [(SQUARE, 11, 20), (SQUARE, 11, 12)]),
-    "death": (5, [(NOISE, p, v) for p, v in
+    "hunter": (3, square((10, 26, 2), (14, 26, 2), (10, 26, 2), (14, 26, 2))),
+    "level": (4, square((30, 28, 3), (22, 28, 3), (16, 28, 3), (11, 28, 3), (11, 20, 1),
+                        (11, 12, 1))),
+    "extra": (4, square(*[(15, 30, 2), (10, 30, 2)] * 3, (10, 20, 2))),
+    "death": (5, [(NOISE, p, v, 1) for p, v in
                   ((1, 60), (1, 56), (2, 52), (2, 48), (3, 44), (3, 40), (4, 36), (4, 32),
                    (5, 28), (6, 24), (7, 20), (8, 16), (9, 12), (10, 8))]),
+    "start": (6, square((48, 28, 4), (38, 28, 4), (31, 28, 4), (23, 28, 6), (31, 28, 3),
+                        (23, 28, 12), (23, 18, 4), (23, 10, 4))),
+    "over": (6, square((32, 28, 20), (40, 28, 20), (43, 28, 20), (48, 28, 30), (48, 20, 15),
+                       (48, 12, 15))),
 }
 SAFE_X, SAFE_Y = 28, 45
 
 
-def sprites() -> dict[str, list[str]]:
+def sprites(file: str = "sprites.txt") -> dict[str, list[str]]:
     art: dict[str, list[str]] = {}
     name = ""
-    for line in (HERE / "sprites.txt").read_text().splitlines():
+    for line in (HERE / file).read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
@@ -92,6 +112,7 @@ def sprites() -> dict[str, list[str]]:
 
 
 ART = sprites()
+FONT = sprites("font.txt")
 
 
 @dataclass
@@ -127,22 +148,40 @@ class Game:
     effect: str = ""
     record: int = 0
     priority: int = 0
-    sound: tuple[int, int, int] | None = None  # the record of the second field
+    hold: int = 0
+    sound: tuple[int, int, int, int] | None = None  # the record of the second field
+    score: int = 0
+    next_extra: int = EXTRA_EVERY
+    lives: int = LIVES
+    dying: int = 0
+    over: int = 0
 
     def start_sound(self, name: str) -> None:
         if EFFECTS[name][0] >= self.priority:
             self.priority = EFFECTS[name][0]
-            self.effect, self.record = name, 0
+            self.effect, self.record, self.hold = name, 0, 0
 
     def sound_frame(self) -> None:
+        """One field: keep the record for its fields, then take the next one."""
+        if self.hold > 1:
+            self.hold -= 1
+            return
         self.sound = None
         if self.effect:
             records = EFFECTS[self.effect][1]
             if self.record < len(records):
                 self.sound = records[self.record]
+                self.hold = self.sound[3]
                 self.record += 1
             else:
-                self.effect, self.priority = "", 0
+                self.effect, self.priority, self.hold = "", 0, 0
+
+    def add_score(self, points: int) -> None:
+        self.score = (self.score + points) % 1_000_000
+        if self.score >= self.next_extra:
+            self.lives += 1
+            self.next_extra += EXTRA_EVERY
+            self.start_sound("extra")
 
     def rand_step(self) -> None:
         """16-bit shift right; a 1 bit out gives exclusive-or with $B400."""
@@ -175,10 +214,10 @@ def start_level(game: Game) -> None:
     game.hunter_wait = game.hunter_timer = max(45, 330 - 30 * game.level)
     if "HUNTER_SOON" in game.controls:
         game.hunter_wait = game.hunter_timer = 15
-    if "FIXED_GRUNTS" in game.controls:
+    if "FIXED_ENEMIES" in game.controls:
         game.hunter_wait = game.hunter_timer = 0
         game.enemies[0] = Enemy(GRUNT, 100, 90, 1)
-        game.enemies[1] = Enemy(GRUNT, 100, 40, 2)
+        game.enemies[1] = Enemy(HUNTER, 100, 40, PERIOD[HUNTER])
         return
     if "NO_ENEMIES" in game.controls:
         return
@@ -191,8 +230,15 @@ def start_level(game: Game) -> None:
         game.enemies[slot] = Enemy(GRUNT, x, y, slot % 2 + 1)
 
 
-def new_game(variant: str) -> Game:
-    game = Game(level=START_LEVEL.get(variant, 1), controls=frozenset(CONTROLS[variant]))
+def new_game(variant: str, game: Game | None = None) -> Game:
+    """A new game: at power-on, or after the pause that follows game over."""
+    if game is None:
+        game = Game(controls=frozenset(CONTROLS[variant]))
+    game.score = START_SCORE.get(variant, 0)
+    game.next_extra = EXTRA_EVERY
+    game.lives = START_LIVES.get(variant, LIVES)
+    game.level = START_LEVEL.get(variant, 1)
+    game.start_sound("start")
     start_level(game)
     return game
 
@@ -247,6 +293,7 @@ def hit_enemies(game: Game) -> None:
                 game.enemies[j] = None
                 game.slots[i] = None
                 game.start_sound("boom")
+                game.add_score(POINTS[enemy.kind])
                 break
 
 
@@ -283,7 +330,7 @@ def inside(x: int, y: int, name: str) -> bool:
     return MIN_X <= x and x + w <= END_X and MIN_Y <= y and y + h <= END_Y
 
 
-def step(game: Game, keys: str) -> None:
+def step(game: Game, keys: str, variant: str) -> None:
     """One frame of the rules in README.md."""
     game.rand_step()
     keys = read_keys(keys)
@@ -292,6 +339,26 @@ def step(game: Game, keys: str) -> None:
         keys = "".join(k for k in keys if k not in "WS") + "".join(game.last_vertical)
     else:
         game.last_vertical = tuple(k for k in "WS" if k in keys)
+    if game.over:
+        game.over -= 1
+        if game.over == 0:
+            new_game(variant, game)
+    elif game.dying:
+        game.dying -= 1
+        if game.dying == 0:
+            game.lives -= 1
+            if game.lives == 0:
+                game.start_sound("over")
+                game.over = OVER_FRAMES
+            else:
+                start_level(game)
+    else:
+        play(game, keys)
+    game.sound_frame()  # the first field of the frame
+    game.sound_frame()  # the second field: this record plays at the checkpoint
+
+
+def play(game: Game, keys: str) -> None:
     dx, dy = direction(keys, MOVE)
     game.x = min(max(game.x + 2 * dx, MIN_X), END_X - PLAYER_W)
     game.y = min(max(game.y + 4 * dy, MIN_Y), END_Y - PLAYER_H)
@@ -307,13 +374,11 @@ def step(game: Game, keys: str) -> None:
     hit_enemies(game)
     if touched(game):
         game.start_sound("death")
-        start_level(game)
+        game.dying = DYING_FRAMES
     elif not any(game.enemies) and "NO_ENEMIES" not in game.controls:
         game.start_sound("level")
         game.level += 1
         start_level(game)
-    game.sound_frame()  # the first field of the frame
-    game.sound_frame()  # the second field: this record plays at the checkpoint
 
 
 def read_keys(held: str) -> str:
@@ -378,7 +443,7 @@ def _games(frames: int, variant: str) -> list[Game]:
     result = [copy.deepcopy(game)]
     for n in range(frames):
         keys, position = script[n] if n < len(script) else ("", None)
-        step(game, keys)
+        step(game, keys, variant)
         if position is not None and position != (game.x, game.y):
             raise ValueError(
                 f"journey.txt line for frame {n + 1} gives {position}, the rules give "
@@ -413,7 +478,21 @@ def picture(game: Game | None) -> np.ndarray:
             if enemy:
                 stamp(codes, SPRITE[enemy.kind], enemy.x, enemy.y)
         stamp(codes, "player", game.x, game.y)
+        hud(codes, game)
     return codes
+
+
+def hud(codes: np.ndarray, game: Game) -> None:
+    """The 6-digit score at pixels 4-27 and the reserve lives from pixel 120 to the
+    left, on rows HUD_ROW to HUD_ROW + 4. Glyphs from font.txt cover every pixel."""
+    def glyph(name: str, left: int) -> None:
+        for y, row in enumerate(FONT[name]):
+            for x, char in enumerate(row):
+                codes[HUD_ROW + y, left + x] = CODES[char]
+    for k, digit in enumerate(f"{game.score:06d}"):
+        glyph(digit, 4 + 4 * k)
+    for i in range(min(max(game.lives - 1, 0), ICONS)):
+        glyph("life", 120 - 4 * i)
 
 
 def pack(codes: np.ndarray) -> bytes:
@@ -447,6 +526,11 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
             want = (shot.x, shot.y, shot.vx & 0xFF, shot.vy & 0xFF)
             if got != want:
                 raise ValueError(f"Frame {frame}: shot slot {i} is {got}, expected {want}.")
+    bcd = int(ram[symbols["score"] : symbols["score"] + 3].hex())
+    got = (bcd, ram[symbols["lives"]], ram[symbols["dying"]], ram[symbols["over"]])
+    want = (game.score, game.lives, game.dying, game.over)
+    if got != want:
+        raise ValueError(f"Frame {frame}: score, lives, dying, over = {got}, expected {want}.")
     if ram[symbols["level"]] != game.level:
         raise ValueError(f"Frame {frame}: level {ram[symbols['level']]}, expected {game.level}.")
     for i, enemy in enumerate(game.enemies):
@@ -495,7 +579,7 @@ def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
         if len(where):
             raise ValueError(f"Frame {frame}: {len(where)} DAC steps, expected silence.")
         return {"frame": frame, "sound": "silent"}
-    mode, period, volume = record
+    mode, period, volume, _ = record
     want = volume * MIXER_PER_DAC
     if len(where) < 3 or not np.all(np.abs(sizes - want) < 0.1 * want):
         raise ValueError(

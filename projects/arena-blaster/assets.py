@@ -170,6 +170,30 @@ def assembly(sprites: dict[str, list[str]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def glyph_bytes(rows: list[str]) -> list[int]:
+    """One byte for each row of a 4-pixel glyph, leftmost pixel in bits 7-6."""
+    out = []
+    for row in rows:
+        if len(row) != 4 or any(c not in "GYBR" for c in row):
+            raise ValueError(f"Glyph row {row!r}: 4 pixels of G, Y, B or R")
+        value = 0
+        for char in row:
+            value = value << 2 | CODES[char]
+        out.append(value)
+    return out
+
+
+def font_assembly(glyphs: dict[str, list[str]]) -> str:
+    """digits: 5 bytes for each of 0-9. life: 5 bytes."""
+    lines = ["digits"]
+    for digit in "0123456789":
+        lines.append("        fcb " + ",".join(f"${b:02x}" for b in glyph_bytes(glyphs[digit])))
+    lines.append("life_icon")
+    lines.append("        fcb " + ",".join(f"${b:02x}" for b in glyph_bytes(glyphs["life"])))
+    return "\n".join(lines) + "\n"
+
+
 def prepare(output: Path) -> None:
     include = output / "assets.inc"
-    include.write_text(assembly(read_sprites(HERE / "sprites.txt")))
+    include.write_text(assembly(read_sprites(HERE / "sprites.txt"))
+                       + font_assembly(read_sprites(HERE / "font.txt")))

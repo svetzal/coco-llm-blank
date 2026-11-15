@@ -1,7 +1,7 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
-* Increment 4: compiled sprites from assets.py and a fixed speed of 30
-* frames each second. README.md has the contract, the rules for each frame
-* and the memory map.
+* Increment 5: score, lives and game over. Increment 4: compiled sprites
+* and a fixed speed of 30 frames each second. README.md has the contract,
+* the rules for each frame and the memory map.
 *
 * Sources (all read as page images):
 *   Tandy, Color Computer Technical Reference Manual:
@@ -75,23 +75,43 @@ SEED    equ $ACE1               ; start value of the random sequence
         ifndef FIRST_LEVEL
 FIRST_LEVEL equ 1               ; a test variant can start at another level
         endc
+        ifndef FIRST_LIVES
+FIRST_LIVES equ 3               ; lives at the start of a game
+        endc
+        ifndef FIRST_SCORE
+FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
+        endc
 * Test-harness controls, only for the check (README.md lists them):
 *   NO_ENEMIES   a level starts with no grunts, and an empty arena is not
 *                a clear arena.
-*   FIXED_GRUNTS a level starts with two grunts, at x 100, y 90 and at
-*                x 100, y 40, and no hunter comes.
+*   FIXED_ENEMIES a level starts with a grunt at x 100, y 90 and a hunter
+*                at x 100, y 40, and no other hunter comes.
 *   STILL        enemies do not move.
-*   HUNTER_SOON  the hunter wait is 30 frames on every level.
-*   NO_DEATH     a touch does not start the level again.
+*   HUNTER_SOON  the hunter wait is 15 frames on every level.
+*   NO_DEATH     a touch does not kill the player.
+*   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
 
-* Sound effects: one record a frame (README.md "Sound").
+* Score, lives and pauses (README.md "Score and lives").
+GRUNT_POINTS equ $10            ; BCD
+HUNTER_POINTS equ $50           ; BCD
+EXTRA_EVERY equ $10             ; BCD hundreds: an extra life each 1000
+DYING_FRAMES equ 45             ; the pause after a death
+OVER_FRAMES equ 90              ; the pause after game over
+HUD_ROW equ 3                   ; the first row of the digits and icons
+ICONS   equ 6                   ; places for reserve lives
+
+* Sound effects: records of mode, period, volume and fields (README.md
+* "Sound").
 NOISE   equ $80                 ; record mode: noise; 0 is a square wave
 FX_END  equ $FF                 ; record mode: end of the effect
 P_SHOT  equ 1                   ; priorities: a new effect replaces the
 P_BOOM  equ 2                   ; current one only if its priority is
 P_HUNTER equ 3                  ; the same or higher
 P_LEVEL equ 4
+P_EXTRA equ 4
 P_DEATH equ 5
+P_OVER  equ 6
+P_START equ 6
 
 * Key bits. The same bits for movement and for shots.
 UP      equ 1
@@ -231,12 +251,40 @@ clear   clr ,x+
         std <end_b
         ldd #SEED
         std <seed
-        lda #FIRST_LEVEL
-        sta <level
-        jsr start_level
+        jsr new_game
+* Start frame 1 at the start of a field, as show does for each frame.
+        lda $FF02
+        jsr play_until_fs       ; the end of a field
+        jsr field_start
 
 frame   jsr rand_step           ; one step of the random sequence a frame
         jsr scan
+* After game over: wait, then start a new game.
+        lda <over
+        beq frame_dying
+        dec <over
+        bne frame_draw
+        jsr new_game
+        bra frame_draw
+* After a death: wait. Then take a life, and start the level again or
+* end the game.
+frame_dying
+        lda <dying
+        beq frame_play
+        dec <dying
+        bne frame_draw
+        dec <lives
+        bne frame_again
+        ldx #fx_over
+        lda #P_OVER
+        jsr start_sound
+        lda #OVER_FRAMES
+        sta <over
+        bra frame_draw
+frame_again
+        jsr start_level         ; the same level again
+        bra frame_draw
+frame_play
         jsr move_player
         jsr move_shots
         jsr fire
@@ -248,7 +296,8 @@ frame   jsr rand_step           ; one step of the random sequence a frame
         ldx #fx_death
         lda #P_DEATH
         jsr start_sound
-        jsr start_level         ; touched: the same level again
+        lda #DYING_FRAMES       ; touched: everything stops for a moment
+        sta <dying
         bra frame_draw
 frame_clear
         ifdef NO_ENEMIES        ; check only: an empty arena is not clear
@@ -272,7 +321,7 @@ frame_draw
         ldd <frames
         addd #1
         std <frames
-        bra frame
+        jmp frame
 
 * --- Read the eight keys. A pressed key reads 0 on its row.
 * A key script line takes effect each time the program reaches 'scan'.
@@ -499,7 +548,7 @@ df_shot tst S_ON,x
         ldu S_SPR,x
         lda S_X,x
         ldb S_Y,x
-        bsr draw_sprite
+        lbsr draw_sprite
         puls x
 df_skip leax S_SIZE,x
         cmpx #shots_end
@@ -528,6 +577,70 @@ df_enemy_skip
         bsr draw_sprite
         ldd <next
         std [end_ptr]
+        jmp draw_hud
+
+* --- The score and the reserve lives, in the blue band above the arena
+* (rows HUD_ROW to HUD_ROW+4). Each glyph is one byte for each row
+* (font.txt). The score is at byte columns 1-6. Reserve lives are from
+* byte column 30 to the left; empty places get the floor.
+draw_hud
+        lda <drawing
+        ldb #HUD_ROW*32+1
+        tfr d,y                 ; the first digit
+        ldx #score
+dh_byte lda ,x
+        lsra
+        lsra
+        lsra
+        lsra
+        bsr dh_glyph_digit      ; high digit
+        lda ,x+
+        anda #$0F
+        bsr dh_glyph_digit      ; low digit
+        cmpx #score+3
+        blo dh_byte
+        lda <drawing
+        ldb #HUD_ROW*32+30
+        tfr d,y                 ; the first reserve life
+        ldb <lives
+        decb                    ; reserves: lives - 1, but not less than 0
+        bpl dh_reserves
+        clrb
+dh_reserves
+        lda #ICONS
+        sta <count
+dh_icon ldu #life_icon
+        tstb
+        bne dh_icon_draw
+        ldu #no_icon
+        incb
+dh_icon_draw
+        decb
+        bsr dh_glyph
+        leay -2,y               ; dh_glyph moved Y on by 1
+        dec <count
+        bne dh_icon
+        rts
+
+* A = a digit 0-9: its glyph from digits, 5 bytes each.
+dh_glyph_digit
+        ldb #5
+        mul
+        ldu #digits
+        leau d,u
+* Store the 5 bytes at U down the column at Y. Then Y moves on by 1.
+dh_glyph
+        lda ,u+
+        sta ,y
+        lda ,u+
+        sta 32,y
+        lda ,u+
+        sta 64,y
+        lda ,u+
+        sta 96,y
+        lda ,u
+        sta 128,y
+        leay 1,y
         rts
 
 * --- Draw sprite U at pixel x = A, row y = B in the hidden screen.
@@ -578,6 +691,15 @@ show_late
 show_a  sta $FFCE               ; F4 = 0: screen A
 * The check takes a snapshot each time the program reaches this label.
 published
+        bsr field_start
+        lda <drawing
+        eora #(SCREEN_A^SCREEN_B)/256
+        sta <drawing
+        rts
+
+* --- Wait for the rising edge of FS: the start of a field. Then select
+* the falling edge again and clear the flag.
+field_start
         lda $FF03
         ora #%00000010          ; rising edge
         sta $FF03
@@ -587,9 +709,6 @@ published
         anda #%11111101         ; falling edge again
         sta $FF03
         lda $FF02               ; clear the flag: the first field starts
-        lda <drawing
-        eora #(SCREEN_A^SCREEN_B)/256
-        sta <drawing
         rts
 
 * --- Fill the screen at X with the floor and the wall.
@@ -664,7 +783,7 @@ sl_wait
         ifdef HUNTER_SOON       ; check only: a hunter each 15 frames
         ldd #15
         endc
-        ifdef FIXED_GRUNTS      ; check only: no hunter
+        ifdef FIXED_ENEMIES     ; check only: no hunter
         ldd #0
         endc
         std <hunter_wait
@@ -672,10 +791,11 @@ sl_wait
         ifdef NO_ENEMIES        ; check only: no grunts
         rts
         endc
-        ifdef FIXED_GRUNTS      ; check only: two grunts at fixed places
+        ifdef FIXED_ENEMIES     ; check only: a grunt and a hunter
         ldu #enemies
         lda #GRUNT
         sta E_TYPE,u
+        lda #HUNTER
         sta E_SIZE+E_TYPE,u
         ldd #100*256+90
         std E_X,u
@@ -683,7 +803,7 @@ sl_wait
         std E_SIZE+E_X,u
         lda #1
         sta E_TICK,u
-        lda #2
+        lda #HUNTER_PERIOD
         sta E_SIZE+E_TICK,u
         rts
         endc
@@ -911,12 +1031,21 @@ he_enemy
         adda #ENEMY_H
         cmpa S_Y,x
         bls he_next_enemy
+        ldb #GRUNT_POINTS
+        lda E_TYPE,u
+        cmpa #GRUNT
+        beq he_remove
+        ldb #HUNTER_POINTS
+he_remove
         clr E_TYPE,u
         clr S_ON,x
         pshs x,u
+        pshs b
         ldx #fx_boom
         lda #P_BOOM
         jsr start_sound
+        puls a
+        jsr add_score
         puls x,u
         bra he_next_shot
 he_next_enemy
@@ -962,11 +1091,66 @@ hp_touch
 
 * --- Start effect X with priority A, if A is the same as or higher
 * than the priority of the effect that plays now.
+* --- Start a game: score, lives and level, the start sound, the level.
+new_game
+        clr <score
+        ldd #FIRST_SCORE
+        std <score+1
+        clr <next_extra
+        ldd #EXTRA_EVERY*256    ; 1000: BCD 00 10 00
+        std <next_extra+1
+        lda #FIRST_LIVES
+        sta <lives
+        lda #FIRST_LEVEL
+        sta <level
+        ldx #fx_start
+        lda #P_START
+        jsr start_sound
+        jmp start_level
+
+* --- Add A (BCD, 00-99) to the 6-digit BCD score. DAA after ADDA or
+* ADCA corrects A to BCD and sets the carry for the next byte
+* (Leventhal PDF 488). At the next 1000, give an extra life.
+add_score
+        adda <score+2
+        daa
+        sta <score+2
+        lda <score+1
+        adca #0
+        daa
+        sta <score+1
+        lda <score
+        adca #0
+        daa
+        sta <score
+        ldd <score              ; score < next_extra: no extra life
+        cmpd <next_extra
+        blo as_done
+        bhi as_extra
+        lda <score+2
+        cmpa <next_extra+2
+        blo as_done
+as_extra
+        inc <lives
+        lda <next_extra+1
+        adda #EXTRA_EVERY
+        daa
+        sta <next_extra+1
+        lda <next_extra
+        adca #0
+        daa
+        sta <next_extra
+        ldx #fx_extra
+        lda #P_EXTRA
+        jsr start_sound
+as_done rts
+
 start_sound
         cmpa <priority
         blo ss_done
         sta <priority
         stx <effect
+        clr <hold               ; the first record plays at the next field
 ss_done rts
 
 * --- Once a frame: take the next record of the effect. Each record is
@@ -977,7 +1161,13 @@ sound_frame
         anda #3
         sta <level_out
         sta $FF20
-        ldx <effect
+        lda <hold               ; keep the record for its fields
+        cmpa #1
+        bls sf_next
+        deca
+        sta <hold
+        rts
+sf_next ldx <effect
         beq sf_silent
         lda ,x
         cmpa #FX_END
@@ -988,12 +1178,15 @@ sound_frame
         lslb
         lslb
         stb <volume
-        leax 3,x
+        lda 3,x
+        sta <hold
+        leax 4,x
         stx <effect
         rts
 sf_end  ldx #0
         stx <effect
         clr <priority
+        clr <hold
 sf_silent
         clr <volume
         rts
@@ -1037,20 +1230,33 @@ pf_done rts
 
 * --- Sound effects. Records: mode, period, volume. One record a frame.
 * Square-wave pitch: 894886 / (2 x (17 x period + 35)) Hz.
-fx_shot fcb 0,8,24,0,10,22,0,13,18,0,17,14,0,22,10,FX_END
-fx_boom fcb NOISE,2,44,NOISE,2,40,NOISE,3,34,NOISE,3,28,NOISE,4,22
-        fcb NOISE,4,16,NOISE,5,10,NOISE,6,6,FX_END
+fx_shot fcb 0,8,24,1,0,10,22,1,0,13,18,1,0,17,14,1,0,22,10,1,FX_END
+fx_boom fcb NOISE,2,44,1,NOISE,2,40,1,NOISE,3,34,1,NOISE,3,28,1
+        fcb NOISE,4,22,1,NOISE,4,16,1,NOISE,5,10,1,NOISE,6,6,1,FX_END
 fx_hunter
-        fcb 0,10,26,0,10,26,0,14,26,0,14,26,0,10,26,0,10,26
-        fcb 0,14,26,0,14,26,FX_END
+        fcb 0,10,26,2,0,14,26,2,0,10,26,2,0,14,26,2,FX_END
 fx_level
-        fcb 0,30,28,0,30,28,0,30,28,0,22,28,0,22,28,0,22,28
-        fcb 0,16,28,0,16,28,0,16,28,0,11,28,0,11,28,0,11,28
-        fcb 0,11,20,0,11,12,FX_END
+        fcb 0,30,28,3,0,22,28,3,0,16,28,3,0,11,28,3,0,11,20,1,0,11,12,1
+        fcb FX_END
 fx_death
-        fcb NOISE,1,60,NOISE,1,56,NOISE,2,52,NOISE,2,48,NOISE,3,44
-        fcb NOISE,3,40,NOISE,4,36,NOISE,4,32,NOISE,5,28,NOISE,6,24
-        fcb NOISE,7,20,NOISE,8,16,NOISE,9,12,NOISE,10,8,FX_END
+        fcb NOISE,1,60,1,NOISE,1,56,1,NOISE,2,52,1,NOISE,2,48,1
+        fcb NOISE,3,44,1,NOISE,3,40,1,NOISE,4,36,1,NOISE,4,32,1
+        fcb NOISE,5,28,1,NOISE,6,24,1,NOISE,7,20,1,NOISE,8,16,1
+        fcb NOISE,9,12,1,NOISE,10,8,1,FX_END
+* Extra life: a fast high trill.
+fx_extra
+        fcb 0,15,30,2,0,10,30,2,0,15,30,2,0,10,30,2,0,15,30,2,0,10,30,2
+        fcb 0,10,20,2,FX_END
+* Start: a rising C-E-G-C, then G-C. Periods 48, 38, 31, 23 are about
+* 526, 657, 796 and 1050 Hz.
+fx_start
+        fcb 0,48,28,4,0,38,28,4,0,31,28,4,0,23,28,6,0,31,28,3,0,23,28,12
+        fcb 0,23,18,4,0,23,10,4,FX_END
+* Game over: a slow falling G-E flat-D-C. Periods 32, 40, 43, 48 are
+* about 773, 626, 584 and 526 Hz.
+fx_over fcb 0,32,28,20,0,40,28,20,0,43,28,20,0,48,28,30,0,48,20,15
+        fcb 0,48,12,15,FX_END
+no_icon fcb FLOOR,FLOOR,FLOOR,FLOOR,FLOOR
 
 * --- Tables.
 * Direction number for each combination of key bits (UP=1, DOWN=2,
@@ -1133,5 +1339,11 @@ volume  rmb 1                   ; the DAC step, shifted left 2
 level_out rmb 1                 ; the value in $FF20
 scount  rmb 1                   ; passes until the next change
 noise   rmb 1
+hold    rmb 1                   ; fields left of the current record
+score   rmb 3                   ; BCD, 6 digits, most significant first
+next_extra rmb 3                ; BCD: the score for the next extra life
+lives   rmb 1                   ; lives left, with the one in play
+dying   rmb 1                   ; frames left of the pause after a death
+over    rmb 1                   ; frames left of the pause after game over
 state_end
         end start
