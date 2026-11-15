@@ -40,7 +40,17 @@ bits 7 and 6 in CG modes.
 
 ## Set up the screen
 
-[main.asm](main.asm) does three steps. Each step is one block of the code.
+The example is in three parts of [main.asm](main.asm). Each part is between
+`>>> EXAMPLE` and `<<< END EXAMPLE` comments:
+
+1. The values for each mode, at the top of the file.
+2. The three setup steps, before the `ready` label.
+3. The `samset` routine, which writes SAM bits.
+
+The other code is context. It draws a test picture and holds it on the screen.
+A project does not need it.
+
+The setup does three steps:
 
 1. Set the SAM display offset, F6 to F0. The value is the screen address
    divided by 512. The screen address must be a multiple of 512.
@@ -53,8 +63,8 @@ even address clears the bit. A write to the odd address sets the bit.
 
 The `samset` routine writes a value to a series of these bits.
 
-The example draws the picture before it shows it. Thus the screen never shows a
-half-drawn picture.
+The context draws the picture before the setup shows it. Thus the screen never
+shows a half-drawn picture.
 
 The example does not change the interrupts, the stack or the CPU clock. It keeps
 the state that BASIC sets. After the setup, the program loops at `ready` to keep

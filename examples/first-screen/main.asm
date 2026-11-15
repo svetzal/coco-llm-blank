@@ -6,6 +6,10 @@
 *   3. PIA $FF22 bits 7..3: VDG mode (A/G, GM2, GM1, GM0) and colour set (CSS).
 *      Bits 2..0 belong to other hardware. Keep them.
 *
+* The example is in three parts, each between ">>> EXAMPLE" and
+* "<<< END EXAMPLE". The rest is context: it draws a test picture and holds
+* it for the check. A project does not need the context.
+*
 * Sources:
 *   Tandy, Color Computer Technical Reference Manual:
 *     PDF 11: SAM control. Write to the even address to clear a bit,
@@ -16,6 +20,7 @@
 *       $FF22 bits 2..0 are "do not change".
 *   Motorola, MC6847 datasheet, PDF 18-21: sizes, colours, pixel order.
 *
+* >>> EXAMPLE 1 of 3: the values for each mode.
 * Select the mode with one assembler define. coco.toml has a variant for each.
 *   (none) CG6  PMODE 3  128x192  4 colours  32 bytes/row  6144 bytes
 *   RG6    RG6  PMODE 4  256x192  2 colours  32 bytes/row  6144 bytes
@@ -27,8 +32,8 @@
 *   CG1    CG1  -        64x64    4 colours  16 bytes/row  1024 bytes
 * PMODE numbers: The Rainbow, October 1986, PDF 119.
 *
-* SAMV is V2..V0. VDG is $FF22 bits 7..4. LEFT and RIGHT are the
-* leftmost and rightmost pixel of a byte, set to the last colour code.
+* SAMV is V2..V0. VDG is $FF22 bits 7..4. BPR is bytes per row. ROWS is the
+* number of rows.
         ifdef RG6
 SAMV    equ %110
 VDG     equ %11110000
@@ -84,7 +89,15 @@ VDG     equ %11100000
 BPR     equ 32
 ROWS    equ 192
         endc
-* $FF22 bit 4 is GM0. It is 1 in every two-colour (RG) mode.
+* Colour set: 0 = green, yellow, blue, red (RG: black, green).
+*             %00001000 = buff, cyan, magenta, orange (RG: black, buff).
+CSS     equ 0
+* Screen start. It must be a multiple of 512. BASIC's text screen is at $0400.
+SCREEN  equ $0400
+* <<< END EXAMPLE
+
+* --- CONTEXT: the leftmost and rightmost pixel of a byte, in the last colour
+* code, for the border. $FF22 bit 4 is GM0. It is 1 in every two-colour mode.
         ifne VDG&%00010000
 LEFT    equ %10000000
 RIGHT   equ %00000001
@@ -92,14 +105,9 @@ RIGHT   equ %00000001
 LEFT    equ %11000000
 RIGHT   equ %00000011
         endc
-* Colour set: 0 = green, yellow, blue, red (RG: black, green).
-*             %00001000 = buff, cyan, magenta, orange (RG: black, buff).
-CSS     equ 0
-* Screen start. It must be a multiple of 512. BASIC's text screen is at $0400.
-SCREEN  equ $0400
 
         org $3000
-* Draw the picture first, then show it.
+* --- CONTEXT: draw the picture first, then show it.
 * Each row holds four bars of bytes $55, $AA, $FF and $00.
 start   ldx #SCREEN
         ldy #ROWS
@@ -129,6 +137,7 @@ edges   lda ,x
         leax BPR,x
         leay -1,y
         bne edges
+* >>> EXAMPLE 2 of 3: the three steps that select the screen.
 * Step 1: SAM display offset.
         lda #SCREEN/512
         ldx #$FFC6
@@ -144,10 +153,13 @@ edges   lda ,x
         anda #%00000111
         ora #VDG+CSS
         sta $FF22
-* The screen is ready. The check takes its snapshot at this label.
+* <<< END EXAMPLE
+
+* --- CONTEXT: hold the picture. The check takes its snapshot at this label.
+* A project replaces this loop with its own main loop.
 ready   bra ready
 
-* Fill one row at X with $FF.
+* --- CONTEXT: fill one row at X with $FF.
 line    lda #$FF
         ldb #BPR
 line1   sta ,x+
@@ -155,6 +167,7 @@ line1   sta ,x+
         bne line1
         rts
 
+* >>> EXAMPLE 3 of 3: write SAM bits.
 * Write the low B bits of A to the SAM, low bit first, from address X.
 * Each bit has two addresses: even clears it, odd sets it. The data does not
 * matter.
@@ -167,6 +180,8 @@ samnext leax 2,x
         decb
         bne samset
         rts
+* <<< END EXAMPLE
 
+* --- CONTEXT: the bytes of the four bars.
 bars    fcb $55,$AA,$FF,$00
         end start

@@ -14,8 +14,8 @@ example how to set up a graphics screen. It stops when that practice is shown.
 
 - Name the practice in the first lines of the README. Say what the example
   does not do.
-- Do not add a game loop, input, sound or timing to an example about another
-  practice. Each of those is its own example.
+- Do not make the practice itself do more than one thing. Input, sound and
+  timing are each their own practice and their own example.
 - Show the variations of the practice, not only one case. First-screen sets up
   all eight graphics modes, one variant in `coco.toml` for each mode.
 - Select a default that suits most games. Do not select the most familiar or
@@ -23,6 +23,25 @@ example how to set up a graphics screen. It stops when that practice is shown.
 - Give the agent what it needs to choose. Put a table of the options and their
   characteristics in the README: size, colours, memory, register values and
   the names a reader can know them by, such as `PMODE` numbers.
+
+## Mark the example inside its context
+
+A practice can need context to show it. The context can be large: a test
+picture, or a whole simple game. That is correct. The context is not the
+example, and an agent must be able to ignore it.
+
+- In the code, put each part of the example between two comment lines:
+  `* >>> EXAMPLE n of m: <what this part does>` and `* <<< END EXAMPLE`.
+- Start each block of context with `* --- CONTEXT: <what it does>`.
+- At the top of `main.asm`, say how many example parts there are and what the
+  context does.
+- In the README, say where the example is: the parts, the labels and the files.
+  Say which files are only context.
+- Write the context correctly, but do not explain it in detail. The README
+  explains the example.
+
+An example shows one way to do the practice. It is not always the best way.
+When you know of other ways, name them in the README.
 
 ## An example is not a smoke test or a template
 
@@ -82,6 +101,6 @@ skill and run its checker. Use these sections, in this order:
 
 1. The practice, and what the example does not do.
 2. How to choose: the table of options.
-3. The steps, one for each block of code.
+3. The steps, one for each block of code, and where the example is.
 4. How to see each variation and how to check it, in a few lines.
 5. The sources, with PDF pages.
