@@ -1062,6 +1062,28 @@ class DescribeEquipmentInXRoar:
 
         assert "Frame 1: rendered display:" in capsys.readouterr().err
 
+    @pytest.mark.parametrize(
+        "line, wrong, error",
+        [
+            ("PAGE    equ SCREEN/$2000", "PAGE    equ $36", "screen bytes differ"),
+            ("BASEHI  equ (SCREEN/$800)&$FF", "BASEHI  equ $D8", "rendered display:"),
+        ],
+    )
+    def should_reject_a_coco3_text_screen_that_only_the_128k_alias_accepts(
+        self, tmp_path: Path, capsys, line: str, wrong: str, error: str
+    ) -> None:
+        if not instrumented_ready("coco3"):
+            pytest.skip("Native tools, CoCo 3 firmware or instrumented build tools are missing")
+        directory = tmp_path / "text-addressing-copy"
+        shutil.copytree(ROOT / "examples/text-addressing", directory)
+        source = directory / "main.asm"
+        source.write_text(source.read_text().replace(line, wrong))
+
+        assert coco.main(["check", str(directory), "--target", "coco3-128"]) == 0
+        assert coco.main(["check", str(directory), "--target", "coco3-512"]) == 1
+
+        assert error in capsys.readouterr().err
+
     def should_reject_an_expected_frame_with_reversed_bit_order(
         self, first_screen: Path, capsys
     ) -> None:

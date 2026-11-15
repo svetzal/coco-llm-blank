@@ -105,11 +105,12 @@ changes those two upper address bits and does not change the lower 17.
 
 This is our cross-source explanation of the published correction.
 
-The original [display-address probe](../../examples/text-addressing/README.md)
-now checks this specific selection at a GIME fetch boundary of an instrumented
-XRoar. All eight memory-size/address combinations matched the predicted words.
+The [text-addressing example](../../examples/text-addressing/README.md) sets
+up a text screen from one physical address on 128K and 512K. Its negative
+controls in `scripts/coco_spec.py` reproduce the error. An MMU page or a
+`$FF9D` value that relies on the 128K alias passes on 128K and fails on 512K.
 
-That result does not validate SMOOTHY, rendered appearance, timing, or physical
+That result does not validate SMOOTHY, scrolling, timing, or physical
 hardware.
 
 For a new implementation, derive display addresses from the intended physical

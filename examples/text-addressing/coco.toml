@@ -1,0 +1,49 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# NTSC CoCo 3, 6809 at the normal low rate, GIME 1986. The two tables differ
+# only in RAM size. A check of both catches a screen that works only through
+# the 128 KiB alias.
+[targets.coco3-128]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+
+[targets.coco3-512]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 512
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+
+[memory]
+at = { start = 0x3000 }
+below = { colv = 0x4000 }   # the last byte; CPU $4000-$5FFF is the screen window
+
+# The plain build shows 40 columns. Each variant selects one other width.
+[variants.c32]
+defines = ["C32"]
+
+[variants.c64]
+defines = ["C64"]
+
+[variants.c80]
+defines = ["C80"]
+
+# The practice is what the display shows, so check the rendered frame too.
+[capture]
+video = true
+
+# For the check only: where to take the snapshot and compare the screen.
+[check]
+checkpoint = "ready"       # reached once the screen is shown
+frames = [1]               # snapshot at the first time it is reached
+unreachable = "ready+1"    # mid-instruction: must never execute
+screen = 0x0C000           # physical $0C000 is this snapshot offset at both sizes
+emulated_seconds = 10
