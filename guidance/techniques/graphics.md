@@ -52,8 +52,8 @@ grid, the colours and the pixel shape.
 
 The Tandy Technical Reference Manual gives 2K for RG2.
 The datasheet gives 1.5K. The tool uses 1536 bytes from the datasheet.
-Do a check on a real program before you trust either value.
-[Tandy, PDF 30][coco-modes]
+The rendered check of RG2 in [first-screen](../../examples/first-screen/README.md)
+passes with 1536 bytes in XRoar. [Tandy, PDF 30][coco-modes]
 
 To set the mode, write the SAM display bits and the PIA bits at `$FF22`.
 [Tandy, PDF 31 Table 1][coco-modes]
@@ -62,9 +62,8 @@ To set the mode, write the SAM display bits and the PIA bits at `$FF22`.
 - `$FF22` bits 7 to 4: `1110` for CG6, `1111` for RG6.
 - `$FF22` bit 3: the colour-set select (CSS).
 
-Copy the setup from [first-screen](../../examples/first-screen/main.asm) or
-[palette-swatches](../../examples/palette-swatches/main.asm). For a different
-mode, read the table again.
+[First-screen](../../examples/first-screen/README.md) sets up each of the eight
+modes and gives the values for each mode. Copy the setup steps from it.
 
 ## Know the colours
 
@@ -211,8 +210,10 @@ supply its account and key.
 - [Tile-room](../../examples/tile-room/README.md) converts its pictures with
   `sheet` at each build. Its check compares 42 rendered frames on CoCo 1 and
   CoCo 2 with text drawings.
-- We did not measure the border colour, other modes, a T1 VDG or other XRoar
-  video paths in a capture.
+- First-screen's rendered check passes for all eight modes on the CoCo 1
+  target with colour set 0.
+- We did not measure the border colour, colour set 1 outside CG6 and RG6, a T1
+  VDG or other XRoar video paths in a capture.
 - The `ntsc` pixel shape is a deduction. Nobody has tuned the dither settings.
 - Nobody has checked a colour or a shape on real hardware or a television.
 

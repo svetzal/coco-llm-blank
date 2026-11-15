@@ -277,7 +277,7 @@ pixel, with no 4:3 stretch.
 
 Its colours are XRoar's palette values, not measurements of a monitor.
 [first-screen](../../examples/first-screen/expected.py)
-records the two for its mode.
+records the values for colour set 0.
 
 Include a control that the memory check cannot catch, such as a wrong SAM mode
 or a reversed bit order. Also open the PNG with an image viewer. The
@@ -304,9 +304,12 @@ uv run python scripts/coco.py snapshot projects/<name> --frame 3 --video \
   --keys keys.txt
 ```
 
-Besides its `README.md`, the folder holds three files. Start with a copy of
-[first-screen](../../examples/first-screen/README.md). Its files show each
-setting with a comment.
+Besides its `README.md`, the folder holds three files. The
+[first-screen](../../examples/first-screen/README.md) files show the target
+settings with a comment.
+
+Do not copy an example folder as the base of a project. Each example shows one
+practice.
 
 - `main.asm`: the program, assembled as a DECB binary with a symbol dump.
 

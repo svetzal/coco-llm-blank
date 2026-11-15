@@ -44,13 +44,10 @@ the chosen target. It checks the actual installed ROM bytes, not only filenames.
 If firmware is missing, run `uv run python scripts/setup.py --roms-only` with
 the project's `--target`. Resolve checksum errors before continuing.
 
-For CoCo 1, use [the first-screen example](examples/first-screen/README.md) to
-check boot and execution before building the requested feature. It is a starting
-point, not
-the requested game or animation.
+Before writing code, create `projects/<name>/` with `main.asm`, `coco.toml`
+and `README.md`. Do not copy an example folder. Each example shows one practice.
 
-Before writing code, copy `examples/first-screen/` to `projects/<name>/` and
-write the project's `README.md`: what the owner asked for, how to run it in
+Write the project's `README.md`: what the owner asked for, how to run it in
 plain language, and the [project contract](guidance/starter/development.md#establish-the-contract).
 Read it back. Convert only reference pages needed for the first feature. Build
 a small complete increment and test it with `scripts/coco.py check`, keeping

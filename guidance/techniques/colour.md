@@ -93,7 +93,7 @@ These checks already run on the examples:
 
 | Check | Target | What it proves |
 | --- | --- | --- |
-| [First screen](../../examples/first-screen/README.md) `check --video` | CoCo 1 | Border pixels at each edge and a square, RG6. |
+| [First screen](../../examples/first-screen/README.md) `check --video` | CoCo 1 | Border pixels at each edge and four bars, in each of the eight modes. |
 | [Palette swatches](../../examples/palette-swatches/README.md) `check --video` | CoCo 1 and CoCo 2 | Every colour of CG6 and RG6 in both colour sets, bit order, byte boundaries and orientation. |
 | Wrong SAM mode, in `scripts/coco_spec.py` | CoCo 1 and CoCo 2 | The memory check passes and the rendered check fails. |
 | Mirrored, upside-down or shifted frames, in the palette spec | Model only | The expected picture is not symmetric, so orientation and row errors fail. |

@@ -1,112 +1,106 @@
-# Your first screen
+# Set up a graphics screen
 
-This original example draws a green border and a solid square on a black screen.
-It is a starting point for CoCo 1 projects. It is not a complete game.
+This example shows how to select each full-graphics mode of the CoCo 1/2 video
+chip (VDG), how to place the screen in memory, and how to start to draw into it.
+It stops when the screen is ready. It has no game loop, no input and no timing.
 
-Ask your agent to run these steps. Commands start in the project folder:
+Use it when you start a project that draws graphics. Do not copy the folder as
+the base of a project. Copy the setup steps and the mode values that you need.
+
+## Choose a mode
+
+The VDG has eight full-graphics modes. Four-colour modes (CG) use two bits for
+each pixel. Two-colour modes (RG) use one bit for each pixel. Extended Color
+BASIC gives five of the modes a `PMODE` number.
+
+| Mode | PMODE | Pixels | Colours | Bytes per row | Screen bytes | SAM V2..V0 | `$FF22` bits 7..4 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CG1 | | 64x64 | 4 | 16 | 1024 | `001` | `1000` |
+| RG1 | | 128x64 | 2 | 16 | 1024 | `001` | `1001` |
+| CG2 | | 128x64 | 4 | 32 | 2048 | `010` | `1010` |
+| RG2 | 0 | 128x96 | 2 | 16 | 1536 | `011` | `1011` |
+| CG3 | 1 | 128x96 | 4 | 32 | 3072 | `100` | `1100` |
+| RG3 | 2 | 128x192 | 2 | 16 | 3072 | `101` | `1101` |
+| CG6 | 3 | 128x192 | 4 | 32 | 6144 | `110` | `1110` |
+| RG6 | 4 | 256x192 | 2 | 32 | 6144 | `110` | `1111` |
+
+Think about these points before you choose:
+
+- Four colours from one colour set apply to the full screen. The two colour
+  sets are green, yellow, blue and red, or buff, cyan, magenta and orange.
+- A two-colour mode shows black and one colour: green or buff.
+- A small mode uses less memory and is faster to redraw. Its pixels are larger.
+- CG6 is a good default for a colour game. RG6 gives the most detail.
+- Pixels are not square. A CG6 pixel is almost two times as wide as it is high.
+  The [graphics guide](../../guidance/techniques/graphics.md) gives the pixel
+  shape of each mode.
+
+In the leftmost pixel of a byte, the bits are the high bits: bit 7 in RG modes,
+bits 7 and 6 in CG modes.
+
+## Set up the screen
+
+[main.asm](main.asm) does three steps. Each step is one block of the code.
+
+1. Set the SAM display offset, F6 to F0. The value is the screen address
+   divided by 512. The screen address must be a multiple of 512.
+2. Set the SAM display mode, V2 to V0.
+3. Set bits 7 to 3 of `$FF22`: the VDG mode in bits 7 to 4 and the colour set
+   (CSS) in bit 3. Do not change bits 2 to 0. Other hardware uses them.
+
+The SAM has no data register. Each SAM bit has two addresses. A write to the
+even address clears the bit. A write to the odd address sets the bit.
+
+The `samset` routine writes a value to a series of these bits.
+
+The example draws the picture before it shows it. Thus the screen never shows a
+half-drawn picture.
+
+The example does not change the interrupts, the stack or the CPU clock. It keeps
+the state that BASIC sets. After the setup, the program loops at `ready` to keep
+the picture on the screen. A project replaces that loop with its own main loop.
+
+## See each mode
+
+The plain build shows CG6. Each other mode has a variant in
+[coco.toml](coco.toml), named after the mode in lowercase. Each variant sets an
+assembler define. Commands start in the starter folder:
 
 ```sh
-sh scripts/bootstrap.sh coco1
-uv run python scripts/setup.py --target coco1 --roms-only
-uv run python scripts/coco.py check examples/first-screen
 uv run python scripts/coco.py run examples/first-screen
+uv run python scripts/coco.py run examples/first-screen --variant rg6
 ```
 
-The last command opens XRoar. Close the window to stop it. Run that command
-again whenever you want to see the example.
+The picture is the same in each mode: a border one pixel wide and four bars.
+In CG modes, the bars are yellow, blue, red and green, with a red border.
+In RG modes, the bars are two striped bars, a green bar and a black bar, with a
+green border. The border width and the stripe width show the pixel size.
 
-## Start your own project from this folder
-
-Copy this folder to `projects/<name>`. Name the copy after your idea.
-Run the same commands with the path of that folder.
-You do not need a launcher script.
-
-Give the copy a `README.md` that says what the project is and how to run it.
-The folder holds three other files:
-
-- `main.asm`: the program.
-
-- `coco.toml`: the machine, firmware, memory layout and checkpoint settings.
-  The `[targets.coco1]` table records the emulated machine.
-  Do not change that table until you record the choice in the contract in the
-  project README.
-
-- `expected.py`: an independent model of the memory the program must produce.
-  Do not write it from the assembled bytes.
-  Write it from the sourced pixel layout and your requirements.
-  Without it, `check` proves only that the program reached the checkpoint.
-
-Run `uv run python scripts/coco.py --help` for the commands. The Python under
-`scripts/` holds no CoCo knowledge. You do not need to read or copy it.
-
-## What the example proves
-
-The check assembles the actual source and runs it in XRoar.
-It starts with nonzero RAM. It waits for the ready label of the program.
-It checks all 6144 screen bytes against the independent pixel specification in
-`expected.py`.
-
-An unreachable checkpoint must produce no snapshot. This prevents startup RAM
-from passing as a result.
-
-The check passes on Apple Silicon macOS and in a clean Ubuntu 24.04 container.
-
-Screen memory alone cannot show a wrong display mode or bit order. Add
-`--video` to check XRoar's rendered picture too:
+To check all eight modes against [expected.py](expected.py), run this command:
 
 ```sh
 uv run python scripts/coco.py check examples/first-screen --video
 ```
 
-This command builds the [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar)
-once. The build uses the build tools listed there.
+The check compares the screen bytes and XRoar's rendered picture of each mode,
+on the CoCo 1 target with colour set 0. It does not prove the result on a
+television or on a physical CoCo.
 
-The command saves `build/first-screen/coco1-frame-1.png`.
-It compares all 512×192 rendered samples (two per pixel) with `expected_frame`
-in [expected.py](expected.py).
-The expected frame is green where a bit is set and black elsewhere.
-Bit 7 is leftmost.
+## Sources
 
-A wrong SAM mode or a reversed bit order still passes the memory check but
-fails this one.
+The program is original code. Read these pages before you change a value:
 
-Neither the rendered capture nor the memory check is a person looking at the
-screen, and neither proves physical hardware operation.
-Open the PNG or the `run` window after changes to display setup.
+- Tandy, *Color Computer Technical Reference Manual*:
+  - PDF page 11: SAM control addresses.
+  - PDF page 14: the `$FF22` bits.
+  - PDF page 15: SAM display offset and display mode bits for each mode.
+  - PDF page 31, Table 1: the SAM and `$FF22` values for each mode.
+- Motorola, *MC6847 Video Display Generator* datasheet, PDF pages 18 to 21:
+  sizes, colours and the order of the pixels in a byte.
+- *The Rainbow*, October 1986, PDF page 119: the `PMODE` number of each mode.
 
-## Target and memory
+The Tandy manual gives 2K for RG2. The datasheet gives 1536 bytes. The rendered
+check of RG2 passes with 1536 bytes.
 
-The target is a CoCo 1 with 32 KiB RAM, NTSC video, and a stock-clock 6809.
-The display is 256 by 192 pixels with two colours. Each byte holds eight pixels,
-so each row uses 32 bytes and the screen uses 6144 bytes.
-
-| Purpose | Address range |
-| --- | --- |
-| Screen | $0400-$1BFF |
-| Ready marker | $2FFF |
-| Program | Starts at $3000. See generated symbols. |
-| Reserved stack | $7E00-$7EFF. Starts at $7F00 and grows down. |
-
-The program disables interrupts while it shows the static image.
-It does not return to BASIC.
-
-An interactive or animated program must choose its own timing and interrupt
-handling. Such a program must not assume that this loop provides them.
-
-## Check the sources before adapting it
-
-The program is original code. Its hardware facts were checked against:
-
-- Tandy, *Color Computer Technical Reference Manual*, PDF pages 14-15 and 30-31:
-  PIA fields, SAM display base, stock clock, and the 256x192 mode row.
-- Inman, *Assembly Language Graphics for the TRS-80 Color Computer*, PDF pages
-  106-108: screen size, two-colour pixel layout, and mode selection.
-
-The SAM mode bits are V2..V0 = 110. The PIA high nibble is 1111, CSS is zero,
-and the program preserves the low three data bits.
-The display offset is two 512-byte units.
-Read the tables and diagrams before you change those values.
-
-Use [reference lookup](../../guidance/starter/references.md) to download and inspect
-those pages. No book pages, converted text, or firmware are included here.
-Build outputs and snapshots stay in ignored `build/first-screen/`.
+Use [reference lookup](../../guidance/starter/references.md) to get those
+pages. Build outputs stay in the ignored `build/first-screen/` folder.

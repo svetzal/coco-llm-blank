@@ -10,7 +10,7 @@ instructions for playing.
 
 | Task | Example | Scope |
 | --- | --- | --- |
-| Check a first CoCo 1 screen | [First screen](first-screen/README.md) | Border and square. A setup checkpoint, not a game. |
+| Set up a graphics screen | [First screen](first-screen/README.md) | All eight VDG full-graphics modes, with the SAM and `$FF22` values and `PMODE` numbers. Rendered check of each mode. |
 | See every VDG graphics colour | [Palette swatches](palette-swatches/README.md) | CG6 and RG6 bars for both colour sets. The evidence for the `xroar` palette in `scripts/graphics.py`. |
 | Redraw objects over scenery | [Moving objects](moving-objects/README.md) | Ordered opaque rectangles over a changing background. |
 | Show only finished frames | [Page flip](page-flip/README.md) | The moving-objects scene, drawn into a hidden screen on CoCo 1/2. Rendered check at every flip. |

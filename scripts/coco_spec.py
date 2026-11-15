@@ -849,7 +849,7 @@ class DescribeExamplesInXRoar:
 
     def should_reject_a_real_picture_that_differs(self, copy: Path, capsys) -> None:
         source = copy / "main.asm"
-        source.write_text(re.sub(r"(square\s+lda\s+#)\$FF", r"\1$FE", source.read_text()))
+        source.write_text(source.read_text().replace("fcb $55,$AA,$FF,$00", "fcb $55,$AA,$FE,$00"))
 
         assert coco.main(["check", str(copy)]) == 1
 
@@ -998,7 +998,11 @@ class DescribeEquipmentInXRoar:
         self, first_screen: Path, capsys
     ) -> None:
         source = first_screen / "main.asm"
-        source.write_text(source.read_text().replace("sta $FFC5", "sta $FFC4"))
+        source.write_text(
+            source.read_text().replace(
+                "ifndef MODESET\nSAMV    equ %110", "ifndef MODESET\nSAMV    equ %010"
+            )
+        )
 
         assert coco.main(["check", str(first_screen)]) == 0
         assert coco.main(["check", str(first_screen), "--video"]) == 1
@@ -1064,9 +1068,7 @@ class DescribeEquipmentInXRoar:
     ) -> None:
         model = first_screen / "expected.py"
         model.write_text(
-            model.read_text().replace(
-                "lit(x // SAMPLES_PER_PIXEL, y)", "lit((x // SAMPLES_PER_PIXEL) ^ 7, y)"
-            )
+            model.read_text().replace("pixel(s // across, line", "pixel((s // across) ^ 3, line")
         )
 
         assert coco.main(["check", str(first_screen), "--video"]) == 1
