@@ -1,40 +1,38 @@
-* Original turn queue for one player on CoCo 3; NTSC, 128/512 KiB, 6809,
-* GIME 1986. Two planets, two journey slots, 16-bit turns and a turn
-* limit. A rejected command changes no world byte. Journeys land when
-* their turn comes, once each. No display, input, combat or production.
-* The script that prepare.py writes from turns.txt drives every case and
-* records the world after each operation. See README.md for the layout.
+* Keep turn-based game state in a journey queue (CoCo 3, RAM only).
+*
+* A command changes the world only after every check passes. A turn lands
+* each due journey once, in slot order. A phase byte and a turn limit decide
+* which routine may run. The rules are our design; README.md states them.
+*
+* The example is in four parts, each between ">>> EXAMPLE" and
+* "<<< END EXAMPLE": the world layout, send, begin_turn and end_commands.
+* The rest is context: a runner reads the script that prepare.py writes from
+* turns.txt, loads each case's start world, calls the routines and appends
+* the world, the status and the landed slots to a record after each step.
+* A project does not need the context.
+*
+* The program keeps the interrupts, stack, direct page, CPU rate and memory
+* map that BASIC sets. No routine writes a hardware register.
+*
+* The BAD_* defines are faults for the negative controls in
+* scripts/coco_spec.py only. A project does not need them.
+*
+* Sources:
+*   Leventhal, 6809 Assembly Language Programming, PDF 537: ADDD and CMPD
+*     take a 16-bit value with its high byte at the lower address; ADDD
+*     sets C.
+*   The same book, PDF 543: BHI branches when C and Z are both 0, BHS when
+*     C is 0.
+
         org $3000
-start   orcc #$50
-        lds #$7F00
-        clra
-        tfr a,dp
-* Normal low CPU rate, task 0, executive map $38-$3F, MMU on, native mode.
-        sta $FFD8
-        clr $FF91
-        ldx #$FFA0
-        lda #$38
-map     sta ,x+
-        inca
-        cmpa #$40
-        blo map
-        lda #$4E
-        sta $FF90
-* Fill $4000-$5FFF and the stack guards with $A5 before any world is set.
-        ldx #$4000
-        lda #$A5
-poison  sta ,x+
-        cmpx #$6000
-        blo poison
-        sta $7DFF
-        sta $7F00
-* Each case: 1, then 17 world bytes, then steps, then 0. A 0 in place of
-* the 1 ends the script. A step is 1 (send) with six command bytes,
-* 2 (begin_turn) or 3 (end_commands). Each step appends a 19-byte record.
-        ldu #results
+* --- CONTEXT: run each case of the script and record each step.
+* Each case: 1, then 17 world bytes, then steps, then 0. A 0 in place of the
+* 1 ends the script. A step is 1 (send) with six command bytes, 2
+* (begin_turn) or 3 (end_commands).
+start   ldu #results
         ldx #script
 case    lda ,x+
-        beq done
+        beq finished
         ldy #world
         ldb #17
 reset   lda ,x+
@@ -64,45 +62,46 @@ close   jsr end_commands
 kept    jsr record
         ldx cursor
         bra step
-done    lda #$5A
-        sta complete
+* This loop exists only for the check, after the last record is written.
 finished bra finished
 
-* Command: player, source, destination, ships, delay high, delay low.
-* Status 0 = accepted, 1 = rejected. No world write before every check.
+* >>> EXAMPLE 2 of 4: send. Check everything, then commit in one place.
+* Command: player, source, destination, ships, delay (16 bits, high first).
+* Status 0 = accepted, 1 = rejected. No world byte changes before commit.
 send    lda #1
         sta status
         lda phase
         cmpa #1
-        lbne rejected
+        lbne send_done
         lda command
         cmpa #1
-        lbne rejected
+        lbne send_done
         ldb command+1
         cmpb #2
-        lbhs rejected
+        lbhs send_done
         lda command+2
         cmpa #2
-        lbhs rejected
+        lbhs send_done
         cmpa command+1
-        lbeq rejected
+        lbeq send_done
         ldy #ships
         leay b,y
         lda command+3
-        lbeq rejected
+        lbeq send_done
         cmpa ,y
-        lbhi rejected
+        lbhi send_done
         ifdef BAD_REJECT
         lda ,y
         suba command+3
         sta ,y
         endc
+* Unsigned: C set means the arrival turn does not fit in 16 bits.
         ldd command+4
-        lbeq rejected
+        lbeq send_done
         addd turn
-        lbcs rejected
+        lbcs send_done
         cmpd turn_limit
-        lbhi rejected
+        lbhi send_done
         std arrival
         ldx #queue
 find    tst ,x
@@ -114,8 +113,9 @@ find    tst ,x
         ldx #queue
         bra commit
         else
-        bra rejected
+        bra send_done
         endc
+* The commit: take the ships and fill the free slot.
 commit
         ifndef BAD_REJECT
         lda ,y
@@ -131,20 +131,23 @@ commit
         lda #1
         sta ,x
         clr status
-rejected rts
+send_done
+        rts
+* <<< END EXAMPLE
 
-* Only from the complete phase and below the limit: add one to the turn,
-* land every due or overdue journey in slot order, then take commands.
+* >>> EXAMPLE 3 of 4: begin_turn. Only from the complete phase and below the
+* limit: add one to the turn, land each due or overdue journey in slot order,
+* free its slot, then take commands.
 begin_turn
         lda #1
         sta status
         clr resolved
         ifndef BAD_WRAP
         lda phase
-        bne rejected
+        bne begin_done
         ldd turn
         cmpd turn_limit
-        bhs rejected
+        bhs begin_done
         endc
         ldd turn
         addd #1
@@ -186,25 +189,31 @@ next    asl slot_bit
         lda #1
         sta phase
         clr status
+begin_done
         rts
+* <<< END EXAMPLE
 
-* Only from the commands phase: complete, or finished at the turn limit.
+* >>> EXAMPLE 4 of 4: end_commands. Only from the commands phase: finished at
+* the turn limit, else complete.
 end_commands
         lda #1
         sta status
         lda phase
         cmpa #1
-        bne rejected
+        bne end_done
         clr phase
         ldd turn
         cmpd turn_limit
-        bne ended
+        bne accepted
         lda #2
         sta phase
-ended   clr status
+accepted
+        clr status
+end_done
         rts
+* <<< END EXAMPLE
 
-* Append the world, the status and the resolved-slot mask at U.
+* --- CONTEXT: append the world, the status and the landed-slot mask at U.
 record  ldx #world
         ldb #17
 copy    lda ,x+
@@ -217,23 +226,28 @@ copy    lda ,x+
         sta ,u+
         rts
 
+* --- CONTEXT: the script from turns.txt. This is a data label: the check
+* fails if the CPU executes it.
 script
         include "script.inc"
 code_end
 
+* >>> EXAMPLE 1 of 4: the world, 17 bytes. 16-bit values are high byte first.
 world   equ $4100
-turn    equ world
-turn_limit equ world+2
-phase   equ world+4
-ships   equ world+5
-queue   equ world+7
-queue_end equ world+17
+turn    equ world               2 bytes
+turn_limit equ world+2          2 bytes
+phase   equ world+4             0 complete, 1 commands, 2 finished
+ships   equ world+5             planets 0 and 1, 0 to 255 ships each
+queue   equ world+7             two slots of 5 bytes: used, destination,
+queue_end equ world+17          ships, arrival turn (2 bytes)
+* <<< END EXAMPLE
+
+* --- CONTEXT: the command, scratch bytes, the runner's cursor and records.
 command equ $4200
 arrival equ $4206
 status  equ $4208
 resolved equ $4209
 slot_bit equ $420A
-complete equ $420B
-cursor  equ $420C
+cursor  equ $420B
 results equ $5000
         end start

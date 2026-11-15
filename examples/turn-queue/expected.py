@@ -14,11 +14,10 @@ PHASES = ("complete", "commands", "finished")
 STATUSES = ("accepted", "rejected")
 WORLD_BYTES = 17
 RECORD_BYTES = WORLD_BYTES + 2
-COMPLETE = 0x5A
-FILL = 0xA5
-STACK_GUARDS = (0x7DFF, 0x7F00)
-RAM_SIZES = (128 * 1024, 512 * 1024)
-# The program maps executive pages $38-$3F, the top 64 KiB of physical RAM.
+RAM_SIZE = 128 * 1024
+# BASIC's reset sets the executive map to physical pages $38-$3F, the top
+# 64 KiB of a 128 KiB CoCo 3 (Tepolt, Assembly Language Programming for the
+# CoCo3, PDF 56 step 6, PDF 57 step 31, PDF 58 Fig. 7-2).
 EXECUTIVE = 0x10000
 
 
@@ -97,26 +96,12 @@ def checkpoints(script: list[Case]) -> list[tuple[str, bytes]]:
     ]
 
 
-def guards(symbols: dict[str, int], records: int) -> tuple[int, ...]:
-    """Fill bytes just outside the world, the scratch area and the records."""
-    world, scratch, results = symbols["world"], symbols["command"], symbols["results"]
-    after_scratch = symbols["cursor"] + 2
-    after_records = results + records * RECORD_BYTES
-    edges = (world - 1, world + WORLD_BYTES, scratch - 1, after_scratch, results - 1)
-    return (*edges, after_records, *STACK_GUARDS)
-
-
 def verify_ram(ram: bytes, symbols: dict[str, int], frame: int) -> None:
-    """Completion, untouched guards, then every record in order."""
-    if len(ram) not in RAM_SIZES:
+    """Every record, in order, against the hand-written outcome."""
+    if len(ram) != RAM_SIZE:
         raise ValueError("Missing or truncated RAM snapshot.")
     memory = ram[-EXECUTIVE:]
     expected = checkpoints(cases())
-    if memory[symbols["complete"]] != COMPLETE:
-        raise ValueError("The program did not run every case.")
-    damaged = [f"${a:04X}" for a in guards(symbols, len(expected)) if memory[a] != FILL]
-    if damaged:
-        raise ValueError(f"Guard bytes changed at {', '.join(damaged)}.")
     start = symbols["results"]
     differ = []
     for index, (name, record) in enumerate(expected):

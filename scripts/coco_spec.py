@@ -888,7 +888,7 @@ class DescribeExamplesInXRoar:
         machine = re.search(r"^machine cocous\n((?:[ \t].*\n)*)", printed, re.MULTILINE)
         assert machine and "tv-type ntsc" in machine.group(1)
 
-    @pytest.mark.parametrize("target", ["coco3-128", "coco3-512"])
+    @pytest.mark.parametrize("target", ["coco3"])
     @pytest.mark.parametrize(
         "control,step",
         [
