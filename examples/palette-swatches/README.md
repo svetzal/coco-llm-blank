@@ -28,6 +28,7 @@ The program draws the same 6144 screen bytes in four builds:
 
 Rows 0 to 159 hold four bars. Each bar is 8 bytes wide: `$00`, `$55`, `$AA` and
 `$FF`. In CG6, each pair of bits is one pixel, so each bar is one colour code.
+
 Rows 160 to 191 hold `$1B` in every byte. In CG6 that is codes 0, 1, 2 and 3
 from the left. This band shows the order of pixels inside a byte.
 
@@ -45,11 +46,20 @@ palette values, the bit order inside a byte, and the pixel sizes. CG6 pixels
 are 4 samples wide and RG6 pixels are 2 samples wide.
 
 The spec, [palette_swatches_spec.py](palette_swatches_spec.py), has negative
-controls. A frame for the other colour set, a frame for the other mode, and a
-frame with yellow and blue swapped must each fail the rendered comparison. When
-`expected.py` was changed to use the wrong colour set, swapped yellow and blue,
-or reversed the pixel order inside each byte, the real `check --video` run
-failed each time. That was a manual test; it is not automated.
+controls. Each of these frames must fail the rendered comparison:
+
+- A frame for the other colour set.
+- A frame for the other mode.
+- A frame with yellow and blue swapped.
+
+A manual test made each of these changes to `expected.py`:
+
+- Use the wrong colour set.
+- Swap yellow and blue.
+- Reverse the pixel order inside each byte.
+
+The real `check --video` run failed each time. That manual test is not
+automated.
 
 ## Palette values and their limits
 
@@ -71,10 +81,11 @@ The machine is `cocous`, NTSC, with a 6847 VDG.
 | black with CSS=0 | 0, 31, 0 |
 | black with CSS=1 | 13, 13, 13 |
 
-XRoar shows two-colour "black" differently for each colour set. These values
-are one emulator path. They are not measurements of a television, a monitor or
-a physical CoCo. Other XRoar settings, such as composite video with artifact
-colours, give different colours.
+XRoar shows two-colour "black" differently for each colour set.
+
+These values are one emulator path. They are not measurements of a television,
+a monitor or a physical CoCo. Other XRoar settings, such as composite video
+with artifact colours, give different colours.
 
 The capture shows only the active area. The border colour (green with CSS=0,
 buff with CSS=1) is not in the capture, so this example does not measure it.
@@ -90,7 +101,7 @@ uses the same memory layout as [first-screen](../first-screen/README.md).
 | Screen | $0400-$1BFF |
 | Ready marker | $2FFF |
 | Program | Starts at $3000 |
-| Reserved stack | $7E00-$7EFF; starts at $7F00 and grows down |
+| Reserved stack | $7E00-$7EFF. Starts at $7F00 and grows down. |
 
 ## Check the sources before adapting it
 
@@ -101,10 +112,13 @@ The program is original code. Its hardware facts were checked against:
   Figure 22: one bit per pixel in RG6 and one pair of bits per pixel in CG6,
   leftmost pixel in the high bits. PDF page 21: the colour of each code for each
   colour set.
+
 - Tandy, *Color Computer Technical Reference Manual*, PDF page 31 Table 1: CG6
-  and RG6 use SAM V2..V0 = 110. `$FF22` bits 7 to 4 are 1110 for CG6 and 1111
-  for RG6. Bit 3 is CSS. The program keeps bits 2 to 0. PDF pages 14 and 15:
-  the PIA data register and the SAM display offset, as in first-screen.
+  and RG6 use SAM V2..V0 = 110.
+  `$FF22` bits 7 to 4 are 1110 for CG6 and 1111 for RG6. Bit 3 is CSS.
+  The program keeps bits 2 to 0.
+  PDF pages 14 and 15: the PIA data register and the SAM display offset, as in
+  first-screen.
 
 Use [reference lookup](../../guidance/starter/references.md) to get those pages.
 No book pages, converted text or firmware are in this folder. Build outputs and

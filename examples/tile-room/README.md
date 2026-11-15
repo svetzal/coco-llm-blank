@@ -1,18 +1,20 @@
 # A small room with persistent map state
 
 This original demo implements the fixed-room proposal in
-[Build a room from tiles](../../guidance/techniques/tile-maps.md). It is an adaptation of
-that guide's design, not a historical reproduction or a PacDude port.
-All code, map data, and byte-aligned artwork here are original.
+[Build a room from tiles](../../guidance/techniques/tile-maps.md).
+It is an adaptation of that guide's design, not a historical reproduction or
+a PacDude port. All code, map data, and byte-aligned artwork here are original.
 
 The actor follows a finite script through an asymmetric room. Walls block
-movement. Collecting the diamond changes its map entry to floor. Walking away
-and returning does not restore the diamond. The exit is a distinct passable
-picture; it has no victory rule. There is no keyboard system.
+movement. Collecting the diamond changes its map entry to floor.
+
+Walking away and returning does not restore the diamond. The exit is a
+distinct passable picture. It has no victory rule. There is no keyboard system.
 
 ## Run and check
 
-From the repository root, with the existing native tools and verified firmware:
+Run these commands from the repository root, with the existing native tools
+and verified firmware:
 
 ```sh
 uv run python scripts/coco.py check examples/tile-room
@@ -20,17 +22,18 @@ uv run python scripts/coco.py run examples/tile-room --target coco1
 ```
 
 `check` covers both targets declared in [coco.toml](coco.toml) and keeps a
-result file for each; add `--target coco2` to check one. Frame N of the check
-shows the room after N - 1 moves.
+result file for each target. Add `--target coco2` to check one target.
+Frame N of the check shows the room after N - 1 moves.
 
 `check` runs headlessly. `run` opens XRoar, moves through the script once,
-and holds the final picture. Close XRoar to stop it. There is no return to
-BASIC. This is direct DECB auto-run, not disk-loading evidence.
-`--help` and invalid arguments do not build or launch anything.
+and holds the final picture. Close XRoar to stop it.
 
-A check removes the target's previous success record before building. The
-independent model and its specifications are [expected.py](expected.py) and
-[tile_room_spec.py](tile_room_spec.py):
+There is no return to BASIC. This is direct DECB auto-run, not disk-loading
+evidence. `--help` and invalid arguments do not build or launch anything.
+
+A check removes the previous success record of the target before it builds.
+The independent model and its specifications are [expected.py](expected.py)
+and [tile_room_spec.py](tile_room_spec.py):
 
 ```sh
 COVERAGE_FILE=build/tile-room/.coverage \
@@ -46,16 +49,21 @@ ignored `build/tile-room/`. No firmware or downloaded source is distributed.
 The task specifies CoCo 1 and CoCo 2, NTSC, 32 KiB, a normal-clock 6809,
 and a non-T1 MC6847. Both checks use XRoar's `cocous` architecture with explicit
 `-vdg-type 6847`, `-machine-cpu 6809`, `-tv-type ntsc`, and `-ram 32`.
-`scripts/coco.py` passes `-no-c` to exclude user configuration. CoCo 1 uses verified
-`bas11.rom` and `extbas10.rom`; CoCo 2 uses verified `bas12.rom` and
-`extbas11.rom`. These are defined emulator configurations, not evidence for
-every board revision. The scoped local contract is
-`local/research/tile-room/contract.txt`; shared project notes are untouched.
+`scripts/coco.py` passes `-no-c` to exclude user configuration.
+
+CoCo 1 uses verified `bas11.rom` and `extbas10.rom`. CoCo 2 uses verified
+`bas12.rom` and `extbas11.rom`. These are defined emulator configurations, not
+evidence for every board revision.
+
+The scoped local contract is `local/research/tile-room/contract.txt`.
+Shared project notes are untouched.
 
 The display is RG6, 256×192, one bit per pixel, with 32 bytes per row and
-6,144 bytes total. CSS is zero (black/green). The 8×6 room occupies the upper
-left 64×48 pixels; the rest of the screen is cleared. This deliberately small
-room keeps the map, drawing, and movement rules easy to inspect.
+6,144 bytes total. CSS is zero (black/green).
+
+The 8×6 room occupies the upper left 64×48 pixels. The program clears the rest
+of the screen. This deliberately small room keeps the map, drawing, and
+movement rules easy to inspect.
 
 | Allocation | Address interval |
 | --- | --- |
@@ -68,14 +76,17 @@ room keeps the map, drawing, and movement rules easy to inspect.
 The build rejects incorrect placement or overlap with the stack reservation.
 The program masks IRQ/FIRQ and initializes its state even with nonzero RAM.
 PIA setup selects the data register and preserves the low three shared bits.
+
 SAM strobes select base `$0400`, mode `110`, page zero, and normal clock.
-No ROM routines are called after entry.
+The program calls no ROM routines after entry.
 
 ## Separate the map, movement and picture
 
 The map uses one byte per cell, with an eight-byte row stride. Tile IDs are
-floor 0, wall 1, collectible 2, and exit 3. The actor image is 4 but is never
-stored in the map. A separate property table says which scenery permits travel.
+floor 0, wall 1, collectible 2, and exit 3.
+
+The actor image is 4 but is never stored in the map. A separate property table
+says which scenery permits travel.
 
 ```text
 ..#.....
@@ -87,84 +98,123 @@ stored in the map. A separate property table says which scenery permits travel.
 ```
 
 The actor starts at column 0, row 0. Each move proposes an adjacent cell.
-Unsigned underflow and upper limits are rejected before indexing the map.
+The program rejects unsigned underflow and upper limits before it indexes the
+map.
+
 Then the tile's property permits or rejects the move. An accepted collectible
 becomes floor in the map before rendering.
 
 Each tile is eight bytes: one byte for each of eight pixel rows. For cell
-column `c` and row `r`, map offset is `r * 8 + c`. The first display byte is
-`$0400 + r * 256 + c`; subsequent image rows are 32 bytes apart.
-The lower-right cell starts at `$0907`, with its final row at `$09E7`.
-These are derived address calculations, independently checked through the
-complete framebuffer oracle.
+column `c` and row `r`, map offset is `r * 8 + c`.
 
-Every checkpoint redraws the entire framebuffer from current map state and
+The first display byte is `$0400 + r * 256 + c`. The image rows after the
+first are 32 bytes apart. The lower-right cell starts at `$0907`, with its
+final row at `$09E7`.
+
+These address calculations are derived. The complete framebuffer oracle checks
+them independently.
+
+Every checkpoint redraws the entire framebuffer from current map state. It
 then draws the actor. No saved background can reintroduce a collected item.
+
 This approach is simple but does more work than dirty-cell drawing. It does
-not synchronize to vertical blanking; no smoothness or frame-rate claim is made.
+not synchronize to vertical blanking. This README makes no claim about
+smoothness or frame rate.
 
 ## Source facts and provenance
 
 The following hardware page images were read before implementation. Their
-facts support the display setup; the room and movement rules are our design.
-SHA-256 values identify the exact locally examined PDFs.
+facts support the display setup. The room and movement rules are our design.
 
-- Tandy, [Color Computer Technical Reference Manual][technical], PDF 14
-  (printed 7): `$FF22` video fields and `$FF23` data-register selection.
-  PDF 15 (printed 8): SAM display-offset, video-mode, page and CPU-rate strobes.
-  PDF 31 (printed 24): 256×192 uses SAM `110` and PIA bits 7–4 `1111`.
-  SHA-256 `8c4ed0c6de6e54f941932999d6750202f75102bff061f215b2dd3f757067cc64`.
+SHA-256 values identify the exact PDFs that were examined locally.
+
+- Tandy, [Color Computer Technical Reference Manual][technical].
+  - PDF 14 (printed 7): `$FF22` video fields and `$FF23` data-register
+    selection.
+  - PDF 15 (printed 8): SAM display-offset, video-mode, page and CPU-rate
+    strobes.
+  - PDF 31 (printed 24): 256×192 uses SAM `110` and PIA bits 7–4 `1111`.
+  - SHA-256 `8c4ed0c6de6e54f941932999d6750202f75102bff061f215b2dd3f757067cc64`.
+
 - Tandy, [Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)][service],
   PDF/printed 31: MC6847 video, SAM addressing, and PIA-controlled mode inputs.
   SHA-256 `7210e7a0da2b5211bc95a5833759a15fb575a5cc5787a0d9cbfa3c09b1622447`.
-- Don Inman, Kurt Inman with Dymax, [Assembly Language Graphics for the TRS-80
-  Color Computer][graphics], PDF 107 (printed 98): eight graphic elements per
-  byte and black/green color set zero.
-  SHA-256 `c1259497b7d1505e6908fd3c8a250d47e0c4b549140e308bdc6bf8e345b6ce01`.
-- Motorola, [MC6847 datasheet][vdg], PDF/printed 19, Table 3: RG6 is
-  256×192, 6,144 bytes, and pixel order runs L7 through L0 across the byte.
-  SHA-256 `2d4586d2fd3c82c60071bbe4cc3930e561c00dce1e43245b0c7ffd5e081fe88c`.
 
-The guide's PacDude source reading motivated the separation of map addressing,
-display addressing and movement rules. This example does not reimplement its
-renderer or diagonal-path collision. Its archive citations remain in the
+- Don Inman, Kurt Inman with Dymax,
+  [Assembly Language Graphics for the TRS-80 Color Computer][graphics],
+  PDF 107 (printed 98).
+  - Eight graphic elements per byte and black/green color set zero.
+  - SHA-256 `c1259497b7d1505e6908fd3c8a250d47e0c4b549140e308bdc6bf8e345b6ce01`.
+
+- Motorola, [MC6847 datasheet][vdg], PDF/printed 19, Table 3.
+  - RG6 is 256×192 and 6,144 bytes.
+  - Pixel order runs L7 through L0 across the byte.
+  - SHA-256 `2d4586d2fd3c82c60071bbe4cc3930e561c00dce1e43245b0c7ffd5e081fe88c`.
+
+The guide's reading of the PacDude source motivated the separation of map
+addressing, display addressing and movement rules.
+This example does not reimplement its renderer or diagonal-path collision.
+Its archive citations remain in the
 [guide's reading record](../../guidance/techniques/tile-maps.md#source-and-reading-record).
 
 ## Evidence and limits
 
-The scoped run passed all 12 specs, including all 42 checkpoints on each
-defined target. Combined statement and branch coverage of the former runner was
-98.67%. Ruff lint/format and scoped Markdown lint passed. The two result files
-record the same binary SHA-256 and each target's checkpoint list.
+The scoped run passed all 12 specifications, including all 42 checkpoints on
+each defined target. Combined statement and branch coverage of the former
+runner was 98.67%. Ruff lint/format and scoped Markdown lint passed.
 
-The independent host oracle walks a graph of passable cells, then composes
-pixels from text drawings. It does not read the assembly map, art, script,
-or captured RAM to derive its expectations. The specs also assert literal
-positions at selected checkpoints, rather than trusting the oracle alone.
+The two result files record the same binary SHA-256 and each target's
+checkpoint list.
+
+The independent host oracle walks a graph of passable cells. It then composes
+pixels from text drawings. To derive its expectations, it does not read the
+assembly map, art, script, or captured RAM.
+
+The specifications also assert literal positions at selected checkpoints. They
+do not trust the oracle alone.
 
 All 42 checkpoints cover every scripted move and the initial picture:
 
 - Left and top boundary rejection at steps 1 and 2, right at 20, bottom at 26.
 - Walls approached from left, below, above and right at steps 4, 9, 17 and 35.
-- Collection at 5, departure at 6, return at 39, departure at 40 and return at 41.
+- Collection at 5, departure at 6, return at 39, departure at 40 and return
+  at 41.
 - Exit traversal at 27, departure at 28, and return at 29.
-- Every map byte, all 6,144 framebuffer bytes, four guards, actor coordinates,
-  acceptance flag and script step at every checkpoint on both targets.
+- At every checkpoint on both targets:
+  - every map byte
+  - all 6,144 framebuffer bytes
+  - four guards
+  - actor coordinates
+  - acceptance flag
+  - script step
 
-The check starts with nonzero RAM and requires a completed-frame PC trap.
-A data-address trap must never fire. Negative controls corrupt the screen,
-map, guards and state, and deliberately select missing or unexpected traps.
-Firmware tests cover missing, partial and corrupt installations. Help and
-argument tests intercept process execution to prevent accidental launches.
+The check starts with nonzero RAM and needs a completed-frame PC trap.
+A data-address trap must never fire.
 
-Initial CoCo 1 checking reached step 34 but missed 35 under a ten-second
-emulated-time budget. Raising that budget to 60 allowed the complete script;
-the host still limits each capture to 30 seconds. The failed attempt did not
-write a success record. This was a test-budget correction, not a speed claim.
+Negative controls corrupt the screen, map, guards and state, and deliberately
+select missing or unexpected traps. Firmware tests cover missing, partial and
+corrupt installations. Help and argument tests intercept process execution to
+prevent accidental launches.
+
+Initial CoCo 1 checking reached step 34 but missed 35 under a budget of
+ten seconds of emulated time. Raising that budget to 60 allowed the complete
+script. The host still limits each capture to 30 seconds.
+
+The failed check did not write a success record. This was a correction to the
+test budget, not a speed claim.
 
 Assembly and emulator RAM evidence are distinct from rendered-display evidence.
-No GUI was launched for this task. Display appearance, real keyboard input,
-physical hardware, PAL, T1, CoCo 3, audio and performance remain untested.
+No GUI was launched for this task. These items remain untested:
+
+- display appearance
+- real keyboard input
+- physical hardware
+- PAL
+- T1
+- CoCo 3
+- audio
+- performance
+
 The full starter suite is intentionally outside this worker's scope.
 
 [technical]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf>
