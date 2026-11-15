@@ -1,12 +1,34 @@
-# Programs to play and study
+# Examples
 
-Start with [collect-room](collect-room/README.md) for a complete playable game.
-In the game, you collect two stars and reach the exit. After that, you
-restart. Its README gives setup, launch commands, controls and the exact
-emulator contract for CoCo 1/2B. Read its evidence limits separately from its
-instructions for playing.
+These are a variety of examples that show specific techniques for doing things in certain situations.
 
-## Choose a smaller building block
+eg
+- choosing and setting up the screen for your program
+- getting keyboard input
+- playing audio alongside gameplay
+
+Each example may have code that builds up the context that is actually not part of the example, and then
+a marked example of doing the one special thing the example is about.
+
+It's not always about the best way, it's an illustration of a technique or a starting point if you don't
+know what else to do.
+
+Think of these examples as building blocks, not to necessarily copy as-is, but to study to decide what to
+do in your own code.
+
+## Try one now
+
+Open a terminal in the starter folder. Paste this line to see the
+[first-screen](first-screen/README.md) example in XRoar. Close the window to
+stop it.
+
+```sh
+uv run python scripts/coco.py run examples/first-screen
+```
+
+Each example README gives the commands for that example.
+
+## The Example Catalogue
 
 | Task | Example | Scope |
 | --- | --- | --- |
