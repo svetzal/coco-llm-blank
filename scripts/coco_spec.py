@@ -1202,13 +1202,17 @@ class DescribeEquipmentInXRoar:
     ) -> None:
         if not instrumented_ready("coco3"):
             pytest.skip("Native tools, CoCo 3 firmware or instrumented build tools are missing")
-        directory = tmp_path / "page-flip-coco3-copy"
-        shutil.copytree(ROOT / "examples/page-flip-coco3", directory)
+        directory = tmp_path / "page-flip-copy"
+        shutil.copytree(ROOT / "examples/page-flip", directory)
         source = directory / "main.asm"
-        source.write_text(source.read_text().replace(" sta $FF9D", " inca\n sta $FF9D"))
+        source.write_text(
+            source.read_text().replace("show    sta $FF9D", "show    inca\n        sta $FF9D")
+        )
         settings = directory / "coco.toml"
-        shown = settings.read_text().replace('frames = ["1-6"]', "frames = [1]")
-        arguments = ["check", str(directory), "--target", "coco3-128"]
+        shown = settings.read_text().replace(
+            "frames = [1, 2, 3, 4, 32, 33, 64, 65]", "frames = [1]"
+        )
+        arguments = ["check", str(directory), "--target", "coco3"]
 
         settings.write_text(shown.replace("video = true", "video = false"))
         assert coco.main(arguments) == 0

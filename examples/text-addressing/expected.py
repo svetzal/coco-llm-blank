@@ -17,7 +17,7 @@ COLUMNS = {"": 40, "c32": 32, "c64": 64, "c80": 80}
 SPACE = 0x20
 BLACK_CELL, WHITE_CELL = 0x00, 0x01
 # Measured, not sourced: the pinned XRoar's rendered levels for GIME palette
-# values $00 and $3F with coco.py's renderer settings (as in page-flip-coco3).
+# values $00 and $3F with coco.py's renderer settings (read from a capture, measured in XRoar).
 BLACK, WHITE = (20, 20, 20), (255, 255, 255)
 LINES_PER_ROW = 8  # $FF98 LPR = 011 (Tandy PDF 12)
 # Measured, not sourced: coco.py's capture is 512 samples wide. A text line

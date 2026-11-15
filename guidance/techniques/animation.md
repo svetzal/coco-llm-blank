@@ -16,7 +16,7 @@ frame is complete, show that screen. Then draw the next frame into the other
 screen. A slow frame is not visible while the program draws it.
 Two 256x192 two-colour screens need 12,288 bytes.
 
-### Flip pages on CoCo 1 and CoCo 2
+### Flip pages with the SAM
 
 These published facts come from page images:
 
@@ -41,10 +41,18 @@ The flag records an event, not the current level. Let one routine only read
 `$FF02`. A keyboard scan or a ROM interrupt handler can clear the flag first.
 Keep the other `$FF03` bits when you change bits 0 and 1.
 
-The example's check runs eight checkpoints on the CoCo 1 target. At each
-checkpoint it compares both screens and every rendered sample.
+The example's check runs eight checkpoints on the CoCo 1, CoCo 2 and CoCo 3
+targets. At each checkpoint it compares both screens and every rendered
+sample.
 
-### Flip pages on a CoCo 3
+On a CoCo 3 the same SAM writes flip the same screens in the VDG modes. In
+those modes the SAM bits F6 to F0 give the physical address bits Y15 to Y9,
+and `$FF9D` bits 7 to 5 give Y18 to Y16. [Tepolt, PDF 44][tepolt-44] BASIC
+loads `$FF9D` with `$E0`. [Tepolt, PDF 56][tepolt-56] The PIA interrupts stay
+on the CoCo 3. [Tepolt, PDF 49][tepolt-49] No source that we read gives the
+timing of field sync on the CoCo 3. The FS wait works in XRoar (measured).
+
+### Flip pages in the GIME native modes
 
 The native GIME display start is `$FF9D` x 2048 + `$FF9E` x 8, a physical
 address. [Tandy CoCo 3, PDF 13][coco3-13] Bit 3 of `$FF92` enables the vertical
@@ -52,12 +60,19 @@ border (VBORD) IRQ source. [Tandy CoCo 3, PDF 11][coco3-11]
 A read of `$FF92` clears a pending GIME IRQ. [Tepolt, PDF 50][tepolt-50]
 
 VBORD is not the PIA field-sync flag. Do not use the SAM strobes for a native
-display. The [CoCo 3 page flip](../../examples/page-flip-coco3/README.md) gives
-both buffers the same `$FF9E`, so only `$FF9D` changes. It writes `$FF9D` after
-a new VBORD and waits for the next VBORD before it uses the old buffer again.
+display: in the native modes the SAM offset has no effect.
+[Tepolt, PDF 39][tepolt-39] The `coco3` variant of the
+[page flip](../../examples/page-flip/README.md) gives both screens the same
+`$FF9E`, so only `$FF9D` changes. It writes `$FF9D` after a new VBORD and
+waits for the next VBORD before it uses the old screen again.
 
-Its check runs six checkpoints at 128 and 512 KiB. A wrong display base passes
-the memory check and fails the rendered check.
+The variant keeps the screens of the main build, CPU `$0400` and `$2400`.
+Under BASIC's map they are at physical `$70400` and `$72400`, so `$FF9D` is
+`$E0` or `$E4` and `$FF9E` is `$80`. A 128 KiB CoCo 3 does not use Y18 and
+Y17, so the same values work at 128 and 512 KiB. [Tepolt, PDF 29][tepolt-29]
+
+Its check runs eight checkpoints at 128 and 512 KiB. A wrong display base
+passes the memory check and fails the rendered check.
 
 ### What the sources do not settle
 
@@ -191,7 +206,7 @@ changes or delays into assembly.
   information, PDF 15.
 - Tandy, *Color Computer 3 Service Manual*, PDF 11-18. Resource `coco3-service`.
 - Laurence A. Tepolt, *Assembly Language Programming for the CoCo3* (1987),
-  PDF 50. Resource `tepolt-coco3`.
+  PDF 29, 39, 44, 49, 50 and 56. Resource `tepolt-coco3`.
 - John Kowalski, *Gloom 3-D V1.2* (1996), read in full, cited routines
   analysed. Its README (lines 10-16) calls it "Openware", not a licence.
   SHA-256: `gloom.asm`
@@ -218,7 +233,12 @@ not reproduce the historical listings.
 [sam-advance]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6883%20Synchronous%20Address%20Multiplexer%20Advance%20Information%20%28Motorola%29.pdf#page=15>
 [coco3-11]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=11>
 [coco3-13]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20%28Tandy%29.pdf#page=13>
+[tepolt-29]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=29>
+[tepolt-39]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=39>
+[tepolt-44]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=44>
+[tepolt-49]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=49>
 [tepolt-50]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=50>
+[tepolt-56]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=56>
 [gloom]: <https://colorcomputerarchive.com/repo/Programming/Source/Gloom3D/gloom.asm>
 [gloom-readme]: <https://colorcomputerarchive.com/repo/Programming/Source/Gloom3D/readme.txt>
 [polsz]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2006%20No.%2003%20-%20October%201986.pdf#page=118>

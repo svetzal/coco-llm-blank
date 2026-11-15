@@ -11,8 +11,50 @@ vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
 
+# CoCo 2 on the same NTSC architecture, with an explicit non-T1 6847 VDG and
+# CoCo 2 firmware, as in palette-swatches. The rendered colours of the 6847
+# are the measured ones.
+[targets.coco2]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas12.rom"
+
+# NTSC CoCo 3, GIME 1986, at 128 and 512 KiB. Under BASIC's map, CPU $0400 is
+# physical $70400. A 128 KiB CoCo 3 has the same RAM at $10400, so the
+# snapshot offset of the screens differs between the two sizes.
+[targets.coco3]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+
+[targets.coco3-512]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 512
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+
+# The code starts after SCREEN_B ($2400-$3BFF) and ends below $4000. On a
+# CoCo 3, BASIC's reset runs its own code at $4000-$436C, so a checkpoint
+# label there can be reached before the program loads.
 [memory]
-at = { start = 0x4000 }
+at = { start = 0x3C00 }
+below = { ink = 0x3FFF }
+
+# The plain build flips with the SAM and waits for the PIA field sync. This
+# variant flips with the GIME's $FF9D and waits for VBORD, in native graphics.
+[variants.coco3]
+defines = ["COCO3"]
+targets = ["coco3", "coco3-512"]
 
 # The practice is about what the display shows, so every check compares the
 # rendered picture too (instrumented XRoar).
