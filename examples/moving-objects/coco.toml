@@ -1,8 +1,7 @@
 # Settings for scripts/coco.py. Paths are relative to this folder.
 source = "main.asm"
 
-# NTSC CoCo architecture with an explicit non-T1 6847 VDG and firmware.
-# Do not use the CoCo 2B T1 default for the non-T1 board reference.
+# The first target is the default. Firmware is checked against roms.json.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -11,21 +10,24 @@ vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
 
-[targets.coco2]
-machine = "cocous"
-cpu = "6809"
-tv = "ntsc"
-vdg = "6847"
-ram_kib = 32
-basic = "bas12.rom"
-
 [memory]
-below = { program_end = 0x7E00 }   # the stack is reserved from $7E00
+at = { start = 0x3000 }
+below = { program_end = 0x4400 }   # the scenery buffer starts at $4400
 
+# The plain build restores from the scenery buffer. Each variant selects one
+# other method.
+[variants.save]
+defines = ["SAVE"]
+
+[variants.redraw]
+defines = ["REDRAW"]
+
+# For the check only: where to take the snapshots and compare the screen.
 [check]
-checkpoint = "frame_ready"         # reached once per completed frame
-# Overlap swaps, edge reflections and the scenery change.
-frames = [1, 15, 16, 17, 31, 32, 46, 64, 65, 185, 186, 369, 370]
-unreachable = "state"              # a data label: executing it is a fault
-screen = 0x0400
-emulated_seconds = 60
+checkpoint = "frame_ready"   # reached once per completed frame
+# First restore, overlap in both orders and the frame after each, layer
+# swap, scenery change and the frame after it, edge reversals.
+frames = [1, 2, 15, 16, 17, 31, 32, 46, 47, 64, 65, 185, 186, 369, 370]
+unreachable = "state"        # a data label: executing it is a fault
+screen = 0x0400              # expected_screen() is compared from here
+emulated_seconds = 90

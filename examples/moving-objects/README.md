@@ -1,174 +1,184 @@
-# Moving objects over changing scenery
+# Move objects without holes in the scenery
 
-This original experiment redraws a patterned background, then draws two opaque
-rectangles in a defined order. It asks whether objects can cross, separate,
-reach the edges, and leave the current scenery intact.
+This example moves objects over scenery and puts the scenery back where each
+object was. In each frame, it first restores the scenery at the old object
+positions. Then it draws the objects at their new positions, the bottom layer
+first.
 
-It implements the full-redraw proposal in
-[Move objects without losing the world](../../guidance/techniques/moving-objects.md).
-It does not implement masks, saved-background rectangles, clipping, or collision.
-The assembly and scene design are original work, not a copied book program.
+The default method keeps a second copy of the scenery in RAM, the scenery
+buffer. It copies each old rectangle back from that buffer.
 
-## Run it
+The example does not hide the drawing from the display, so a frame can show
+tearing. The [page flip](../page-flip/README.md) example draws this scene into
+a hidden screen. The example does not draw transparent pixels, clip at an
+edge, place objects inside a byte, detect collisions or time the frames.
 
-Prepare the starter's native tools and the selected machine's firmware first.
-From the repository root:
+## Choose a restore method
+
+The scenery buffer is the default. Use it when the scenery has a pattern and
+objects can overlap. It costs 6 KiB of RAM in RG6.
+
+| Method | Variant | Extra RAM | Bytes for each object | Overlap rule | When the scenery changes |
+| --- | --- | --- | --- | --- | --- |
+| Scenery buffer | (none) | 6,144 | 32 | Any order | Change the buffer, then copy all of it |
+| Save under | `save` | 36 | 48 | Reverse of the draw order | Draw all of the scenery again |
+| Redraw | `redraw` | 0 | 16 | None | Nothing more |
+
+- Extra RAM: the bytes that the method needs in this example, for two
+  objects.
+
+- Bytes for each object: the bytes that the method copies or writes for one
+  16×8 object in each frame, with the draw. Redraw also writes 6,144 bytes of
+  scenery in each frame.
+
+- Overlap rule: the order in which to restore the old objects.
+
+Notes on the methods:
+
+- Scenery buffer: the buffer is the true scenery. When a door opens or a
+  pickup goes, change the buffer and the screen. Restore all old objects
+  before you draw any object.
+
+- Save under: before each draw, keep the screen bytes under the object. In
+  the next frame, put them back, the object drawn last first. The saved bytes
+  of an object can include an object that was below it. Thus the wrong order
+  shows that lower object again at its old position.
+
+- Save under: saved bytes are not correct after the scenery changes beneath
+  them. Draw all of the scenery again at that time.
+
+- Redraw is the simplest method and the slowest. It writes the full screen in
+  each frame.
+
+Other ways that this example does not show:
+
+- Erase the old rectangle with one colour. Inman's program does this, with
+  `CLR`. It is correct only on a one-colour background. On this checker, it
+  makes black holes.
+
+- Restore only the screen strip that the object uncovers. This writes fewer
+  bytes, but it needs a different routine for each direction.
+
+- Redraw the tiles under the old rectangle from a tile map. The
+  [tile room](../tile-room/README.md) keeps the room as a tile map.
+
+The [moving-objects guide](../../guidance/techniques/moving-objects.md)
+compares the published methods.
+
+## Restore and draw
+
+The example is the three `>>> EXAMPLE` parts of [main.asm](main.asm):
+
+1. After the label `frame`, restore the scenery at the old object positions.
+   - Scenery buffer: `copy_back` copies 8 rows of 2 bytes from the buffer to
+     the screen. The buffer is at `$4400`, so each buffer byte is at the
+     screen address plus `$4000`.
+   - Save under: `put_back` writes the saved bytes of the object drawn last,
+     then of the object drawn first.
+   - Redraw: go to step 2 in each frame.
+
+2. At `new_scenery`, show all of the new scenery. The scenery buffer method
+   draws the scenery into the buffer, then copies 6,144 bytes to the screen.
+   The other methods draw the scenery on the screen. This also removes the
+   old objects, so step 1 does not occur in this frame.
+
+3. At `draw_objects`, draw the objects, the bottom layer first.
+   `rectangle` records the screen address of each object in a slot, for step
+   1 of the next frame. The save under method also keeps the 16 screen bytes
+   under the object in the slot.
+
+The `--- CONTEXT` blocks are not part of the practice:
+
+- They set up RG6 at `$0400` with colour set 0, as in
+  [first-screen](../first-screen/README.md).
+
+- They count the frames. The scenery is new in frame 1 and changes in each
+  64th frame.
+
+- They draw an 8×8 checker scenery. Bit 6 of the frame count inverts it.
+
+- They move two opaque 16×8 rectangles. Green object A starts at the top
+  left. Black object B starts at the top right. They move in opposite
+  directions across the screen, and down together. Each reverses at an edge.
+
+- Every 32 frames, they swap the layer order. Bit 5 of the frame count puts
+  B below A.
+
+- They pause after each frame.
+
+The program keeps the interrupts, stack, direct page and CPU clock that BASIC
+sets.
+
+The program ends below `$4400`. The build fails if it reaches the scenery
+buffer. The `state` label is data. The check fails if the CPU runs it.
+
+## See and check each method
+
+Open a terminal in the starter folder. Copy one line and paste it to see that
+method in XRoar. The objects move until you close the window.
 
 ```sh
-uv run python scripts/coco.py check examples/moving-objects
-uv run python scripts/coco.py run examples/moving-objects --target coco1
+uv run python scripts/coco.py run examples/moving-objects                    # scenery buffer
+uv run python scripts/coco.py run examples/moving-objects --variant save     # save under
+uv run python scripts/coco.py run examples/moving-objects --variant redraw   # redraw
 ```
 
-`check` covers both targets declared in [coco.toml](coco.toml).
-Add `--target coco2` to check one. Each command rebuilds the binary.
+All three methods show the same picture. To check all three methods, paste
+this line:
 
-The run command opens XRoar at normal speed. Close its window to stop it.
-There are no controls and no return to BASIC.
-The loader is direct DECB auto-run, not a disk boot or `LOADM` check.
+```sh
+uv run python scripts/coco.py check examples/moving-objects --video
+```
 
-The intended picture is two 16×8 rectangles over an 8×8 checker pattern.
-One rectangle uses set pixels. The other rectangle uses clear pixels.
-They move in opposite horizontal directions and share a vertical position.
+The `--video` option needs the
+[instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar).
 
-Layer order changes every 32 frames. Scenery inverts every 64 frames.
+The check takes a snapshot at 15 frames. It compares all 6,144 screen bytes
+and XRoar's rendered picture with [expected.py](expected.py).
 
-The display has not been visually inspected.
-These descriptions specify the intended picture.
-The checks below establish its memory representation.
+The model in `expected.py` calculates each position from the bounce rule. It
+sets each pixel from the scenery and the objects in layer order. It does not
+model the restore. A correct restore leaves no trace of the old positions.
 
-## Machine contract
+The frames include these cases:
 
-Both targets use NTSC, 32 KiB RAM, a normal-clock 6809, and an MC6847.
-The assembly explicitly selects the slow SAM clock. It masks IRQ and FIRQ.
+- Frame 1, the first scenery, and frame 2, the first restore.
 
-| Target | XRoar architecture | VDG | Explicit firmware |
-| --- | --- | --- | --- |
-| CoCo 1 | `cocous` | `6847` | `bas11.rom` |
-| CoCo 2 | `cocous` | `6847` | `bas12.rom` |
+- Full overlap in both layer orders, frames 16 and 46, and the frame after
+  each.
 
-The CoCo 2 test uses the shared NTSC CoCo architecture with the CoCo 2 ROMs
-and an explicit non-T1 VDG. It does not use the `coco2bus` profile's T1 default.
-This is a defined emulator configuration, not proof for every CoCo 2 revision.
-The check reports the exact configuration in its results file.
+- The swap of the layer order, frames 31 and 32.
 
-ROMs remain in ignored `local/roms/` storage. The project manifest identifies
-their source and checksums. The check never changes project files.
+- The change of the scenery, frame 64, and the restore after it.
 
-## Source facts and our design
+- The reversals at the edges, frames 185, 186, 369 and 370.
 
-Tandy's *Color Computer Technical Reference Manual* establishes these controls:
+A save under restore in the wrong order fails at frame 17. A scenery buffer
+restore of only one object fails at frame 2.
 
-- PDF 14 (printed 7): `$FF22` video fields and `$FF23` data-register selection.
-- PDF 15 (printed 8): SAM display offset, video mode, and CPU rate strobes.
-- PDF 31 (printed 24): 256×192 mode uses SAM `110` and PIA bits 7–4 `1111`.
+The check uses the CoCo 1 target in [coco.toml](coco.toml): NTSC, 32 KiB,
+normal clock, the non-T1 MC6847 and Color BASIC 1.1. It does not prove the
+result on a television, a physical CoCo, PAL, the MC6847T1 or the CoCo 3. It
+does not measure the time of each method.
 
-The implementation reuses the starter's
-[first-screen setup](../first-screen/README.md).
-It selects CSS zero while it preserves PIA low bits.
-The framebuffer contains 32 bytes per row for 192 rows, so its derived size is
-6,144 bytes. [Tandy technical manual][technical]
+## Sources
 
-Tandy's *Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)*,
-PDF/printed 31, identifies its MC6847, SAM display addressing, and PIA-controlled
-video inputs. It establishes the board family used for the source comparison,
-not T1 or PAL behaviour. [CoCo 2 service manual][service]
+Read these pages before you change the screen setup or the bit order. Use
+[reference lookup](../../guidance/starter/references.md) to get them.
 
-Don Inman, Kurt Inman with Dymax, *Assembly Language Graphics for the TRS-80
-Color Computer*, chapter 7, printed 151–156 / PDF 159–164, supplies the research
-starting point.
-That starting point is shape data, placement bounds, and rectangle erasure.
+- Inman, Inman and Dymax, *Assembly Language Graphics for the TRS-80 Color
+  Computer*, PDF 106–107: mode 6R is 256×192 at `$0400`–`$1BFF`, has eight
+  pixels in each byte and uses 6 KiB. With colour set 0, a 0 bit shows black
+  and a 1 bit shows green.
 
-Our full-scene redraw replaces the old-rectangle erase design.
-We did not reproduce that program or its ROM joystick calls.
-[Graphics book][graphics]
+- The same book, PDF 162: the program erases the old shape with `CLR` on each
+  of its rows before it draws the shape at the new position.
 
-All rendered bytes here are either `$00` or `$FF`. The rectangles and checker
-cells are byte-aligned. Their visible geometry does not depend on which bit
-appears first inside a byte. Arbitrary pixel alignment remains outside this test.
+- Motorola, *MC6847 Video Display Generator* datasheet, PDF 19, Table 3: in
+  RG6, bit 7 is the leftmost pixel of a byte.
 
-## Memory and motion
+- Tandy, *Color Computer Technical Reference Manual*, PDF 14–15: the `$FF22`
+  bits, and the SAM offset and mode bits. PDF 31: RG6 uses SAM V=`110` and
+  `$FF22` bits 7 to 4 `1111`.
 
-| Region | Addresses |
-| --- | --- |
-| Framebuffer | `$0400–$1BFF` |
-| Framebuffer guards | `$03FF`, `$1C00` |
-| Code and initialized state | `$3000` through `program_end - 1` |
-| Reserved stack | `$7E00–$7EFF`, growing down from `$7F00` |
-
-The build rejects code that reaches the stack reservation. Symbols come from
-the same assembled binary that the emulator checks use.
-
-The object origins move one byte horizontally and one pixel vertically per frame.
-Horizontal origin bounds are 0–30 bytes. Vertical origin bounds are 0–184 pixels.
-Those bounds include the whole 16×8 rectangle.
-
-Motion reverses before the next step would leave the screen.
-The objects share their vertical trajectory.
-
-Every frame draws the complete current background before either object.
-There is no saved image that can accidentally restore old scenery.
-Changing layer order and inverting the background exercise that distinction.
-
-This simplicity costs a full framebuffer redraw per frame. The program draws
-into the screen that the display shows, so the display can show a frame that is
-not complete. The [page flip](../page-flip/README.md) example draws the same
-scene into a hidden screen. Its rendered check shows the difference.
-
-## Emulator checks
-
-The check captures completed frames 1, 15, 16, 17, 31, 32, 46, 64, 65,
-185, 186, 369, and 370. Each capture checks:
-
-- The actual frame counter and both object-position coordinates.
-- All 6,144 framebuffer bytes against an independent pixel-level scene.
-- Guard bytes immediately before and after the framebuffer.
-- An unreachable data-address trap that must not produce a snapshot.
-
-The independent movement oracle uses a closed-form reflected trajectory.
-It does not repeat the assembly's direction-update loop.
-
-The scene oracle composes the background and objects by pixel coordinates.
-It does not copy the assembly's byte-writing loops.
-
-Frames 16 and 46 exercise opposite overlap orders. Frames around those overlaps
-check restoration after separation. Frames 64 and 65 check changed scenery.
-The selected boundaries and their following frames check motion reversal.
-
-Tests also reject corrupted RAM, guards, positions, and frame counters.
-
-XRoar 1.12.1 passed these checks for both defined configurations on the
-development Mac with Apple Silicon. On 2026-11-14 they also passed on
-XRoar 1.13.
-
-Native tests start with nonzero RAM. `-no-ratelimit` accelerates host execution.
-The emulated CPU remains at its normal clock.
-Each process has both emulator and host timeouts.
-
-The CI workflow provisions CoCo 2 firmware before pytest, alongside its existing
-CoCo 1 and CoCo 3 firmware. It preserves the CoCo 1 project target.
-
-The development Mac passes all 133 tests with 93.99% combined coverage.
-The non-integration run passes 124 tests. Ruff check and format checks pass.
-
-Results, logs, symbols, and snapshots stay under ignored `build/moving-objects/`.
-The implementation files are:
-
-- [main.asm](main.asm)
-- the machine and checkpoint settings in [coco.toml](coco.toml)
-- the independent scene model in [expected.py](expected.py)
-- [its specifications](moving_objects_spec.py)
-
-These remain untested:
-
-- visual appearance
-- physical hardware
-- PAL
-- T1
-- CoCo 3
-- sound during redraw
-- independent vertical object motion
-- partial-byte placement
-
-[technical]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=14>
-[service]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf#page=31>
-[graphics]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf#page=159>
+The restore methods, the scene and the bounce rule are our own design.

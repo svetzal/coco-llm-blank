@@ -3,8 +3,8 @@
 Read this when a moving object leaves holes in the scenery, when a foreground
 layer must hide an object, or when drawing changes which objects collide.
 Rendering and collision need separate decisions. The sources are listings and
-manuals that we read but did not run. The checked examples run on defined
-CoCo 1 and CoCo 2 configurations only.
+manuals that we read but did not run. The checked examples run on a defined
+CoCo 1 configuration only.
 
 ## Start with what the drawing routine overwrites
 
@@ -42,6 +42,10 @@ that the renderer supports, including partial bytes at the right edge.
 | Save and restore a rectangle | One object moves over unchanged scenery | An old snapshot can erase a newer object or show removed scenery again |
 | Restore from a persistent background | Scenery changes during play | The buffer costs memory and must change with the scenery |
 | Redraw affected regions from world state | Several objects overlap | It costs more drawing time, which also matters to [sound](sound.md) |
+
+The [moving-objects example](../../examples/moving-objects/README.md) shows
+three of these methods: save and restore, a persistent background, and a full
+redraw of the scenery in each frame.
 
 A transparency mask answers a different question: which destination pixels
 does this draw keep? It does not remember what was there before the draw. A
@@ -148,15 +152,17 @@ pixel-perfect collision or blend loop. [Manual, PDF 20][graf-shapes]
 
 ## What the examples check
 
-**Measured result.** Both examples run with NTSC, 32 KiB, a normal-clock 6809
-and the non-T1 MC6847. Moving-objects runs on CoCo 1 and CoCo 2, not on all
-CoCo 2 revisions. Masked-objects runs on CoCo 1. Read each machine contract
-before reuse.
+**Measured result.** Both examples run on CoCo 1 with NTSC, 32 KiB, a
+normal-clock 6809 and the non-T1 MC6847. Read each machine contract before
+reuse.
 
-- The [moving-objects example](../../examples/moving-objects/README.md) draws
-  the patterned background, then two opaque byte-aligned rectangles. Its check
-  compares the full framebuffer, positions, the frame counter and guards in 13
-  frames: overlap in both orders, separation, changed scenery and reversals.
+- The [moving-objects example](../../examples/moving-objects/README.md)
+  restores the patterned scenery under two opaque byte-aligned rectangles,
+  then draws them in layer order. The default method copies the old
+  rectangles from a scenery buffer. Variants save the screen under each
+  object, or redraw all of the scenery. In each method, 15 frames check every
+  screen byte and the rendered picture: overlap in both orders and the restore
+  after it, changed scenery and reversals.
 - The [masked-object example](../../examples/masked-objects/README.md) restores
   the complete background, then draws hollow objects with
   `(screen AND mask) OR ink`. Variants draw the same scenes opaque and with
