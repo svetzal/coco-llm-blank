@@ -17,16 +17,17 @@ trial without a new request.
 
 ## Open work
 
-- Close the labs that were never closed. `experiments/`,
-  `guidance/techniques/research/` and both `validation/` folders are leftover
-  lab material from before [the lab workflow](guidance/starter/lab.md). Close
-  them as that workflow describes, in order:
-  1. One topic at a time (setup):
-     codify what its experiments, research notes and
+- Close the labs that were never closed. `experiments/` and
+  `guidance/techniques/research/` are leftover lab material from before
+  [the lab workflow](guidance/starter/lab.md). Close them as that workflow
+  describes, in order:
+  1. One topic at a time: codify what its experiments, research notes and
      validation reports established into the technique guide and examples,
      moving useful assembly programs into `examples/`. Then delete that
-     topic's leftover files. Setup checks become `scripts/` tests.
-     We closed the display topic. Its evidence is in the
+     topic's leftover files. Every topic is now closed. What remains is
+     `experiments/README.md`, `guidance/techniques/research/`, and a decision
+     about `scripts/validate_repository.py`, which now has only the root
+     scope. We closed the display topic. Its evidence is in the
      [display test](guidance/techniques/colour.md#make-a-display-test-before-making-the-art).
      We closed the animation topic. Its evidence is in the
      [animation guide](guidance/techniques/animation.md) and the page-flip
@@ -43,6 +44,9 @@ trial without a new request.
      example. We closed the collect-room topic. Its evidence is in the
      collect-room example and the
      [sound guide](guidance/techniques/sound.md#measurements-the-examples-do-not-rerun).
+     We closed the setup topic. Its evidence is in the
+     [measured setup results](guidance/starter/toolchain.md#measured-setup-results)
+     and the setup specs in `scripts/`.
   2. Add a size check to CI so growth is a deliberate decision.
 - Clean Apple Silicon host and native Linux desktop onboarding, including
   x86-64 Linux. Intel Mac support is excluded. Current container and configured

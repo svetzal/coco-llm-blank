@@ -8,15 +8,9 @@ For implementation advice, use the [technique guides](../guidance/techniques/REA
 
 ## Choose an investigation
 
-Read the report for its evidence boundary, then follow its reproduction
-instructions. Where a package has no README, the report supplies that procedure.
-The links below describe existing work; they do not claim a new validation run.
-
-| Task | Code and procedure | Validation report |
-| --- | --- | --- |
-| Check current-host macOS recovery | [macos-onboarding](macos-onboarding/) | [Evidence and limits](../guidance/starter/validation/macos-onboarding.md) |
-| Reproduce nonroot Ubuntu onboarding | [linux-onboarding](linux-onboarding/README.md) | [Evidence and limits](../guidance/starter/validation/linux-onboarding.md) |
-| Check sudo failure and recovery | [sudo-policy](sudo-policy/README.md) | [Evidence and limits](../guidance/starter/validation/sudo-policy.md) |
+No investigation remains here. The setup checks are now root specifications
+in `scripts/`. The [toolchain guide](../guidance/starter/toolchain.md#measured-setup-results)
+records the measured setup results.
 
 ## Choose the right test suite
 
@@ -32,7 +26,7 @@ Prepare the [complete starter validation environment](../guidance/starter/python
 before that full run; selected-target setup alone is insufficient.
 
 Experiment suites require an explicit path, such as
-`uv run pytest experiments/sudo-policy`. Use the package's documented command
+`uv run pytest experiments/<name>`. Use the package's documented command
 for coverage, environment variables and preparation. Its scoped coverage
 configuration measures that package, not the entire starter or assembly code.
 Some suites need verified firmware, native tools or Docker. Host-only models have narrower requirements.

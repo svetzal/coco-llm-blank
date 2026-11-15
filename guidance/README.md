@@ -10,7 +10,6 @@ Agents enter through [AGENTS.md](../AGENTS.md), which says when to read each par
 | [starter/](#using-the-starter) | How to use this repository: setup, tools, references and development practice | Setting up, building, testing, or looking up a source |
 | [techniques/](techniques/README.md) | Game and demo domain guidance: how to animate, draw, control, store and play sound | Choosing or applying a technique for the owner's project |
 | `techniques/research/` | Source research behind the techniques | Tracing a claim, or extending a technique with new sources |
-| `starter/validation/` | Measured results for setup and permissions | Diagnosing setup on a new host |
 
 Read the guide for the task at hand. Research and validation records are the
 evidence trail. Open them when a guide's claim matters to the work.
@@ -45,17 +44,10 @@ For practical implementation advice, start with the [technique guides](technique
 
 ## Validation records
 
-Use these reports to inspect recorded commands, targets, expectations, failure
-controls and limitations. They record earlier measurements, not a fresh check
-of your environment. The index under [experiments](../experiments/README.md)
-lists the reproduction code. Example-specific checks are also in the
-[example READMEs](../examples/README.md).
-
-### Starter setup and permissions
-
-- [Apple Silicon current-host onboarding audit](starter/validation/macos-onboarding.md).
-- [Ubuntu onboarding validation](starter/validation/linux-onboarding.md).
-- [Sudo policy validation](starter/validation/sudo-policy.md).
+These records hold earlier measurements, not a fresh check of your
+environment. The checks for each example are in the
+[example READMEs](../examples/README.md). The measured setup results are in
+[the toolchain guide](starter/toolchain.md#measured-setup-results).
 
 Keep these kinds of evidence distinct:
 

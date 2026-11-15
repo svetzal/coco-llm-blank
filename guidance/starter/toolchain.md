@@ -61,6 +61,15 @@ non-interactive sudo and stops if permission is unavailable.
 It never asks an agent to collect a password.
 Reruns reuse working executables and check cached source archives.
 
+When uv, Homebrew and curl are all missing, bootstrap installs curl and CA
+certificates with apt. It uses the same non-interactive sudo. If sudo needs a
+password or refuses the command, bootstrap stops before it installs uv.
+
+Do not ask the owner for a password. Tell the owner that an administrator must
+give the account non-interactive sudo access for apt. Alternatively, the
+administrator can install `curl` and `ca-certificates`. Then run bootstrap
+again. Bootstrap does not change the folders in `projects/`.
+
 `doctor.py` and `coco.py` find the local tools without shell profile
 changes. For custom commands, use the paths that the doctor reports, or add
 `local/toolchain/bin` to PATH.
@@ -72,6 +81,45 @@ Other Linux distributions need manual installation.
 - [ToolShed documentation](https://toolshed.sourceforge.net/ToolShed.html)
 - [XRoar downloads](https://www.6809.org.uk/xroar/)
 - [XRoar build and configuration manual](https://www.6809.org.uk/xroar/doc/xroar.shtml)
+
+## Measured setup results
+
+On November 14, 2026, setup journeys ran in new Ubuntu 24.04.5 ARM64
+containers. The host was an Apple Silicon Mac with Docker 29.8.2. A digest
+pinned the Ubuntu image. These results came from the bootstrap of that date.
+
+As root, the bare image first stopped because curl was missing. Bootstrap now
+installs curl. After that change, a full bootstrap took 796 seconds.
+
+An ordinary account with `NOPASSWD` sudo completed bootstrap in 1,138 seconds.
+Without sudo, bootstrap stopped in 0.08 seconds and gave the administrator
+message. In two more containers, sudo needed a password or denied the command.
+Bootstrap stopped in less than 0.1 seconds and installed nothing. After the
+administrator changed the policy, bootstrap completed in 1,189 and 542 seconds.
+
+Each completed journey then passed the doctor for CoCo 2 and the CoCo 2
+moving-objects check. The two sudo journeys also passed an earlier
+collect-room check on CoCo 2. A second bootstrap took less than 1.1 seconds.
+It kept an edited project note byte for byte.
+
+Most of the time went to the first download of 130 Python packages, with a
+5.9 GiB uv cache. The versions were uv 0.13.8, Python 3.13.18, LWTOOLS 4.25
+and XRoar 1.12.1.
+
+On the same date, recovery checks ran on a configured Apple Silicon Mac with
+macOS 27.2. They used temporary project folders and fixture ROMs, not a clean
+host. They found that tool discovery missed `/opt/homebrew/bin` when PATH did
+not include it. A later change fixed that defect, and `native_spec.py` checks
+the fix.
+
+These results do not show a clean Apple Silicon Mac, a native Linux desktop,
+x86-64 Linux, other distributions or an interrupted apt. They do not show a
+GUI, audio or physical hardware. The scripts changed after these runs, and
+nobody ran the containers again.
+
+The root suite checks the same failures and recoveries with substitute
+commands. `bootstrap_spec.py` covers sudo and apt. `roms_spec.py` and
+`coco_spec.py` cover firmware.
 
 ## Verify the actual workflow
 

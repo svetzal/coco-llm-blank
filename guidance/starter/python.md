@@ -152,7 +152,6 @@ On macOS, the supported host is Apple Silicon.
 ```sh
 uv run --locked --no-sync python scripts/validate_repository.py list
 uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
-uv run --locked --no-sync python scripts/validate_repository.py run linux-onboarding sudo-policy
 ```
 
 Each selection runs pytest, Ruff, and Ruff's format check in separate processes
@@ -161,40 +160,19 @@ suites, including integrations. Root needs `--heavy`. It preserves the full
 coverage gate of the starter. It does not present a partial run as root
 validation.
 
-Experiment names select only that experiment. Coverage uses its `coverage.ini`
-where present. Otherwise, coverage uses the root configuration with the
-documented module targets.
+Root is the only scope now, because the setup checks moved into the root
+suite. An experiment name selects only that experiment.
+An experiment with heavy prerequisites needs `--heavy`.
 
-The light experiment scopes are `linux-onboarding` and `sudo-policy`. They run
-host specifications with controlled process boundaries, not the Docker
-onboarding or sudo journeys.
-`linux-onboarding`, `macos-onboarding`, and `sudo-policy` have no scoped
-coverage gate. The runner does not invent one or borrow the root's
-measured source scope.
+The word `all` selects every experiment but not root. No experiment remains,
+so `run all` stops with an error.
 
-Other experiments need `--heavy`, even if their prerequisites are cached.
-The runner checks the entire selection before any work starts. `all` means all
-experiments, excluding root. Scopes run sequentially and stop at the first failed
-check. These commands explicitly opt into expensive work:
-
-```sh
-uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
-uv run --locked --no-sync python scripts/validate_repository.py run \
-  macos-onboarding --heavy
-uv run --locked --no-sync python scripts/validate_repository.py run all --heavy
-```
-
-Before you opt in, read the README or validation guide of the selected
-experiment.
+The runner checks the entire selection before any work starts. Scopes run
+sequentially and stop at the first failed check.
 
 Root with `--heavy` needs the complete starter environment described above.
 Docling can download model weights. Native runs need the assembler, build
 tools, and verified ROMs for their documented machines.
-
-Some scopes have their own prerequisites:
-
-- `macos-onboarding` needs installed `lwasm`. It checks current-host recovery
-  with fixture firmware and a recording launcher, not clean-host installation.
 
 The runner does not prepare these inputs, launch experiment setup scripts, or
 start an interactive GUI. Missing prerequisites follow the behavior of the

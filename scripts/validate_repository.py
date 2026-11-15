@@ -16,9 +16,6 @@ SCOPES = {
         ("scripts", "examples"),
         "full integrations, Docling models, native tools/all ROM profiles",
     ),
-    "linux-onboarding": (None, ""),
-    "macos-onboarding": (None, "installed lwasm; current-host boundary tests only"),
-    "sudo-policy": (None, ""),
 }
 
 
@@ -106,6 +103,8 @@ def main(argv: list[str] | None = None) -> int:
             for name in (list(SCOPES)[1:] if scope == "all" else [scope])
         )
     )
+    if not selected:
+        parser.error("no experiment scopes remain; select root")
     unknown = [name for name in selected if name not in SCOPES]
     if unknown:
         parser.error(f"unknown scopes: {', '.join(unknown)}")

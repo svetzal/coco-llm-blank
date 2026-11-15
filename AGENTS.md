@@ -175,6 +175,5 @@ return to BUILD on the project that raised it. If a project's README has an
 `Open lab` line, ask whether to resume that lab or continue building.
 
 Never add research notes, validation reports or experiment packages to tracked
-folders. The existing `experiments/`, `guidance/techniques/research/` and
-`validation/` folders are labs that were never closed; they are being closed,
-so do not add to them.
+folders. The existing `experiments/` and `guidance/techniques/research/`
+folders hold labs that were never closed. Do not add to them.

@@ -118,8 +118,9 @@ Read [reference conversion](references.md) for cache behavior and limits.
 OCR still needs checking, especially for assembly code and diagrams.
 
 The baseline targets Apple Silicon macOS and Linux. Intel Macs are unsupported.
-The [Linux onboarding report](validation/linux-onboarding.md) records tested
-Ubuntu container journeys. Native desktop onboarding remains unverified.
+The [toolchain guide](toolchain.md#measured-setup-results) records the tested
+journeys in Ubuntu containers. Nobody has tested onboarding on a native
+desktop yet.
 
 Archive availability does not change copyright or licensing. Downloaded and
 derived content stays outside Git.
