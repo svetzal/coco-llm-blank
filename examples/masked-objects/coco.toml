@@ -1,7 +1,7 @@
 # Settings for scripts/coco.py. Paths are relative to this folder.
 source = "main.asm"
 
-# NTSC CoCo architecture with an explicit non-T1 6847 VDG and firmware.
+# The first target is the default. Firmware is checked against roms.json.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -10,20 +10,20 @@ vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
 
-[targets.coco2]
-machine = "cocous"
-cpu = "6809"
-tv = "ntsc"
-vdg = "6847"
-ram_kib = 32
-basic = "bas12.rom"
-
 [memory]
-below = { program_end = 0x7E00 }   # the stack is reserved from $7E00
+at = { start = 0x3000 }
 
+# The plain build draws with the mask. Each variant selects one other method.
+[variants.opaque]
+defines = ["OPAQUE"]
+
+[variants.xor]
+defines = ["XOR"]
+
+# For the check only: where to take the snapshots and compare the screen.
 [check]
 checkpoint = "frame_ready"   # reached once per completed scene
 frames = ["1-12"]            # frame N shows scene N - 1
 unreachable = "state"        # a data label: executing it is a fault
-screen = 0x0400
+screen = 0x0400              # expected_screen() is compared from here
 emulated_seconds = 20

@@ -1,207 +1,150 @@
-# Masked objects over patterned scenery
+# Draw an object with transparent pixels
 
-This example is an original algorithm for software masking on the 6809, with
-an original scene design. It draws two hollow 16×10 objects with opaque green
-and opaque black edges.
+This example draws an object over scenery with a software mask. Each screen
+byte under the object becomes `(screen AND mask) OR ink`. A mask bit of 1
+keeps the scenery pixel. A mask bit of 0 replaces that pixel with the ink bit.
 
-The holes and outer rows of the objects are transparent. The example does not
-copy a historical program listing.
+Thus an object can have transparent pixels and opaque black pixels.
 
-The renderer computes `(destination AND preserve_mask) OR ink` for each pair
-of screen bytes. A mask bit of one preserves the pixel underneath. A mask bit
-of zero replaces that pixel with the ink bit.
+The example does not erase or restore the scenery. It does not clip, place
+objects at a pixel position inside a byte, detect collisions or time the
+frames.
 
-Each ink bit beneath a preserve bit is zero. Opaque black is therefore
-different from transparency.
+The context redraws the full background before each scene. The
+[moving-objects guide](../../guidance/techniques/moving-objects.md) compares
+the methods that restore scenery.
 
-Every scene redraws the current checker background before it draws the
-objects. This restores old positions and handles overlap by composing both
-objects again in the requested order. It needs no saved-background storage.
+## Choose a draw method
 
-This is a bounded full-redraw design. It is not an implementation of
-GrafExpress's restoration buffers or Dunkey Munkey's renderer. The
-[moving-object guide](../../guidance/techniques/moving-objects.md)
-explains what those historical sources actually establish.
+The mask method is the default. Use it when an object has holes or an
+irregular outline, and when it must show black over lit scenery.
 
-## Run and check
+| Method | Variant | Byte becomes | Clear | Black | Order | Data | Steps |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Mask | (none) | `(screen AND mask) OR ink` | Yes | Yes | Yes | 2 | 6 |
+| Opaque | `opaque` | `ink` | No | Yes | Yes | 1 | 3 |
+| XOR | `xor` | `screen XOR ink` | Black ink | No | No | 1 | 5 |
 
-Make sure that the native tools and the validated firmware are installed.
-Run these commands from the repository root:
+- Clear: the object can have transparent pixels.
+- Black: the object can show opaque black over lit scenery.
+- Order: the last object drawn hides the objects below it.
+- Data: the bytes of shape data for each screen byte.
+- Steps: the instructions for each row of two bytes in this example.
+
+- Opaque is the fastest method. It replaces the full box, so use it for a
+  solid rectangle.
+
+  The
+  [moving-objects example](../moving-objects/README.md) draws this way.
+- XOR inverts the scenery under each lit ink bit. A second XOR draw at the
+  same position removes the object. Black ink has no effect, so an XOR object
+  cannot show black.
+
+- The step counts include one step in each XOR and opaque row. This step skips
+  the unused mask word.
+
+The example uses RG6, one bit for each pixel. In a four-colour (CG) mode, each
+pixel has two bits, so each pixel's mask has two bits. That is our derivation.
+This example does not check it.
+
+Other ways that this example does not show:
+
+- Keep shifted copies of the shape and mask to place an object at any pixel.
+- Make the mask from a key colour in the shape when the program draws.
+- Write the shape as code, with one store instruction for each byte.
+
+## Draw the object
+
+The example is the three `>>> EXAMPLE` parts of [main.asm](main.asm):
+
+1. At `place`, find the screen byte of the top-left corner:
+   `$0400 + 32 × row + column`. RG6 has 32 bytes in each row.
+
+   The column is a byte column, 0 to 30. The row is a pixel row, 0 to 182. The
+   full 16×10 object must be on the screen.
+
+2. At `draw_row`, change two screen bytes with the selected method. Then add
+   32 to step to the next row. Do this for each of the 10 rows.
+
+3. At `shape_a` and `shape_b`, keep the shape data. Each row has a 16-bit mask
+   and a 16-bit ink word, in that order. Bit 15 is the leftmost pixel.
+
+   Ink must be 0 under each mask bit of 1. Otherwise the ink sets that scenery
+   pixel.
+
+The `--- CONTEXT` blocks are not part of the practice:
+
+- They set up RG6 at `$0400` with colour set 0, as in
+  [first-screen](../first-screen/README.md).
+- They redraw an 8×8 checker background for each scene.
+- They draw two hollow objects in the order that the scene table gives.
+
+Object A has a green top and left edge and a black bottom and right edge.
+Object B has the opposite colours. The top row, the bottom row and the centre
+of each object are transparent.
+
+The program keeps the interrupts, stack, direct page and CPU clock that BASIC
+sets. The `state` label is data. The check fails if the CPU runs it.
+
+## See and check each method
+
+Open a terminal in the starter folder. Copy one line and paste it to see that
+method in XRoar. The 12 scenes repeat until you close the window.
 
 ```sh
-uv run python scripts/coco.py check examples/masked-objects
-uv run python scripts/coco.py run examples/masked-objects --target coco1
+uv run python scripts/coco.py run examples/masked-objects                   # mask
+uv run python scripts/coco.py run examples/masked-objects --variant opaque  # opaque
+uv run python scripts/coco.py run examples/masked-objects --variant xor     # xor
 ```
 
-`check` covers both targets declared in [coco.toml](coco.toml). Add
-`--target coco2` to check one target. Frame N of the check shows scene N - 1.
+To check all three methods, paste this line:
 
-`run` opens an XRoar window at normal speed and cycles through 12 discrete
-scenes. Close that window to stop. There are no controls, and there is no
-return to BASIC.
+```sh
+uv run python scripts/coco.py check examples/masked-objects --video
+```
 
-`check` uses bounded headless processes and never opens a window. Both actions
-rebuild the DECB binary and do a check of the firmware bytes before they
-launch XRoar. The resulting absolute firmware paths are passed explicitly.
+The `--video` option needs the
+[instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar).
 
-This is direct DECB auto-run. This example claims no disk image, no disk boot
-and no `LOADM` result.
+The check takes a snapshot after each of the 12 scenes. It compares all 6,144
+screen bytes and XRoar's rendered picture with [expected.py](expected.py). The
+model in `expected.py` draws each object pixel by pixel from the ring shape and
+the rule for each method.
 
-## Hardware contract and direct sources
+The model does not read the mask data in `main.asm`.
 
-Both targets are NTSC CoCo 1/2 with 32 KiB RAM, a normal-clock 6809, and the
-non-T1 MC6847. The program explicitly clears both SAM CPU-rate bits. The
-program masks IRQ and FIRQ after entry.
+The scenes include these cases:
 
-The program relies on the PIA direction registers that the BASIC firmware
-initialized. It then selects the data register. It preserves the low three
-bits of `$FF22` when it sets graphics fields.
+- Objects in all four corners.
+- Partial overlap and full overlap, in both draw orders.
+- Objects that are apart.
+- Scenes with no objects, after scenes with objects.
+- Objects over the inverted background.
 
-| Target | XRoar architecture | VDG / CPU | Firmware |
-| --- | --- | --- | --- |
-| CoCo 1 | `cocous`, 32 KiB | `6847` / `6809` | `bas11.rom` |
-| CoCo 2 | `cocous`, 32 KiB | `6847` / `6809` | `bas12.rom` |
+The check uses the CoCo 1 target in [coco.toml](coco.toml): NTSC, 32 KiB,
+normal clock, the non-T1 MC6847 and Color BASIC 1.1. It does not prove the
+result on a television, a physical CoCo, PAL, the MC6847T1 or the CoCo 3.
 
-The CoCo 2 configuration deliberately selects the shared NTSC architecture and
-CoCo 2 firmware with a non-T1 VDG. It does not prove all CoCo 2 board revisions.
+The program draws into the screen that the VDG shows, with no vertical sync.
+A real game can show tearing or a half-drawn object. Read
+[show only finished frames](../../guidance/techniques/animation.md#show-only-finished-frames).
 
-The following source pages were inspected as rendered images before
-implementation:
+## Sources
+
+Read these pages before you change the screen setup or the bit order. Use
+[reference lookup](../../guidance/starter/references.md) to get them.
 
 - Inman, Inman and Dymax, *Assembly Language Graphics for the TRS-80 Color
-  Computer*, printed 97–98 / PDF 106–107. [Graphics book][graphics]
-  - Mode 6R is 256×192, uses 6 KiB, and encodes eight pixels per byte.
-  - CSS zero gives black for zero and green for one.
+  Computer*, PDF 106–107: mode 6R is 256×192, has eight pixels in each byte
+  and uses 6 KiB. With colour set 0, a 0 bit shows black and a 1 bit shows
+  green.
 
-- Motorola, *MC6847/MC6847Y Video Display Generator*, PDF 19, Table 3.
-  [Motorola datasheet][motorola]
-  - RG6 uses one bit per element, with L7 leftmost and L0 rightmost.
+- Motorola, *MC6847 Video Display Generator* datasheet, PDF 19, Table 3: in
+  RG6, bit 7 is the leftmost pixel of a byte.
 
-- Tandy, *Color Computer Technical Reference Manual*.
-  [Technical manual][technical]
-  - Printed 7–8 / PDF 14–15: PIA `$FF22` fields, `$FF23` data-register
-    selection, SAM offset and rate strobes.
-  - Printed 24 / PDF 31: 256×192 uses SAM V=`110` and PIA bits 7–4 `1111`.
+- Tandy, *Color Computer Technical Reference Manual*, PDF 14–15: the `$FF22`
+  bits, and the SAM offset and mode bits. PDF 31: RG6 uses SAM V=`110` and
+  `$FF22` bits 7 to 4 `1111`.
 
-- Tandy, *Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)*,
-  printed/PDF 31: MC6847 video generation, SAM addressing and PIA video
-  control connections for the board family. [Service manual][service]
-
-Derived layout: 256 / 8 = 32 bytes per row, and 32 × 192 = 6,144 bytes.
-Display offset F=2 selects `$0400`. SAM V=6 and PIA upper bits `$F0`
-select RG6 with CSS zero.
-
-These hardware facts justify the setup. The mask format, ring geometry and
-scene sequence are our own design.
-
-## Bounds and memory
-
-| Region | Addresses |
-| --- | --- |
-| Framebuffer | `$0400–$1BFF` |
-| Framebuffer guards | `$03FF`, `$1C00` |
-| Code, scene table, shape data, mutable state | `$3000` to `program_end - 1` |
-| Stack reservation | `$7E00–$7EFF`, initial S=`$7F00` |
-
-The build rejects a program that reaches the stack reservation. Shape data has
-10 rows. Each row holds a 16-bit preserve mask and a 16-bit ink value.
-
-This is 40 bytes per object. The program initializes all mutable state before
-use.
-
-Origins are whole byte columns, 0–30, and pixel rows, 0–182. Callers must keep
-the entire 16×10 bounding box on screen.
-
-There is no clipping, no support for negative coordinates and no arbitrary
-pixel alignment. The fixed scene table respects those bounds.
-
-Each object has a one-row transparent margin at top and bottom and a hollow
-interior. Its two side edges have different colours, which exercises bit order.
-
-Transparency describes which displayed pixels survive. This example has none
-of these items:
-
-- collision representation
-- collision detection
-- hit testing
-- a solidity rule
-
-## Evidence and limits
-
-The 12 scenes cover these cases:
-
-- all four corners
-- partial overlap in both draw orders
-- complete overlap in both orders
-- separation
-- removal of both objects
-- inverted scenery beneath overlapping objects
-
-Removal and the redraw after it exercise restoration across consecutive
-scenes, not only isolated blank starts.
-
-Each real XRoar capture starts with nonzero RAM. It checks these items:
-
-- the scene checkpoint
-- all 6,144 screen bytes
-- both framebuffer guards
-- an unreachable data trap
-
-The independent oracle uses per-pixel ring geometry and layer composition. It
-neither reads the assembly's masks nor repeats its byte blend loop.
-
-Host tests also anchor left/right bit order and distinguish zero ink from a
-transparent hole.
-
-Tests deliberately move the negative trap to reachable code and move the ready
-trap to unreachable data. These controls must fail. They must erase stale
-snapshots. They must then recover on a valid capture.
-
-Damaged guards, framebuffers, counters, wrong RAM sizes, missing firmware and
-stack overlap are rejected too.
-
-XRoar 1.12.1 passed all 12 scenes on both configurations. The scoped suite
-passed 18 tests with 96.09% combined statement and branch coverage. Ruff and
-Markdown checks passed. On 2026-11-14 the `coco.py check` also passed on
-XRoar 1.13.
-
-Independent integration review passed the full suite with 195 tests, zero
-skips and 94.65% coverage. Later regression checks for stale evidence and
-firmware launch passed in a focused run of 95 tests.
-
-To run only the specifications of this example, use these commands:
-
-```sh
-COVERAGE_FILE=build/masked-objects/.coverage uv run pytest \
-  examples/masked-objects --cov=examples/masked-objects
-uv run ruff check examples/masked-objects
-uv run ruff format --check examples/masked-objects
-```
-
-Generated binaries, symbols, logs, RAM captures, coverage and results are
-under ignored `build/masked-objects/`. Source-page images remain ignored under
-`local/research/masked-objects/`. No copyrighted source material is distributed
-with the example.
-
-The headless checks establish framebuffer contents, not a visually inspected
-emulator display. These items remain untested:
-
-- physical hardware
-- composite colour appearance
-- PAL
-- T1
-- CoCo 3
-- disk loading
-- frame rate
-
-Rendering writes directly to the displayed buffer without vertical
-synchronization, so tearing or flicker is possible. The delay loop is for
-scene visibility, not calibrated timing.
-
-`-no-ratelimit` accelerates host execution during checks. It does not select a
-faster emulated CPU clock.
-
-[graphics]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf#page=106>
-[motorola]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=19>
-[technical]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=14>
-[service]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf#page=31>
+The mask format, the shapes and the scenes are our own design. We found no
+examined listing of a CoCo masked renderer to compare with.

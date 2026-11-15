@@ -148,9 +148,10 @@ pixel-perfect collision or blend loop. [Manual, PDF 20][graf-shapes]
 
 ## What the examples check
 
-**Measured result.** Both examples run on CoCo 1 and CoCo 2 with NTSC, 32 KiB,
-a normal-clock 6809 and the non-T1 MC6847, not on all CoCo 2 revisions. Read
-each machine contract before reuse.
+**Measured result.** Both examples run with NTSC, 32 KiB, a normal-clock 6809
+and the non-T1 MC6847. Moving-objects runs on CoCo 1 and CoCo 2, not on all
+CoCo 2 revisions. Masked-objects runs on CoCo 1. Read each machine contract
+before reuse.
 
 - The [moving-objects example](../../examples/moving-objects/README.md) draws
   the patterned background, then two opaque byte-aligned rectangles. Its check
@@ -158,9 +159,11 @@ each machine contract before reuse.
   frames: overlap in both orders, separation, changed scenery and reversals.
 - The [masked-object example](../../examples/masked-objects/README.md) restores
   the complete background, then draws hollow objects with
-  `(destination AND preserve_mask) OR ink`. Twelve scenes check every byte,
-  guards, corners, overlap order, removal and changed scenery against an
-  independent pixel oracle. Origins are byte-aligned, and objects fit on screen.
+  `(screen AND mask) OR ink`. Variants draw the same scenes opaque and with
+  XOR. Twelve scenes in each method check every screen byte and the rendered
+  picture: corners, overlap order, removal and changed scenery. An independent
+  pixel model gives the expected result. Origins are byte-aligned, and objects
+  fit on the screen.
 
 Neither example has collision, clipping or partial-byte placement, or
 reproduces a historical renderer. Frame rate, PAL, T1 and physical hardware
