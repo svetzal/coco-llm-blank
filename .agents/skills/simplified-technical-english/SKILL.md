@@ -13,7 +13,7 @@ description: >
   the user never names the standard.
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "2.0.0"
   author: Stacey Vetzal
 ---
 
@@ -107,20 +107,20 @@ python3 scripts/ste_check.py DOCUMENT.md
 ```
 
 The checker is deterministic and reports `file:line [check] message`. It finds
-long sentences, "and then" chains, semicolons, overlong paragraphs, passive
-voice, noun clusters, and the common non-STE words above. Exit code is 1 when
-findings exist, so it works as a CI or pre-commit gate. `--json` emits
-structured findings for scripting.
+long sentences, overlong paragraphs, semicolons, phrases such as "and then",
+and the common non-STE words above. It reads sentences and paragraphs across
+wrapped lines. Exit code is 1 when findings exist, so it works as a CI or
+pre-commit gate. `--json` emits structured findings for scripting.
 
-Passive-voice and noun-cluster findings are heuristics — they need a
-part-of-speech tagger to be exact, so read each one before acting on it. The
-rest are mechanical and can be trusted.
+Fix every finding. The checker reports only what it can decide without
+knowledge of grammar. It does not check the passive voice or noun clusters,
+because those need a part-of-speech tagger to be exact.
 
-The checker cannot see the judgement rules. One instruction per sentence, one
-word per concept, and warning placement still need you to read the text.
-Check the title and the headings in that pass too — the checker examines them
-for clusters and word choice, but a heading that misdescribes its section is
-yours to catch.
+The checker cannot see the judgement rules. The passive voice, noun clusters,
+one instruction per sentence, one word per concept, and warning placement
+still need you to read the text. Check the title and the headings in that
+pass too. The checker examines them for word choice only. A heading that is a
+noun cluster, or that misdescribes its section, is yours to catch.
 
 When you report violations to someone (a review rather than a rewrite), keep
 each violation a separate finding with its location and its fix. One finding

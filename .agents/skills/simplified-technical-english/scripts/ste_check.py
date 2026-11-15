@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 """Check a document against the mechanical rules of ASD-STE100.
 
-The checks are deterministic and cheap. They catch what a machine can see:
-sentence length, "and then" chains, semicolons, paragraph length, passive
-voice, noun clusters, and a curated list of common non-STE words. Judgement
-rules such as "one instruction per sentence" still need a person or an agent
+The checks are deterministic. Each one reports only what a machine can decide
+without knowledge of grammar: sentence length, paragraph length, semicolons,
+phrases such as "and then", and a curated list of common non-STE words.
+
+The script does not check the passive voice, noun clusters, or judgement rules
+such as "one instruction per sentence". Those need a person or an agent
 reading the text.
+
+Sentences and paragraphs are read across wrapped lines. Front matter, code
+fences, tables, link targets, URLs and inline code are not prose and are not
+checked. A word or a phrase in double quotes is a mention, so the word-choice
+and phrase checks ignore it.
 
 This script is self-contained. It paraphrases STE principles and does not
 embed the ASD-STE100 dictionary, which is ASD copyright. For word-level
@@ -39,30 +46,6 @@ restart restore resume review run save select send set show shut start stop
 tap test try turn type unlock update upload use verify wait write
 """.split())
 
-# Small words that never form part of a noun cluster.
-FUNCTION_WORDS = set("""
-a an the and or but nor if of in on to for with from at by as into onto than
-then that this these those is are was were be been being am can could do does
-did done not no so such only just also very too much many more most some any
-all each every both either neither other another same own few less least you
-your it its they them their we our i me my he she him her his who whom whose
-which what when where why how while after before during between through above
-below over under about against across along among around behind beyond despite
-except inside outside since toward towards until upon within without because
-although though unless whether here there now always never often sometimes
-usually already still yet again however therefore thus otherwise instead
-rather have has had having will would shall should may might must
-""".split())
-
-BE_FORMS = {"is", "are", "was", "were", "be", "been", "being"}
-PARTICIPLE = re.compile(r"^\w+(ed|en|wn|ne|ilt|ent|eft|ost|ung)$", re.IGNORECASE)
-# Adjectives and nouns whose endings look like participles but are not.
-NOT_PARTICIPLES = set("""
-open often even seven eleven dozen wooden golden sudden hidden screen kitchen
-current present frequent recent silent urgent absent adjacent different
-independent permanent transparent consistent persistent red need speed
-""".split())
-
 # Common non-STE words in engineering documentation, with replacements. A
 # curated example list, not the controlled dictionary.
 WORD_CHOICE = {
@@ -82,8 +65,6 @@ WORD_CHOICE = {
     "additional": "more",
     "assist": "help",
     "indicate": "show",
-    "prior": "before (for 'prior to')",
-    "subsequent": "after (for 'subsequent to')",
     "approximately": "about",
     "demonstrate": "show",
     "facilitate": "help, or rebuild the sentence",
@@ -104,30 +85,91 @@ PHRASES = {
     "carry out": "do",
     "make sure to": "a direct instruction ('Do X.', with 'Make sure that' for conditions)",
 }
+# Whole words only, and across a line wrap.
+PHRASE_PATTERNS = {
+    phrase: re.compile(r"\b" + r"\s+".join(map(re.escape, phrase.split())) + r"\b",
+                       re.IGNORECASE)
+    for phrase in PHRASES
+}
 
 FENCE = re.compile(r"^\s*(```|~~~)")
 HEADING = re.compile(r"^\s*#")
 TABLE_ROW = re.compile(r"^\s*\|")
 LIST_ITEM = re.compile(r"^\s*([-*+]|\d+[.)])\s+")
+BLOCKQUOTE = re.compile(r"^\s*(>\s?)+")
+LINK_DEFINITION = re.compile(r"^\s*\[[^\]]+\]:\s")
+HTML_COMMENT = re.compile(r"^\s*<!--.*-->\s*$")
 INLINE_CODE = re.compile(r"`[^`]*`")
 LINK_TARGET = re.compile(r"\]\([^)]*\)")
+LINK_LABEL = re.compile(r"\]\[[^\]]*\]")
+URL = re.compile(r"<?https?://[^\s>]+>?")
+HTML_TAG = re.compile(r"</?[A-Za-z][^>]*>")
+HTML_ENTITY = re.compile(r"&#?\w+;")
+# Text in double quotes names a word or a phrase. It does not use it.
+QUOTED = re.compile(r'"[^"]*"|\u201c[^\u201d]*\u201d')
 WORD = re.compile(r"[A-Za-z][A-Za-z'-]*")
+
+# A full stop after one of these does not end a sentence.
+ABBREVIATIONS = {"e.g.", "i.e.", "vs.", "cf.", "Dr.", "Mr.", "Mrs.", "Ms."}
+# A full stop after one of these does not end a sentence before a number.
+NUMBER_ABBREVIATIONS = {"No.", "Vol.", "Fig.", "p.", "pp."}
+SENTENCE_END = re.compile(r"[.!?]+[\"')\]*_]*\s+")
+# A link that follows the end of a sentence is a citation for that sentence.
+TRAILING_CITATION = re.compile(r"(?<=[.!?])\s+\[[^\]]*\](?=\s|$)")
+# A citation link or a bold label that stands alone is not a sentence.
+NOT_A_SENTENCE = re.compile(r"^(\[[^\]]*\][.,]?|\*\*[^*]+\*\*[.:]?|__[^_]+__[.:]?)$")
+
+
+def clean(line):
+    """Replace what is not prose. Inline code and URLs each count as one word."""
+    line = INLINE_CODE.sub("CODE", line)
+    line = LINK_TARGET.sub("]", line)
+    line = LINK_LABEL.sub("]", line)
+    line = URL.sub("URL", line)
+    line = HTML_TAG.sub("", line)
+    line = HTML_ENTITY.sub(" ", line)
+    return line
+
+
+def unquoted(text):
+    """Blank the text in double quotes, and keep every offset."""
+    return QUOTED.sub(lambda match: " " * len(match.group()), text)
+
+
+def ends_sentence(text, match):
+    """Decide whether the punctuation at this match ends a sentence.
+
+    When the text does not decide, split. A split can only make a sentence
+    shorter, so it cannot cause a false sentence-length finding.
+    """
+    following = text[match.end():match.end() + 1]
+    if following.islower():
+        return False
+    preceding = text[:match.start() + 1].split()[-1].lstrip("\"'([*_")
+    if preceding in ABBREVIATIONS:
+        return False
+    if preceding in NUMBER_ABBREVIATIONS and following.isdigit():
+        return False
+    return True
 
 
 def sentences(text):
-    """Split prose into sentences. Crude but adequate for checking."""
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    return [p for p in parts if WORD.search(p)]
+    """Split prose into (offset, sentence) pairs."""
+    # Blank each trailing citation, and keep the offsets of the text after it.
+    text = TRAILING_CITATION.sub(lambda match: " " * len(match.group()), text)
+    found = []
+    start = 0
+    for match in SENTENCE_END.finditer(text):
+        if ends_sentence(text, match):
+            found.append((start, text[start:match.end()].strip()))
+            start = match.end()
+    found.append((start, text[start:].strip()))
+    return [(offset, sent) for offset, sent in found
+            if WORD.search(sent) and not NOT_A_SENTENCE.match(sent)]
 
 
 def words(sentence):
     return WORD.findall(sentence)
-
-
-def clean(line):
-    line = INLINE_CODE.sub("code", line)
-    line = LINK_TARGET.sub("]", line)
-    return line
 
 
 def base_form(token):
@@ -141,11 +183,20 @@ def base_form(token):
     return token
 
 
+def check_word_choice(lowered, findings, path, lineno, where=""):
+    seen = set()
+    for tok in lowered:
+        base = tok if tok in WORD_CHOICE else base_form(tok)
+        if base in WORD_CHOICE and base not in seen:
+            seen.add(base)
+            shown = base if base == tok else f"{tok} ({base})"
+            findings.append((path, lineno, "word-choice",
+                             f"\"{shown}\"{where} — prefer: {WORD_CHOICE[base]}"))
+
+
 def check_sentence(sent, findings, path, lineno):
     toks = words(sent)
     lowered = [t.lower() for t in toks]
-    if not toks:
-        return
 
     procedural = lowered[0] in IMPERATIVE_OPENERS
     limit = PROCEDURAL_LIMIT if procedural else DESCRIPTIVE_LIMIT
@@ -155,130 +206,112 @@ def check_sentence(sent, findings, path, lineno):
                          f"{len(toks)} words in a {kind} sentence (limit {limit}): "
                          f"\"{sent[:60]}...\""))
 
-    for i, tok in enumerate(lowered):
-        if tok in BE_FORMS and i + 1 < len(lowered):
-            nxt = lowered[i + 1]
-            if (PARTICIPLE.match(nxt) and nxt not in FUNCTION_WORDS
-                    and nxt not in NOT_PARTICIPLES):
-                findings.append((path, lineno, "passive-voice",
-                                 f"possible passive: \"{toks[i]} {toks[i + 1]}\" "
-                                 "(heuristic — read before acting)"))
-                break
-
-    run = 0
-    start = 0
-    for i, tok in enumerate(lowered):
-        if i == 0 and procedural:
-            continue  # the leading verb of an instruction is not part of a cluster
-        if tok in FUNCTION_WORDS or not tok.isalpha():
-            run = 0
-        else:
-            if run == 0:
-                start = i
-            run += 1
-            if run == 4:
-                cluster = " ".join(toks[start:start + 4])
-                findings.append((path, lineno, "noun-cluster",
-                                 f"possible 4+ word cluster: \"{cluster}\" "
-                                 "(heuristic — read before acting)"))
-                run = 0
-
-    seen = set()
-    for tok in lowered:
-        base = tok if tok in WORD_CHOICE else base_form(tok)
-        if base in WORD_CHOICE and base not in seen:
-            seen.add(base)
-            shown = base if base == tok else f"{tok} ({base})"
-            findings.append((path, lineno, "word-choice",
-                             f"\"{shown}\" — prefer: {WORD_CHOICE[base]}"))
+    mentioned = [t.lower() for t in words(unquoted(sent))]
+    check_word_choice(mentioned, findings, path, lineno)
 
 
 def check_heading(text, findings, path, lineno):
-    """Headings are not sentences, but the noun-cluster and word-choice rules
-    still apply — a title is the first thing a scanning reader parses."""
-    toks = words(clean(text))
-    lowered = [t.lower() for t in toks]
-    skip_first = bool(lowered) and lowered[0] in IMPERATIVE_OPENERS
+    """Headings are not sentences, but the word-choice rule still applies — a
+    title is the first thing a scanning reader parses."""
+    lowered = [t.lower() for t in words(unquoted(clean(text)))]
+    check_word_choice(lowered, findings, path, lineno, " in heading")
 
-    run = 0
-    start = 0
-    for i, tok in enumerate(lowered):
-        if i == 0 and skip_first:
-            continue
-        if tok in FUNCTION_WORDS or not tok.isalpha():
-            run = 0
-        else:
-            if run == 0:
-                start = i
-            run += 1
-            if run == 4:
-                cluster = " ".join(toks[start:start + 4])
-                findings.append((path, lineno, "noun-cluster",
-                                 f"possible 4+ word cluster in heading: \"{cluster}\" "
-                                 "(heuristic — read before acting)"))
-                run = 0
 
-    seen = set()
-    for tok in lowered:
-        base = tok if tok in WORD_CHOICE else base_form(tok)
-        if base in WORD_CHOICE and base not in seen:
-            seen.add(base)
-            shown = base if base == tok else f"{tok} ({base})"
-            findings.append((path, lineno, "word-choice",
-                             f"\"{shown}\" in heading — prefer: {WORD_CHOICE[base]}"))
+def check_block(lines, findings, path):
+    """Check one paragraph or one list item. Return its number of sentences.
+
+    `lines` holds (line number, cleaned text) pairs. The block is joined so
+    that a sentence or a phrase can continue across a line wrap.
+    """
+    starts = []
+    offset = 0
+    for lineno, text in lines:
+        starts.append((offset, lineno))
+        offset += len(text) + 1
+        if ";" in text:
+            findings.append((path, lineno, "semicolon",
+                             "semicolon — split into two sentences or use a list"))
+    joined = " ".join(text for _, text in lines)
+
+    def line_at(position):
+        return [lineno for start, lineno in starts if start <= position][-1]
+
+    for phrase, pattern in PHRASE_PATTERNS.items():
+        for match in pattern.finditer(unquoted(joined)):
+            findings.append((path, line_at(match.start()), "phrase",
+                             f"\"{phrase}\" — prefer: {PHRASES[phrase]}"))
+
+    found = sentences(joined)
+    for position, sent in found:
+        check_sentence(sent, findings, path, line_at(position))
+    return len(found)
 
 
 def check_file(path):
     findings = []
+    name = str(path)
     in_fence = False
+    in_front_matter = False
+    block = []
+    block_is_list = False
     para_sentences = 0
     para_start = 0
 
+    def flush_block():
+        nonlocal block, para_sentences
+        if block:
+            count = check_block(block, findings, name)
+            if not block_is_list:
+                para_sentences += count
+            block = []
+
+    def end_paragraph():
+        nonlocal para_sentences, block_is_list
+        flush_block()
+        if para_sentences > PARAGRAPH_LIMIT:
+            findings.append((name, para_start, "paragraph-length",
+                             f"{para_sentences} sentences in one paragraph "
+                             f"(limit {PARAGRAPH_LIMIT})"))
+        para_sentences = 0
+        block_is_list = False
+
     for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if lineno == 1 and raw.strip() == "---":
+            in_front_matter = True
+            continue
+        if in_front_matter:
+            in_front_matter = raw.strip() != "---"
+            continue
         if FENCE.match(raw):
+            end_paragraph()
             in_fence = not in_fence
             continue
-        if not in_fence and HEADING.match(raw):
-            check_heading(raw.lstrip(" #"), findings, str(path), lineno)
+        if in_fence:
             continue
-        if in_fence or TABLE_ROW.match(raw):
+        if HEADING.match(raw):
+            end_paragraph()
+            check_heading(raw.lstrip(" #"), findings, name, lineno)
             continue
-
-        line = clean(raw)
-        stripped = line.strip()
-
-        if not stripped:
-            if para_sentences > PARAGRAPH_LIMIT:
-                findings.append((str(path), para_start, "paragraph-length",
-                                 f"{para_sentences} sentences in one paragraph "
-                                 f"(limit {PARAGRAPH_LIMIT})"))
-            para_sentences = 0
+        if TABLE_ROW.match(raw) or LINK_DEFINITION.match(raw) or HTML_COMMENT.match(raw):
+            end_paragraph()
             continue
 
-        if para_sentences == 0:
+        raw = BLOCKQUOTE.sub("", raw)
+        if not raw.strip():
+            end_paragraph()
+            continue
+
+        if LIST_ITEM.match(raw):
+            # Each list item is its own block. It is not part of a paragraph.
+            flush_block()
+            block_is_list = True
+            raw = LIST_ITEM.sub("", raw)
+        elif not block and not block_is_list and para_sentences == 0:
             para_start = lineno
-        is_list_item = bool(LIST_ITEM.match(raw))
-        body = LIST_ITEM.sub("", stripped) if is_list_item else stripped
-        sents = sentences(body)
-        if not is_list_item:
-            para_sentences += len(sents)
+        # A line that follows a list item with no blank line continues that item.
+        block.append((lineno, clean(raw).strip()))
 
-        if ";" in body:
-            findings.append((str(path), lineno, "semicolon",
-                             "semicolon — split into two sentences or use a list"))
-        lower = body.lower()
-        for phrase, fix in PHRASES.items():
-            if phrase in lower:
-                findings.append((str(path), lineno, "phrase",
-                                 f"\"{phrase}\" — prefer: {fix}"))
-
-        for sent in sents:
-            check_sentence(sent, findings, str(path), lineno)
-
-    if para_sentences > PARAGRAPH_LIMIT:
-        findings.append((str(path), para_start, "paragraph-length",
-                         f"{para_sentences} sentences in one paragraph "
-                         f"(limit {PARAGRAPH_LIMIT})"))
+    end_paragraph()
     return findings
 
 
