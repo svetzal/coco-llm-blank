@@ -138,7 +138,9 @@ and machine state, detects a 6309 and contains `LDMD`. `GOON` (02540-02620)
 changes its own operand. The README names EDTASM (line 21) and puts data at
 `$00000-$2FFFF` and `$60000-$63FFF` (lines 45-48, 60-66). `gloom.txt` lines
 15-26 describe strictly 6809 code, unlike this listing. Its frame rate is the
-author's report. For packed CoCo 3 pixels, read the [colour guide](colour.md#keep-the-neighbour-pixel-and-the-palette-separate).
+author's report.
+
+For packed CoCo 3 pixels, read the [colour guide](colour.md#keep-the-neighbour-pixel-and-the-palette-separate).
 
 ## Budget the storage for animation
 

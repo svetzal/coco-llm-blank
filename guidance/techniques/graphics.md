@@ -1,7 +1,7 @@
 # Draw in the VDG graphics modes
 
-Read this before you choose a graphics mode for a CoCo 1 or CoCo 2 project, or
-before you turn artwork into screen bytes.
+Read this before you choose a graphics mode for a CoCo 1 or CoCo 2 project.
+Read it also before you turn artwork into screen bytes.
 
 This guide covers the eight full-graphics modes of the MC6847 video chip (VDG).
 For these modes, it covers:
@@ -203,7 +203,7 @@ supply its account and key.
   We read them from the page images.
 - We measured the `xroar` palette in CG6 and RG6, for both colour sets, on
   the CoCo 1 target and the non-T1 CoCo 2 target. The rendered check fails
-  for each negative control: a changed colour set, two exchanged colours, a
+  for each negative control. The controls are a changed colour set, two exchanged colours, a
   reversed bit order, a mirrored or shifted picture and a wrong SAM mode.
 - The [display test](colour.md#make-a-display-test-before-making-the-art)
   lists those controls and their limits.

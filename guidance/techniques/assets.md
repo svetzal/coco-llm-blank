@@ -46,8 +46,8 @@ This is the method of [tile-room](../../examples/tile-room/README.md):
    keep every source column and copy each pixel. Stop on any error.
 4. Include the generated `.asm` file in `main.asm`. Give the drawing routine a
    table of picture labels, in image-ID order.
-5. Test the `_bpr` and `_rows` equates of the include with `if` and `error`,
-   so that a picture of a different size stops the assembly.
+5. Test the `_bpr` and `_rows` equates of the include with `if` and `error`.
+   Then a picture of a different size stops the assembly.
 6. In `expected.py`, write the pictures again as text drawings. Do not read
    the PNG or the converted bytes there.
 

@@ -41,9 +41,13 @@ commands and makes no changes. It never commits, pushes or contacts anyone.
 uv run python scripts/xroar_upstream.py report
 ```
 
-The report shows the pin, the newest git tag, the newest archive on the
-download page, how many releases the pin is behind, and the ordinary XRoar's
-version.
+The report shows these items:
+
+- the pin
+- the newest git tag
+- the newest archive on the download page
+- how many releases the pin is behind
+- the version of the ordinary XRoar
 
 ## Move to a new release
 
@@ -179,7 +183,7 @@ The files of each run stay in `local/lab/xroar-<version>/captures/`.
 Captures must be identical, unless an upstream change explains a difference.
 For each different file, do these steps:
 
-1. Find the kind and size of the difference, for example bytes in a RAM
+1. Find the kind and size of the difference. Examples are bytes in a RAM
    snapshot or ticks in a log line.
 2. Find the upstream change in the ChangeLog and in `git log <old>..<new>`.
 3. Prove the cause with a control. Revert that upstream commit in a lab

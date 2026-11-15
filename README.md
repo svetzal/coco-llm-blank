@@ -113,39 +113,40 @@ share them.
 
 ## What to expect today
 
-This is a concept in development, the idea of having a repository like this
+This is a concept in development. The idea is a repository like this, one
 that guides an agent to help you in different ways at different times.
 
 Building games and demos for the CoCo is in some ways an arcane art. In the
 1980s and 1990s we had various magazines and books that helped explain the
-hardware and capabilities, brought us games and various techniques for
+hardware and capabilities. They brought us games and various techniques for
 building better games. But a lot of this knowledge is very hard to find,
-or was never published, and there are still new things to discover as we use
+or was never published. And there are still new things to discover as we use
 these computers in a modern context.
 
-The quality of the games or demos you produce is going to hinge on guides
-already in this repository that are being built up over time, or on a lab
-that you start to have the agent help you research your challenge. The agent
+The quality of the games or demos you produce is going to hinge on two
+things. One is the guides already in this repository, which are being built up
+over time. The other is a lab that you start, to have the agent help you
+research your challenge. The agent
 may find new books or blogs or articles on the Internet that may help find
 a solution. Or the agent may just have to put its head down and try to solve
 the problem itself.
 
-Your attention to detail, your diligence in playability and user experience
-will have far more impact on the quality of the game it produces than the agent
-technology itself.
+Your attention to detail matters, and so does your diligence in playability
+and user experience. They will have far more impact on the quality of the game
+than the agent technology itself.
 
-There will be problems you can't solve (I mean, it's a 40 year old computer,
-you won't be building Call of Duty or First Light), there will be problems you
-might find a brand new solution to that nobody has found before, there will be
-problems that someone else has published a solution to, and there will be
+There will be problems you can't solve. (I mean, it's a 40 year old computer,
+you won't be building Call of Duty or First Light.) There will be problems you
+might find a brand new solution to that nobody has found before. There will be
+problems that someone else has published a solution to. And there will be
 problems already solved by guides here in this repo.
 
 Most importantly, have fun! And if you have trouble with it, drop me a line.
-My goal is to enable, 40 years later, people to have the same sense of learning
-and exploration that I and many others remember from our youth with these old
+My goal is to enable people, 40 years later, to have the same sense of learning
+and exploration. I and many others remember it from our youth with these old
 computers. There are fewer and fewer places to go to learn so deeply about
-computing technology than these computers that inspired and drove our entire
-personal computing field.
+computing technology. These computers inspired and drove our entire personal
+computing field.
 
 ## Look inside when you are ready
 

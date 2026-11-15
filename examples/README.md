@@ -7,8 +7,8 @@ eg
 - getting keyboard input
 - playing audio alongside gameplay
 
-Each example may have code that builds up the context that is actually not part of the example, and then
-a marked example of doing the one special thing the example is about.
+Each example may have code that builds up the context, which is actually not part of the example. After
+that comes a marked example of doing the one special thing the example is about.
 
 It's not always about the best way, it's an illustration of a technique or a starting point if you don't
 know what else to do.

@@ -19,8 +19,8 @@ example how to set up a graphics screen. It stops when that practice is shown.
 - Select a default that suits most games. Do not select the most familiar or
   the first case. First-screen uses CG6, a four-colour mode, not RG6.
 - Give the agent what it needs to choose. Put a table of the options and their
-  characteristics in the README: size, colours, memory, register values and
-  the names a reader can know them by, such as `PMODE` numbers.
+  characteristics in the README. Include size, colours, memory, register
+  values and the names a reader can know them by, such as `PMODE` numbers.
 
 ## Mark the example inside its context
 
@@ -46,8 +46,8 @@ When you know of other ways, name them in the README.
 - Do not use an example to check boot, firmware, tools or the emulator. Do not
   write that it does. Those checks belong in `scripts/` and its tests, and in
   the [toolchain guide](../guidance/starter/toolchain.md).
-- Do not add a value or a function that only proves that the program ran, such
-  as a ready marker in RAM or a `verify_ram` that tests it. The check compares
+- Do not add a value or a function that only proves that the program ran.
+  Examples are a ready marker in RAM, or a `verify_ram` that tests it. The check compares
   the full result.
 - Do not put claims about host platforms or past runs in an example README.
 - Do not write an example as the base of a project. Agents copy
@@ -59,8 +59,9 @@ When you know of other ways, name them in the README.
 - Do not add setup because it sounds reasonable. Each line of code, each
   firmware file and each setting must have a specific reason. If you cannot
   give the reason, remove it.
-- Keep the machine state that BASIC sets. Do not mask interrupts, move the
-  stack, set the CPU clock or set the direct page unless the practice needs it.
+- Keep the machine state that BASIC sets. Do not mask interrupts or move
+  the stack unless the practice needs it. The same applies to the CPU clock and
+  the direct page.
 - If a line exists only for the check, put a comment on it that says so. Then
   an agent knows to remove it from a real project. The `ready` loop in
   first-screen is an example.

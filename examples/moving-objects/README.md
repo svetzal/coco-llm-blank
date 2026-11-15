@@ -167,12 +167,12 @@ Read these pages before you change the screen setup or the bit order. Use
 [reference lookup](../../guidance/starter/references.md) to get them.
 
 - Inman, Inman and Dymax, *Assembly Language Graphics for the TRS-80 Color
-  Computer*, PDF 106–107: mode 6R is 256×192 at `$0400`–`$1BFF`, has eight
+  Computer*, PDF 106–107: mode 6R is 256×192 at `$0400`–`$1BFF`. It has eight
   pixels in each byte and uses 6 KiB. With colour set 0, a 0 bit shows black
   and a 1 bit shows green.
 
 - The same book, PDF 162: the program erases the old shape with `CLR` on each
-  of its rows before it draws the shape at the new position.
+  of its rows. Then it draws the shape at the new position.
 
 - Motorola, *MC6847 Video Display Generator* datasheet, PDF 19, Table 3: in
   RG6, bit 7 is the leftmost pixel of a byte.

@@ -1,7 +1,7 @@
 # Separate game state from presentation
 
-Read this for a turn-based game, a menu for one switch, or a game that waits
-for a command before it plays a sequence.
+Read this for a turn-based game, or a menu for one switch. Read it also for a game
+that waits for a command before it plays a sequence.
 Keep the world state, the pending commands and the presentation state apart.
 A redraw, an animation or a sound must never advance a turn or apply a command
 again.
@@ -35,6 +35,7 @@ Do every check before the first write: phase, player, planets, ships, time and
 a free slot.
 Then fill the slot and take the ships as one commit.
 A rejected command, an overflow and a full queue leave the world unchanged.
+
 Choose a turn limit, or a time that cannot wrap, before you write the time
 check.
 The `send` routine in the turn-queue example does this in 6809 code.
@@ -156,7 +157,7 @@ when their artwork or background changes.
 **Our adaptation, not tested.** Each pass of the loop samples one event, then
 does one bounded piece of work in the current phase.
 Cancel comes first and makes no new commit.
-Start the dwell of each shown item after you show it, so slow work makes the
+Start the dwell of each shown item after you show it. Then slow work makes the
 sequence longer but never makes it catch up.
 A long blocking sound routine defeats this loop.
 Read [sound scheduling](sound.md) before you combine them.

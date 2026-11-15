@@ -10,8 +10,8 @@ The example does not show the keyboard scan, the room drawing or the sound.
 Those are context. It does not show pause, menus, a time limit, interrupt
 input or key repeat.
 
-The context is a whole small game for CoCo 1 and CoCo 2B: an 8×6 room in
-RG6, two stars to collect, an exit, phase messages and short DAC effects.
+The context is a whole small game for CoCo 1 and CoCo 2B. It has an 8×6 room
+in RG6, two stars to collect, an exit, phase messages and short DAC effects.
 
 ## Choose what each phase accepts
 

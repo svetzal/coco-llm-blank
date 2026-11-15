@@ -96,8 +96,8 @@ The `--- CONTEXT` parts are not part of the practice:
 - A runner reads a script that [prepare.py](prepare.py) writes from
   [turns.txt](turns.txt) into the build.
 - For each case, the runner loads a start world.
-- For each step, it calls a routine and appends a 19-byte record at `$5000`:
-  the world, the status and a mask of the slots that landed.
+- For each step, it calls a routine and appends a 19-byte record at `$5000`.
+  The record holds the world, the status and a mask of the slots that landed.
 
 The program keeps the machine state that BASIC sets: the interrupts, the
 stack, the direct page, the CPU rate and the memory map. No routine writes a
@@ -125,8 +125,8 @@ uv run python scripts/coco.py check examples/turn-queue
 ```
 
 The file [turns.txt](turns.txt) holds 19 cases with 44 steps. Each step has
-an action and an outcome that we wrote by hand from the rules above: the
-status, the slots that landed and the full world.
+an action and an outcome that we wrote by hand from the rules above. The
+outcome is the status, the slots that landed and the full world.
 
 [expected.py](expected.py) compares each record in RAM with that outcome. It
 does not read the assembly.

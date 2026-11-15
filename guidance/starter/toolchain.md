@@ -121,7 +121,7 @@ The root suite checks the same failures and recoveries with substitute
 commands. `bootstrap_spec.py` covers sudo and apt. `roms_spec.py` and
 `coco_spec.py` cover firmware.
 
-## Verify the actual workflow
+## Check the actual workflow
 
 Finding an executable does not prove a working build. Assemble an original
 small program. Inspect its load and execution addresses.

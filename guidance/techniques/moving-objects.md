@@ -1,7 +1,7 @@
 # Move objects without losing the world
 
-Read this when a moving object leaves holes in the scenery, when a foreground
-layer must hide an object, or when drawing changes which objects collide.
+Read this when a moving object leaves holes in the scenery or when a foreground
+layer must hide an object. Read it also when drawing changes which objects collide.
 Rendering and collision need separate decisions. The sources are listings and
 manuals that we read but did not run. The checked examples run on a defined
 CoCo 1 configuration only.
@@ -76,7 +76,9 @@ The source uses 32-byte rows, two-bit pixels and a syntax that is not LWTOOLS.
 **Our adaptation.** Keep the scenery authoritative in a separate buffer.
 Change that buffer when a door opens, a pickup goes or terrain changes. Restore
 old object regions from it. Then redraw the intersecting objects in layer
-order. That redraw rule is ours. The routines do not prove safe handling of
+order.
+
+That redraw rule is ours. The routines do not prove safe handling of
 arbitrary overlap. We made no RAM, ROM, mode or CoCo 2/3 assessment.
 
 ## Save background regions separately for each screen
@@ -91,7 +93,9 @@ of restoration buffers and states their time and memory cost.
 **Our adaptation.** Tie each saved region to the screen and frame that it came
 from. Save before you draw any object into that frame. Do not repair the
 previous screen with the newest saved pixels. Two buffer sets do not show that
-a third screen is safe. This is our derivation, not a tested renderer. The
+a third screen is safe.
+
+This is our derivation, not a tested renderer. The
 manual is not engine source. GE16 and GE256 have their own packing, and GE256
 shows only on composite displays (printed 2, PDF 7). Neither sets up CoCo 1/2.
 
@@ -100,7 +104,7 @@ shows only on composite displays (printed 2, PDF 7). Neither sets up CoCo 1/2.
 **Published explanation.** LeRoy W. Gross's *Knight Rider* (16K Extended
 Color BASIC) draws the scenery, then the rider, then the foreground scenery.
 Lines 210 and 400 select and clear alternate screens. On page 76 he explains a
-failure: a green fill of the foliage can find green at its start point and skip
+failure. A green fill of the foliage can find green at its start point and skip
 the repaint, so the rider shows through. His listing fills with an intermediate
 colour first, then with green. This is a flood-fill workaround, not a mask.
 [*Hot CoCo*, October 1983, printed/PDF 72–73 and 76][knight]
@@ -220,10 +224,14 @@ at the display for flicker and measure the work at the chosen clock.
   line 620. The [controls guide](controls-and-collision.md#sources) records the
   hash of the issue and the search for errata.
 
-Leads that gave no rendering evidence: *Hot CoCo* Graphic Master adverts, a
-*Dragon User* sprite article (not read), IBM and Atari COMPUTE! matches, Ron
-Clark's BASIC GET/PUT pages (PDF 86–93), *Undercolor* 1:1 contents, and the
-first pages of three *Hot CoCo* animation articles of 1983 and 1986.
+Leads that gave no rendering evidence:
+
+- *Hot CoCo* Graphic Master adverts
+- a *Dragon User* sprite article (not read)
+- IBM and Atari COMPUTE! matches
+- Ron Clark's BASIC GET/PUT pages (PDF 86–93)
+- *Undercolor* 1:1 contents
+- the first pages of three *Hot CoCo* animation articles of 1983 and 1986
 
 We examined the cited page images and listings and ran none of them. The
 adaptations and test cases are our original guidance.

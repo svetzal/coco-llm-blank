@@ -117,7 +117,7 @@ scope, and setup code together.
 Do not cycle through guessed register values until something looks plausible.
 Do not change working behavior solely to match an unverified summary.
 
-## Build and verify
+## Build and check
 
 Keep deterministic computation separate from display, input, and disk I/O.
 Use fixed test vectors and compare exact output bytes where appropriate.

@@ -27,11 +27,16 @@ trial without a new request.
   Existing page samples do not establish whole-book OCR quality.
 - Technique-driven source and errata reading, especially scrolling and broader
   sound/input integration. Continue only against a concrete builder need.
-- Make the instrumented XRoar's patch series acceptable to XRoar upstream, as
-  [Toward upstream](guidance/starter/xroar-patch.md#toward-upstream) lists:
-  XRoar-native trap actions and an audio module instead of environment
-  variables, Dragon and MC-10 coverage where cheap, XRoar's code style and
-  licence headers, and Texinfo documentation. Keep it current with
+- Make the instrumented XRoar's patch series acceptable to XRoar upstream.
+  [Toward upstream](guidance/starter/xroar-patch.md#toward-upstream) lists
+  the work:
+  - XRoar-native trap actions and an audio module instead of environment
+    variables
+  - Dragon and MC-10 coverage where cheap
+  - XRoar's code style and licence headers
+  - Texinfo documentation
+
+  Keep it current with
   [the XRoar patch procedure](guidance/starter/xroar-patch.md). Submit nothing
   and contact no one until the owner asks.
 - Host keyboard delivery, window presentation, listening, and physical-machine
@@ -51,13 +56,13 @@ guide states:
 - The task, the machines and configurations it applies to, and their limits.
 - Practical steps, memory and timing tradeoffs, and likely failure cases.
 - Inline citations beside sourced claims: author, title, edition or issue,
-  PDF page (printed page when known) and resource ID. Cite only read passages;
-  inspect diagrams and listings as images when conversion is uncertain.
+  PDF page (printed page when known) and resource ID. Cite only read passages.
+  Inspect diagrams and listings as images when conversion is uncertain.
 - Which claims are published explanations, our adaptations, derived
   calculations, measured results or untested proposals.
-- The example that demonstrates it, and what that example's check proves.
+- The example that shows it, and what that example's check proves.
 - Unresolved conflicts and the evidence that would settle them.
 
 Credit examined authors without claiming they invented a technique. Keep
-copyrighted source content in ignored storage; publish original explanations
+copyrighted source content in ignored storage. Publish original explanations
 and source metadata only.

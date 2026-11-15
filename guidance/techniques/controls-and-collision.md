@@ -1,7 +1,7 @@
 # Separate controls, collision, and artwork
 
-Read this when held movement must work together with single-press actions,
-or when a change to a picture must not change what blocks the player. The
+Read this when held movement must work together with single-press actions.
+Read it also when a change to a picture must not change what blocks the player. The
 keyboard facts apply to CoCo 1 and the named CoCo 2 NTSC boards. The CoCo 3
 manual describes the same scan. The checked examples run on CoCo 1 and CoCo 2
 only. The policies are original adaptations for all three machines.
@@ -145,6 +145,7 @@ function move_horizontal(position, dx, probes, scenery):
 Unit steps stop a probe from skipping a solid cell on its own track. They do
 not fill the gaps between probes: a one-cell post can pass between two probe
 tracks. Thin posts and corners need every relevant edge cell or a shape test.
+
 Do not extend the loop to diagonal motion without a corner rule. If you limit
 the steps in one update, drop or defer the remaining steps. Do not jump to the
 destination. Two moving objects need a relative-motion test.
@@ -204,9 +205,9 @@ A+B+I probe and most chords are not tested.
   pages equal printed pages. We read as page images Landwehr, "Read the
   Keyboard in Assembly", 106 and 108, and Togliatti, "Attacker", 82, 84, 86,
   88 and 89, with their complete listings.
-- Errata search, 2026-11-14: the November 1983 Feedback section (printed 8 and
-  10, PDF 10 and 12, read as images), a text search of that issue, and web
-  searches for the titles and authors. We found no correction to these
+- Errata search, 2026-11-14. We read the November 1983 Feedback section as
+  images (printed 8 and 10, PDF 10 and 12). We also did a text search of that
+  issue and web searches for the titles and authors. We found no correction to these
   articles. That does not prove that none exists.
 
 The examples are our original work. They copy no magazine listing.
