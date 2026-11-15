@@ -50,11 +50,24 @@ The example does not change the interrupts, the stack or the CPU clock.
 
 ## See and check each mode
 
-The plain build shows CG6. Each other mode is a variant in
-[coco.toml](coco.toml), named after the mode in lowercase:
+Open a terminal in the starter folder. Copy one line and paste it to see that
+mode in XRoar. Close the window to stop it.
 
 ```sh
-uv run python scripts/coco.py run examples/first-screen --variant rg6
+uv run python scripts/coco.py run examples/first-screen                # CG6, PMODE 3
+uv run python scripts/coco.py run examples/first-screen --variant rg6  # RG6, PMODE 4
+uv run python scripts/coco.py run examples/first-screen --variant rg3  # RG3, PMODE 2
+uv run python scripts/coco.py run examples/first-screen --variant cg3  # CG3, PMODE 1
+uv run python scripts/coco.py run examples/first-screen --variant rg2  # RG2, PMODE 0
+uv run python scripts/coco.py run examples/first-screen --variant cg2  # CG2
+uv run python scripts/coco.py run examples/first-screen --variant rg1  # RG1
+uv run python scripts/coco.py run examples/first-screen --variant cg1  # CG1
+```
+
+Each mode other than CG6 is a variant in [coco.toml](coco.toml). To check all
+eight modes, paste this line:
+
+```sh
 uv run python scripts/coco.py check examples/first-screen --video
 ```
 
