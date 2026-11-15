@@ -184,12 +184,20 @@ def glyph_bytes(rows: list[str]) -> list[int]:
 
 
 def font_assembly(glyphs: dict[str, list[str]]) -> str:
-    """digits: 5 bytes for each of 0-9. life: 5 bytes."""
-    lines = ["digits"]
-    for digit in "0123456789":
-        lines.append("        fcb " + ",".join(f"${b:02x}" for b in glyph_bytes(glyphs[digit])))
+    """font: 5 bytes for each character from space (32) to Z (90). A character
+    without a glyph is a space. digits: the glyphs of 0-9 in font. life_icon: 5
+    bytes. double: for each pair of pixels (4 bits), the byte that shows each
+    pixel two times, for big text."""
+    blank = ["BBBB"] * 5
+    lines = ["font"]
+    for code in range(32, 91):
+        rows = glyphs.get(chr(code), blank)
+        lines.append("        fcb " + ",".join(f"${b:02x}" for b in glyph_bytes(rows)))
+    lines.append(f"digits equ font+{(ord('0') - 32) * 5}")
     lines.append("life_icon")
     lines.append("        fcb " + ",".join(f"${b:02x}" for b in glyph_bytes(glyphs["life"])))
+    pairs = [(n >> 2) * 0x50 | (n & 3) * 0x05 for n in range(16)]
+    lines.append("double  fcb " + ",".join(f"${b:02x}" for b in pairs))
     return "\n".join(lines) + "\n"
 
 

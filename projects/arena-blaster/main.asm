@@ -1,6 +1,7 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
-* Increment 5: score, lives and game over. Increment 4: compiled sprites
-* and a fixed speed of 30 frames each second. README.md has the contract,
+* Increment 6: title screen, high-score table and initials. Increment 5:
+* score, lives and game over. Increment 4: compiled sprites and a fixed
+* speed of 30 frames each second. README.md has the contract,
 * the rules for each frame and the memory map.
 *
 * Sources (all read as page images):
@@ -89,6 +90,7 @@ FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
 *   STILL        enemies do not move.
 *   HUNTER_SOON  the hunter wait is 15 frames on every level.
 *   NO_DEATH     a touch does not kill the player.
+*   SKIP_TITLE   at power-on a game starts at once, with no title screen.
 *   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
 
 * Score, lives and pauses (README.md "Score and lives").
@@ -99,6 +101,21 @@ DYING_FRAMES equ 45             ; the pause after a death
 OVER_FRAMES equ 90              ; the pause after game over
 HUD_ROW equ 3                   ; the first row of the digits and icons
 ICONS   equ 6                   ; places for reserve lives
+
+* Phases of the program (README.md "Title and high scores").
+TITLE   equ 0                   ; the title screen and the table
+PLAY    equ 1                   ; a game
+ENTRY   equ 2                   ; the initials for a new high score
+PLACES  equ 10                  ; entries in the high-score table
+P_ENTRY_SIZE equ 6              ; an entry: 3 BCD score bytes, 3 letters
+REPEAT_FIRST equ 12             ; frames before a held W or S repeats
+REPEAT_NEXT equ 4               ; frames between two repeats
+* Text colours (font.txt is yellow on blue) and the big-text flag.
+YELLOW_TEXT equ 0
+RED_TEXT equ 1
+GREEN_TEXT equ 2
+BIG     equ $80                 ; each pixel shows as 2x2 pixels
+CURSOR  equ $55                 ; four yellow pixels
 
 * Sound effects: records of mode, period, volume and fields (README.md
 * "Sound").
@@ -251,21 +268,43 @@ clear   clr ,x+
         std <end_b
         ldd #SEED
         std <seed
+        lda #$FF
+        sta <new_rank           ; no entry of the table is new
+        ifdef SKIP_TITLE        ; check only: a game at once
+        lda #PLAY
+        sta <phase
         jsr new_game
-* Start frame 1 at the start of a field, as show does for each frame.
-        lda $FF02
-        jsr play_until_fs       ; the end of a field
-        jsr field_start
+        jsr resync
+        else
+        jsr setup_title         ; phase = TITLE (0): the title screen
+        endc
 
 frame   jsr rand_step           ; one step of the random sequence a frame
         jsr scan
-* After game over: wait, then start a new game.
+        lda <old_fire           ; shoot keys held now, but not in the last frame
+        coma
+        anda <fire_keys
+        sta <fire_new
+        lda <fire_keys
+        sta <old_fire
+        lda <phase
+        cmpa #PLAY
+        beq frame_over
+        cmpa #ENTRY
+        lbeq frame_entry
+* Title: a shoot key that was not held in the last frame starts a game.
+        lda <fire_new
+        lbeq frame_still
+        jsr begin_game
+        bra frame_draw
+* After game over: wait. Then the initials for a high score, or the title.
+frame_over
         lda <over
         beq frame_dying
         dec <over
         bne frame_draw
-        jsr new_game
-        bra frame_draw
+        jsr game_end
+        lbra frame_still
 * After a death: wait. Then take a life, and start the level again or
 * end the game.
 frame_dying
@@ -317,11 +356,84 @@ fc_slot tst E_TYPE,x
 frame_draw
         jsr sound_frame
         jsr draw_frame
+frame_show
         jsr show
         ldd <frames
         addd #1
         std <frames
         jmp frame
+* Title and initials: the screens stay, and only one part changes.
+frame_still
+        jsr sound_frame
+        lda <phase
+        cmpa #ENTRY
+        beq fs_entry
+        jsr draw_prompt
+        bra frame_show
+fs_entry
+        jsr draw_entry
+        bra frame_show
+
+* --- Initials. W or S changes the letter at the cursor: at once, then
+* after REPEAT_FIRST frames, then each REPEAT_NEXT frames. A new shoot key
+* moves the cursor on. After the third letter, the entry goes into the
+* table and the title screen comes.
+frame_entry
+        lda <move_keys
+        anda #UP+DOWN
+        beq fe_none             ; W and S are not held
+        cmpa #UP+DOWN
+        beq fe_none             ; both are held
+        ldb <rpt
+        bne fe_held
+        ldb #REPEAT_FIRST       ; a new press
+        bra fe_change
+fe_held decb
+        stb <rpt
+        bne fe_fire
+        ldb #REPEAT_NEXT
+fe_change
+        stb <rpt
+        ldx #initials
+        ldb <pos
+        abx
+        ldb ,x
+        cmpa #UP
+        bne fe_down
+        incb                    ; W: the next letter, after Z comes A
+        cmpb #'Z
+        bls fe_store
+        ldb #'A
+        bra fe_store
+fe_down decb                    ; S: the letter before, before A comes Z
+        cmpb #'A
+        bhs fe_store
+        ldb #'Z
+fe_store
+        stb ,x
+        ldx #fx_shot
+        lda #P_SHOT
+        jsr start_sound
+        bra fe_fire
+fe_none clr <rpt
+fe_fire lda <fire_new
+        beq fe_done
+        inc <pos
+        lda <pos
+        cmpa #3
+        beq fe_last
+        ldx #fx_shot
+        lda #P_SHOT
+        jsr start_sound
+fe_done jmp frame_still
+fe_last jsr insert
+        lda <rank
+        sta <new_rank
+        ldx #fx_level
+        lda #P_LEVEL
+        jsr start_sound
+        jsr setup_title
+        jmp frame_still
 
 * --- Read the eight keys. A pressed key reads 0 on its row.
 * A key script line takes effect each time the program reaches 'scan'.
@@ -710,6 +822,381 @@ field_start
         sta $FF03
         lda $FF02               ; clear the flag: the first field starts
         rts
+
+* --- After long work, such as a new screen: wait for the end of a field,
+* then start the frame at the start of the next field.
+resync  lda $FF02
+        jsr play_until_fs
+        bra field_start
+
+* --- From the title: a new game in the arena.
+begin_game
+        lda #PLAY
+        sta <phase
+        ldx #SCREEN_A
+        jsr prepare_screen
+        ldx #SCREEN_B
+        jsr prepare_screen
+        ldd #LIST_A             ; nothing to erase
+        std <end_a
+        ldd #LIST_B
+        std <end_b
+        jsr new_game
+        bra resync
+
+* --- After the pause of game over: the initials if the score gets a
+* place in the table, if not the title.
+game_end
+        lda #$FF
+        sta <new_rank
+        bsr find_rank
+        lda <rank
+        cmpa #PLACES
+        lbhs setup_title
+        lbra setup_entry
+
+* --- rank = the first entry with a lower score than 'score', or PLACES
+* if none. A score the same as an entry goes below that entry.
+find_rank
+        ldx #table
+        clr <rank
+fr_entry
+        ldd <score
+        cmpd ,x
+        bne fr_test
+        lda <score+2
+        cmpa 2,x
+fr_test bhi fr_done             ; score > entry
+        leax P_ENTRY_SIZE,x
+        inc <rank
+        lda <rank
+        cmpa #PLACES
+        blo fr_entry
+fr_done rts
+
+* --- Put the score and the initials into the table at 'rank'. Each
+* lower entry moves down one place. The last entry goes out.
+insert  lda <rank
+        ldb #P_ENTRY_SIZE
+        mul
+        addd #table
+        tfr d,y                 ; the new entry
+        leau P_ENTRY_SIZE,y
+        stu <temp               ; the lowest byte that gets a copy
+        ldx #table+PLACES*P_ENTRY_SIZE-1
+ins_move
+        cmpx <temp
+        blo ins_put
+        lda -P_ENTRY_SIZE,x
+        sta ,x
+        leax -1,x
+        bra ins_move
+ins_put ldd <score
+        std ,y
+        lda <score+2
+        sta 2,y
+        ldd <initials
+        std 3,y
+        lda <initials+2
+        sta 5,y
+        rts
+
+* --- The title screen in both screens.
+setup_title
+        clr <phase              ; TITLE
+        lda #SCREEN_A/256
+        bsr title_screen
+        lda #SCREEN_B/256
+        bsr title_screen
+        lbra resync
+
+* A = the screen. The name, the table, the enemies and their points, and
+* the keys. The prompt is drawn each frame (draw_prompt).
+title_screen
+        sta <target
+        lbsr blank
+        ldu #title_texts
+        lbsr texts
+        bsr draw_table
+        lda <drawing            ; draw_sprite draws into 'drawing'
+        pshs a
+        lda <target
+        sta <drawing
+        ldd #LIST_A             ; a place for the erase entries, not used
+        std <next
+        ldd #36*256+136
+        ldu #grunt
+        lbsr draw_sprite
+        ldd #76*256+136
+        ldu #hunter
+        lbsr draw_sprite
+        puls a
+        sta <drawing
+        rts
+
+* --- The table: one line for each entry, "NN ABC 012345", from row 40,
+* each 9 rows, at byte column 9. A new entry is green.
+draw_table
+        clr <trow
+        ldx #table
+dt_line ldy #line
+        lda <trow
+        inca                    ; place 1-10
+        cmpa #PLACES
+        bne dt_one
+        ldd #'1*256+'0
+        bra dt_place
+dt_one  adda #'0
+        tfr a,b
+        lda #32                 ; a space
+dt_place
+        std ,y++
+        lda #32
+        sta ,y+
+        lda 3,x
+        sta ,y+
+        lda 4,x
+        sta ,y+
+        lda 5,x
+        sta ,y+
+        lda #32
+        sta ,y+
+        tfr x,u
+        bsr bcd_text
+        clr ,y
+        lda #YELLOW_TEXT
+        ldb <trow
+        cmpb <new_rank
+        bne dt_colour
+        lda #GREEN_TEXT
+dt_colour
+        sta <tcolour
+        lda <trow
+        ldb #9
+        mul
+        addb #40                ; the row: 40 + 9 x place
+        lda #32
+        mul
+        addd #9
+        adda <target
+        tfr d,y
+        pshs x
+        ldu #line
+        lbsr text_at
+        puls x
+        leax P_ENTRY_SIZE,x
+        inc <trow
+        lda <trow
+        cmpa #PLACES
+        blo dt_line
+        rts
+
+* --- The 3 BCD bytes at U as 6 characters at Y. Y moves on.
+bcd_text
+        lda #3
+        sta <count
+bt_byte lda ,u
+        lsra
+        lsra
+        lsra
+        lsra
+        adda #'0
+        sta ,y+
+        lda ,u+
+        anda #$0F
+        adda #'0
+        sta ,y+
+        dec <count
+        bne bt_byte
+        rts
+
+* --- The initials screen in both screens.
+setup_entry
+        lda #ENTRY
+        sta <phase
+        clr <pos
+        clr <rpt
+        lda #'A
+        sta <initials
+        sta <initials+1
+        sta <initials+2
+        lda #SCREEN_A/256
+        bsr entry_screen
+        lda #SCREEN_B/256
+        bsr entry_screen
+        lbra resync
+
+* A = the screen. The texts and the score. The letters and the cursor are
+* drawn each frame (draw_entry).
+entry_screen
+        sta <target
+        bsr blank
+        ldu #entry_texts
+        lbsr texts
+        ldy #line
+        ldu #score
+        bsr bcd_text
+        clr ,y
+        ldd #40*32+13
+        adda <target
+        tfr d,y
+        clr <tcolour            ; yellow
+        ldu #line
+        lbra text_at
+
+* --- Each frame on the title: the prompt shows for 16 frames, then a
+* space for 16 frames.
+draw_prompt
+        ldd #156*32+9
+        adda <drawing
+        tfr d,y
+        clr <tcolour            ; yellow
+        ldu #prompt_on
+        lda <frames+1
+        bita #16
+        beq text_at
+        ldu #prompt_off
+        bra text_at
+
+* --- Each frame of the initials: the three letters in big text at row 80,
+* byte columns 12, 16 and 20. Under the letter at 'pos', a yellow bar on
+* rows 92-93.
+draw_entry
+        ldx #line
+        lda <initials
+        ldb #32
+        std ,x++
+        lda <initials+1
+        std ,x++
+        lda <initials+2
+        clrb
+        std ,x
+        ldd #80*32+12
+        adda <drawing
+        tfr d,y
+        lda #BIG+YELLOW_TEXT
+        sta <tcolour
+        ldu #line
+        bsr text_at
+        ldd #92*32+12
+        adda <drawing
+        tfr d,x
+        clr <trow
+de_bar  ldu #FLOOR*257
+        lda <trow
+        cmpa <pos
+        bne de_put
+        ldu #CURSOR*257
+de_put  stu ,x
+        stu 32,x
+        leax 4,x
+        inc <trow
+        lda <trow
+        cmpa #3
+        blo de_bar
+        rts
+
+* --- Fill the screen in 'target' with the floor.
+blank   lda <target
+        clrb
+        tfr d,x
+        adda #6144/256
+        std <temp
+        ldd #FLOOR*257
+bl_word std ,x++
+        cmpx <temp
+        blo bl_word
+        rts
+
+* --- Draw the text records at U into the screen in 'target'. A record is
+* the byte offset (2 bytes), the colour, the characters and 0. $FFFF ends
+* the list.
+texts   ldd ,u++
+        cmpd #$FFFF
+        beq tl_done
+        adda <target
+        tfr d,y
+        lda ,u+
+        sta <tcolour
+        bsr text_at
+        bra texts
+tl_done rts
+
+* --- Draw the characters at U, up to a 0, at screen byte Y in the colour
+* 'tcolour'. A normal character is 1 byte wide and 5 rows high. A big
+* character is 2 bytes wide and 10 rows high. U moves past the 0.
+text_at lda ,u+
+        beq tx_done
+        pshs u
+        suba #32
+        ldb #5
+        mul
+        ldu #font
+        leau d,u
+        tst <tcolour
+        bmi tx_big
+        bsr glyph
+        bra tx_next
+tx_big  bsr big_glyph
+tx_next puls u
+        bra text_at
+tx_done rts
+
+* Glyph U (5 bytes) at Y in 'tcolour'. Then Y moves on by 1.
+glyph   lda #5
+        sta <rows
+gl_row  lda ,u+
+        bsr paint
+        sta ,y
+        leay 32,y
+        dec <rows
+        bne gl_row
+        leay -5*32+1,y
+        rts
+
+* Glyph U at Y, each pixel two times across and down. Then Y moves on by 2.
+big_glyph
+        lda #5
+        sta <rows
+        ldx #double
+bg_row  lda ,u+
+        bsr paint
+        pshs a
+        lsra
+        lsra
+        lsra
+        lsra
+        lda a,x                 ; the left two pixels, doubled
+        sta ,y
+        sta 32,y
+        puls a
+        anda #$0F
+        lda a,x                 ; the right two pixels, doubled
+        sta 1,y
+        sta 33,y
+        leay 64,y
+        dec <rows
+        bne bg_row
+        leay -10*32+2,y
+        rts
+
+* A = a glyph byte, yellow (01) on blue (10). Change yellow to the colour
+* in 'tcolour'. Red (11) = byte OR (yellow bits shifted left). Green (00) =
+* byte AND $AA.
+paint   ldb <tcolour
+        andb #$7F
+        beq pt_done             ; yellow
+        decb
+        bne pt_green
+        tfr a,b
+        andb #$55
+        lslb
+        stb <tbits
+        ora <tbits
+        rts
+pt_green
+        anda #$AA
+pt_done rts
 
 * --- Fill the screen at X with the floor and the wall.
 prepare_screen
@@ -1258,6 +1745,79 @@ fx_over fcb 0,32,28,20,0,40,28,20,0,43,28,20,0,48,28,30,0,48,20,15
         fcb 0,48,12,15,FX_END
 no_icon fcb FLOOR,FLOOR,FLOOR,FLOOR,FLOOR
 
+* --- Text records: the byte offset in the screen (row x 32 + byte
+* column), the colour, the characters, 0. $FFFF ends a list.
+title_texts
+        fdb 10*32+3
+        fcb BIG+YELLOW_TEXT
+        fcc "ARENA BLASTER"
+        fcb 0
+        fdb 28*32+10
+        fcb YELLOW_TEXT
+        fcc "HIGH SCORES"
+        fcb 0
+        fdb 138*32+11           ; beside the grunt at pixel 36, row 136
+        fcb YELLOW_TEXT
+        fcc "10"
+        fcb 0
+        fdb 138*32+21           ; beside the hunter at pixel 76, row 136
+        fcb YELLOW_TEXT
+        fcc "50"
+        fcb 0
+        fdb 172*32+5
+        fcb GREEN_TEXT
+        fcc "MOVE WASD  SHOOT OKL;"
+        fcb 0
+        fdb $FFFF
+entry_texts
+        fdb 20*32+2
+        fcb BIG+YELLOW_TEXT
+        fcc "NEW HIGH SCORE"
+        fcb 0
+        fdb 60*32+6
+        fcb YELLOW_TEXT
+        fcc "ENTER YOUR INITIALS"
+        fcb 0
+        fdb 120*32+3
+        fcb GREEN_TEXT
+        fcc "W AND S CHANGE THE LETTER"
+        fcb 0
+        fdb 130*32+3
+        fcb GREEN_TEXT
+        fcc "SHOOT FOR THE NEXT LETTER"
+        fcb 0
+        fdb $FFFF
+prompt_on
+        fcc "SHOOT TO START"
+        fcb 0
+prompt_off
+        fcc "              "
+        fcb 0
+
+* --- The high-score table: PLACES entries of 3 BCD score bytes and 3
+* letters, the highest first. It is in RAM, so it keeps new entries while
+* the machine is on. Made-up start entries, 10000 down to 1000.
+table   fcb $01,$00,$00
+        fcc "ZAP"
+        fcb $00,$90,$00
+        fcc "ACE"
+        fcb $00,$80,$00
+        fcc "MAX"
+        fcb $00,$70,$00
+        fcc "JET"
+        fcb $00,$60,$00
+        fcc "SKY"
+        fcb $00,$50,$00
+        fcc "REX"
+        fcb $00,$40,$00
+        fcc "ION"
+        fcb $00,$30,$00
+        fcc "VOX"
+        fcb $00,$20,$00
+        fcc "KIT"
+        fcb $00,$10,$00
+        fcc "DOT"
+
 * --- Tables.
 * Direction number for each combination of key bits (UP=1, DOWN=2,
 * LEFT=4, RIGHT=8). Number = (dy + 1) * 3 + (dx + 1), so 4 is no
@@ -1345,5 +1905,19 @@ next_extra rmb 3                ; BCD: the score for the next extra life
 lives   rmb 1                   ; lives left, with the one in play
 dying   rmb 1                   ; frames left of the pause after a death
 over    rmb 1                   ; frames left of the pause after game over
+phase   rmb 1                   ; TITLE, PLAY or ENTRY
+old_fire rmb 1                  ; the shoot keys of the last frame
+fire_new rmb 1                  ; shoot keys held now, not in the last frame
+target  rmb 1                   ; high byte of the screen for a new picture
+tcolour rmb 1                   ; text colour, and BIG
+tbits   rmb 1
+rows    rmb 1
+trow    rmb 1
+rank    rmb 1                   ; the place for the score, or PLACES
+new_rank rmb 1                  ; the place of the last new entry, or $FF
+pos     rmb 1                   ; the letter at the cursor, 0-2
+rpt     rmb 1                   ; frames until a held W or S repeats
+initials rmb 3
+line    rmb 16                  ; a line of text
 state_end
         end start

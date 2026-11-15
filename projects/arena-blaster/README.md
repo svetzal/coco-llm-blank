@@ -69,15 +69,16 @@ uv run python scripts/coco.py check projects/arena-blaster
 
 The `run` command opens XRoar. Close the window to stop it.
 
-The check runs six builds for 200 frames each. At each frame it compares
+The check runs eight builds for 200 frames each. At each frame it compares
 both screens, the game state, the rendered picture and the mixer output with
 `expected.py`. See [Checks](#checks).
 
 ## Status
 
-Increment 5: score, lives, game over and the start and game-over sounds.
+Increment 6: the title screen, the high-score table and the initials.
+Increment 5 added score, lives, game over and the start and game-over sounds.
 Increment 4 added faster drawing and the fixed speed of 30 frames each second.
-After game over, a new game starts by itself. Increment 6 adds a title screen.
+Increment 7 adds the first levels that teach the game.
 
 The owner chose the fixed speed of 30 frames each second. Each frame lasts two
 fields of the picture (one field is 1/60 second). Measured speed in XRoar, in
@@ -134,11 +135,17 @@ The CoCo 1 defaults come from
 | `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`). An erase-list entry is the first screen byte and the erase routine of a sprite. |
 | `$2000`-`$23FF` | Stack, from `$2400` down |
 | `$2400`-`$3BFF` | Screen B, 6144 bytes |
-| `$3C00`-`$7FFF` | Code and sprite data |
+| `$3C00`-`$5850` | Code, sprites, font, text and the high-score table |
+| `$5851`-`$7FFF` | Free, about 10 KiB |
+
+The game needs 32 KiB. The two screens use 12 KiB, so a 16 KiB machine
+does not have space for the program. The game state uses 242 of the 256
+bytes of the direct page.
 
 ### Arena
 
-- Rows 0-11 and 188-191 are blue. They are for the score in a later increment.
+- Rows 0-11 and 188-191 are blue. Rows 3-7 show the score and the reserve
+  lives.
 - A red wall is on rows 12 and 187, and on pixel columns 3 and 124.
 - Objects stay inside pixel columns 4-123 and rows 13-186. These are byte
   columns 1-30. An erase routine stores the floor only in the bytes that
@@ -218,6 +225,46 @@ The numbers are agent choices. The owner can change them.
 - When no life is left, the game-over sound plays, and the game stops for 90
   frames (3 seconds). Then a new game starts with the start sound.
 
+### Title and high scores
+
+The program has three phases: the title, a game and the initials. The
+numbers and the words are agent choices. The owner can change them.
+
+- At power-on, the title screen shows. It has the name of the game in big
+  text, the high-score table, a grunt and a hunter with their points, and
+  the keys. "SHOOT TO START" shows for 16 frames, then goes for 16 frames.
+- A shoot key starts a game. The key must be new: held now, but not held
+  in the last frame. So a shoot key that is held from before does not
+  start a game.
+- After the pause of game over, the score goes to the table if it is more
+  than the score of an entry. A score the same as an entry goes below that
+  entry. If the score gets no place, the title screen comes.
+- The initials screen shows "NEW HIGH SCORE", the score and three big
+  letters. All three letters start as A. A yellow bar is under the letter
+  that changes.
+- W gives the next letter and S gives the letter before. After Z comes A.
+  A held W or S changes the letter at once and again after 12 frames.
+  After that, it changes the letter each 4 frames. A letter change plays the shot sound.
+- A new shoot key goes to the next letter, with the shot sound. After the
+  third letter, the entry goes into the table and the level sound plays.
+  Each lower entry moves down one place, and the last entry goes out. The
+  title screen comes, with the new entry in green.
+- The table has 10 entries of a 6-digit score and 3 letters. It starts with
+  made-up entries: 10000 down to 1000 in steps of 1000. The table is in RAM,
+  so it keeps new entries until the machine goes off.
+
+The text uses the glyphs in `font.txt`: 4 pixels wide and 5 rows high, one
+byte for each row. A glyph is yellow on blue. Red text sets each yellow
+pixel to red: the byte OR (the yellow bits shifted left). Green text sets
+each yellow pixel to green: the byte AND `$AA`. Big text shows each pixel as
+2x2 pixels, so a big character is 2 bytes wide and 10 rows high.
+
+A new screen (the arena, the title or the initials) goes into both screens.
+That work takes more than two fields. So after it, the frame waits for the
+start of a field, as at power-on. Then each frame draws only the part that
+changes into the hidden screen. On the title, this part is the prompt. On
+the initials screen, it is the letters and the bar.
+
 ### Sound
 
 One effect plays at a time. A new effect replaces the current one only if its
@@ -233,6 +280,8 @@ two fields of the effect.
 | Hunter | 3 | A hunter comes | Square, periods 10 and 14 in turn, 8 fields; volume 26 |
 | Level | 4 | The arena is clear | Square, periods 30, 22, 16, 11, 3 fields each; volume 28 |
 | Extra life | 4 | The score reaches the next 1000 | Square, periods 15 and 10 in turn, 2 fields each, 14 fields; volume 30 |
+| Letter | 1 | A change or the next letter in the initials | The shot sound |
+| Entry | 4 | The initials go into the table | The level sound |
 | Death | 5 | An enemy touches the player | Noise, periods 1-10, 14 fields; volume 60 down to 8 |
 | Start | 6 | A game starts | Square, periods 48, 38, 31, 23 (C, E, G, C), then 31, 23; 41 fields; volume 28 |
 | Game over | 6 | The last life is lost | Square, periods 32, 40, 43, 48 (G, E flat, D, C), 120 fields; volume 28 down to 12 |
@@ -250,9 +299,15 @@ two fields of the effect.
 
 1. Do one step of the random numbers. Read the keys. If O and K are held
    and both W and S read as held, use the vertical keys of the last frame.
-   After game over, count down the pause and go to step 9. At 0, start a new
-   game. After a death, count down the pause and go to step 9. At 0, take a
-   life. Then start the same level again, or start game over.
+   Find the new shoot keys: held now, but not in the last frame.
+   On the title, a new shoot key starts a game: go to step 9. If not, take
+   the next sound record, draw the prompt and go to step 10. For the
+   initials, do the rules of "Title and high scores". Then take the next
+   sound record, draw the letters and the bar, and go to step 10.
+   After game over, count down the pause and go to step 9. At 0, show the
+   initials screen or the title. After a death, count down the pause and go
+   to step 9. At 0, take a life. Then start the same level again, or start
+   game over.
 2. Move the player 2 pixels across and 4 rows down or up. Stop the player at
    the arena edge. The player is 6 pixels wide and 10 rows high. It starts at
    pixel 61, row 95.
@@ -320,16 +375,18 @@ remove one part of the game. The key scripts are short and written by hand.
 
 | Build | Controls | Keys | What it checks |
 | --- | --- | --- | --- |
-| `main` | none | none | The real start with the start sound. The grunts reach the player at frames 39 and 127: death sound, pause, one life less. |
-| `moves` | `NO_ENEMIES` | `moves.txt` | Movement, walls, shots, the wrong key C, the K/O/S/W rectangle rule, shot sounds |
-| `hit` | `FIXED_ENEMIES` `STILL` `FIRST_SCORE=0x0990` | `hit.txt` | Hits on a grunt (frame 9) and a hunter (frame 32), their points, an extra life at 1000, the extra-life and level sounds, level 2 |
-| `touch` | `FIXED_ENEMIES` | none | The hunter reaches the player at frames 34, 113 and 192 |
-| `hunter` | `NO_ENEMIES` `HUNTER_SOON` `NO_DEATH` | none | A hunter each 15 frames, its place and the hunter sound |
-| `level10` | `FIRST_LEVEL=10` | none | 20 grunts and the level-10 hunter wait |
-| `over` | `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound, a new game at frame 174 |
+| `main` | none | none | The real power-on: the title screen, the table and the prompt that comes and goes |
+| `moves` | `SKIP_TITLE` `NO_ENEMIES` | `moves.txt` | Movement, walls, shots, the wrong key C, the K/O/S/W rectangle rule, shot sounds |
+| `hit` | `SKIP_TITLE` `FIXED_ENEMIES` `STILL` `FIRST_SCORE=0x0990` | `hit.txt` | Hits on a grunt (frame 9) and a hunter (frame 32), their points, an extra life at 1000, the extra-life and level sounds, level 2 |
+| `touch` | `SKIP_TITLE` `FIXED_ENEMIES` | none | The hunter reaches the player at frames 34, 113 and 192 |
+| `hunter` | `SKIP_TITLE` `NO_ENEMIES` `HUNTER_SOON` `NO_DEATH` | none | A hunter each 15 frames, its place and the hunter sound |
+| `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | 20 grunts and the level-10 hunter wait |
+| `over` | `SKIP_TITLE` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
+| `scores` | `FIXED_ENEMIES` `FIRST_LIVES=1` `FIRST_SCORE=0x5000` | `scores.txt` | A start from the title (frame 3), game over (frame 82), the initials screen (frame 172), a held W that repeats, S from A to Z, the entry CZA at place 7 below REX (frame 192), a held shoot key that does not start a game |
 
 The controls:
 
+- `SKIP_TITLE`: at power-on, a game starts at once, with no title screen.
 - `NO_ENEMIES`: no grunts, and an empty arena does not end the level.
 - `FIXED_ENEMIES`: a grunt at x 100, y 90 and a hunter at x 100, y 40. No
   other hunters.
@@ -350,6 +407,8 @@ measured in these captures.
 
 Negative controls, run on copies. Each one must fail:
 
+- Increment 6: an `insert` that does not move the lower entries down fails
+  at frame 192 (`scores`).
 - Increment 5: an `add_score` without `DAA` fails at frame 9 (`hit`).
 - Increment 4: a `show` without the record of the second field failed at
   frame 40 (`main`), because the death sound played its records too slowly.

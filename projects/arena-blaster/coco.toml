@@ -29,27 +29,32 @@ letters = { W = "w", S = "s", A = "a", D = "d", O = "o", L = "l", K = "k", ";" =
 video = true
 audio = true
 
-# The main build has no controls and gets no keys. The variants below use
-# test-harness controls (README.md "Checks"), each for one game element.
+# The main build has no controls and gets no keys: it shows the title
+# screen. The variants below use test-harness controls (README.md
+# "Checks"), each for one game element. SKIP_TITLE starts a game at once.
 [variants.moves]
-defines = ["NO_ENEMIES"]
+defines = ["SKIP_TITLE", "NO_ENEMIES"]
 keys = "moves.txt"
 
 [variants.hit]
-defines = ["FIXED_ENEMIES", "STILL", "FIRST_SCORE=0x0990"]
+defines = ["SKIP_TITLE", "FIXED_ENEMIES", "STILL", "FIRST_SCORE=0x0990"]
 keys = "hit.txt"
 
 [variants.touch]
-defines = ["FIXED_ENEMIES"]
+defines = ["SKIP_TITLE", "FIXED_ENEMIES"]
 
 [variants.hunter]
-defines = ["NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"]
+defines = ["SKIP_TITLE", "NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"]
 
 [variants.level10]
-defines = ["FIRST_LEVEL=10"]
+defines = ["SKIP_TITLE", "FIRST_LEVEL=10"]
 
 [variants.over]
-defines = ["FIRST_LIVES=1"]
+defines = ["SKIP_TITLE", "FIRST_LIVES=1"]
+
+[variants.scores]
+defines = ["FIXED_ENEMIES", "FIRST_LIVES=1", "FIRST_SCORE=0x5000"]
+keys = "scores.txt"
 
 [check]
 checkpoint = "published"   # reached once for each frame, after the flip

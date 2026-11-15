@@ -6,8 +6,10 @@ key script and simulates each frame. Then it draws each screen pixel by pixel an
 the pixels itself.
 
 Frame N is drawn into the hidden screen and then shown. Odd frames are at $2400 and even
-frames at $0400. At the checkpoint for frame N the shown screen holds frame N and the
-other screen still holds frame N - 1 (or only the arena, at frame 1).
+frames at $0400. The model keeps both screens. A new screen (the arena, the title or the
+initials) goes into both screens. Then each frame draws its part into the hidden screen:
+in a game the whole picture, on the title the prompt, for the initials the letters and
+the cursor.
 """
 
 import copy
@@ -51,23 +53,30 @@ SEED = 0xACE1
 # Test-harness controls of each variant (coco.toml), and its first level.
 CONTROLS = {
     "": set(),
-    "moves": {"NO_ENEMIES"},
-    "hit": {"FIXED_ENEMIES", "STILL"},
-    "touch": {"FIXED_ENEMIES"},
-    "hunter": {"NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"},
-    "level10": set(),
-    "over": set(),
+    "moves": {"SKIP_TITLE", "NO_ENEMIES"},
+    "hit": {"SKIP_TITLE", "FIXED_ENEMIES", "STILL"},
+    "touch": {"SKIP_TITLE", "FIXED_ENEMIES"},
+    "hunter": {"SKIP_TITLE", "NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"},
+    "level10": {"SKIP_TITLE"},
+    "over": {"SKIP_TITLE"},
+    "scores": {"FIXED_ENEMIES"},
 }
 START_LEVEL = {"level10": 10}
-START_LIVES = {"over": 1}
-START_SCORE = {"hit": 990}
+START_LIVES = {"over": 1, "scores": 1}
+START_SCORE = {"hit": 990, "scores": 5000}
 # Score and lives (README.md "Score and lives").
 POINTS = {1: 10, 2: 50}  # grunt, hunter
 EXTRA_EVERY = 1000
 LIVES = 3
 DYING_FRAMES, OVER_FRAMES = 45, 90
 HUD_ROW, ICONS = 3, 6
-SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt"}
+SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt", "scores": "scores.txt"}
+# Title and high scores (README.md "Title and high scores").
+TITLE, PLAY, ENTRY = 0, 1, 2
+TABLE = [(10000, "ZAP"), (9000, "ACE"), (8000, "MAX"), (7000, "JET"), (6000, "SKY"),
+         (5000, "REX"), (4000, "ION"), (3000, "VOX"), (2000, "KIT"), (1000, "DOT")]
+REPEAT_FIRST, REPEAT_NEXT = 12, 4
+NO_RANK = 0xFF
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
 # field plays one record, so each frame plays two.
 SQUARE, NOISE = 0, 0x80
@@ -155,6 +164,16 @@ class Game:
     lives: int = LIVES
     dying: int = 0
     over: int = 0
+    phase: int = PLAY
+    table: list[tuple[int, str]] = field(default_factory=lambda: list(TABLE))
+    rank: int = 0
+    new_rank: int = NO_RANK
+    initials: list[str] = field(default_factory=lambda: ["\0"] * 3)
+    pos: int = 0
+    rpt: int = 0
+    old_fire: frozenset = frozenset()
+    fire_new: frozenset = frozenset()
+    setup: bool = False  # a new screen in this frame
 
     def start_sound(self, name: str) -> None:
         if EFFECTS[name][0] >= self.priority:
@@ -228,6 +247,54 @@ def start_level(game: Game) -> None:
             if not (abs(x - START[0]) <= SAFE_X and abs(y - START[1]) <= SAFE_Y):
                 break
         game.enemies[slot] = Enemy(GRUNT, x, y, slot % 2 + 1)
+
+
+def power_on(variant: str) -> Game:
+    """The program clears its state, then shows the title (or starts a game at once)."""
+    if "SKIP_TITLE" in CONTROLS[variant]:
+        return new_game(variant)
+    return Game(x=0, y=0, level=0, lives=0, next_extra=0, phase=TITLE,
+                controls=frozenset(CONTROLS[variant]))
+
+
+def game_end(game: Game) -> None:
+    """After the pause of game over: the initials if the score gets a place."""
+    game.new_rank = NO_RANK
+    game.rank = next((i for i, (s, _) in enumerate(game.table) if game.score > s), 10)
+    game.setup = True
+    if game.rank < 10:
+        game.phase, game.pos, game.rpt, game.initials = ENTRY, 0, 0, ["A"] * 3
+    else:
+        game.phase = TITLE
+
+
+def entry(game: Game, keys: str) -> None:
+    """W or S changes the letter: at once, then after 12 frames, then each 4 frames."""
+    up, down = "W" in keys, "S" in keys
+    if up != down:
+        change = game.rpt == 0
+        if change:
+            game.rpt = REPEAT_FIRST
+        else:
+            game.rpt -= 1
+            if game.rpt == 0:
+                change, game.rpt = True, REPEAT_NEXT
+        if change:
+            letter = ord(game.initials[game.pos]) - ord("A") + (1 if up else -1)
+            game.initials[game.pos] = chr(ord("A") + letter % 26)
+            game.start_sound("shot")
+    else:
+        game.rpt = 0
+    if game.fire_new:
+        game.pos += 1
+        if game.pos < 3:
+            game.start_sound("shot")
+        else:
+            game.table.insert(game.rank, (game.score, "".join(game.initials)))
+            game.table.pop()
+            game.new_rank = game.rank
+            game.start_sound("level")
+            game.phase, game.setup = TITLE, True
 
 
 def new_game(variant: str, game: Game | None = None) -> Game:
@@ -339,10 +406,18 @@ def step(game: Game, keys: str, variant: str) -> None:
         keys = "".join(k for k in keys if k not in "WS") + "".join(game.last_vertical)
     else:
         game.last_vertical = tuple(k for k in "WS" if k in keys)
-    if game.over:
+    fire = frozenset(k for k in keys if k in SHOOT)
+    game.fire_new, game.old_fire = fire - game.old_fire, fire
+    if game.phase == TITLE:
+        if game.fire_new:
+            game.phase, game.setup = PLAY, True
+            new_game(variant, game)
+    elif game.phase == ENTRY:
+        entry(game, keys)
+    elif game.over:
         game.over -= 1
         if game.over == 0:
-            new_game(variant, game)
+            game_end(game)
     elif game.dying:
         game.dying -= 1
         if game.dying == 0:
@@ -424,32 +499,45 @@ def journey(name: str = "journey.txt") -> list[tuple[str, tuple[int, int] | None
         parts = line.split("#")[0].split()
         if parts:
             keys = "" if parts[0] == "-" else parts[0]
-            steps.append((keys, (int(parts[1]), int(parts[2])) if len(parts) >= 3 else None))
+            position = len(parts) >= 3 and parts[1].isdigit() and parts[2].isdigit()
+            steps.append((keys, (int(parts[1]), int(parts[2])) if position else None))
     return steps
 
 
 def games(frames: int, variant: str) -> list[Game]:
     """The state after each frame 0..frames. Frame 0 is the start."""
-    return _games(MAX_FRAMES, variant)[: frames + 1]
+    return [g for g, _ in _games(MAX_FRAMES, variant)[: frames + 1]]
+
+
+def screens(frame: int, variant: str) -> dict[int, np.ndarray]:
+    """Pixel codes of screen A (0) and screen B (1) at the checkpoint of a frame."""
+    return _games(MAX_FRAMES, variant)[frame][1]
 
 
 MAX_FRAMES = 200
 
 
 @functools.cache
-def _games(frames: int, variant: str) -> list[Game]:
+def _games(frames: int, variant: str) -> list[tuple[Game, dict[int, np.ndarray]]]:
     script = journey(SCRIPTS[variant]) if variant in SCRIPTS else []
-    game = new_game(variant)
-    result = [copy.deepcopy(game)]
+    game = power_on(variant)
+    first = still(game)
+    bufs = {0: first, 1: first}
+    result = [(copy.deepcopy(game), bufs)]
     for n in range(frames):
         keys, position = script[n] if n < len(script) else ("", None)
+        game.setup = False
         step(game, keys, variant)
+        if game.setup:
+            bufs = {0: still(game), 1: still(game)}
+        hidden = (n + 1) % 2
+        bufs = {**bufs, hidden: changing(game, bufs[hidden], n + 1)}
         if position is not None and position != (game.x, game.y):
             raise ValueError(
                 f"journey.txt line for frame {n + 1} gives {position}, the rules give "
                 f"{(game.x, game.y)}: correct the script or the rules."
             )
-        result.append(copy.deepcopy(game))
+        result.append((copy.deepcopy(game), bufs))
     return result
 
 
@@ -495,6 +583,65 @@ def hud(codes: np.ndarray, game: Game) -> None:
         glyph("life", 120 - 4 * i)
 
 
+def text(codes: np.ndarray, words: str, row: int, column: int, colour: str = "Y",
+         big: bool = False) -> None:
+    """Characters from font.txt at a pixel row and a byte column (4 pixels). The
+    glyphs are yellow on blue; another colour takes the place of yellow. A big
+    character shows each pixel as 2x2 pixels."""
+    scale = 2 if big else 1
+    for i, char in enumerate(words):
+        glyph = FONT.get(char, ["BBBB"] * 5)
+        left = 4 * column + 4 * scale * i
+        for y, line in enumerate(glyph):
+            for x, c in enumerate(line):
+                code = CODES[colour] if c == "Y" else CODES[c]
+                codes[row + scale * y : row + scale * (y + 1),
+                      left + scale * x : left + scale * (x + 1)] = code
+
+
+def blank() -> np.ndarray:
+    return np.full((HEIGHT, WIDTH), BLUE, dtype=np.uint8)
+
+
+def still(game: Game) -> np.ndarray:
+    """The picture that a new screen puts into both screens."""
+    if game.phase == PLAY:
+        return arena()
+    codes = blank()
+    if game.phase == TITLE:
+        text(codes, "ARENA BLASTER", 10, 3, big=True)
+        text(codes, "HIGH SCORES", 28, 10)
+        for i, (score, name) in enumerate(game.table):
+            text(codes, f"{i + 1:2d} {name} {score:06d}", 40 + 9 * i, 9,
+                 "G" if i == game.new_rank else "Y")
+        stamp(codes, "grunt", 36, 136)
+        text(codes, "10", 138, 11)
+        stamp(codes, "hunter", 76, 136)
+        text(codes, "50", 138, 21)
+        text(codes, "MOVE WASD  SHOOT OKL;", 172, 5, "G")
+    else:
+        text(codes, "NEW HIGH SCORE", 20, 2, big=True)
+        text(codes, f"{game.score:06d}", 40, 13)
+        text(codes, "ENTER YOUR INITIALS", 60, 6)
+        text(codes, "W AND S CHANGE THE LETTER", 120, 3, "G")
+        text(codes, "SHOOT FOR THE NEXT LETTER", 130, 3, "G")
+    return codes
+
+
+def changing(game: Game, base: np.ndarray, frame: int) -> np.ndarray:
+    """The hidden screen after frame N draws its part. The frame counter is N - 1."""
+    if game.phase == PLAY:
+        return picture(game)
+    codes = base.copy()
+    if game.phase == TITLE:
+        text(codes, "SHOOT TO START" if (frame - 1) & 16 == 0 else " " * 14, 156, 9)
+    else:
+        text(codes, " ".join(game.initials), 80, 12, big=True)
+        for k in range(3):
+            codes[92:94, 48 + 16 * k : 56 + 16 * k] = YELLOW if k == game.pos else BLUE
+    return codes
+
+
 def pack(codes: np.ndarray) -> bytes:
     """Four pixels per byte, leftmost pixel in bits 7-6 (MC6847 PDF 19 Table 3)."""
     c = codes.astype(np.uint8)
@@ -502,15 +649,26 @@ def pack(codes: np.ndarray) -> bytes:
 
 
 def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) -> None:
-    states = games(frame, variant)
-    shown = SCREENS[frame % 2]
-    if ram[shown : shown + SCREEN_BYTES] != pack(picture(states[frame])):
-        raise ValueError(f"The screen at ${shown:04X} does not hold frame {frame}.")
-    other = SCREENS[(frame - 1) % 2]
-    previous = states[frame - 1] if frame > 1 else None
-    if ram[other : other + SCREEN_BYTES] != pack(picture(previous)):
-        raise ValueError(f"The screen at ${other:04X} does not hold frame {frame - 1}.")
-    game = states[frame]
+    bufs = screens(frame, variant)
+    for which in (0, 1):
+        at = SCREENS[which]
+        if ram[at : at + SCREEN_BYTES] != pack(bufs[which]):
+            raise ValueError(f"Frame {frame}: the screen at ${at:04X} differs.")
+    game = games(frame, variant)[frame]
+    got = (ram[symbols["phase"]], ram[symbols["new_rank"]])
+    if got != (game.phase, game.new_rank):
+        raise ValueError(f"Frame {frame}: phase, new_rank = {got}, expected "
+                         f"{(game.phase, game.new_rank)}.")
+    table = ram[symbols["table"] : symbols["table"] + 60]
+    want = b"".join(bytes.fromhex(f"{s:06d}") + n.encode() for s, n in game.table)
+    if table != want:
+        raise ValueError(f"Frame {frame}: the high-score table differs.")
+    if game.phase == ENTRY:
+        got = (bytes(ram[symbols["initials"] : symbols["initials"] + 3]).decode("latin-1"),
+               ram[symbols["pos"]], ram[symbols["rpt"]])
+        want = ("".join(game.initials), game.pos, game.rpt)
+        if got != want:
+            raise ValueError(f"Frame {frame}: initials, pos, rpt = {got}, expected {want}.")
     actual = tuple(ram[symbols[name]] for name in STATE_FIELDS)
     if actual != (game.x, game.y, game.delay):
         raise ValueError(f"Frame {frame}: px, py, delay = {actual}, expected "
@@ -543,7 +701,7 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
 
 def expected_frame(frame: int, variant: str) -> np.ndarray:
     """XRoar's picture of the shown screen: CG6, colour set 0, measured xroar palette."""
-    return render(picture(games(frame, variant)[frame]), MODES["CG6"], 0, XROAR, 2)
+    return render(screens(frame, variant)[frame % 2], MODES["CG6"], 0, XROAR, 2)
 
 
 # --- Sound. The sound plays only while the program waits for the end of the picture.
