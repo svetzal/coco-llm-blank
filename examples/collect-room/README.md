@@ -127,7 +127,7 @@ byte, the state, the room and the guards. The `journey` variant plays
 scanner entry, and checks the screen, state, room and guards at frames 1–3,
 16, 48 and 95 against the outcomes written beside each line. Pressing keys
 needs the [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar),
-which `check` builds once; it needs a C compiler and `make`. A wrong key in
+which `check` builds once with the build tools listed there. A wrong key in
 the script fails at frame 16.
 
 The journey experiment below checks every one of the 95 checkpoints, the

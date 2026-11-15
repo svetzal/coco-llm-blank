@@ -1,7 +1,7 @@
 """Read what the instrumented XRoar recorded in one run: key steps, rendered frame and sound.
 
-Pure decoding and checks only. The C hooks in scripts/xroar_hooks/ write the
-raw files and log lines; nothing here makes pixels or samples.
+Pure decoding and checks only. The patch series in scripts/xroar_patches/ makes
+XRoar write the raw files and log lines; nothing here makes pixels or samples.
 """
 
 import re

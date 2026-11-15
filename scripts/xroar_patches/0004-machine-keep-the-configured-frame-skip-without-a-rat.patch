@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CoCo starter <coco-starter@example.invalid>
+Date: Sat, 14 Nov 2026 18:59:09 -0500
+Subject: [PATCH 4/4] machine: keep the configured frame skip without a rate
+ limit
+
+Turning the rate limit off normally forces a ten-frame skip on the
+Dragon/CoCo 1/2 and CoCo 3 machines. Rendered-frame capture needs every
+frame, so keep the frame skip that -fskip configured instead.
+
+This is test equipment for the CoCo starter's scripts/coco.py.
+---
+ src/coco3.c         | 2 +-
+ src/dragon/dragon.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/coco3.c b/src/coco3.c
+index 1e7c45f5c9cb8af9d005d686b61301db76a8d75d..410d2837d0f8baee54b96f70ca0907b78f532ca6 100644
+--- a/src/coco3.c
++++ b/src/coco3.c
+@@ -1080,7 +1080,7 @@ static void coco3_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
+ 	if (uimsg->value) {
+ 		mp->frameskip = mp->configured_frameskip;
+ 	} else {
+-		mp->frameskip = 10;
++		mp->frameskip = mp->configured_frameskip;
+ 	}
+ }
+ 
+diff --git a/src/dragon/dragon.c b/src/dragon/dragon.c
+index 170b376e62eb13ee5b60f62454dfee2f41942241..3879fee6039c99397c9b26dc0f5539fc6aaad043 100644
+--- a/src/dragon/dragon.c
++++ b/src/dragon/dragon.c
+@@ -1020,7 +1020,7 @@ static void dragon_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
+ 	if (uimsg->value) {
+ 		md->frameskip = md->configured_frameskip;
+ 	} else {
+-		md->frameskip = 10;
++		md->frameskip = md->configured_frameskip;
+ 	}
+ }
+ 

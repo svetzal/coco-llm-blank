@@ -137,8 +137,8 @@ Use [python.md](python.md) when adding build orchestration or test scripts.
 ## Instrumented XRoar
 
 Scripted keys, rendered frames and mixer sound need a second XRoar: the pinned
-XRoar release built from source with the hooks tracked in `scripts/xroar_hooks/`
-patched in. `scripts/coco.py` builds it the first time a project asks for one of
+XRoar release built from source with the patch series in `scripts/xroar_patches/`
+applied. `scripts/coco.py` builds it the first time a project asks for one of
 those abilities, into ignored `local/toolchain/xroar-instrumented/`, and reuses
 it afterwards. Bootstrap does not build it, and `build`, `run` and a plain
 `check` keep using the installed XRoar, so the beginner path needs no C
@@ -150,27 +150,35 @@ uv run python scripts/instrumented_xroar.py status
 uv run python scripts/instrumented_xroar.py build
 ```
 
-The build needs a C compiler and `make` (set `CC` or `MAKE` to choose others).
-It is configured without any window, audio driver or GUI toolkit, so it needs
-no SDL, GTK or other library. If either tool is missing, the build stops before
-downloading anything and says what to install:
+The build needs a C compiler, `make`, Autoconf, Automake and `pkg-config`
+(set `CC` or `MAKE` to choose others). The series adds its own source files to
+XRoar's `src/Makefile.am`, so the build regenerates XRoar's build files with
+`autoreconf -fi` before configuring. It is configured without any window,
+audio driver or GUI toolkit, so it needs no SDL, GTK or other library. If a
+tool is missing, the build stops before downloading anything and says what to
+install:
 
-- macOS: `xcode-select --install`.
-- Ubuntu 24.04: `sudo apt-get install build-essential pkg-config`.
+- macOS: `xcode-select --install`, then `brew install autoconf automake pkgconf`.
+- Ubuntu 24.04: `sudo apt-get install build-essential pkg-config autoconf automake`.
 
-The source archive is the one the native installer pins, with the same SHA-256,
-cached under `local/toolchain-sources/`. Before patching, every patched file
-must match its recorded pristine SHA-256, and each hook edit must find exactly
-one anchor. A different XRoar release therefore fails with a plain message
-instead of a silently wrong patch. `build.json` beside the build records the
-archive URL and hash, a hash of the whole patch (hooks and edits), each patched
-file's hash, the configure and make commands, the host, and the executable's
-hash. Each use checks that record; when the pinned archive, the hooks, a
-patched file or the executable no longer match, the tool says why and rebuilds.
+`scripts/xroar_patches/upstream.json` is the one XRoar pin: the release
+version, its git tag and commit, and the source archive's URL and SHA-256. The
+native installer's Ubuntu build of the ordinary XRoar reads the same file. The
+archive is cached under `local/toolchain-sources/` and must match the pinned
+SHA-256. The series is a set of `git format-patch` files exported with
+`--full-index`, so every changed file is named by its exact git blob hash
+before and after. The build refuses a file whose bytes differ from the blob the
+patch expects, so a different XRoar release fails with a plain message instead
+of a silently wrong patch. `build.json` beside the build records the release,
+tag, archive URL and hash, the patch names and a hash of the whole series, each
+patched or added file's hash, the commands, the Autoconf and Automake versions,
+the host, and the executable's hash. Each use checks that record; when the pin,
+the series, a patched file or the executable no longer match, the tool says
+why and rebuilds.
 
-To add equipment, add a hook file and its edits in `scripts/instrumented_xroar.py`
-and keep the patch tests in `scripts/instrumented_xroar_spec.py` passing against
-the cached archive. The changed patch hash rebuilds the executable on next use.
+Set `XROAR_INSTRUMENTED` to an executable path to make `scripts/coco.py` use
+that instrumented XRoar instead. It is not verified; the XRoar patch procedure
+uses it to run the same checks against a trial build.
 
 ## Diagnose binary startup
 

@@ -39,8 +39,8 @@ between sessions until closed.
   screen and mixer sound ([evidence methods](development.md#check-the-feature-you-claim)).
   If an experiment needs equipment it lacks, building that ability is part of
   the lab. Add it to `coco.py` with tests, not as a script in the lab; an
-  emulator hook goes in `scripts/xroar_hooks/` and the
-  [instrumented XRoar](toolchain.md#instrumented-xroar) patch.
+  emulator hook goes in the [instrumented XRoar](toolchain.md#instrumented-xroar)
+  patch series.
 
 Keep the evidence honest: separate source statements, deductions and measured
 results, keep expectations independent of the implementation, include a

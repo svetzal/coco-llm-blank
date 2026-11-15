@@ -8,8 +8,8 @@ LWTOOLS and drives XRoar.
 
 Rendered frames (--video), mixer sound (--audio) and scripted keys ([keys] in
 coco.toml) need the instrumented XRoar, which is built once into local/ on
-first use; it needs a C compiler and make. Everything else uses the installed
-XRoar.
+first use; it needs a C compiler, make and autotools. Everything else uses
+the installed XRoar.
 """
 
 import argparse
@@ -103,7 +103,7 @@ class Keys(BaseModel):
     @field_validator("letters")
     @classmethod
     def known_keys(cls, letters: dict[str, str]) -> dict[str, str]:
-        names = instrumented_xroar.key_names()
+        names = instrumented_xroar.key_names(instrumented_xroar.load_series())
         for letter, key in letters.items():
             if len(letter) != 1 or letter in "-#" or letter.isspace():
                 raise ValueError(f"letter {letter!r} must be one character other than - or #")
@@ -246,7 +246,9 @@ class Host:
         return path
 
     def instrumented(self) -> str:
-        """The verified instrumented XRoar, built on first use."""
+        """XROAR_INSTRUMENTED if set, else the verified instrumented XRoar, built on first use."""
+        if override := os.environ.get("XROAR_INSTRUMENTED"):
+            return override
         return str(instrumented_xroar.ensure(say=lambda text: print(text, file=sys.stderr)))
 
     def firmware(self, profile: str, names: tuple[str, ...]) -> dict[str, Path]:

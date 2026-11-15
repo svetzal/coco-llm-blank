@@ -782,10 +782,19 @@ class DescribeHost:
             say("Building the instrumented XRoar once")
             return Path("/local/xroar")
 
+        monkeypatch.delenv("XROAR_INSTRUMENTED", raising=False)
         monkeypatch.setattr(coco.instrumented_xroar, "ensure", ensure)
 
         assert Host().instrumented() == "/local/xroar"
         assert "Building" in capsys.readouterr().err
+
+    def should_use_an_explicitly_named_instrumented_emulator(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("XROAR_INSTRUMENTED", "/lab/xroar")
+        monkeypatch.setattr(coco.instrumented_xroar, "ensure", Mock(side_effect=AssertionError))
+
+        assert Host().instrumented() == "/lab/xroar"
 
     def should_log_process_output(self, tmp_path: Path) -> None:
         log = tmp_path / "out.log"
@@ -823,7 +832,7 @@ class DescribeExamplesInXRoar:
         if not native_ready(*firmware_profiles(example)):
             pytest.skip("Native tools or firmware are not installed")
         if uses_equipment(example) and not instrumented_ready():
-            pytest.skip("A C compiler and make are needed for the instrumented XRoar")
+            pytest.skip("Build tools are needed for the instrumented XRoar")
 
         assert coco.main(["check", str(example)]) == 0
 
@@ -950,7 +959,7 @@ class DescribeEquipmentInXRoar:
     @pytest.fixture
     def first_screen(self, tmp_path: Path) -> Path:
         if not instrumented_ready("coco1"):
-            pytest.skip("Native tools, CoCo 1 firmware, a C compiler or make are missing")
+            pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
         directory = tmp_path / "first-screen-copy"
         shutil.copytree(ROOT / "examples/first-screen", directory)
         return directory
@@ -989,7 +998,7 @@ class DescribeEquipmentInXRoar:
 
     def should_reject_a_journey_with_a_wrong_key(self, tmp_path: Path) -> None:
         if not instrumented_ready("coco1"):
-            pytest.skip("Native tools, CoCo 1 firmware, a C compiler or make are missing")
+            pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
         example = ROOT / "examples/collect-room"
         project = coco.load_project(example)
         lines = (example / "journey.txt").read_text().splitlines()
@@ -1005,7 +1014,7 @@ class DescribeEquipmentInXRoar:
 
     def should_reject_sound_from_a_muted_mux(self, tmp_path: Path, capsys) -> None:
         if not instrumented_ready("coco1"):
-            pytest.skip("Native tools, CoCo 1 firmware, a C compiler or make are missing")
+            pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
         directory = tmp_path / "sound-slots-copy"
         shutil.copytree(ROOT / "examples/sound-slots", directory)
         source = directory / "main.asm"

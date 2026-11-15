@@ -1,11 +1,14 @@
 """Build the one instrumented XRoar that coco.py uses to capture screens, keys and sound.
 
-It is XRoar built from the pinned release archive with the tracked hooks in
-scripts/xroar_hooks/ patched in. It is built once, into ignored
+It is the pinned XRoar release archive with the patch series in
+scripts/xroar_patches/ applied. It is built once, into ignored
 local/toolchain/xroar-instrumented/, the first time a project asks for one of
-those abilities, and rebuilt when the pinned source, the patch or the build
+those abilities, and rebuilt when the pinned release, the series or the build
 output no longer match the recorded provenance. Ordinary build, run and check
 keep using the installed XRoar and need no C compiler.
+
+The series is carried forward to new XRoar releases with
+scripts/xroar_upstream.py; see guidance/starter/xroar-patch.md.
 """
 
 import argparse
@@ -19,48 +22,93 @@ import subprocess
 import sys
 import tarfile
 import urllib.request
-from collections.abc import Callable, Iterable
-from pathlib import Path
+from collections.abc import Callable
+from pathlib import Path, PurePosixPath
 
-from native import ROOT, SOURCES, cached_source
+from native import ROOT, cached_source
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-HOOKS = Path(__file__).resolve().parent / "xroar_hooks"
+PATCHES = Path(__file__).resolve().parent / "xroar_patches"
+PIN = "upstream.json"
 HOME = Path("local/toolchain/xroar-instrumented")
 RECORD = "build.json"
-VERSION, URL, ARCHIVE_SHA256 = SOURCES["xroar"]
-TREE = f"xroar-{VERSION}"
-EXECUTABLE = Path(TREE) / "src/xroar"
+# The series adds source files to src/Makefile.am, so the build files are regenerated.
+AUTORECONF = ["autoreconf", "-fi"]
 # No window, no host audio: only the null UI and null audio modules are needed.
 CONFIGURE = ["./configure"] + [
     f"--without-{name}"
     for name in ("gtk3", "gtk2", "sdl3", "sdl2", "cocoa", "coreaudio", "alsa", "oss", "pulse")
 ]
 MAKE = ["make", "-j4"]
-PREREQUISITES = {"cc": "CC", "make": "MAKE"}
+# Each tool, and the environment variable that names a substitute for it.
+PREREQUISITES = {
+    "cc": "CC",
+    "make": "MAKE",
+    "autoreconf": None,
+    "automake": None,
+    "pkg-config": None,
+}
 INSTALL_HINT = (
-    "Install a C compiler and make, then rerun. On Apple Silicon macOS run "
-    "`xcode-select --install`; on Ubuntu 24.04 run "
-    "`sudo apt-get install build-essential pkg-config`. "
+    "Install a C compiler, make, Autoconf, Automake and pkg-config, then rerun. "
+    "On Apple Silicon macOS run `xcode-select --install` and "
+    "`brew install autoconf automake pkgconf`; on Ubuntu 24.04 run "
+    "`sudo apt-get install build-essential pkg-config autoconf automake`. "
     "See guidance/starter/toolchain.md#instrumented-xroar."
 )
+EMPTY_BLOB = "0" * 40
+HUNK = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+UNSUPPORTED = ("deleted file", "rename ", "copy ", "similarity", "old mode", "new mode", "Binary")
 
 
-class Edit(BaseModel):
+class Upstream(BaseModel):
+    """The pinned XRoar release: its git tag and its checksum-pinned source archive."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    version: str
+    tag: str
+    tag_commit: str
+    git_url: str
+    archive_url: str
+    archive_sha256: str
+
+    @property
+    def tree(self) -> str:
+        return f"xroar-{self.version}"
+
+
+class Hunk(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    anchor: str
-    replacement: str
+    old_start: int
+    lines: tuple[str, ...]
 
 
-class FilePatch(BaseModel):
-    """Exact edits to one pristine source file, identified by its SHA-256."""
+class FileChange(BaseModel):
+    """One file in a patch; the git blob hashes name its exact before and after bytes."""
 
     model_config = ConfigDict(frozen=True)
 
     path: str
-    pristine_sha256: str
-    edits: tuple[Edit, ...]
+    old_blob: str | None
+    new_blob: str
+    hunks: tuple[Hunk, ...]
+
+
+class Patch(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    subject: str
+    changes: tuple[FileChange, ...]
+
+
+class Series(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    patches: tuple[Patch, ...]
+    digest: str
+    text: str
 
 
 class Provenance(BaseModel):
@@ -68,12 +116,16 @@ class Provenance(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    upstream_version: str
+    tag: str
+    tag_commit: str
     archive_url: str
     archive_sha256: str
-    patch_sha256: str
+    series: list[str]
+    series_sha256: str
     patched_sha256: dict[str, str]
-    configure: list[str]
-    make: list[str]
+    commands: dict[str, list[str]]
+    tools: dict[str, str]
     executable: str
     executable_sha256: str
     host: str
@@ -86,165 +138,185 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def hook(name: str, hooks: Path = HOOKS) -> str:
-    return (hooks / name).read_text()
+def git_blob(data: bytes) -> str:
+    """The object name git gives these bytes; patches name files by it."""
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
 
 
-def recipe(hooks: Path = HOOKS) -> tuple[FilePatch, ...]:
-    """Every change made to the pinned XRoar sources; anything else stays pristine."""
-    trap = "static void handle_trap(void *sptr) {\n\tstruct trap_def *trap = sptr;"
-    snapshot = "\t\twrite_snapshot(trap->snap);\n"
-    null_render = (
-        "static void null_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data)"
+def subject_of(name: str, header: list[str]) -> str:
+    for index, line in enumerate(header):
+        if line.startswith("Subject: "):
+            folded = [line[9:]] + [
+                more.strip() for more in header[index + 1 :] if more.startswith((" ", "\t"))
+            ]
+            return re.sub(r"^\[PATCH[^]]*\]\s*", "", " ".join(folded))
+    raise ValueError(f"{name}: no Subject line; export the series with git format-patch.")
+
+
+def checked_path(name: str, path: str) -> str:
+    parts = PurePosixPath(path).parts
+    if not parts or PurePosixPath(path).is_absolute() or ".." in parts:
+        raise ValueError(f"{name}: refusing a patch path outside the XRoar tree: {path!r}")
+    return path
+
+
+def hunk_lines(where: str, body: list[str], old_left: int, new_left: int) -> list[str]:
+    """Exactly the lines a hunk header counts: context and removals, context and additions."""
+    lines = []
+    while old_left > 0 or new_left > 0:
+        line = body[len(lines)] if len(lines) < len(body) else ""
+        kind = line[:1]
+        if (
+            kind not in (" ", "-", "+")
+            or (kind != "+" and not old_left)
+            or (kind != "-" and not new_left)
+        ):
+            raise ValueError(f"{where}: a hunk is truncated or malformed")
+        old_left -= kind != "+"
+        new_left -= kind != "-"
+        lines.append(line)
+    return lines
+
+
+def parse_hunks(name: str, path: str, body: list[str]) -> tuple[Hunk, ...]:
+    hunks, index = [], 0
+    while index < len(body) and body[index]:
+        if not (match := HUNK.match(body[index])):
+            raise ValueError(f"{name}: {path}: unexpected line {body[index][:60]!r}")
+        old, new = int(match[2] or 1), int(match[4] or 1)
+        lines = hunk_lines(f"{name}: {path}", body[index + 1 :], old, new)
+        hunks.append(Hunk(old_start=int(match[1]), lines=tuple(lines)))
+        index += 1 + len(lines)
+    if any(body[index:]):
+        raise ValueError(f"{name}: {path}: unexpected text after the last hunk")
+    return tuple(hunks)
+
+
+def parse_change(name: str, section: list[str]) -> FileChange:
+    body = next((i for i, line in enumerate(section) if line.startswith("@@")), len(section))
+    meta = section[:body]
+    if unsupported := [line for line in meta if line.startswith(UNSUPPORTED)]:
+        raise ValueError(f"{name}: unsupported change {unsupported[0]!r}; only edits and new files")
+    index = next((m for line in meta if (m := re.match(r"index (\w+)\.\.(\w+)", line))), None)
+    if not index or len(index[1]) != 40 or len(index[2]) != 40:
+        raise ValueError(f"{name}: export the series with git format-patch --full-index.")
+    target = next((line[6:] for line in meta if line.startswith("+++ b/")), None)
+    if target is None:
+        raise ValueError(f"{name}: a file change has no +++ line")
+    path = checked_path(name, target)
+    new_file = any(line.startswith("new file mode") for line in meta)
+    return FileChange(
+        path=path,
+        old_blob=None if new_file else index[1],
+        new_blob=index[2],
+        hunks=parse_hunks(name, path, section[body:]),
     )
-    return (
-        FilePatch(
-            path="src/xroar.c",
-            pristine_sha256="6898598f808f1afece007781ea05d89dd28081b1752887d09b5eee7a6f83e0f1",
-            edits=(
-                Edit(
-                    anchor=trap,
-                    replacement=hook("keys.c", hooks)
-                    + "\n"
-                    + trap
-                    + "\n\tcoco_keys_trap(trap->cond);",
-                ),
-                Edit(
-                    anchor=snapshot,
-                    replacement=snapshot + "\t\tcoco_snapshot_written(trap->snap);\n",
-                ),
-            ),
-        ),
-        FilePatch(
-            path="src/null/ui_null.c",
-            pristine_sha256="b813f70b890375c467dc1c7135e4172884ee659c1e6f63ef058f929d83cca85c",
-            edits=(
-                Edit(
-                    anchor="#include <stdlib.h>\n",
-                    replacement='#include <stdio.h>\n#include <stdlib.h>\n\n#include "events.h"\n',
-                ),
-                Edit(anchor=null_render + ";\n", replacement=hook("video.c", hooks)),
-                Edit(
-                    anchor="struct vo_interface *vo = xmalloc(sizeof(*vo));",
-                    replacement="struct vo_interface *vo = vo_interface_new(sizeof(*vo));",
-                ),
-                Edit(
-                    anchor="*vo = (struct vo_interface){0};", replacement="coco_video_attach(vo);"
-                ),
-                Edit(
-                    anchor="\tvo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, "
-                    "null_render, vo->renderer);\n\n",
-                    replacement="",
-                ),
-                Edit(
-                    anchor="\n"
-                    + null_render
-                    + " {\n\t(void)sptr;\n\t(void)burst;\n\t(void)npixels;\n\t(void)data;\n}\n",
-                    replacement="",
-                ),
-            ),
-        ),
-        FilePatch(
-            path="src/null/ao_null.c",
-            pristine_sha256="e9fa06289dab8a8d025c21d38c0cc2c6c2b44cd7248443197aad6af83ece124f",
-            edits=(
-                Edit(
-                    anchor="#include <signal.h>\n",
-                    replacement="#include <signal.h>\n#include <stdio.h>\n",
-                ),
-                Edit(
-                    anchor="static void *new(void *cfg);\n",
-                    replacement=hook("audio.c", hooks) + "\nstatic void *new(void *cfg);\n",
-                ),
-                Edit(
-                    anchor="sound_interface_new(NULL, SOUND_FMT_NULL, 44100, 1, 1024)",
-                    replacement="sound_interface_new(coco_audio_buffer, SOUND_FMT_S16_LE, "
-                    "COCO_AUDIO_RATE, 1, COCO_AUDIO_FRAMES)",
-                ),
-                Edit(
-                    anchor="\taonull->last_pause_ms = current_time();\n\treturn aonull;",
-                    replacement="\taonull->last_pause_ms = current_time();\n"
-                    "\tcoco_audio_open();\n\treturn aonull;",
-                ),
-                Edit(
-                    anchor="\tsound_interface_free(aonull->public.sound_interface);",
-                    replacement="\tcoco_audio_close();\n"
-                    "\tsound_interface_free(aonull->public.sound_interface);",
-                ),
-                Edit(
-                    anchor="static void *ao_null_write_buffer(void *sptr, void *buffer) {\n",
-                    replacement="static void *ao_null_write_buffer(void *sptr, void *buffer) {\n"
-                    "\tcoco_audio_write(buffer);\n",
-                ),
-            ),
-        ),
-        # Unlimited speed normally forces a ten-frame skip; capture needs every frame.
-        FilePatch(
-            path="src/dragon/dragon.c",
-            pristine_sha256="12e686625bb0c0a1c1122cc39db9d1f12c102647a99965f5f1eb97b598aeaa47",
-            edits=(
-                Edit(
-                    anchor="\t\tmd->frameskip = 10;\n",
-                    replacement="\t\tmd->frameskip = md->configured_frameskip;\n",
-                ),
-            ),
-        ),
-        FilePatch(
-            path="src/coco3.c",
-            pristine_sha256="4e70fc1de1bf0b801be79815a686ae62360f87419accf78bea89da23c9d41c9d",
-            edits=(
-                Edit(
-                    anchor="\t\tmp->frameskip = 10;\n",
-                    replacement="\t\tmp->frameskip = mp->configured_frameskip;\n",
-                ),
-            ),
+
+
+def parse_patch(name: str, text: str) -> Patch:
+    """Read one git format-patch file: its subject and each file it edits or adds."""
+    text = re.sub(r"\n-- \n[^\n]*\n*\Z", "\n", text)
+    lines = text.split("\n")
+    starts = [i for i, line in enumerate(lines) if line.startswith("diff --git ")]
+    if not starts:
+        raise ValueError(f"{name}: no file changes")
+    return Patch(
+        name=name,
+        subject=subject_of(name, lines[: starts[0]]),
+        changes=tuple(
+            parse_change(name, lines[start:end])
+            for start, end in zip(starts, [*starts[1:], len(lines)], strict=True)
         ),
     )
 
 
-def replace_once(text: str, anchor: str, replacement: str, path: str) -> str:
-    if (count := text.count(anchor)) != 1:
+def series_digest(files: list[tuple[str, bytes]]) -> str:
+    """Identify the series by each patch file's name, order and bytes."""
+    return sha256(json.dumps([[name, sha256(data)] for name, data in files]).encode())
+
+
+def parse_series(files: list[tuple[str, bytes]]) -> Series:
+    if not files:
+        raise ValueError("The XRoar patch series is empty.")
+    return Series(
+        patches=tuple(parse_patch(name, data.decode()) for name, data in files),
+        digest=series_digest(files),
+        text="".join(data.decode() for _, data in files),
+    )
+
+
+def hunk_index(hunk: Hunk) -> int:
+    """Where a hunk's first old line sits; a pure insertion follows its start line."""
+    removes_or_keeps = any(line[0] != "+" for line in hunk.lines)
+    return hunk.old_start - 1 if removes_or_keeps else hunk.old_start
+
+
+def apply_hunks(where: str, lines: list[bytes], hunks: tuple[Hunk, ...]) -> bytes:
+    result, position = [], 0
+    for hunk in hunks:
+        start = hunk_index(hunk)
+        if start < position:
+            raise ValueError(f"{where}: hunks overlap")
+        result += lines[position:start]
+        for line in hunk.lines:
+            content = (line[1:] + "\n").encode()
+            if line[0] != "+":
+                if start >= len(lines) or lines[start] != content:
+                    raise ValueError(f"{where}: a hunk does not match the source")
+                start += 1
+            if line[0] != "-":
+                result.append(content)
+        position = start
+    return b"".join(result + lines[position:])
+
+
+def apply_change(patch: str, change: FileChange, source: bytes | None) -> bytes:
+    """Patch exactly the bytes the patch names; drifted, missing or patched files are refused."""
+    where = f"{patch}: {change.path}"
+    if change.old_blob is None and source is not None:
+        raise ValueError(f"{where} already exists, but the patch adds it.")
+    if change.old_blob is not None and source is None:
+        raise ValueError(f"{where} is missing from the XRoar source.")
+    if change.old_blob is not None and git_blob(source) != change.old_blob:
         raise ValueError(
-            f"{path}: expected one instrumentation anchor, found {count}: {anchor[:60]!r}"
+            f"{where} is not the XRoar source this patch was made against "
+            f"(expected git blob {change.old_blob[:12]}, found {git_blob(source)[:12]}). "
+            "The source is a different release or already patched; see "
+            "guidance/starter/xroar-patch.md."
         )
-    return text.replace(anchor, replacement, 1)
+    result = apply_hunks(where, (source or b"").splitlines(keepends=True), change.hunks)
+    if git_blob(result) != change.new_blob:
+        raise ValueError(f"{where}: applying the patch did not give the bytes it records.")
+    return result
 
 
-def apply(patch: FilePatch, source: bytes) -> bytes:
-    """Patch pristine bytes only; drifted or already patched source is refused."""
-    if sha256(source) != patch.pristine_sha256:
-        raise ValueError(
-            f"{patch.path} is not the pristine XRoar {VERSION} source; "
-            "the archive or a previous patch changed it."
-        )
-    text = source.decode()
-    for edit in patch.edits:
-        text = replace_once(text, edit.anchor, edit.replacement, patch.path)
-    return text.encode()
+def apply_series(series: Series, read: Callable[[str], bytes | None]) -> dict[str, bytes]:
+    """The final bytes of every file the series touches, applied patch by patch."""
+    files: dict[str, bytes | None] = {}
+    for patch in series.patches:
+        for change in patch.changes:
+            current = files[change.path] if change.path in files else read(change.path)
+            files[change.path] = apply_change(patch.name, change, current)
+    return files
 
 
-def patch_digest(patches: Iterable[FilePatch]) -> str:
-    """Identify the patch itself: pristine hashes, anchors and hook text."""
-    return sha256(json.dumps([p.model_dump() for p in patches], sort_keys=True).encode())
+def key_names(series: Series) -> tuple[str, ...]:
+    """XRoar key names the keyboard equipment accepts, read from the series itself."""
+    return tuple(dict.fromkeys(re.findall(r'\{ "(\w+)", DSCAN_\w+ \}', series.text)))
 
 
-def key_names(hooks: Path = HOOKS) -> tuple[str, ...]:
-    """XRoar key names the keyboard hook accepts, read from the hook itself."""
-    return tuple(re.findall(r'\{ "(\w+)", DSCAN_\w+ \}', hook("keys.c", hooks)))
-
-
-def stale_reason(home: Path, patches: tuple[FilePatch, ...]) -> str | None:
+def stale_reason(home: Path, pin: Upstream, series: Series) -> str | None:
     """Why the recorded build cannot be used, or None when every hash still matches."""
     try:
         record = Provenance.model_validate_json((home / RECORD).read_text())
     except FileNotFoundError:
         return "not built yet"
     except ValidationError:
-        return "its build record is unreadable"
-    if record.archive_sha256 != ARCHIVE_SHA256:
-        return "the pinned XRoar source changed"
-    if record.patch_sha256 != patch_digest(patches):
-        return "the hooks or patch changed"
+        return "its build record is unreadable or from an older format"
+    if (record.upstream_version, record.archive_sha256) != (pin.version, pin.archive_sha256):
+        return "the pinned XRoar release changed"
+    if record.series_sha256 != series.digest:
+        return "the patch series changed"
     for name, expected in {
         **record.patched_sha256,
         record.executable: record.executable_sha256,
@@ -256,6 +328,16 @@ def stale_reason(home: Path, patches: tuple[FilePatch, ...]) -> str | None:
 
 
 # --- Imperative shell -----------------------------------------------------------------------
+
+
+def load_pin(patches: Path = PATCHES) -> Upstream:
+    return Upstream.model_validate_json((patches / PIN).read_text())
+
+
+def load_series(patches: Path = PATCHES) -> Series:
+    return parse_series(
+        [(path.name, path.read_bytes()) for path in sorted(patches.glob("*.patch"))]
+    )
 
 
 class BuildHost:
@@ -274,47 +356,64 @@ class BuildHost:
                 command, cwd=cwd, stdout=stream, stderr=subprocess.STDOUT, check=True, timeout=900
             )
 
+    def version(self, name: str) -> str:
+        result = subprocess.run([name, "--version"], capture_output=True, text=True, check=True)
+        return result.stdout.splitlines()[0]
+
 
 def missing_prerequisites(host: BuildHost) -> list[str]:
     return [
         name
         for name, variable in PREREQUISITES.items()
-        if not host.which(os.environ.get(variable, name))
+        if not host.which(os.environ.get(variable, name) if variable else name)
     ]
 
 
-def extract(archive: Path, patches: tuple[FilePatch, ...], work: Path) -> dict[str, str]:
-    """Unpack the pinned archive and patch it; returns the patched files' hashes."""
+def extract(archive: Path, pin: Upstream, series: Series, work: Path) -> dict[str, str]:
+    """Unpack the release archive and apply the series; returns the patched files' hashes."""
     with tarfile.open(archive) as source:
         source.extractall(work, filter="data")
+    tree = work / pin.tree
+    if not tree.is_dir():
+        raise ValueError(f"The XRoar {pin.version} archive does not unpack to {pin.tree}/.")
+
+    def read(path: str) -> bytes | None:
+        return (tree / path).read_bytes() if (tree / path).is_file() else None
+
     hashes = {}
-    for patch in patches:
-        path = work / TREE / patch.path
-        path.write_bytes(apply(patch, path.read_bytes()))
-        hashes[str(Path(TREE) / patch.path)] = sha256(path.read_bytes())
+    for path, data in apply_series(series, read).items():
+        (tree / path).parent.mkdir(parents=True, exist_ok=True)
+        (tree / path).write_bytes(data)
+        hashes[f"{pin.tree}/{path}"] = sha256(data)
     return hashes
 
 
-def build(root: Path, host: BuildHost, patches: tuple[FilePatch, ...]) -> Provenance:
-    """Configure and make in a fresh folder, then replace the previous build."""
-    archive = cached_source("xroar", root, host.download)
-    home = root / HOME
+def build(host: BuildHost, pin: Upstream, series: Series, archive: Path, home: Path) -> Provenance:
+    """Patch, regenerate, configure and make in a fresh folder, then replace the old build."""
+    if sha256(archive.read_bytes()) != pin.archive_sha256:
+        raise ValueError(f"{archive} does not match the pinned XRoar {pin.version} checksum.")
     work = home.with_name(home.name + ".building")
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
-    patched = extract(archive, patches, work)
-    tree = work / TREE
-    host.run(CONFIGURE, tree, work / "configure.log")
-    host.run(MAKE, tree, work / "make.log")
+    patched = extract(archive, pin, series, work)
+    tree = work / pin.tree
+    commands = {"autoreconf": AUTORECONF, "configure": CONFIGURE, "make": MAKE}
+    for step, command in commands.items():
+        host.run(command, tree, work / f"{step}.log")
+    executable = f"{pin.tree}/src/xroar"
     record = Provenance(
-        archive_url=URL,
-        archive_sha256=ARCHIVE_SHA256,
-        patch_sha256=patch_digest(patches),
+        upstream_version=pin.version,
+        tag=pin.tag,
+        tag_commit=pin.tag_commit,
+        archive_url=pin.archive_url,
+        archive_sha256=pin.archive_sha256,
+        series=[patch.name for patch in series.patches],
+        series_sha256=series.digest,
         patched_sha256=patched,
-        configure=CONFIGURE,
-        make=MAKE,
-        executable=str(EXECUTABLE),
-        executable_sha256=sha256((work / EXECUTABLE).read_bytes()),
+        commands=commands,
+        tools={name: host.version(name) for name in ("autoreconf", "automake")},
+        executable=executable,
+        executable_sha256=sha256((work / executable).read_bytes()),
         host=f"{platform.system()} {platform.machine()}",
     )
     (work / RECORD).write_text(record.model_dump_json(indent=2) + "\n")
@@ -323,35 +422,52 @@ def build(root: Path, host: BuildHost, patches: tuple[FilePatch, ...]) -> Proven
     return record
 
 
+def build_verified(
+    host: BuildHost,
+    pin: Upstream,
+    series: Series,
+    archive: Callable[[], Path],
+    home: Path,
+    say: Callable[[str], None],
+) -> Path:
+    """Return the executable built from this pin and series, building it when needed."""
+    if (reason := stale_reason(home, pin, series)) is None:
+        return home / pin.tree / "src/xroar"
+    if missing := missing_prerequisites(host):
+        raise ValueError(
+            f"The instrumented XRoar ({reason}) needs {', '.join(missing)}, which "
+            f"{'is' if len(missing) == 1 else 'are'} not installed. {INSTALL_HINT}"
+        )
+    say(f"Building the instrumented XRoar {pin.version} ({reason}); this takes a minute or two.")
+    build(host, pin, series, archive(), home)
+    if (reason := stale_reason(home, pin, series)) is not None:
+        raise ValueError(f"The instrumented XRoar build did not verify: {reason}.")
+    return home / pin.tree / "src/xroar"
+
+
 def ensure(
     root: Path = ROOT, host: BuildHost | None = None, say: Callable[[str], None] = print
 ) -> Path:
     """Return the verified instrumented executable, building it first when needed."""
     host = host or BuildHost()
-    patches = recipe()
-    home = root / HOME
-    if (reason := stale_reason(home, patches)) is None:
-        return home / EXECUTABLE
-    if missing := missing_prerequisites(host):
-        raise ValueError(
-            f"The instrumented XRoar ({reason}) needs {' and '.join(missing)}, which "
-            f"{'is' if len(missing) == 1 else 'are'} not installed. {INSTALL_HINT}"
-        )
-    say(f"Building the instrumented XRoar once ({reason}); this takes a minute or two.")
-    build(root, host, patches)
-    if (reason := stale_reason(home, patches)) is not None:
-        raise ValueError(f"The instrumented XRoar build did not verify: {reason}.")
-    return home / EXECUTABLE
+    return build_verified(
+        host,
+        load_pin(),
+        load_series(),
+        lambda: cached_source("xroar", root, host.download),
+        root / HOME,
+        say,
+    )
 
 
 def status(root: Path = ROOT, host: BuildHost | None = None) -> str:
     """One line for doctor.py: built and verified, or what building it needs."""
     host = host or BuildHost()
-    home = root / HOME
-    if (reason := stale_reason(home, recipe())) is None:
-        return f"built and verified: {home / EXECUTABLE}"
+    home, pin = root / HOME, load_pin()
+    if (reason := stale_reason(home, pin, load_series())) is None:
+        return f"built and verified: {home / pin.tree / 'src/xroar'}"
     missing = missing_prerequisites(host)
-    needs = f"missing {', '.join(missing)}. {INSTALL_HINT}" if missing else "cc and make found"
+    needs = f"missing {', '.join(missing)}. {INSTALL_HINT}" if missing else "build tools found"
     return f"{reason}; scripts/coco.py builds it on first use ({needs})"
 
 

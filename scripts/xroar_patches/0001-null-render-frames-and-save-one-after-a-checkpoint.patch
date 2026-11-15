@@ -1,0 +1,210 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CoCo starter <coco-starter@example.invalid>
+Date: Sat, 14 Nov 2026 18:58:23 -0500
+Subject: [PATCH 1/4] null: render frames and save one after a checkpoint
+
+The null UI normally discards every scanline. Attach XRoar's own
+software renderer to it instead, rendering into a memory buffer, so the
+machine's SAM/VDG (or GIME) output and palette are rendered exactly as
+for a window.
+
+When coco_video_checkpoint() is called, the second frame completed
+afterwards is written as a binary PPM to the path in the COCO_VIDEO
+environment variable, and a COCO_VIDEO,<tick>,<width>,<height> line is
+logged on stderr. The first frame completed after the checkpoint was
+partly scanned before it, so it is skipped.
+
+Without COCO_VIDEO nothing is written; the renderer still runs.
+
+This is test equipment for the CoCo starter's scripts/coco.py.
+---
+ src/Makefile.am       |  1 +
+ src/null/coco_video.c | 92 +++++++++++++++++++++++++++++++++++++++++++
+ src/null/coco_video.h | 20 ++++++++++
+ src/null/ui_null.c    | 16 ++------
+ 4 files changed, 117 insertions(+), 12 deletions(-)
+ create mode 100644 src/null/coco_video.c
+ create mode 100644 src/null/coco_video.h
+
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 094044eb5499012730e6338df80aa61f6f9f75b9..afdc9c31370d87ae8d4f7eeb784f4d1cb3fe6d4c 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -46,6 +46,7 @@ xroar_SOURCES = \
+ 	module.c module.h \
+ 	mos6551.c mos6551.h \
+ 	ntsc.c ntsc.h \
++	null/coco_video.c null/coco_video.h \
+ 	null/ui_null.c \
+ 	part.c part.h \
+ 	path.c path.h \
+diff --git a/src/null/coco_video.c b/src/null/coco_video.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..a6901b1614c95e8675604acf3d129a63fe5514a9
+--- /dev/null
++++ b/src/null/coco_video.c
+@@ -0,0 +1,92 @@
++/** \file
++ *
++ *  \brief coco.py test equipment: rendered frames from the null UI.
++ *
++ *  Original code for the CoCo starter's instrumented XRoar.
++ *
++ *  The null UI normally throws every scanline away. This attaches XRoar's own
++ *  software renderer instead, so the machine's SAM/VDG (or GIME) output and
++ *  palette are rendered exactly as for a window, into a memory buffer.
++ *  Nothing here reads RAM or builds pixels.
++ *
++ *  After the checkpoint, the first frame XRoar completes was partly scanned
++ *  before the checkpoint, so the second completed frame is written to the
++ *  COCO_VIDEO path as a binary PPM. It is the first frame rendered entirely
++ *  after the checkpoint.
++ *
++ *  Log line on stderr: COCO_VIDEO,<tick>,<width>,<height>
++ */
++
++#include "top-config.h"
++
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#include "delegate.h"
++#include "xalloc.h"
++
++#include "events.h"
++#include "vo.h"
++#include "vo_render.h"
++
++#include "null/coco_video.h"
++
++#define COCO_VIDEO_MAX_W 1024
++#define COCO_VIDEO_MAX_H 768
++
++static int coco_video_wait = -1;
++
++void coco_video_checkpoint(void) {
++	if (coco_video_wait < 0)
++		coco_video_wait = 2;
++}
++
++static void coco_video_write(struct vo_render *vr, const char *path) {
++	FILE *fp = fopen(path, "wb");
++	if (!fp) {
++		perror(path);
++		exit(2);
++	}
++	fprintf(fp, "P6\n%d %d\n255\n", vr->viewport.w, vr->viewport.h);
++	for (int y = 0; y < vr->viewport.h; ++y) {
++		uint32_t *row = (uint32_t *)vr->buffer + y * vr->buffer_pitch;
++		for (int x = 0; x < vr->viewport.w; ++x) {
++			uint8_t rgb[3] = { row[x] >> 24, row[x] >> 16, row[x] >> 8 };
++			if (fwrite(rgb, 1, 3, fp) != 3)
++				exit(2);
++		}
++	}
++	if (fclose(fp))
++		exit(2);
++	fprintf(stderr, "COCO_VIDEO,%u,%d,%d\n", (unsigned)event_current_tick,
++	        vr->viewport.w, vr->viewport.h);
++}
++
++static void coco_video_draw(void *sptr) {
++	struct vo_interface *vo = sptr;
++	const char *path = getenv("COCO_VIDEO");
++	if (!path || coco_video_wait <= 0 || --coco_video_wait > 0)
++		return;
++	coco_video_write(vo->renderer, path);
++}
++
++static void coco_video_viewport(void *sptr, int w, int h) {
++	struct vo_interface *vo = sptr;
++	if (w > COCO_VIDEO_MAX_W || h > COCO_VIDEO_MAX_H) {
++		fprintf(stderr, "COCO_VIDEO_TOO_LARGE,%d,%d\n", w, h);
++		exit(2);
++	}
++	vo_render_set_viewport(vo->renderer, w, h);
++	vo->renderer->buffer_pitch = w;
++}
++
++void coco_video_attach(struct vo_interface *vo) {
++	vo_interface_init(vo);
++	struct vo_render *vr = vo_render_new(VO_RENDER_FMT_RGBA8);
++	vo_set_renderer(vo, vr);
++	vo_render_set_buffer(vr, xmalloc(COCO_VIDEO_MAX_W * COCO_VIDEO_MAX_H * sizeof(uint32_t)));
++	vr->buffer_pitch = COCO_VIDEO_MAX_W;
++	vo->set_viewport = DELEGATE_AS2(void, int, int, coco_video_viewport, vo);
++	vo->draw = DELEGATE_AS0(void, coco_video_draw, vo);
++}
+diff --git a/src/null/coco_video.h b/src/null/coco_video.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..e05a952b56d68373db77ea8da1343fb20f05732a
+--- /dev/null
++++ b/src/null/coco_video.h
+@@ -0,0 +1,20 @@
++/** \file
++ *
++ *  \brief coco.py test equipment: rendered frames from the null UI.
++ *
++ *  Original code for the CoCo starter's instrumented XRoar.
++ */
++
++#ifndef XROAR_NULL_COCO_VIDEO_H_
++#define XROAR_NULL_COCO_VIDEO_H_
++
++struct vo_interface;
++
++// Give the null UI's video interface XRoar's software renderer and a memory
++// buffer in place of discarding every scanline.
++void coco_video_attach(struct vo_interface *vo);
++
++// Save the second frame completed after this call to the COCO_VIDEO path.
++void coco_video_checkpoint(void);
++
++#endif
+diff --git a/src/null/ui_null.c b/src/null/ui_null.c
+index e668e686d9d7843f0de83703c176ff491cd63d32..0b44b855f68c6bb87b7c47b5ff5fa13be1e332ff 100644
+--- a/src/null/ui_null.c
++++ b/src/null/ui_null.c
+@@ -26,6 +26,8 @@
+ #include "ui.h"
+ #include "vo.h"
+ 
++#include "null/coco_video.h"
++
+ static void *filereq_null_new(void *cfg);
+ static void filereq_null_free(void *sptr);
+ 
+@@ -54,7 +56,6 @@ static char *filereq_noop(void *sptr, char const *extensions) {
+ }
+ 
+ static void null_free(void *sptr);
+-static void null_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
+ 
+ static void *new(void *cfg) {
+ 	(void)cfg;
+@@ -63,11 +64,9 @@ static void *new(void *cfg) {
+ 
+ 	uinull->free = DELEGATE_AS0(void, null_free, uinull);
+ 
+-	struct vo_interface *vo = xmalloc(sizeof(*vo));
++	struct vo_interface *vo = vo_interface_new(sizeof(*vo));
+ 	uinull->vo_interface = vo;
+-	*vo = (struct vo_interface){0};
+-
+-	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, null_render, vo->renderer);
++	coco_video_attach(vo);
+ 
+ 	return uinull;
+ }
+@@ -92,10 +91,3 @@ static void filereq_null_free(void *sptr) {
+ 	struct filereq_interface *frnull = sptr;
+ 	free(frnull);
+ }
+-
+-static void null_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
+-	(void)sptr;
+-	(void)burst;
+-	(void)npixels;
+-	(void)data;
+-}

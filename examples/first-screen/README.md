@@ -52,7 +52,7 @@ uv run python scripts/coco.py check examples/first-screen --video
 ```
 
 This builds the [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar)
-once, which needs a C compiler and `make`. It saves
+once, with the build tools listed there. It saves
 `build/first-screen/coco1-frame-1.png` and compares all 512×192 rendered
 samples (two per pixel) with `expected_frame` in [expected.py](expected.py):
 green where a bit is set, black elsewhere, bit 7 leftmost. A wrong SAM mode or

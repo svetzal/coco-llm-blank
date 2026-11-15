@@ -1,6 +1,7 @@
 """Install the assembly and emulator tools for Apple Silicon macOS or Ubuntu 24.04."""
 
 import hashlib
+import json
 import os
 import platform
 import shutil
@@ -14,17 +15,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HOMEBREW_BIN = Path("/opt/homebrew/bin")
+XROAR_PIN = json.loads(
+    (Path(__file__).resolve().parent / "xroar_patches/upstream.json").read_text()
+)
 SOURCES = {
     "lwtools": (
         "4.25",
         "https://www.lwtools.ca/releases/lwtools/lwtools-4.25.tar.gz",
         "9bb97e987d486d7abd85d04cb98a53f666f02785c108647b795c4a111c5eb09f",
     ),
-    "xroar": (
-        "1.12.1",
-        "https://www.6809.org.uk/xroar/dl/xroar-1.12.1.tar.gz",
-        "ba525225fbd732c4dbf2cbb571dc9d2810fd9dcedf0482133cf637e2eef61f88",
-    ),
+    # Ubuntu's ordinary XRoar and the instrumented XRoar share one pin.
+    "xroar": (XROAR_PIN["version"], XROAR_PIN["archive_url"], XROAR_PIN["archive_sha256"]),
 }
 
 

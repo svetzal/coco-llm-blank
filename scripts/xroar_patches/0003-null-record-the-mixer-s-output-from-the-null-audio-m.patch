@@ -1,0 +1,182 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CoCo starter <coco-starter@example.invalid>
+Date: Sat, 14 Nov 2026 18:59:09 -0500
+Subject: [PATCH 3/4] null: record the mixer's output from the null audio
+ module
+
+The null audio module normally asks XRoar's mixer for no samples. Give
+the mixer a buffer of 1024 frames of signed 16-bit little-endian mono at
+44100 Hz instead, and append every completed buffer to the file named
+by COCO_AUDIO. The samples are the mixer's own output (DAC, mux,
+single-bit sound and gain), before any host audio driver. A final
+partly filled buffer is not written.
+
+Logs COCO_AUDIO_START,<tick>,<rate>,<frames per buffer> on stderr when
+the recording opens and COCO_AUDIO,<tick> after each buffer.
+
+Without COCO_AUDIO nothing is written; the mixer still fills the buffer.
+
+This is test equipment for the CoCo starter's scripts/coco.py.
+---
+ src/Makefile.am       |  3 ++-
+ src/null/ao_null.c    |  7 +++++-
+ src/null/coco_audio.c | 56 +++++++++++++++++++++++++++++++++++++++++++
+ src/null/coco_audio.h | 28 ++++++++++++++++++++++
+ 4 files changed, 92 insertions(+), 2 deletions(-)
+ create mode 100644 src/null/coco_audio.c
+ create mode 100644 src/null/coco_audio.h
+
+diff --git a/src/Makefile.am b/src/Makefile.am
+index be64c13d7743a2f58d2a7f492e04d2f4fde40f7a..58feebf8aa2b3bc9b8e753056e0216651d7298cf 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -483,7 +483,8 @@ endif
+ # Null audio driver
+ if AO_NULL
+ xroar_SOURCES += \
+-	null/ao_null.c
++	null/ao_null.c \
++	null/coco_audio.c null/coco_audio.h
+ endif
+ 
+ # libsndfile support
+diff --git a/src/null/ao_null.c b/src/null/ao_null.c
+index 1055d34f0498c70963e3b5021ad498be8e2c00ed..62ab2ad8470bbce6058b7535a9c05b08968a4abe 100644
+--- a/src/null/ao_null.c
++++ b/src/null/ao_null.c
+@@ -45,6 +45,8 @@
+ #include "sound.h"
+ #include "xroar.h"
+ 
++#include "null/coco_audio.h"
++
+ static void *new(void *cfg);
+ 
+ struct module ao_null_module = {
+@@ -73,7 +75,7 @@ static void *new(void *cfg) {
+ 
+ 	ao->free = DELEGATE_AS0(void, ao_null_free, ao);
+ 
+-	ao->sound_interface = sound_interface_new(NULL, SOUND_FMT_NULL, 44100, 1, 1024);
++	ao->sound_interface = sound_interface_new(coco_audio_buffer, SOUND_FMT_S16_LE, COCO_AUDIO_RATE, 1, COCO_AUDIO_FRAMES);
+ 	if (!ao->sound_interface) {
+ 		free(aonull);
+ 		return NULL;
+@@ -81,6 +83,7 @@ static void *new(void *cfg) {
+ 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_null_write_buffer, ao);
+ 	aonull->last_pause_cycle = event_current_tick;
+ 	aonull->last_pause_ms = current_time();
++	coco_audio_open();
+ 	return aonull;
+ }
+ 
+@@ -111,11 +114,13 @@ static void sleep_ms(unsigned int ms) {
+ 
+ static void ao_null_free(void *sptr) {
+ 	struct ao_null_interface *aonull = sptr;
++	coco_audio_close();
+ 	sound_interface_free(aonull->public.sound_interface);
+ 	free(aonull);
+ }
+ 
+ static void *ao_null_write_buffer(void *sptr, void *buffer) {
++	coco_audio_write(buffer);
+ 	struct ao_null_interface *aonull = sptr;
+ 
+ 	event_ticks elapsed_cycles = event_current_tick - aonull->last_pause_cycle;
+diff --git a/src/null/coco_audio.c b/src/null/coco_audio.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..8a59747da8a4738b65b41c92f0c86b5117b54ff1
+--- /dev/null
++++ b/src/null/coco_audio.c
+@@ -0,0 +1,56 @@
++/** \file
++ *
++ *  \brief coco.py test equipment: mixer output from the null audio module.
++ *
++ *  Original code for the CoCo starter's instrumented XRoar.
++ *
++ *  The null audio module normally asks XRoar's mixer for no samples. This
++ *  gives the mixer a buffer in signed 16-bit little-endian mono instead, and
++ *  appends every completed buffer to the COCO_AUDIO path. The samples are the
++ *  mixer's own output (DAC, mux, single-bit sound and gain), before any host
++ *  audio driver. Nothing here generates or alters a sample. A final partly
++ *  filled buffer is not written.
++ *
++ *  Log lines on stderr: COCO_AUDIO_START,<tick>,<rate>,<frames per buffer>
++ *  and COCO_AUDIO,<tick> after each buffer.
++ */
++
++#include "top-config.h"
++
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#include "events.h"
++
++#include "null/coco_audio.h"
++
++int16_t coco_audio_buffer[COCO_AUDIO_FRAMES];
++static FILE *coco_audio_file;
++
++void coco_audio_open(void) {
++	const char *path = getenv("COCO_AUDIO");
++	if (!path)
++		return;
++	if (!(coco_audio_file = fopen(path, "wb"))) {
++		perror(path);
++		exit(2);
++	}
++	fprintf(stderr, "COCO_AUDIO_START,%u,%d,%d\n", (unsigned)event_current_tick,
++	        COCO_AUDIO_RATE, COCO_AUDIO_FRAMES);
++}
++
++void coco_audio_write(const void *buffer) {
++	if (!coco_audio_file)
++		return;
++	if (!buffer || fwrite(buffer, sizeof(int16_t), COCO_AUDIO_FRAMES, coco_audio_file)
++	                   != COCO_AUDIO_FRAMES || fflush(coco_audio_file))
++		exit(2);
++	fprintf(stderr, "COCO_AUDIO,%u\n", (unsigned)event_current_tick);
++}
++
++void coco_audio_close(void) {
++	if (coco_audio_file && fclose(coco_audio_file))
++		exit(2);
++	coco_audio_file = NULL;
++}
+diff --git a/src/null/coco_audio.h b/src/null/coco_audio.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..a3521f0ee3dc988801242772fb303b1d5056f04b
+--- /dev/null
++++ b/src/null/coco_audio.h
+@@ -0,0 +1,28 @@
++/** \file
++ *
++ *  \brief coco.py test equipment: mixer output from the null audio module.
++ *
++ *  Original code for the CoCo starter's instrumented XRoar.
++ */
++
++#ifndef XROAR_NULL_COCO_AUDIO_H_
++#define XROAR_NULL_COCO_AUDIO_H_
++
++#include <stdint.h>
++
++#define COCO_AUDIO_RATE 44100
++#define COCO_AUDIO_FRAMES 1024
++
++// The buffer XRoar's mixer fills: signed 16-bit little-endian mono.
++extern int16_t coco_audio_buffer[COCO_AUDIO_FRAMES];
++
++// Open the COCO_AUDIO path, if set.
++void coco_audio_open(void);
++
++// Append one completed mixer buffer.
++void coco_audio_write(const void *buffer);
++
++// Close the recording.
++void coco_audio_close(void);
++
++#endif

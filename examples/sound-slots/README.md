@@ -73,7 +73,7 @@ uv run python experiments/sound-throughput/throughput.py check
 [coco.toml](coco.toml) declares the machine, the checkpoint frames, the
 `scripted` variant, the trace and `[capture] audio`. The audio capture needs
 the [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar),
-which `check` builds once; it needs a C compiler and `make`. Each checkpoint
+which `check` builds once with the build tools listed there. Each checkpoint
 saves XRoar's mixer output as a WAV in `build/sound-slots/`. `verify_sound` in
 expected.py measures its pitch against the tone that the cycle count
 predicts, within 15 Hz, and requires a nonzero signal level. A muted
