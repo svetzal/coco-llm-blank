@@ -32,7 +32,7 @@ WALL_TOP, WALL_BOTTOM, WALL_LEFT, WALL_RIGHT = 12, 187, 3, 124
 MIN_X, END_X, MIN_Y, END_Y = 4, 124, 13, 187
 PLAYER_W, PLAYER_H = 6, 10
 START = (61, 95)
-SHOT_SLOTS, SHOT_DELAY = 6, 2
+SHOT_SLOTS, SHOT_DELAY = 10, 2
 # Movement keys and shoot keys: (dx, dy) for each key letter in the key script.
 MOVE = {"W": (0, -1), "S": (0, 1), "A": (-1, 0), "D": (1, 0)}
 SHOOT = {"O": (0, -1), "L": (0, 1), "K": (-1, 0), ";": (1, 0)}
@@ -64,11 +64,32 @@ CONTROLS = {
     "level3": {"SKIP_TITLE", "NO_DEATH"},
     "level5": {"SKIP_TITLE", "NO_DEATH"},
     "shooter": {"SKIP_TITLE", "NO_READY", "ONE_SHOOTER"},
+    "pickups": {"SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL"},
+    "bomb": {"SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL"},
+    "double": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES"},
+    "spread": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES"},
+    "star": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES"},
     "level10": {"SKIP_TITLE"},
     "over": {"SKIP_TITLE", "NO_READY"},
     "scores": {"NO_READY", "FIXED_ENEMIES"},
 }
-START_LEVEL = {"level3": 3, "level5": 5, "level10": 10}
+START_LEVEL = {"level3": 3, "level5": 5, "level10": 10, "pickups": 4}
+# Things to collect (README.md "Things to collect").
+PK_POINTS, PK_DOUBLE, PK_SPREAD, PK_STAR, PK_BOMB = 1, 2, 3, 4, 5
+PICKUP_SPRITE = {1: "pk_points", 2: "pk_double", 3: "pk_spread", 4: "pk_star", 5: "pk_bomb"}
+PICKUP_W, PICKUP_H = 6, 7
+PICKUP_LEVEL, BOMB_LEVEL = 4, 6
+PICKUP_FRAMES, BLINK_FRAMES = 150, 60
+BOMB_X, BOMB_Y = 40, 60
+DROP_ORDER = [PK_POINTS, PK_DOUBLE, PK_BOMB, PK_SPREAD, PK_POINTS, PK_STAR, PK_BOMB, PK_DOUBLE]
+# The 8 directions in turn from up, clockwise, as (dx, dy).
+RING = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
+SHOTS_OF = {0: 1, PK_DOUBLE: 2, PK_SPREAD: 4, PK_STAR: 8}
+DIGIT_OF = {PK_DOUBLE: "2", PK_SPREAD: "4", PK_STAR: "8"}
+DROP_EVERY = {"pickups": 1}
+FIRST_POWER = {"double": PK_DOUBLE, "spread": PK_SPREAD, "star": PK_STAR}
+POWER_TIME = {"double": 100, "spread": 100, "star": 100}
+FIXED_PICKUP = {"bomb": PK_BOMB}
 START_LIVES = {"over": 1, "scores": 1}
 START_SCORE = {"hit": 990, "scores": 5000}
 # Score and lives (README.md "Score and lives").
@@ -78,7 +99,8 @@ LIVES = 3
 DYING_FRAMES, OVER_FRAMES = 45, 90
 HUD_ROW, ICONS = 3, 6
 SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt", "scores": "scores.txt",
-           "shooter": "shooter.txt"}
+           "shooter": "shooter.txt", "pickups": "pickups.txt", "bomb": "bomb.txt",
+           "double": "powers.txt", "spread": "powers.txt", "star": "powers.txt"}
 # Title and high scores (README.md "Title and high scores").
 TITLE, PLAY, ENTRY = 0, 1, 2
 TABLE = [(10000, "ZAP"), (9000, "ACE"), (8000, "MAX"), (7000, "JET"), (6000, "SKY"),
@@ -92,8 +114,9 @@ TEACH = {
     1: (4, 0, 0, "SHOOT THE GRUNTS", 8, 0, 0),
     2: (8, 0, 0, "HOLD TWO KEYS FOR DIAGONALS", 2, 0, 0),
     3: (6, 60, 240, "HUNTERS ARE FAST", 8, 0, 0),
-    4: (10, 210, 210, "MORE OF EVERYTHING", 7, 0, 0),
+    4: (10, 210, 210, "COLLECT THE POWER UPS", 5, 0, 0),
     5: (12, 180, 180, "SHOOTERS FIRE BACK", 7, 2, 60),
+    6: (13, 150, 150, "BOMBS CLEAR THE AREA", 6, 3, 36),
 }
 READY_FRAMES = 60
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
@@ -113,6 +136,10 @@ EFFECTS = {
     "level": (4, square((30, 28, 3), (22, 28, 3), (16, 28, 3), (11, 28, 3), (11, 20, 1),
                         (11, 12, 1))),
     "extra": (4, square(*[(15, 30, 2), (10, 30, 2)] * 3, (10, 20, 2))),
+    "pickup": (4, square((31, 26, 2), (23, 26, 2), (16, 26, 3), (16, 14, 2))),
+    "bomb": (5, [(NOISE, p, v, 2) for p, v in
+                 ((1, 62), (1, 58), (2, 54), (2, 50), (3, 44), (4, 38), (5, 32), (6, 26),
+                  (8, 20), (10, 14), (12, 8))]),
     "zap": (1, square((12, 22, 1), (16, 18, 1), (20, 14, 1))),
     "death": (5, [(NOISE, p, v, 1) for p, v in
                   ((1, 60), (1, 56), (2, 52), (2, 48), (3, 44), (3, 40), (4, 36), (4, 32),
@@ -189,6 +216,12 @@ class Game:
     fire_wait: int = 0
     fire_timer: int = 0
     shooter_turn: int = 0
+    pickup: list[int] | None = None  # type, x, y, frames left
+    pk_next: int = 0
+    drop_count: int = 0
+    power: int = 0
+    power_timer: int = 0
+    variant: str = ""
     phase: int = PLAY
     table: list[tuple[int, str]] = field(default_factory=lambda: list(TABLE))
     rank: int = 0
@@ -257,6 +290,9 @@ def start_level(game: Game) -> None:
     game.enemies = [None] * ENEMY_SLOTS
     game.bullets = [None] * BULLET_SLOTS
     game.shooter_turn = 0xFF
+    game.pickup = None
+    if game.variant in FIXED_PICKUP:
+        game.pickup = [FIXED_PICKUP[game.variant], 60, 60, PICKUP_FRAMES]
     if "NO_READY" not in game.controls:
         game.ready = READY_FRAMES
     if game.level in TEACH:
@@ -346,6 +382,11 @@ def new_game(variant: str, game: Game | None = None) -> Game:
     game.score = START_SCORE.get(variant, 0)
     game.next_extra = EXTRA_EVERY
     game.lives = START_LIVES.get(variant, LIVES)
+    game.variant = variant
+    game.drop_count = DROP_EVERY.get(variant, 6)
+    game.pk_next = 0
+    game.power = FIRST_POWER.get(variant, 0)
+    game.power_timer = POWER_TIME.get(variant, 300)
     game.level = START_LEVEL.get(variant, 1)
     game.start_sound("start")
     start_level(game)
@@ -403,6 +444,7 @@ def hit_enemies(game: Game) -> None:
                 game.slots[i] = None
                 game.start_sound("boom")
                 game.add_score(POINTS[enemy.kind])
+                drop_pickup(game, enemy)
                 break
 
 
@@ -511,6 +553,7 @@ def step(game: Game, keys: str, variant: str) -> None:
                 game.start_sound("over")
                 game.over = OVER_FRAMES
             else:
+                game.power = 0
                 start_level(game)
     elif game.ready:
         game.ready -= 1
@@ -536,6 +579,7 @@ def play(game: Game, keys: str) -> None:
     spawn_hunter(game)
     enemy_fire(game)
     hit_enemies(game)
+    update_pickup(game)
     if touched(game):
         game.start_sound("death")
         game.dying = DYING_FRAMES
@@ -567,18 +611,77 @@ def read_keys(held: str) -> str:
 
 
 def fire(game: Game, keys: str) -> None:
+    """A power counts down. Then the shoot delay. Then shots in 1, 2, 4 or 8 directions,
+    at even steps around the ring from the direction of the keys."""
+    if game.power:
+        game.power_timer -= 1
+        if game.power_timer == 0:
+            game.power = 0
     if game.delay > 0:
         game.delay -= 1
         return
     fx, fy = direction(keys, SHOOT)
-    if (fx, fy) == (0, 0) or None not in game.slots:
+    if (fx, fy) == (0, 0):
         return
-    name = shot_sprite(fx, fy)
-    w, h = size(name)
-    shot = Shot(game.x + (PLAYER_W - w) // 2, game.y + (PLAYER_H - h) // 2, 6 * fx, 12 * fy, name)
-    game.slots[game.slots.index(None)] = shot
-    game.delay = SHOT_DELAY
-    game.start_sound("shot")
+    count = SHOTS_OF[game.power]
+    first = RING.index((fx, fy))
+    fired = False
+    for k in range(count):
+        dx, dy = RING[(first + k * 8 // count) % 8]
+        if None not in game.slots:
+            continue
+        name = shot_sprite(dx, dy)
+        w, h = size(name)
+        shot = Shot(game.x + (PLAYER_W - w) // 2, game.y + (PLAYER_H - h) // 2, 6 * dx, 12 * dy,
+                    name)
+        game.slots[game.slots.index(None)] = shot
+        fired = True
+    if fired:
+        game.delay = SHOT_DELAY
+        game.start_sound("shot")
+
+
+def drop_pickup(game: Game, enemy: Enemy) -> None:
+    """From level 4, each 6th enemy that a shot removes leaves a pickup, if none is there."""
+    if game.level < PICKUP_LEVEL:
+        return
+    game.drop_count -= 1
+    if game.drop_count:
+        return
+    game.drop_count = DROP_EVERY.get(game.variant, 6)
+    if game.pickup:
+        return
+    kind = DROP_ORDER[game.pk_next % 8]
+    game.pk_next = (game.pk_next + 1) & 0xFF
+    if kind == PK_BOMB and game.level < BOMB_LEVEL:
+        kind = PK_POINTS
+    game.pickup = [kind, enemy.x & ~3, enemy.y + (ENEMY_H - PICKUP_H) // 2, PICKUP_FRAMES]
+
+
+def update_pickup(game: Game) -> None:
+    if not game.pickup:
+        return
+    kind, x, y, _ = game.pickup
+    if not overlap(x, y, PICKUP_W, PICKUP_H, game.x, game.y, PLAYER_W, PLAYER_H):
+        game.pickup[3] -= 1
+        if game.pickup[3] == 0:
+            game.pickup = None
+        return
+    game.pickup = None
+    if kind == PK_POINTS:
+        game.add_score(50)
+        game.add_score(50)
+    elif kind == PK_BOMB:
+        for i, e in enumerate(game.enemies):
+            if e and abs(e.x - game.x) < BOMB_X and abs(e.y - game.y) < BOMB_Y:
+                game.enemies[i] = None
+                game.add_score(POINTS[e.kind])
+        game.bullets = [None] * BULLET_SLOTS
+        game.start_sound("bomb")
+        return
+    else:
+        game.power, game.power_timer = kind, POWER_TIME.get(game.variant, 300)
+    game.start_sound("pickup")
 
 
 def journey(name: str = "journey.txt") -> list[tuple[str, tuple[int, int] | None]]:
@@ -654,6 +757,10 @@ def picture(game: Game | None) -> np.ndarray:
         for b in game.bullets:
             if b:
                 stamp(codes, "bullet", b[0], b[1])
+        if game.pickup:
+            kind, x, y, left = game.pickup
+            if left >= BLINK_FRAMES or not left & 4:
+                stamp(codes, PICKUP_SPRITE[kind], x, y)
         for enemy in game.enemies:
             if enemy:
                 stamp(codes, SPRITE[enemy.kind], enemy.x, enemy.y)
@@ -677,6 +784,10 @@ def hud(codes: np.ndarray, game: Game) -> None:
         glyph(digit, 4 + 4 * k)
     for i in range(min(max(game.lives - 1, 0), ICONS)):
         glyph("life", 120 - 4 * i)
+    if game.power:
+        glyph(DIGIT_OF[game.power], 32)
+        bar = (game.power_timer + 31) // 32
+        codes[HUD_ROW + 1 : HUD_ROW + 4, 36 : 36 + 4 * bar] = YELLOW
 
 
 def text(codes: np.ndarray, words: str, row: int, column: int, colour: str = "Y",
@@ -795,6 +906,16 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
         want = (b[0], b[1], b[2] & 0xFF, b[3] & 0xFF) if b else None
         if got != want:
             raise ValueError(f"Frame {frame}: bullet slot {i} is {got}, expected {want}.")
+    p = game.pickup
+    got = (ram[symbols["pk_type"]], ram[symbols["power"]],
+           int.from_bytes(ram[symbols["power_timer"] : symbols["power_timer"] + 2], "big"))
+    want = (p[0] if p else 0, game.power, game.power_timer)
+    if game.phase == PLAY and (got[0], got[1]) != want[:2]:
+        raise ValueError(f"Frame {frame}: pk_type, power = {got[:2]}, expected {want[:2]}.")
+    if game.power and got[2] != want[2]:
+        raise ValueError(f"Frame {frame}: power_timer {got[2]}, expected {want[2]}.")
+    if p and tuple(ram[symbols[n]] for n in ("pk_x", "pk_y", "pk_timer")) != tuple(p[1:]):
+        raise ValueError(f"Frame {frame}: the pickup differs: expected {p}.")
     if ram[symbols["shooter_turn"]] != game.shooter_turn and game.phase == PLAY:
         raise ValueError(f"Frame {frame}: shooter_turn differs.")
     if ram[symbols["level"]] != game.level:

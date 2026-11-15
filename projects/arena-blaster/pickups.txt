@@ -1,0 +1,48 @@
+# Held keys for each frame of the pickups variant: level 4 (pickups),
+# FIXED_ENEMIES, STILL, and a pickup after each enemy that a shot removes.
+# Written by hand; the frames of the events come from expected.py.
+-
+-
+;      frame 3: a shot right hits the grunt at frame 9: a coin pickup
+-
+-
+-
+-
+-
+-
+D      right, to the coin at x 100
+D
+D
+D
+D
+D
+D
+D
+D
+D
+D
+D
+D
+D
+D
+D
+D      frame 26: the coin: 100 points
+D
+D      x 99
+-
+O      frame 30: a shot up at the hunter at x 100
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-

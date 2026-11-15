@@ -1,4 +1,5 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
+* Increment 9: things to collect: points, power-ups and bombs.
 * Increment 8: shooters, enemies that fire bullets at the player.
 * Increment 7: first levels that teach the game, and a "LEVEL N" banner.
 * Increment 6: title screen, high-score table and initials. Increment 5:
@@ -42,7 +43,7 @@ SCREEN_B equ $2400
 STATE   equ $1C00
 LIST_A  equ $1D00               ; erase list of screen A: first byte, erase routine
 LIST_B  equ $1E00               ; erase list of screen B
-line    equ $1F00               ; a line of text, 16 bytes
+EXTRA   equ $1F00               ; more state, not in the direct page
 STACK   equ $2400
 
 * Screen bytes. Four pixels for each byte, code 2 (blue) is the floor.
@@ -63,7 +64,7 @@ PLAYER_H equ 10
 START_X equ 61
 START_Y equ 95
 
-SHOTS   equ 6                   ; shot slots
+SHOTS   equ 10                  ; shot slots
 SHOT_DELAY equ 2                ; frames between two shots is SHOT_DELAY+1
 
 * Enemies. All are 6x10 pixels, the same size as the player.
@@ -109,7 +110,33 @@ FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
 *   NO_READY     a level starts with no banner: play starts at once.
 *   ONE_SHOOTER  a level starts with one shooter at x 61, y 30, which
 *                fires each 20 frames, and no other enemies.
+*   FIXED_PICKUP=N a level starts with a pickup of type N at x 60, y 60.
+*   DROP_EVERY, FIRST_POWER, POWER_TIME  other values for the pickups.
 *   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
+
+* Things to collect (README.md "Things to collect"). Pickup types:
+PK_POINTS equ 1                 ; 100 points
+PK_DOUBLE equ 2                 ; shots in 2 directions: also the power
+PK_SPREAD equ 3                 ; shots in 4 directions
+PK_STAR equ 4                   ; shots in 8 directions
+PK_BOMB equ 5                   ; clears the enemies near the player
+PICKUP_W equ 6
+PICKUP_H equ 7
+PICKUP_LEVEL equ 4              ; the first level with pickups
+BOMB_LEVEL equ 6                ; the first level with bombs
+PICKUP_FRAMES equ 150           ; a pickup stays 5 seconds
+BLINK_FRAMES equ 60             ; it blinks in its last 2 seconds
+BOMB_X  equ 40                  ; a bomb clears enemies less than 40
+BOMB_Y  equ 60                  ; pixels across and 60 rows away
+        ifndef DROP_EVERY
+DROP_EVERY equ 6                ; each 6th enemy that a shot removes
+        endc
+        ifndef POWER_TIME
+POWER_TIME equ 300              ; a power lasts 10 seconds
+        endc
+        ifndef FIRST_POWER
+FIRST_POWER equ 0               ; the power at the start of a game
+        endc
 
 * Score, lives and pauses (README.md "Score and lives").
 EXTRA_EVERY equ $10             ; BCD hundreds: an extra life each 1000
@@ -134,7 +161,7 @@ BIG     equ $80                 ; each pixel shows as 2x2 pixels
 CURSOR  equ $55                 ; four yellow pixels
 
 * The first levels and the banner (README.md "Levels and enemies").
-TEACH_LEVELS equ 5              ; levels with their own row in teach_table
+TEACH_LEVELS equ 6              ; levels with their own row in teach_table
 READY_FRAMES equ 60             ; the banner: 2 seconds
 BANNER_ROW equ 60               ; "LEVEL N" in big text: rows 60-69
 BANNER_ROWS equ 21              ; the hint is on rows 76-80
@@ -154,6 +181,8 @@ NOISE   equ $80                 ; record mode: noise; 0 is a square wave
 FX_END  equ $FF                 ; record mode: end of the effect
 P_SHOT  equ 1                   ; priorities: a new effect replaces the
 P_ZAP   equ 1
+P_PICKUP equ 4
+P_BOMB  equ 5
 P_BOOM  equ 2                   ; current one only if its priority is
 P_HUNTER equ 3                  ; the same or higher
 P_LEVEL equ 4
@@ -342,7 +371,7 @@ frame   jsr rand_step           ; one step of the random sequence a frame
         lda <fire_new
         lbeq frame_still
         jsr begin_game
-        bra frame_draw
+        lbra frame_draw
 * After game over: wait. Then the initials for a high score, or the title.
 frame_over
         lda <over
@@ -367,6 +396,7 @@ frame_dying
         sta <over
         bra frame_draw
 frame_again
+        clr <power              ; a death ends the power
         jsr start_level         ; the same level again
         bra frame_draw
 * The banner at the start of a level: wait.
@@ -384,6 +414,7 @@ frame_play
         jsr spawn_hunter
         jsr enemy_fire
         jsr hit_enemies
+        jsr update_pickup
         jsr hit_player
         bcc frame_clear
         ldx #fx_death
@@ -644,26 +675,76 @@ ms_next leax S_SIZE,x
 
 * --- Start a shot when the delay is 0, a shoot key is held and a slot
 * is free.
-fire    lda <delay
+fire    lda <power                ; a power counts down its time
+        beq fire_delay
+        ldd <power_timer
+        subd #1
+        std <power_timer
+        bne fire_delay
+        clr <power
+fire_delay
+        lda <delay
         beq fire_ready
         deca
         sta <delay
         rts
+* The shoot keys give a direction. Its place in 'ring' (the 8 directions in
+* turn) is the first shot. A power adds shots at even steps around the
+* ring: 2 shots each 4 places, 4 shots each 2 places, 8 shots each place.
 fire_ready
         ldb <fire_keys
-        bsr direction
-        ldd D_SPR,x
-        beq fire_done           ; no direction: no sprite
-        ldu #shots
-fire_slot
-        tst S_ON,u
-        beq fire_start
-        leau S_SIZE,u
-        cmpu #shots_end
-        blo fire_slot
+        ldx #directions
+        ldb b,x                 ; direction number 0-8
+        cmpb #4
+        beq fire_done           ; no direction
+        ldx #ring_pos
+        lda b,x
+        sta <fpos
+        ldb <power
+        ldx #power_count
+        lda b,x
+        sta <fcount
+        ldx #power_step
+        lda b,x
+        sta <fstep
+        clr <fired
+fire_dir
+        lda <fpos
+        anda #7
+        ldx #ring
+        ldb a,x                 ; the direction of this shot
+        lda #D_SIZE
+        mul
+        ldx #dir_table
+        leax d,x
+        bsr fire_one
+        lda <fpos
+        adda <fstep
+        sta <fpos
+        dec <fcount
+        bne fire_dir
+        tst <fired
+        beq fire_done           ; no free slot
+        lda #SHOT_DELAY
+        sta <delay
+        ldx #fx_shot
+        lda #P_SHOT
+        jmp start_sound
 fire_done
         rts
-fire_start
+
+* X = a direction record: start a shot in the first free slot, if any.
+fire_one
+        ldu #shots
+fo_slot tst S_ON,u
+        beq fo_start
+        leau S_SIZE,u
+        cmpu #shots_end
+        blo fo_slot
+        rts
+fo_start
+        inc <fired
+        ldd D_SPR,x
         std S_SPR,u
         lda #1
         sta S_ON,u
@@ -679,11 +760,7 @@ fire_start
         std S_MAXX,u            ; S_MAXX and S_MAXY
         ldd D_W,x
         std S_W,u               ; S_W and S_H
-        lda #SHOT_DELAY
-        sta <delay
-        ldx #fx_shot
-        lda #P_SHOT
-        jmp start_sound
+        rts
 
 * --- Erase what the hidden screen showed two frames before. Then draw
 * the shots and the player, and keep their rectangles for the next erase.
@@ -733,6 +810,21 @@ df_bullet_skip
         leax B_SIZE,x
         cmpx #bullets_end
         blo df_bullet
+        lda <pk_type            ; the pickup: it blinks near its end
+        beq df_no_pickup
+        ldb <pk_timer
+        cmpb #BLINK_FRAMES
+        bhs df_pickup
+        bitb #4
+        bne df_no_pickup
+df_pickup
+        lsla
+        ldu #pickup_sprites
+        ldu a,u
+        lda <pk_x
+        ldb <pk_y
+        lbsr draw_sprite
+df_no_pickup
         ldx #enemies
 df_enemy
         lda E_TYPE,x
@@ -873,6 +965,48 @@ dh_icon_draw
         leay -2,y               ; dh_glyph moved Y on by 1
         dec <count
         bne dh_icon
+* The power: its digit (2, 4 or 8) at byte column 8, and a yellow bar of
+* (time + 31) / 32 bytes from byte column 9, on rows HUD_ROW+1 to +3.
+        lda <drawing
+        ldb #HUD_ROW*32+8
+        tfr d,y
+        ldb <power
+        bne dh_power
+        ldu #no_icon
+        lbsr dh_glyph
+        ldd #0
+        bra dh_bar
+dh_power
+        ldx #power_digit
+        lda b,x
+        lbsr dh_glyph_digit
+        ldd <power_timer
+dh_bar  addd #31
+        lsra
+        rorb
+        lsra
+        rorb
+        lsra
+        rorb
+        lsra
+        rorb
+        lsra
+        rorb                    ; B = bytes of the bar
+        lda #10
+        sta <count
+dh_bar_byte
+        lda #FLOOR
+        tstb
+        beq dh_bar_store
+        decb
+        lda #CURSOR             ; four yellow pixels
+dh_bar_store
+        sta 32,y
+        sta 64,y
+        sta 96,y
+        leay 1,y
+        dec <count
+        bne dh_bar_byte
         rts
 
 * A = a digit 0-9: its glyph from digits, 5 bytes each.
@@ -1407,6 +1541,15 @@ sl_bullet
         blo sl_bullet
         lda #$FF                ; the first shooter to fire is the first in
         sta <shooter_turn          ; slot order
+        clr <pk_type            ; no pickup
+        ifdef FIXED_PICKUP      ; check only: a pickup above the player
+        lda #FIXED_PICKUP
+        sta <pk_type
+        ldd #60*256+60          ; x 60, y 60
+        std <pk_x
+        lda #PICKUP_FRAMES
+        sta <pk_timer
+        endc
 * The banner "LEVEL N" first: nothing moves for READY_FRAMES frames.
         ifndef NO_READY         ; check only: no banner
         lda #READY_FRAMES
@@ -1824,6 +1967,126 @@ ef_on   lda #1
         lda #P_ZAP
         jmp start_sound
 
+* --- An enemy at U was removed by a shot. From PICKUP_LEVEL, each
+* DROP_EVERY-th such enemy leaves a pickup at its place, if no pickup is
+* there. The types come in the order of drop_order. Before BOMB_LEVEL, a
+* bomb is points. The pickup x is a multiple of 4, so assets.py makes only
+* one draw routine for each pickup.
+drop_pickup
+        lda <level
+        cmpa #PICKUP_LEVEL
+        blo dp_done
+        dec <drop_count
+        bne dp_done
+        lda #DROP_EVERY
+        sta <drop_count
+        tst <pk_type
+        bne dp_done
+        lda <pk_next
+        inc <pk_next
+        anda #7
+        ldx #drop_order
+        lda a,x
+        cmpa #PK_BOMB
+        bne dp_type
+        ldb <level
+        cmpb #BOMB_LEVEL
+        bhs dp_type
+        lda #PK_POINTS
+dp_type sta <pk_type
+        lda E_X,u
+        anda #$FC               ; a multiple of 4: one byte column
+        sta <pk_x
+        lda E_Y,u
+        adda #(ENEMY_H-PICKUP_H)/2
+        sta <pk_y
+        lda #PICKUP_FRAMES
+        sta <pk_timer
+dp_done rts
+
+* --- If the player overlaps the pickup, collect it. If not, count down
+* its time.
+update_pickup
+        lda <pk_type
+        beq up_done
+        lda <pk_x
+        adda #PICKUP_W
+        cmpa <px                ; pickup right > player left
+        bls up_time
+        lda <px
+        adda #PLAYER_W
+        cmpa <pk_x
+        bls up_time
+        lda <pk_y
+        adda #PICKUP_H
+        cmpa <py
+        bls up_time
+        lda <py
+        adda #PLAYER_H
+        cmpa <pk_y
+        bhi up_collect
+up_time dec <pk_timer
+        bne up_done
+        clr <pk_type            ; time is up
+up_done rts
+up_collect
+        lda <pk_type
+        clr <pk_type
+        cmpa #PK_POINTS
+        bne up_power
+        lda #$50                ; 100 points: two adds of BCD 50
+        jsr add_score
+        lda #$50
+        jsr add_score
+        bra up_sound
+up_power
+        cmpa #PK_BOMB
+        beq bomb
+        sta <power              ; PK_DOUBLE, PK_SPREAD or PK_STAR
+        ldd #POWER_TIME
+        std <power_timer
+up_sound
+        ldx #fx_pickup
+        lda #P_PICKUP
+        jmp start_sound
+
+* --- A bomb removes each enemy less than BOMB_X pixels across and BOMB_Y
+* rows from the player, and adds its points. It removes all bullets.
+bomb    ldu #enemies
+bm_slot lda E_TYPE,u
+        beq bm_next
+        lda E_X,u
+        suba <px
+        bhs bm_dx
+        nega
+bm_dx   cmpa #BOMB_X
+        bhs bm_next
+        lda E_Y,u
+        suba <py
+        bhs bm_dy
+        nega
+bm_dy   cmpa #BOMB_Y
+        bhs bm_next
+        ldx #points
+        lda E_TYPE,u
+        lda a,x
+        clr E_TYPE,u
+        pshs u
+        jsr add_score
+        puls u
+bm_next leau E_SIZE,u
+        cmpu #enemies_end
+        blo bm_slot
+        ldx #bullets
+bm_bullet
+        clr B_ON,x
+        leax B_SIZE,x
+        cmpx #bullets_end
+        blo bm_bullet
+        ldx #fx_bomb
+        lda #P_BOMB
+        jmp start_sound
+
 * --- A shot that overlaps an enemy removes the enemy and the shot. Shots
 * in slot order; each shot removes the first enemy in slot order.
 hit_enemies
@@ -1867,6 +2130,7 @@ he_enemy
         puls a
         jsr add_score
         puls x,u
+        jsr drop_pickup         ; U = the enemy
         bra he_next_shot
 he_next_enemy
         leau E_SIZE,u
@@ -1948,6 +2212,13 @@ new_game
         sta <lives
         lda #FIRST_LEVEL
         sta <level
+        lda #DROP_EVERY
+        sta <drop_count
+        clr <pk_next
+        lda #FIRST_POWER
+        sta <power
+        ldd #POWER_TIME
+        std <power_timer
         ldx #fx_start
         lda #P_START
         jsr start_sound
@@ -2106,6 +2377,31 @@ no_icon fcb FLOOR,FLOOR,FLOOR,FLOOR,FLOOR
 * 1449 and 1172 Hz.
 fx_zap  fcb 0,12,22,1,0,16,18,1,0,20,14,1,FX_END
 
+* Pickup: a fast rising C-E-G. Periods 31, 23, 16 are about 796, 1050 and
+* 1467 Hz.
+fx_pickup
+        fcb 0,31,26,2,0,23,26,2,0,16,26,3,0,16,14,2,FX_END
+* Bomb: a long, loud noise that falls.
+fx_bomb fcb NOISE,1,62,2,NOISE,1,58,2,NOISE,2,54,2,NOISE,2,50,2
+        fcb NOISE,3,44,2,NOISE,4,38,2,NOISE,5,32,2,NOISE,6,26,2
+        fcb NOISE,8,20,2,NOISE,10,14,2,NOISE,12,8,2,FX_END
+
+* --- Shots of a power. ring: the 8 direction numbers in turn, from up,
+* clockwise. ring_pos: the place of each direction number in ring. For
+* each power (0 none, PK_DOUBLE, PK_SPREAD, PK_STAR): the number of shots
+* and the step around the ring. power_digit: the digit in the band.
+ring    fcb 1,2,5,8,7,6,3,0
+ring_pos fcb 7,0,1,6,0,2,5,4,3
+power_count fcb 1,1,2,4,8
+power_step fcb 8,8,4,2,1
+power_digit fcb 0,0,2,4,8
+* The order of the pickup types that enemies leave.
+drop_order
+        fcb PK_POINTS,PK_DOUBLE,PK_BOMB,PK_SPREAD
+        fcb PK_POINTS,PK_STAR,PK_BOMB,PK_DOUBLE
+pickup_sprites
+        fdb 0,pk_points,pk_double,pk_spread,pk_star,pk_bomb
+
 * For each enemy type (0, GRUNT, HUNTER, SHOOTER): the frames between two
 * steps, the points (BCD) and the sprite.
 periods fcb 0,GRUNT_PERIOD,HUNTER_PERIOD,SHOOTER_PERIOD
@@ -2178,6 +2474,8 @@ teach_table
         fdb 210,210,hint_4
         fcb 12,2,60
         fdb 180,180,hint_5
+        fcb 13,3,36
+        fdb 150,150,hint_6
 hint_1  fdb 76*32+8
         fcb GREEN_TEXT
         fcc "SHOOT THE GRUNTS"
@@ -2193,14 +2491,19 @@ hint_3  fdb 76*32+8
         fcc "HUNTERS ARE FAST"
         fcb 0
         fdb $FFFF
-hint_4  fdb 76*32+7
+hint_4  fdb 76*32+5
         fcb GREEN_TEXT
-        fcc "MORE OF EVERYTHING"
+        fcc "COLLECT THE POWER UPS"
         fcb 0
         fdb $FFFF
 hint_5  fdb 76*32+7
         fcb GREEN_TEXT
         fcc "SHOOTERS FIRE BACK"
+        fcb 0
+        fdb $FFFF
+hint_6  fdb 76*32+6
+        fcb GREEN_TEXT
+        fcc "BOMBS CLEAR THE AREA"
         fcb 0
         fdb $FFFF
 prompt_on
@@ -2294,8 +2597,6 @@ next    rmb 2                   ; next free erase-list entry
 end_ptr rmb 2                   ; address of end_a or end_b
 end_a   rmb 2                   ; end of the erase list of screen A
 end_b   rmb 2
-shots   rmb SHOTS*S_SIZE
-shots_end
 level   rmb 1
 seed    rmb 2
 rcount  rmb 1
@@ -2339,7 +2640,26 @@ grunts  rmb 1                   ; grunts left to place in start_level
 fire_wait rmb 1                 ; frames between two bullets, 0 = none
 fire_timer rmb 1                ; frames until the next bullet
 shooter_turn rmb 1              ; the slot of the shooter that fired last
+pk_type rmb 1                   ; the pickup on the floor, 0 = none
+pk_x    rmb 1
+pk_y    rmb 1
+pk_timer rmb 1                  ; frames until it goes
+pk_next rmb 1                   ; the next place in drop_order
+drop_count rmb 1                ; enemies until the next pickup
+power   rmb 1                   ; 0, PK_DOUBLE, PK_SPREAD or PK_STAR
+power_timer rmb 2               ; frames until the power ends
+fpos    rmb 1                   ; fire: the place in ring
+fstep   rmb 1
+fcount  rmb 1
+fired   rmb 1                   ; shots that started in this frame
+state_end
+
+* --- More state after the erase lists, in extended addressing.
+        org EXTRA
+line    rmb 16                  ; a line of text
+shots   rmb SHOTS*S_SIZE
+shots_end
 bullets rmb BULLETS*B_SIZE
 bullets_end
-state_end
+extra_end
         end start

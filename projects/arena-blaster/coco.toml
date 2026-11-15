@@ -65,6 +65,26 @@ defines = ["SKIP_TITLE", "FIRST_LEVEL=5", "NO_DEATH"]
 defines = ["SKIP_TITLE", "NO_READY", "ONE_SHOOTER"]
 keys = "shooter.txt"
 
+[variants.pickups]
+defines = ["SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL", "FIRST_LEVEL=4", "DROP_EVERY=1"]
+keys = "pickups.txt"
+
+[variants.bomb]
+defines = ["SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL", "FIXED_PICKUP=5"]
+keys = "bomb.txt"
+
+[variants.double]
+defines = ["SKIP_TITLE", "NO_READY", "NO_ENEMIES", "FIRST_POWER=2", "POWER_TIME=100"]
+keys = "powers.txt"
+
+[variants.spread]
+defines = ["SKIP_TITLE", "NO_READY", "NO_ENEMIES", "FIRST_POWER=3", "POWER_TIME=100"]
+keys = "powers.txt"
+
+[variants.star]
+defines = ["SKIP_TITLE", "NO_READY", "NO_ENEMIES", "FIRST_POWER=4", "POWER_TIME=100"]
+keys = "powers.txt"
+
 [variants.level10]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=10"]
 

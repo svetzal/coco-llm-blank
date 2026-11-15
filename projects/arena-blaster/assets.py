@@ -158,12 +158,19 @@ def erase_code(name: str, used: list[tuple[int, int, int]]) -> list[str]:
     return code.lines
 
 
+# Sprites that main.asm always places at a pixel x that is a multiple of 4.
+# They get only the shift-0 routines; the descriptor repeats them.
+ALIGNED = ("pk_",)
+
+
 def assembly(sprites: dict[str, list[str]]) -> str:
     lines = []
     for name, rows in sprites.items():
+        shifts = [0] if name.startswith(ALIGNED) else list(range(4))
         lines.append(f"{name} fdb " + ",".join(
-            f"{name}_draw_{s},{name}_erase_{s}" for s in range(4)))
-        for shift in range(4):
+            f"{name}_draw_{s if s in shifts else 0},{name}_erase_{s if s in shifts else 0}"
+            for s in range(4)))
+        for shift in shifts:
             used = cells(rows, shift)
             lines += draw_code(f"{name}_draw_{shift}", used)
             lines += erase_code(f"{name}_erase_{shift}", used)

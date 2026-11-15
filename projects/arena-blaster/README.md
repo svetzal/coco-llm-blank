@@ -32,6 +32,9 @@ other hand, in eight directions. The game uses four-colour graphics.
 
 > The bullets are too big now. Make them 2 pixels high, not 1.
 
+> Increment 9: things to collect (agreed with the owner: points, shots in
+> 2, 4 or 8 directions, and a bomb).
+
 The plan for these requests:
 
 | Increment | Contents |
@@ -91,21 +94,23 @@ and types `LOADM"ARENA":EXEC`. On a real CoCo, type the same command. With
 `--check`, XRoar does the same without a window, and the game must reach its
 first frame.
 
-The check runs twelve builds for 200 frames each, with Extended BASIC in
+The check runs seventeen builds for 200 frames each, with Extended BASIC in
 the machine. At each frame it compares
 both screens, the game state, the rendered picture and the mixer output with
 `expected.py`. See [Checks](#checks).
 
 ## Status
 
-Increment 8: shooters, enemies that fire bullets at the player, from
+Increment 9: things to collect, from level 4: points, shots in 2, 4 or 8
+directions, and bombs from level 6. This completes the plan.
+
+Increment 8 added shooters, enemies that fire bullets at the player, from
 level 5.
 Increment 7 added the first levels that teach the game, and a "LEVEL N"
 banner at the start of each level.
 Increment 6 added the title screen, the high-score table and the initials.
 Increment 5 added score, lives, game over and the start and game-over sounds.
 Increment 4 added faster drawing and the fixed speed of 30 frames each second.
-Increment 9 adds things to collect.
 
 The owner chose the fixed speed of 30 frames each second. Each frame lasts two
 fields of the picture (one field is 1/60 second). Measured speed in XRoar, in
@@ -153,7 +158,7 @@ Nobody has listened to it yet.
   BASIC (owner request).
 - Disk BASIC RAM: Disk BASIC keeps its RAM from `$600`, just above the text
   screen, up to the graphics pages (*Disk Basic Unravelled II*, PDF 20). The
-  game loads at `$3C00`-`$5F50`, above that area. After `EXEC`, the game
+  game loads at `$3C00`-`$64B7`, above that area. After `EXEC`, the game
   does not go back to BASIC, so it uses all RAM.
 - Drive motor: Disk BASIC turns the motor off in its IRQ handler (PDF 70).
   The game masks the IRQ, so at its start it stores 0 in `$FF40`. Bit 3 of
@@ -173,13 +178,13 @@ The CoCo 1 defaults come from
 | `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`). An erase-list entry is the first screen byte and the erase routine of a sprite. |
 | `$2000`-`$23FF` | Stack, from `$2400` down |
 | `$2400`-`$3BFF` | Screen B, 6144 bytes |
-| `$3C00`-`$5F50` | Code, sprites, font, text and the high-score table |
-| `$5F51`-`$7FFF` | Free, about 8.2 KiB |
+| `$3C00`-`$64B7` | Code, sprites, font, text and the high-score table |
+| `$64B8`-`$7FFF` | Free, about 6.8 KiB |
 
 The game needs 32 KiB. The two screens use 12 KiB, so a 16 KiB machine
-does not have space for the program. The game state uses 251 of the 256
-bytes of the direct page. A line buffer for text is at `$1F00`, after the
-erase lists.
+does not have space for the program. The game state uses 178 of the 256
+bytes of the direct page. More state is at `$1F00`-`$1F91`, after the erase
+lists: a line buffer for text, the shot slots and the bullet slots.
 
 ### Arena
 
@@ -227,11 +232,12 @@ thing. The numbers and the hints are agent choices:
 | 1 | 4 | None | SHOOT THE GRUNTS |
 | 2 | 8 | None | HOLD TWO KEYS FOR DIAGONALS |
 | 3 | 6 | The first after 60 frames (2 seconds), then each 240 frames (8 seconds) | HUNTERS ARE FAST |
-| 4 | 10 | Each 210 frames (7 seconds) | MORE OF EVERYTHING |
+| 4 | 10. Pickups start. | Each 210 frames (7 seconds) | COLLECT THE POWER UPS |
 | 5 | 12, and 2 shooters. A bullet each 60 frames. | Each 180 frames (6 seconds) | SHOOTERS FIRE BACK |
-| 6 and more | See below | Each 330 - 30 x level frames, not less than 45 | None |
+| 6 | 13, and 3 shooters. A bullet each 36 frames. Bombs start. | Each 150 frames (5 seconds) | BOMBS CLEAR THE AREA |
+| 7 and more | See below | Each 330 - 30 x level frames, not less than 45 | None |
 
-From level 6, a level has 4 + 2 x level enemies at the start, not more
+From level 7, a level has 4 + 2 x level enemies at the start, not more
 than 20. Of these, level - 3 are shooters, not more than 4. The rest are
 grunts. A shooter fires each 84 - 8 x level frames, not less than 24. So
 level 6 has 13 grunts and 3 shooters, with a bullet each 36 frames. Level
@@ -266,6 +272,44 @@ each 45 frames (1.5 seconds).
   after eight more steps. A random x is 4 + (byte AND 127), and tries again
   above 114. A random y is 13 + byte, and tries again above 164. A random
   side is byte AND 3: top, bottom, left, right.
+
+### Things to collect
+
+The owner asked for points and power-ups to collect. The numbers are agent
+choices. The owner can change them.
+
+| Pickup | Sprite | When the player collects it |
+| --- | --- | --- |
+| Points | A coin | 100 points |
+| Double | 2 | For 300 frames (10 seconds), each shot is 2 shots: forward and back |
+| Spread | 4 | For 300 frames, each shot is 4 shots, at right angles |
+| Star | 8 | For 300 frames, each shot is 8 shots, in all directions |
+| Bomb | A red bomb | Removes each enemy less than 40 pixels across and 60 rows from the player, with its points. Removes all bullets. |
+
+- From level 4, each 6th enemy that a shot removes leaves a pickup at its
+  place, if no pickup is on the floor. The count goes on from level to
+  level, and starts again with each game.
+- The types come in this order: points, double, bomb, spread, points,
+  star, bomb, double. After that, the order starts again. Before level 6, a bomb is points.
+- A pickup is 6x7 pixels in a green box. Its x is a multiple of 4, so it
+  is in whole bytes, and it needs only one draw routine.
+- A pickup stays for 150 frames (5 seconds). In its last 60 frames, it
+  blinks: it does not show when bit 2 of its frame count is 1.
+- A new power replaces the old one. A death ends the power. A new level
+  keeps it.
+- With a power, the shots go around a ring of the 8 directions. The first
+  shot goes in the direction of the keys. A double puts 2 shots each 4
+  places, a spread 4 shots each 2 places, and a star 8 shots each place. Each shot needs a free slot of the 10 shot slots. A
+  shot that gets no slot does not start.
+- Speed: a test copy at level 10, with the star power and a shoot key held
+  for 200 frames, measured 2 frames of 3 fields. All the other frames took
+  2 fields, except the new level after the arena was clear. Each shot is
+  tested against each enemy, so 10 shots and 20 enemies are the heaviest
+  load. A copy with 8 shot slots measured 1 frame of 3 fields, so we kept
+  10 slots. A frame of 3 fields also has a short gap in the sound.
+- The band at the top shows the power: its digit (2, 4 or 8) at pixel 32,
+  and a yellow bar of (frames left + 31) / 32 bytes from pixel 36, on rows
+  4-6.
 
 ### Shooters
 
@@ -362,6 +406,8 @@ two fields of the effect.
 | Level | 4 | The arena is clear | Square, periods 30, 22, 16, 11, 3 fields each; volume 28 |
 | Extra life | 4 | The score reaches the next 1000 | Square, periods 15 and 10 in turn, 2 fields each, 14 fields; volume 30 |
 | Bullet | 1 | A shooter fires | Square, periods 12, 16, 20; volume 22 down to 14 |
+| Pickup | 4 | The player collects points or a power | Square, periods 31, 23, 16 (C, E, G); volume 26 |
+| Bomb | 5 | The player collects a bomb | Noise, periods 1-12, 22 fields; volume 62 down to 8 |
 | Letter | 1 | A change or the next letter in the initials | The shot sound |
 | Entry | 4 | The initials go into the table | The level sound |
 | Death | 5 | An enemy touches the player | Noise, periods 1-10, 14 fields; volume 60 down to 8 |
@@ -396,20 +442,23 @@ two fields of the effect.
 3. Move each shot 6 pixels across and 12 rows down or up. Remove a shot that
    leaves the arena. Then move each bullet, and remove a bullet that leaves
    the arena.
-4. If the shoot delay is more than 0, decrease it by 1. If not, and a shoot
-   key is held, and a shot slot is free, start a shot from the player. Then
-   set the delay to 2.
+4. If a power is on, count down its time. If the shoot delay is more than
+   0, decrease it by 1. If not, and a shoot key is held, start the shots
+   of the power in the free slots. If a shot started, set the delay to 2.
 5. Move each enemy whose step count reaches 0.
 6. Count down the hunter wait. At 0, try to start a hunter. Then count
    down the fire wait. At 0, the next shooter fires.
 7. A shot that overlaps an enemy removes the shot and the enemy, and adds its
-   points. Each shot removes only the first enemy in slot order.
+   points. Each shot removes only the first enemy in slot order. The enemy
+   can leave a pickup. Then, if the player overlaps the pickup, collect it.
+   If not, count down the time of the pickup.
 8. If an enemy or a bullet overlaps the player, start the pause after a
    death. If not, and no enemy is left, start the next level. A new level
    puts the player back at the start and removes all shots and bullets.
 9. Take the next sound record. Erase what this screen showed two frames
-   before. Draw the shots, the bullets and the enemies. Draw the player.
-   During the banner, draw the banner. Then draw the score and the reserve lives.
+   before. Draw the shots, the bullets, the pickup and the enemies. Draw
+   the player. During the banner, draw the banner. Then draw the score, the
+   reserve lives and the power.
 10. Wait for the end of the first field, unless it ended during the work.
     The field-sync flag stays set until a read of `$FF02` (MC6821 PDF 10,
     Figure 18), so a set flag tells that the first field ended. Take the next
@@ -475,6 +524,11 @@ remove one part of the game. The key scripts are short and written by hand.
 | `level3` | `SKIP_TITLE` `FIRST_LEVEL=3` `NO_DEATH` | none | The level 3 banner and hint, 6 grunts, the first hunter at frame 120 |
 | `level5` | `SKIP_TITLE` `FIRST_LEVEL=5` `NO_DEATH` | none | The level 5 banner and hint, 12 grunts and 2 shooters, bullets across at frames 120 and 180 |
 | `shooter` | `SKIP_TITLE` `NO_READY` `ONE_SHOOTER` | `shooter.txt` | Bullets down, on both diagonals and across, the bullet sound, deaths by a bullet at frames 28 and 174 |
+| `pickups` | `SKIP_TITLE` `NO_READY` `FIXED_ENEMIES` `STILL` `FIRST_LEVEL=4` `DROP_EVERY=1` | `pickups.txt` | A coin from the grunt at frame 9, collected at frame 26 (100 points, pickup sound). The hunter leaves a double at frame 34, but the level ends and removes it. |
+| `bomb` | `SKIP_TITLE` `NO_READY` `FIXED_ENEMIES` `STILL` `FIXED_PICKUP=5` | `bomb.txt` | A bomb at frame 8 removes both enemies (60 points) and ends the level. A second bomb at frame 37, with the bomb sound. |
+| `double` | `SKIP_TITLE` `NO_READY` `NO_ENEMIES` `FIRST_POWER=2` `POWER_TIME=100` | `powers.txt` | 2 shots for each shot, the bar in the band, the end of the power at frame 100, then single shots |
+| `spread` | the same, with `FIRST_POWER=3` | `powers.txt` | 4 shots for each shot, and all 10 shot slots in use |
+| `star` | the same, with `FIRST_POWER=4` | `powers.txt` | 8 shots for each shot, and shots that get no slot |
 | `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | The banner with a two-digit level, 16 grunts and 4 shooters, a bullet up, a death at frame 91 |
 | `over` | `SKIP_TITLE` `NO_READY` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
 | `scores` | `NO_READY` `FIXED_ENEMIES` `FIRST_LIVES=1` `FIRST_SCORE=0x5000` | `scores.txt` | A start from the title (frame 3), game over (frame 82), the initials screen (frame 172), a held W that repeats, S from A to Z, the entry CZA at place 7 below REX (frame 192), a held shoot key that does not start a game |
@@ -486,6 +540,11 @@ The controls:
   use it, so that their scripts stay short.
 - `NO_ENEMIES`: no grunts, no bullets, and an empty arena does not end
   the level.
+- `FIXED_PICKUP=N`: a level starts with a pickup of type N at x 60, y 60.
+  Type 5 is a bomb.
+- `DROP_EVERY=N`: each Nth enemy that a shot removes leaves a pickup.
+- `FIRST_POWER=N`, `POWER_TIME=N`: a game starts with power N (2 double, 3
+  spread, 4 star), and a power lasts N frames.
 - `ONE_SHOOTER`: one shooter at x 61, y 30 that fires each 20 frames, and
   no other enemies.
 - `FIXED_ENEMIES`: a grunt at x 100, y 90 and a hunter at x 100, y 40. No
@@ -507,6 +566,8 @@ measured in these captures.
 
 Negative controls, run on copies. Each one must fail:
 
+- Increment 9: a spread power with a step of 4 places, not 2, fails at
+  frame 1 (`spread`): it fires 2 directions, not 4.
 - Increment 8: an aim that never sends a bullet only across fails at frame
   120 (`level5`), at the first bullet.
 - Increment 7: an `erase_banner` without the store to byte columns 12-13

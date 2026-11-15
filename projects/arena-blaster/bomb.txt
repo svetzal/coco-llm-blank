@@ -1,0 +1,48 @@
+# Held keys for each frame of the bomb variant: FIXED_ENEMIES, STILL and a
+# bomb at x 60, y 60 at the start of each level. Written by hand; the
+# frames of the events come from expected.py.
+W      up, to the bomb at x 60, y 60
+W
+W
+W
+W
+W
+W
+W
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+W      level 2: up to the bomb again
+W
+W
+W
+W
+W
+W
+W
+-
+-
+-
+-
+-
+-
+-
+-
