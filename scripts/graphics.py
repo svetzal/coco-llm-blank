@@ -1,7 +1,8 @@
 """Convert artwork to MC6847 VDG full-graphics bytes, and render those bytes back to pictures.
 
-Run `uv run python scripts/graphics.py --help`. CoCo 1/2 only: the eight VDG full-graphics
-modes. CoCo 3 GIME modes are out of scope.
+Run `uv run python scripts/graphics.py --help`. The eight VDG full-graphics modes of the
+CoCo 1/2, which the CoCo 3 also shows (with the `xroar-coco3` palette). CoCo 3 GIME
+high-resolution modes are out of scope.
 
 Sourced facts (Motorola MC6847/MC6847Y datasheet, 1984, DS9823-R1; resource `mc6847`):
 
@@ -196,7 +197,45 @@ cross-colour artifacts (`-tv-input svideo -ccr none`), active area only, NTSC `c
 with CSS=1. They approximate one emulator path, not a real television.
 """
 
-PALETTES: dict[str, Palette] = {XROAR.name: XROAR}
+XROAR_COCO3 = Palette(
+    name="xroar-coco3",
+    description=(
+        "Measured from instrumented XRoar 1.13 through scripts/coco.py's rendered-frame "
+        "capture (-tv-input svideo -ccr none, active area only), machine coco3, NTSC, "
+        "GIME 1986, after Super Extended Color BASIC's reset initialization. On a CoCo 3 each "
+        "VDG colour is a palette register (Tepolt PDF 46), and BASIC loads them with "
+        "12,24,0B,07,3F,1F,09,26,00,12,00,3F,... (Tepolt PDF 57 step 44). "
+        "examples/palette-swatches shows every colour in CG6 and RG6 with both colour sets. "
+        "Valid only while those registers hold BASIC's values. These are one emulator path's "
+        "values, not measurements of a monitor."
+    ),
+    colours={
+        VdgColour.GREEN: (71, 145, 5),
+        VdgColour.YELLOW: (255, 200, 46),
+        VdgColour.BLUE: (34, 28, 222),
+        VdgColour.RED: (155, 18, 60),
+        VdgColour.BUFF: (255, 255, 255),
+        VdgColour.CYAN: (25, 161, 33),
+        VdgColour.MAGENTA: (106, 17, 181),
+        VdgColour.ORANGE: (255, 157, 151),
+    },
+    black=((20, 20, 20), (20, 20, 20)),
+)
+"""XRoar's rendered CoCo 3 colours for the VDG-compatible modes, measured from captures of
+examples/palette-swatches.
+
+On the CoCo 3 a pixel code selects a palette register, not a fixed VDG colour (Tepolt,
+*Assembly Language Programming for the CoCo3*, PDF 46): CG with CSS=0 uses registers 0-3,
+CSS=1 registers 4-7, RG with CSS=0 registers 8-9, CSS=1 registers 10-11. Super Extended
+Color BASIC's reset loads them with 12,24,0B,07,3F,1F,09,26,00,12,00,3F,00,12,00,26 hex
+(Tepolt PDF 57, step 44); XRoar reads back the same values. The CoCo 3 service manual
+(PDF 17) lists other, RGB-coded values "for CoCo compatibility"; BASIC does not load those.
+So RG green and buff are the same registers' codes as CG green and buff, and RG black is
+code 00 for both colour sets. The rendered RGB is XRoar's (S-video input, cross-colour off)
+conversion of those codes; a program that writes $FFB0-$FFBB changes it.
+"""
+
+PALETTES: dict[str, Palette] = {XROAR.name: XROAR, XROAR_COCO3.name: XROAR_COCO3}
 
 
 def parse_palette(name: str) -> Palette:

@@ -7,6 +7,7 @@ import pytest
 from graphics import (
     MODES,
     XROAR,
+    XROAR_COCO3,
     ConvertOptions,
     GraphicsError,
     Palette,
@@ -134,8 +135,18 @@ class DescribePalettes:
             Palette(name="x", description="x", colours=colours, black=XROAR.black)
 
     def should_reject_an_unknown_palette(self) -> None:
-        with pytest.raises(GraphicsError, match="known: xroar"):
+        with pytest.raises(GraphicsError, match="known: xroar, xroar-coco3"):
             parse_palette("tv")
+
+    def should_find_the_coco3_palette_by_name(self) -> None:
+        assert parse_palette("xroar-coco3") is XROAR_COCO3
+
+    def should_give_coco3_two_colour_modes_the_four_colour_codes(self) -> None:
+        # On a CoCo 3, BASIC loads RG registers 9 and 11 with the codes of CG green and buff,
+        # and registers 8 and 10 with black for both colour sets (Tepolt PDF 57, step 44).
+        cg0, cg1 = palette_rgb(CG6, 0, XROAR_COCO3), palette_rgb(CG6, 1, XROAR_COCO3)
+        assert palette_rgb(RG6, 0, XROAR_COCO3).tolist() == [[20, 20, 20], cg0[0].tolist()]
+        assert palette_rgb(RG6, 1, XROAR_COCO3).tolist() == [[20, 20, 20], cg1[0].tolist()]
 
 
 class DescribePixelAspect:

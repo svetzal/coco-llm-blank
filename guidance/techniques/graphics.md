@@ -94,6 +94,16 @@ artifact decoding. They are not the colours of a real television.
 XRoar shows RG "black" with a small tint of the colour set: dark green when
 CSS=0 and dark grey when CSS=1. The palette stores each black separately.
 
+The CoCo 3 shows the same modes with the same `$FF22` and SAM values. There,
+each code selects a palette register: 0 to 3 or 4 to 7 in CG modes, 8 and 9
+or 10 and 11 in RG modes. [Tepolt, PDF 46][tepolt-46] BASIC loads these
+registers at reset. [Tepolt, PDF 57][tepolt-57]
+
+With those values, use the `xroar-coco3` palette for a CoCo 3 oracle. Its RGB
+values are different, but the frame size and position are the same. We
+measured it with palette-swatches. If a program writes `$FFB0` to `$FFBB`,
+that palette does not apply.
+
 ## Know the pixel order
 
 In RG modes, bit 7 of a byte is the leftmost pixel. In CG modes, bits 7 and 6
@@ -202,7 +212,8 @@ supply its account and key.
 - Mode sizes, colour sets, bit order and the clock come from the datasheet.
   We read them from the page images.
 - We measured the `xroar` palette in CG6 and RG6, for both colour sets, on
-  the CoCo 1 target and the non-T1 CoCo 2 target. The rendered check fails
+  the CoCo 1 target and the non-T1 CoCo 2 target. We measured the
+  `xroar-coco3` palette in the same way on the CoCo 3 target. The rendered check fails
   for each negative control. The controls are a changed colour set, two exchanged colours, a
   reversed bit order, a mirrored or shifted picture and a wrong SAM mode.
 - The [display test](colour.md#make-a-display-test-before-making-the-art)
@@ -223,10 +234,14 @@ supply its account and key.
   13, 18–21. Resource `mc6847`.
 - Tandy, *Color Computer Technical Reference Manual*, PDF 30–31. Resource
   `coco1-technical`.
+- Laurence A. Tepolt, *Assembly Language Programming for the CoCo3*, 1987,
+  PDF 46 and 57. Resource `tepolt-coco3`.
 
 [mc6847-modes]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=18>
 [mc6847-colours]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=21>
 [mc6847-order]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=19>
 [mc6847-clock]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=13>
 [mc6847-sync]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=8>
+[tepolt-46]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=46>
+[tepolt-57]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20%281987%29%20%28Laurence%20A%20Tepolt%29.pdf#page=57>
 [coco-modes]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=31>

@@ -1,8 +1,10 @@
-* Select a colour set on a CoCo 1/2 graphics screen (MC6847 VDG).
+* Select a colour set on a CoCo 1/2 graphics screen (MC6847 VDG). The same
+* code runs on a CoCo 3 in its VDG-compatible modes.
 *
 * $FF22 bit 3 is the colour-set select (CSS). It selects one of two sets of
 * colours for the full screen. Each colour code in a screen byte then shows
-* one colour of that set.
+* one colour of that set. On a CoCo 3, each code selects a palette register
+* instead, and the program keeps the colours that BASIC loads into them.
 *
 * The example is in two parts, each between ">>> EXAMPLE" and
 * "<<< END EXAMPLE". The rest is context: it draws bars of each colour code
@@ -28,6 +30,12 @@
 *       1110 and 1111. $FF22 bits 2..0 are "do not change".
 *     PDF 11 and 15: SAM bits. The even address clears a bit, the odd
 *       address sets it. F6..F0 is the screen start / 512.
+*   Tepolt, Assembly Language Programming for the CoCo3:
+*     PDF 46: the same $FF22 and SAM values select G6C and G6R on a CoCo 3.
+*       A G6C code selects palette register 0-3 (CSS=0) or 4-7 (CSS=1). A
+*       G6R bit selects register 8-9 (CSS=0) or 10-11 (CSS=1).
+*     PDF 57 step 44: BASIC loads registers 0-15 with 12,24,0B,07,3F,1F,09,
+*       26,00,12,00,3F,00,12,00,26 (hex). This program does not change them.
 
 * >>> EXAMPLE 1 of 2: the colour set and the mode.
 * CSS is $FF22 bit 3: 0 selects colour set 0, %00001000 selects colour set 1.
