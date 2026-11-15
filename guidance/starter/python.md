@@ -71,7 +71,7 @@ behavior changed. The coverage report includes production scripts and excludes
 specs and fixtures.
 
 The root pytest configuration in `pyproject.toml` collects the `*_spec.py`
-files under `scripts/` and `examples/`, including the emulator integrations.
+files under `scripts/`, including the emulator integrations.
 CI runs `uv run pytest --cov`, Ruff and Ruff's format check.
 Keep test evidence that must survive a rerun under ignored `local/` or
 `build/`. Do not keep it in a pytest temporary directory.

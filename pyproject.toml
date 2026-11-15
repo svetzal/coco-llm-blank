@@ -15,7 +15,7 @@ dependencies = [
 package = false
 
 [tool.pytest.ini_options]
-testpaths = ["scripts", "examples"]
+testpaths = ["scripts"]
 python_files = ["*_spec.py"]
 python_classes = ["Describe*"]
 python_functions = ["should_*"]

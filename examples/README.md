@@ -53,7 +53,8 @@ sources before you adapt a program.
 
 ## Checks
 
-`scripts/coco.py` builds, runs and checks every example. See its README.
+`scripts/coco.py` builds, runs and checks every example. Run it with `--help`
+to see its commands.
 The `expected.py` oracle and `coco.py check` are the test of an example.
 The root pytest suite runs the real check of each example and the negative
 controls in `scripts/coco_spec.py`.

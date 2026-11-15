@@ -3,9 +3,7 @@
 Read this file before you write, change or review anything in `examples/`.
 These rules come from the owner. They apply to every example.
 
-[First-screen](first-screen/README.md) is the reference: it obeys all of them.
-Some older examples do not obey them yet. [PLAN.md](../PLAN.md) records that
-work.
+[First-screen](first-screen/README.md) is the reference for them.
 
 ## One example shows one practice
 
