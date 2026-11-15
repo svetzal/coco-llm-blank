@@ -120,6 +120,18 @@ validation pass.
 Keep the 90% gate and the full measured scope. Provisioning removes an
 environment gap but does not guarantee enough coverage.
 
+### Repository size limits
+
+The root suite runs `scripts/repository_size_spec.py`, so CI checks the size of
+the tracked files. Together, the tracked files except `uv.lock` must be
+1,200,000 bytes or less. Each tracked file except `uv.lock` must be
+100,000 bytes or less. The check measures the files in the working tree.
+Untracked files do not count.
+
+Raise a limit only as a deliberate decision. Change its constant in
+`scripts/repository_size.py` in its own commit. Give the reason in the commit
+message.
+
 ### Other checks
 
 Ruff enforces a maximum function complexity of 10. Keep larger workflows readable
