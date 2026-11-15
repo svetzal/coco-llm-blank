@@ -1,129 +1,161 @@
-# Held keys and single presses
+# Read held keys and single presses
 
-This example reads the keyboard matrix directly on CoCo 1 and CoCo 2. It
-moves a position while an arrow key is held. It counts one action for each
-new press of Space, also while an arrow moves.
+This example reads controls from the CoCo 1/2 keyboard matrix. It samples all
+controls before it chooses actions. It shows held movement and one action for
+each new Space press, including movement and action together.
 
-The program writes a record of each update to memory. After 16 updates it
-stops. This is a test probe, not a game. It shows nothing on the screen.
+It does not provide timing, key repeat, debounce, sound or a display. A small
+movement model and a record of 16 updates supply the context for the check.
 
-## What the program does
+## Choose how to read a control
 
-The program scans three keyboard columns: left arrow, right arrow and Space.
-It reads all three keys before it applies the policy. The policy is an
-original adaptation, not a hardware rule:
+These are input policies, not hardware rules. Use held arrows and a new Space
+press as the default for movement with one action per press.
 
-- A held left or right arrow moves the position one cell for each update.
-  Both arrows together cancel.
-- The world holds positions 0 to 4. The program rejects a move to -1 or 5.
-  The position starts at 2.
-- Space counts one action on a rising edge only. A held Space does not repeat.
-- The startup sample seeds the history, so a Space held at startup is not a
-  press.
-- The history updates after every sample, also after a rejected move.
+| Policy | Use | Result while held | Startup choice | Example |
+| --- | --- | --- | --- | --- |
+| Held state | Continuous movement | One move per update | Read the current keys | Left and Right |
+| New press | A single action | One action until release and repress | Seed history from a startup sample | Space |
 
-The program does exactly one startup sample and 16 updates. It has no timer,
-repeat delay, debounce or display. IRQ and FIRQ stay masked.
+Both arrows together cancel. A Space held at startup does not count as a new
+press.
 
-## Contract
+To accept that startup press, initialize `previous` to zero instead.
+Automatic fire needs held state and a repeat interval. This example has no
+repeat interval. A press and release between samples can go undetected.
 
-The program runs on two targets, both NTSC, 32 KiB, normal-clock 6809 and
-direct DECB loading:
+The scan uses these matrix positions. The strobes come from clearing the
+column bit in `$FF`. The row mask is `$08`.
 
-- `coco1`: `cocous`, Color BASIC 1.1.
-- `coco2`: `coco2bus`, Color BASIC 1.2.
+| Control | Column | Row | Strobe at `$FF02` | Logical bit in `held` |
+| --- | --- | --- | --- | --- |
+| Left | PB5 | PA3 | `$DF` | 1 |
+| Right | PB6 | PA3 | `$BF` | 2 |
+| Space | PB7 | PA3 | `$7F` | 4 |
 
-| Region | Use |
-| --- | --- |
-| `$3000..program_end` | Code and state, below `$4000` |
-| `$4000..$406F` | 16 update records of seven bytes |
-| `$7E00..$7EFF` | Stack, down from `$7F00` |
+Sources: Tandy, *Color Computer Technical Reference Manual*, PDF 13, 40 and
+75. Tandy's *Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)*, PDF 36,
+figure 4-10. M shares PB5 but uses PA1. Test the row bit, not the full byte.
 
-Each record holds the three row reads, the held bits (left 1, right 2,
-Space 4), the position, the action count and the history.
+Color BASIC 1.2 also has a keyboard routine, `KEYIN` (*Color Basic
+Unravelled II*, PDF 29). This example uses direct scanning to read the
+supported combinations. It does not compare the methods.
 
-## Source facts
+## Read the controls
 
-The keyboard experiment that came before this example read these pages as
-images. PDF pages are one-based positions in the archive files.
+The five `>>> EXAMPLE` parts of [main.asm](main.asm) show the input practice:
 
-- Tandy, **Color Computer Technical Reference Manual**, PDF 13: port B
-  (`$FF02`) drives the eight columns. Port A (`$FF00`) bits 0–6 read the
-  rows. Bit 7 of `$FF00` is the joystick comparator. Bit 2 of each control
-  register selects the data register when set.
+1. Set the PIA directions before the first scan. Clear control bit 2 to select
+   each direction register. Set the rows to inputs and the columns to outputs.
+   Set control bit 2 to select the data registers. Keep the other control bits.
 
-- The same manual, PDF 40: to scan, write zero to one column bit and ones to
-  the other seven. A pressed key reads zero on its row.
+2. Take one startup sample. Copy `held` to `previous` to ignore startup-held
+   Space as a new press.
 
-- Tandy, **Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)**, PDF 36,
-  figure 4-10: left, right and Space are on row PA3 at columns PB5, PB6 and
-  PB7. M is on row PA1 at column PB5.
+3. At `sample`, read Left, Right and Space into `held`. Write each strobe to
+   `$FF02`. Test PA3 in `$FF00`. Write `$FF` to `$FF02` after the scan.
 
-- Motorola, **MC6821 PIA datasheet**, PDF 7–8: a DDR bit of zero makes the
-  line an input, and one makes it an output.
+4. At `update`, count an action only if Space is held now and
+   the previous sample showed a release. The counter `shots` is the action
+   for this context.
 
-The derived column strobes are `$DF`, `$BF` and `$7F`. The scanner tests
-only bit 3 of the row read. It restores all columns high after each scan.
-The [controls guide](../../guidance/techniques/controls-and-collision.md) gives
-the archive links and the wider matrix.
+5. At `history`, save `held` to `previous` after every update. A rejected move
+   must still reach this step.
 
-## Check it
+Part 1 uses Tandy's *Color Computer Technical Reference Manual*, PDF 13, and
+Motorola's *MC6821 PIA* datasheet, PDF 7–8. Part 3 uses the matrix sources
+above. Parts 2, 4 and 5 are our input policy.
 
-From the repository root, after the setup has prepared CoCo 1 and CoCo 2
-firmware:
+The `--- CONTEXT` blocks initialize state, move a position within 0 to 4 and
+record the results. The position starts at 2. These blocks are demonstration
+code, not a collision technique.
+
+The raw row copies and final PIA copies exist only for the check.
+The program keeps the interrupts, stack, direct page and CPU clock that BASIC
+sets.
+
+[coco.toml](coco.toml) declares these targets: NTSC, 32 KiB, 6809, normal clock
+and direct DECB loading.
+
+| Target | XRoar machine | Firmware |
+| --- | --- | --- |
+| CoCo 1 | `cocous` | Color BASIC 1.1 |
+| CoCo 2B | `coco2bus` | Color BASIC 1.2 |
+
+Code and state start at `$3000` and end below `$4000`. The check records use
+`$4000..$406F`. [keys.txt](keys.txt) and [expected.py](expected.py) are only
+check context. Their expected positions and action counts come from the policy.
+
+## Run and check the variations
+
+Start the commands in the starter folder. Use `snapshot` to run each variation
+and save its RAM. This example shows nothing on the screen.
+
+```sh
+# CoCo 1, no input
+uv run python scripts/coco.py snapshot examples/keyboard-controls --target coco1
+# CoCo 1, scripted keys
+uv run python scripts/coco.py snapshot examples/keyboard-controls \
+  --target coco1 --variant keys
+# CoCo 2B, no input
+uv run python scripts/coco.py snapshot examples/keyboard-controls --target coco2
+# CoCo 2B, scripted keys
+uv run python scripts/coco.py snapshot examples/keyboard-controls \
+  --target coco2 --variant keys
+```
+
+To compare both variations on both targets, use this command:
 
 ```sh
 uv run python scripts/coco.py check examples/keyboard-controls
 ```
 
-The check needs the
+The scripted variation needs the
 [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar).
-It runs two builds on each target:
 
-- The main build gets no keys. All 16 records must show no key, position 2
-  and no action. This is the no-input control.
-- The `keys` build plays [keys.txt](keys.txt) through XRoar's keyboard
-  matrix, one line for each scan. Line 1 is the startup sample.
+The check compares all 16 records with [expected.py](expected.py). It checks
+the row reads, held bits, position, action count and history. It also checks
+the update count, control bits and final column value.
 
-[expected.py](expected.py) compares each record with the hand-written
-position and action count beside each line of `keys.txt`. It calculates
-the row reads from the matrix positions above. It also checks these items:
+The build without keys must stay at position 2 with no action.
 
-- the program finished 16 updates
-- the writable bits of both PIA control registers did not change
-- all columns are high at the end
+The script checks startup-held Space, release and repress, both arrows,
+movement with action, rejected moves and M held with Right. Line 1 supplies
+the startup sample. The next 16 lines supply the updates.
 
-The script includes these cases:
-
-- Space held at startup
-- movement and action in the same update
-- M held with right: M shares the left column but is not left
-- Space released and pressed again at an edge
-- both arrows held
-- a move back from each edge
-
-## Negative controls
-
-`main.asm` has four broken builds. The integration tests in
-`scripts/coco_spec.py` play `keys.txt` through each build on both targets.
-Each build must fail at the stated update:
+Four negative controls in `scripts/coco_spec.py` must fail on both targets:
 
 | Define | Fault | First failed update |
 | --- | --- | --- |
-| `WRONG_COLUMN` | Scans PB4 for left | 4: the M row read is missing |
-| `WRONG_SELECT` | Leaves bit 2 of `$FF03` clear, so column writes go to the DDR | 1: Space is not read |
-| `HELD_FIRE` | Counts a held Space on every update | 1: startup-held Space counts |
-| `STALE_HISTORY` | Skips the history update after a blocked move | 6: the history is stale |
+| `WRONG_COLUMN` | Scan PB4 for Left | 4: the M row read is missing |
+| `WRONG_SELECT` | Leave the column direction register selected | 1: Space is missing |
+| `HELD_FIRE` | Count held Space on every update | 1: startup-held Space counts |
+| `STALE_HISTORY` | Skip history after a rejected move | 6: history is stale |
 
-The example spec checks the same faults against the model alone.
+The check delivers keys through XRoar's keyboard matrix, PIA and the 6809
+scanner.
 
-## Limits
+It does not test host key events, window focus, physical keys, switch
+bounce or rapid taps. It does not establish safe sharing with another scanner
+or a handler that changes the column port. It does not test CoCo 3 or other
+CoCo 2 boards.
 
-The keys go into XRoar's keyboard matrix through its keyboard API. The real
-PIA and the 6809 scanner read them. Each key is held for a complete scan.
-This is not evidence for these items:
+## Sources
 
-- host key events or window focus
-- physical keys, switch bounce or rapid taps
-- joystick buttons, sound or a display
-- CoCo 3, or every CoCo 2 board (the result is for `coco2bus`)
+PDF pages are one-based positions in the archive files. Read these pages before
+you change the scan. The
+[controls guide](../../guidance/techniques/controls-and-collision.md#sources)
+gives the source links and the wider matrix.
+
+- Tandy, *Color Computer Technical Reference Manual*: PDF 13 gives the PIA
+  registers and joystick comparator bit. PDF 40 explains scanning. PDF 75
+  shows the matrix wiring.
+
+- Tandy, *Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)*:
+  PDF 36, figure 4-10, gives the matrix positions.
+
+- Motorola, *MC6821 PIA* datasheet: PDF 7–8 gives the direction bits,
+  register selection and writable control bits.
+
+- Spectral Associates, *Color Basic Unravelled II*: PDF 29 describes the
+  keyboard routine in Color BASIC 1.2. This example does not call it.

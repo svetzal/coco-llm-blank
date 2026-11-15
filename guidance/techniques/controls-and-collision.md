@@ -48,8 +48,9 @@ and [collect-room](../../examples/collect-room/README.md):
 4. Write `$FF` to the columns after the scan.
 
 A write to `$FF02` is not a column strobe until bit 2 of `$FF03` is set.
-Both examples mask IRQ and FIRQ. They make no claim to work beside a ROM
-interrupt handler.
+Keyboard-controls keeps the interrupt state that BASIC sets. Collect-room
+masks IRQ and FIRQ. Neither check establishes safe sharing with another
+keyboard scanner or a handler that changes the column port.
 
 ### Shared inputs
 

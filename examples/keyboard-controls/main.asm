@@ -1,17 +1,20 @@
-* Original keyboard scan and policy. Contract and hardware citations: README.md.
-* Code and state $3000..program_end; records $4000..$406F; stack below $7F00.
+* Read held keys and single presses in five example parts.
+* Context moves a position, counts actions and records 16 updates in RAM.
+* Code and state $3000..program_end; records $4000..$406F.
+* --- CONTEXT: Initialize the state for the bounded demonstration.
         org $3000
-start   orcc #$50
-        lds #$7f00
-        clra
-        tfr a,dp
-        ldx #state
+start   ldx #state
 clear   clr ,x+
         cmpx #state_end
         blo clear
         lda #2
         sta position
-* Preserve control bits while selecting DDR, then data registers.
+* >>> EXAMPLE 1 of 5: Set rows as inputs and columns as outputs
+* Tandy, Color Computer Technical Reference Manual, PDF 13: control bit 2.
+* Motorola, MC6821 PIA datasheet, PDF 7-8: DDR 0=input, 1=output.
+* Keep the other control bits while selecting DDR, then data registers.
+* The control_*_before copies exist only for the check.
+* All conditional fault defines exist only for the negative controls.
         lda $ff01
         sta control_a_before
         anda #$fb
@@ -32,11 +35,16 @@ clear   clr ,x+
         anda #$fb
         sta $ff03
         endc
+* <<< END EXAMPLE
+* --- CONTEXT: Point to the update records used by the check.
         ldu #$4000
-* Startup sample seeds history, suppressing startup-held fire.
+* >>> EXAMPLE 2 of 5: Seed history from the startup sample
+* Our policy: a Space held at startup does not count as a new press.
         jsr sample
         lda held
         sta previous
+* <<< END EXAMPLE
+* --- CONTEXT: Apply controls and record all 16 updates for the check.
 loop    jsr sample
         jsr update
         ldx #raw_left
@@ -55,12 +63,16 @@ record  lda ,x+
         sta control_b_after
         lda $ff02
         sta columns_after
-        lda #$a5
-        sta complete
-* The checkpoint: all 16 records are written.
+* This loop exists only for the check, after all 16 records are written.
 finished bra finished
 
-* One scan of left, right and Space. A key script takes effect at each entry.
+* >>> EXAMPLE 3 of 5: Sample all three controls before choosing actions
+* Tandy, Color Computer Technical Reference Manual, PDF 40: low selects.
+* The same manual, PDF 75, and CoCo 2 NTSC Service Manual, PDF 36:
+* Left, Right and Space are PA3 at PB5, PB6 and PB7.
+* Derived strobes: $DF, $BF, $7F. Test PA3 only; leave all columns high.
+* The raw row copies exist only for the check.
+* A key script takes effect at each sample entry.
 sample  clr held
         lda #$df
         ifdef WRONG_COLUMN
@@ -95,8 +107,10 @@ scan_done
         sta $ff02
         rts
 
-* Logical bits left=1,right=2,fire=4. World [0,5); wall at 5.
-* Save history even if motion is rejected. Both directions cancel.
+* <<< END EXAMPLE
+
+* >>> EXAMPLE 4 of 5: Count an action only on a new Space press
+* Logical bits: Left=1, Right=2, Space=4. This policy is our adaptation.
 update  lda held
         bita #4
         beq movement
@@ -106,6 +120,8 @@ update  lda held
         bne movement
         endc
         inc shots
+* <<< END EXAMPLE
+* --- CONTEXT: Move within positions 0 to 4; opposite arrows cancel.
 movement
         anda #3
         cmpa #1
@@ -120,15 +136,20 @@ movement
 go_left tst position
         beq rejected
         dec position
+* >>> EXAMPLE 5 of 5: Save history even after a rejected move
 history lda held
         sta previous
         rts
+* <<< END EXAMPLE
+* --- CONTEXT: Return from a rejected move through the history update.
 rejected
         ifdef STALE_HISTORY
         rts
         else
         bra history
         endc
+* --- CONTEXT: Store raw rows, controls and demonstration state.
+* The seven record fields must stay adjacent for the check.
 state
 raw_left rmb 1
 raw_right rmb 1
@@ -138,7 +159,6 @@ position rmb 1
 shots   rmb 1
 previous rmb 1
 count   rmb 1
-complete rmb 1
 control_a_before rmb 1
 control_b_before rmb 1
 control_a_after rmb 1

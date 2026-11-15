@@ -21,7 +21,6 @@ HELD_BITS = {"L": 1, "R": 2, "F": 4}
 KEYBOARD_ROWS = 0x7F
 # Writable PIA control bits; bits 7 and 6 are interrupt flags.
 CONTROL_BITS = 0x3F
-COMPLETE = 0xA5
 START_POSITION = 2
 RAM_SIZES = (32768, 65536)
 
@@ -64,7 +63,7 @@ def actual_record(ram: bytes, update: int) -> tuple[int, ...]:
 
 
 def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) -> None:
-    """Every update record, then completion and the restored PIA state."""
+    """Every update record, then the update count and final PIA state."""
     if len(ram) not in RAM_SIZES:
         raise ValueError("Missing or truncated RAM snapshot.")
     steps = script(variant)
@@ -75,7 +74,7 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
         if actual != expected:
             fields = dict(zip(RECORD_FIELDS, actual, strict=True))
             raise ValueError(f"Update {update} ({step[0]}): expected {expected}, got {fields}.")
-    if ram[symbols["count"]] != UPDATES or ram[symbols["complete"]] != COMPLETE:
+    if ram[symbols["count"]] != UPDATES:
         raise ValueError("The program did not complete 16 updates.")
     for port in ("a", "b"):
         before = ram[symbols[f"control_{port}_before"]] & CONTROL_BITS
