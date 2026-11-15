@@ -42,6 +42,11 @@ samples are already aligned. Give each sound asset an explicit format. His prose
 names `BNE` at the end of the table loop, but the listing uses `BLS`.
 [Barden, PDF 246 and 248–251][barden]
 
+The [collect-room example](../../examples/collect-room/README.md) plays its
+effects in the same blocking way: 32 alternating DAC writes, then a return to
+the game. Its check finds every effect in XRoar's mixer output and tests its
+pitch band. The game cannot read keys during an effect.
+
 ROM SOUND and PLAY calls can help a BASIC-hosted prototype. Nee's PLAY example
 saves the BASIC text pointer and runs from BASIC. His prose and listing give
 different note-table addresses, so use labels. These calls are not a portable
@@ -150,6 +155,19 @@ The same build counted progress in one emulated second. Sound-slots completed
 samples under the heavy load. The timer build kept 6,992 (1986) or 7,005 (1987)
 samples, but its redraws fell from 27 to 2. The counts are uncertain by a small
 amount at the edges of the window.
+
+A private XRoar 1.12.1 build recorded every rendered frame and all mixer output
+of collect-room for the first 43 lines of its journey. It ran on CoCo 1 and
+CoCo 2 (NTSC, 32 KiB, non-T1). Each run gave 447 continuous frames and 328,704
+samples. All 229 frames between a checkpoint and the next key sample showed
+the complete scene.
+
+The five effects peaked at 978 Hz (start), 1,739 Hz (pickup) and 680 Hz (win),
+with 16 high runs each. The title was silent. The first checkpoint came 2.15 s
+after audio start, and the next 42 scans took 5.27 s.
+
+Frames during a redraw were not compared, so this is no tear-free claim. The
+example check compares only one frame after each checkpoint.
 
 ## Apply the findings to a game
 

@@ -40,9 +40,9 @@ trial without a new request.
      in the [assets guide](guidance/techniques/assets.md) and the tile-room
      example. We closed the tiles topic. Its evidence is in the
      [tile-map guide](guidance/techniques/tile-maps.md) and the tile-room
-     example. `experiments/display-validation/` and
-     `experiments/audio-output/` keep only `instrument.py`, which
-     `collect-room-output` uses. Delete them with that experiment.
+     example. We closed the collect-room topic. Its evidence is in the
+     collect-room example and the
+     [sound guide](guidance/techniques/sound.md#measurements-the-examples-do-not-rerun).
   2. Add a size check to CI so growth is a deliberate decision.
 - Clean Apple Silicon host and native Linux desktop onboarding, including
   x86-64 Linux. Intel Mac support is excluded. Current container and configured

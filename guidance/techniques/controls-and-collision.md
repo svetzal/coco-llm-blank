@@ -170,9 +170,13 @@ Integration tests in `scripts/coco_spec.py` break the scanner four ways: a
 wrong column, a DDR left selected, a held-fire count and a stale history.
 
 Collect-room's `journey` variant plays 95 scans with arrows, walls, a locked
-exit and restarts. Both examples deliver keys through XRoar's API. They are
-not evidence for host key events, physical keys, switch bounce, joystick
-buttons or CoCo 3. The A+B+I probe and most chords are not tested.
+exit and restarts. Its check compares memory, the rendered frame and the
+mixer output at each scan. Integration tests break its scanner three ways: a
+wrong column, a stale history and a held Space at startup.
+
+Both examples deliver keys through XRoar's API. They are not evidence for host
+key events, physical keys, switch bounce, joystick buttons or CoCo 3. The
+A+B+I probe and most chords are not tested.
 
 ## Unresolved source conflicts
 

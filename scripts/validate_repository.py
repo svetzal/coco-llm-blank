@@ -16,14 +16,6 @@ SCOPES = {
         ("scripts", "examples"),
         "full integrations, Docling models, native tools/all ROM profiles",
     ),
-    "collect-room-journey": (
-        ("experiments/collect-room-journey",),
-        "pinned XRoar download and C build, CoCo 1/2 ROMs",
-    ),
-    "collect-room-output": (
-        ("experiments/collect-room-output",),
-        "cached COLLECT_ARCHIVE, C build, CoCo 1/2 ROMs",
-    ),
     "linux-onboarding": (None, ""),
     "macos-onboarding": (None, "installed lwasm; current-host boundary tests only"),
     "sudo-policy": (None, ""),

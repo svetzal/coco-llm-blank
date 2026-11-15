@@ -46,7 +46,7 @@ class DescribeValidationCLI:
         actual = Path(validation.__file__).resolve().parents[1] / "experiments"
         names = {p.name for p in actual.iterdir() if list(p.glob("*_spec.py"))}
         assert {line.split(":")[0] for line in text.splitlines()[:-1]} == names | {"root"}
-        assert "collect-room-output: coverage 90%; cached COLLECT_ARCHIVE" in text
+        assert "macos-onboarding: no coverage gate; installed lwasm" in text
         assert not (checkout / "build").exists()
 
     @pytest.mark.parametrize(
@@ -60,17 +60,16 @@ class DescribeValidationCLI:
         assert not (checkout / "build").exists()
 
     def should_select_deduplicate_and_keep_separate_scope_logs(self, checkout):
-        config = checkout / "experiments/collect-room-journey/coverage.ini"
+        config = checkout / "scripts/coverage.ini"
         config.parent.mkdir(parents=True)
         config.write_text("[report]\nfail_under = 90\n")
-        journey = "collect-room-journey"
 
-        assert validation.main(["run", journey, "sudo-policy", journey, "--heavy"]) == 0
+        assert validation.main(["run", "root", "sudo-policy", "root", "--heavy"]) == 0
 
         saved = records(checkout)
         assert len(saved) == 6
-        covered = json.loads(next(p for p in saved if p.parent.name == journey).read_text())
-        assert f"--cov=experiments/{journey}" in covered["command"]
+        covered = json.loads(next(p for p in saved if p.parent.name == "root").read_text())
+        assert "--cov=scripts" in covered["command"]
         assert f"--cov-config={config}" in covered["command"]
         policy = json.loads(next(p for p in saved if p.parent.name == "sudo-policy").read_text())
         assert not any(arg.startswith("--cov") for arg in policy["command"])
@@ -91,12 +90,11 @@ class DescribeValidationCLI:
         assert validation.main(["run", "all", "--heavy"]) == 0
 
         saved = records(checkout)
-        assert len(saved) == 5 * 3
+        assert len(saved) == 3 * 3
         assert "root" not in {p.parent.name for p in saved}
         commands = [json.loads(p.read_text())["command"] for p in saved if p.name == "1.json"]
         assert all(len([a for a in c if a.startswith("experiments/")]) == 1 for c in commands)
-        output = next(c for c in commands if "experiments/collect-room-output" in c)
-        assert "--cov=experiments/collect-room-output" in output
+        assert not any(a.startswith("--cov") for c in commands for a in c)
 
     def should_preserve_failure_stop_and_keep_evidence_on_successful_retry(
         self, checkout, monkeypatch

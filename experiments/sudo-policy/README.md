@@ -46,10 +46,10 @@ selected-target doctor independently. The two example checks are:
 - [Moving objects](../../examples/moving-objects/README.md): 13 checkpoints,
   complete framebuffer comparison against an independent pixel/trajectory
   oracle, guards and an unreachable checkpoint.
-- [Collect Room](../../examples/collect-room/README.md): builds its separately
-  instrumented pinned XRoar, checks 95 hand-authored game checkpoints, idle and
-  unreachable controls, and four deliberately broken variants. These establish
-  RAM/state and DAC callback outcomes, not visible or audible output.
+- [Collect Room](../../examples/collect-room/README.md): on CoCo 2, the
+  example check compares memory, the rendered frame and the mixer effects at
+  95 hand-authored checkpoints. The recorded runs used an earlier harness,
+  which also built four broken variants.
 
 Both are existing original examples, executed without changing their assembly,
 fixtures, or oracle. Their READMEs retain hardware source provenance and machine

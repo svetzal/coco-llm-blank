@@ -10,7 +10,6 @@ Agents enter through [AGENTS.md](../AGENTS.md), which says when to read each par
 | [starter/](#using-the-starter) | How to use this repository: setup, tools, references and development practice | Setting up, building, testing, or looking up a source |
 | [techniques/](techniques/README.md) | Game and demo domain guidance: how to animate, draw, control, store and play sound | Choosing or applying a technique for the owner's project |
 | `techniques/research/` | Source research behind the techniques | Tracing a claim, or extending a technique with new sources |
-| `techniques/validation/` | Measured results behind the techniques | Checking what a technique has actually been shown to do |
 | `starter/validation/` | Measured results for setup and permissions | Diagnosing setup on a new host |
 
 Read the guide for the task at hand. Research and validation records are the
@@ -57,10 +56,6 @@ lists the reproduction code. Example-specific checks are also in the
 - [Apple Silicon current-host onboarding audit](starter/validation/macos-onboarding.md).
 - [Ubuntu onboarding validation](starter/validation/linux-onboarding.md).
 - [Sudo policy validation](starter/validation/sudo-policy.md).
-
-### Controls and state
-
-- [Collection-game keyboard, renderer and PCM journey](techniques/validation/collect-room-output.md).
 
 Keep these kinds of evidence distinct:
 

@@ -14,8 +14,6 @@ The links below describe existing work; they do not claim a new validation run.
 
 | Task | Code and procedure | Validation report |
 | --- | --- | --- |
-| Play the collection game with injected keys | [collect-room-journey](collect-room-journey/README.md) | [Collect room evidence](../examples/collect-room/README.md) |
-| Check a collection-game output journey | [collect-room-output](collect-room-output/README.md) | [Evidence and limits](../guidance/techniques/validation/collect-room-output.md) |
 | Check current-host macOS recovery | [macos-onboarding](macos-onboarding/) | [Evidence and limits](../guidance/starter/validation/macos-onboarding.md) |
 | Reproduce nonroot Ubuntu onboarding | [linux-onboarding](linux-onboarding/README.md) | [Evidence and limits](../guidance/starter/validation/linux-onboarding.md) |
 | Check sudo failure and recovery | [sudo-policy](sudo-policy/README.md) | [Evidence and limits](../guidance/starter/validation/sudo-policy.md) |
@@ -37,8 +35,7 @@ Experiment suites require an explicit path, such as
 `uv run pytest experiments/sudo-policy`. Use the package's documented command
 for coverage, environment variables and preparation. Its scoped coverage
 configuration measures that package, not the entire starter or assembly code.
-Some suites need verified firmware, native tools, a private instrumented XRoar
-build or Docker. Host-only models have narrower requirements.
+Some suites need verified firmware, native tools or Docker. Host-only models have narrower requirements.
 
 A passing root suite does not replace experiment checks. A passing experiment
 does not replace root integration checks. Report what ran, skipped or failed,

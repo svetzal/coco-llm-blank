@@ -180,7 +180,7 @@ check. These commands explicitly opt into expensive work:
 ```sh
 uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
 uv run --locked --no-sync python scripts/validate_repository.py run \
-  collect-room-output --heavy
+  macos-onboarding --heavy
 uv run --locked --no-sync python scripts/validate_repository.py run all --heavy
 ```
 
@@ -188,19 +188,13 @@ Before you opt in, read the README or validation guide of the selected
 experiment.
 
 Root with `--heavy` needs the complete starter environment described above.
-Docling can download model weights. Animation and output suites can download
-pinned XRoar sources and compile private emulators. Native runs need the
-assembler, build tools, and verified ROMs for their documented machines.
+Docling can download model weights. Native runs need the assembler, build
+tools, and verified ROMs for their documented machines.
 
 Some scopes have their own prerequisites:
 
 - `macos-onboarding` needs installed `lwasm`. It checks current-host recovery
   with fixture firmware and a recording launcher, not clean-host installation.
-- `collect-room-journey` downloads the pinned XRoar release and builds it with
-  the example's keyboard and audio hooks. It needs CoCo 1/2 ROMs.
-- `collect-room-output` builds a private emulator from `COLLECT_ARCHIVE`
-  (default `local/research/audio-timing/xroar-1.12.1.tar.gz`). It needs
-  CoCo 1/2 ROMs.
 
 The runner does not prepare these inputs, launch experiment setup scripts, or
 start an interactive GUI. Missing prerequisites follow the behavior of the
