@@ -78,6 +78,8 @@ CONTROLS = {
     "jinxdrop": {"SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL"},
     "demo": {"DEMO_SOON"},
     "demoshoot": {"DEMO_SOON"},
+    "demohunter": {"DEMO_SOON"},
+    "demoshooter": {"DEMO_SOON"},
     "over": {"SKIP_TITLE", "NO_READY"},
     "scores": {"NO_READY", "FIXED_ENEMIES"},
 }
@@ -147,6 +149,8 @@ READY_FRAMES = 60
 # x, y) and the script (held keys, frames).
 IDLE_FRAMES = 300
 IDLE_SOON = 30
+PROMPT_COL = 9
+FIRST_SCENE = {"demohunter": 1, "demoshooter": 2}
 
 
 @dataclass
@@ -172,7 +176,14 @@ SCENES = {
                    [(1, 61, 30), (1, 21, 50), (1, 101, 50)],
                    [("", 4), ("O", 8), ("A", 10), ("O", 8), ("D", 18), ("O", 8), ("", 16)]),
 }
-PARTS = [["grunt"]]
+SCENES["hunter"] = Scene("HUNTER", 10, "FAST  50 POINTS", 8, (61, 95), [],
+                         [("", 18), (";", 6), ("", 50), ("K", 8), ("", 16)],
+                         first=10, wait=50, seed=0x1234)
+SCENES["shooter"] = Scene("SHOOTER", 9, "FIRES BACK  30 POINTS", 5, (61, 150),
+                          [(3, 61, 30)],
+                          [("", 12), ("D", 8), ("", 14), ("A", 8), ("O", 10), ("", 16)],
+                          fire=20)
+PARTS = [["grunt", "hunter", "shooter"]]
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
 # field plays one record, so each frame plays two.
 SQUARE, NOISE = 0, 0x80
@@ -399,7 +410,7 @@ def start_demo(game: Game) -> None:
     """The next part: the arena, one life that cannot end, level 1, score 0."""
     game.phase, game.demo, game.setup = PLAY, True, True
     game.lives, game.level, game.score, game.next_extra = 1, 1, 0, EXTRA_EVERY
-    game.scenes = list(PARTS[game.part])
+    game.scenes = list(PARTS[game.part])[FIRST_SCENE.get(game.variant, 0):]
     game.part = (game.part + 1) % len(PARTS)
     start_scene(game)
 
@@ -942,11 +953,11 @@ def hud(codes: np.ndarray, game: Game, frame: int = 0) -> None:
         for y, row in enumerate(FONT[name]):
             for x, char in enumerate(row):
                 codes[HUD_ROW + y, left + x] = CODES[char]
-    if game.demo:  # SHOOT flashes in the place of the score, at the rate of the prompt
-        text(codes, "SHOOT" if (frame - 1) & 16 == 0 else "", HUD_ROW, 1)
-    else:
-        for k, digit in enumerate(f"{game.score:06d}"):
-            glyph(digit, 4 + 4 * k)
+    if game.demo:  # the prompt flashes at the rate of the title prompt; no names
+        text(codes, "SHOOT TO START" if (frame - 1) & 16 == 0 else "", HUD_ROW, PROMPT_COL)
+        return
+    for k, digit in enumerate(f"{game.score:06d}"):
+        glyph(digit, 4 + 4 * k)
     for i in range(min(max(game.lives - 1, 0), ICONS)):
         glyph("life", 120 - 4 * i)
     # The gift name in yellow and the jinx name in red, each with a bar of the time

@@ -111,6 +111,12 @@ defines = ["DEMO_SOON"]
 defines = ["DEMO_SOON"]
 keys = "demoshoot.txt"
 
+[variants.demohunter]
+defines = ["DEMO_SOON", "FIRST_SCENE=1"]
+
+[variants.demoshooter]
+defines = ["DEMO_SOON", "FIRST_SCENE=2"]
+
 [variants.level10]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=10"]
 

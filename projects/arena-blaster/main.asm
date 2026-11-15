@@ -119,6 +119,7 @@ FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
 *   FIRST_DROP   the first place in drop_order.
 *   DEMO_SOON    the demo starts after 30 idle frames on the title, not 300.
 *   FIRST_PART=N the first demo part.
+*   FIRST_SCENE=N each part starts at its scene N.
 *   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
 
 * Things to collect (README.md "Things to collect"). Pickup types:
@@ -176,6 +177,10 @@ IDLE_FRAMES equ 300             ; 10 seconds of the title with no key
         endc
         ifndef FIRST_PART
 FIRST_PART equ 0
+        endc
+PROMPT_COL equ 9                ; the byte column of the demo prompt
+        ifndef FIRST_SCENE
+FIRST_SCENE equ 0               ; check only: a part starts at this scene
         endc
 SC_CAPTION equ 0                ; scene record: the banner text list
 SC_X    equ 2                   ; the player's start
@@ -1061,9 +1066,9 @@ eb_row  stu ,x
 * (font.txt). The score is at byte columns 1-6. Reserve lives are from
 * byte column 30 to the left; empty places get the floor.
 draw_hud
-        tst <demo               ; the demo: SHOOT flashes in place of the score
+        tst <demo               ; the demo: SHOOT TO START flashes in the band
         beq dh_score
-        ldd #HUD_ROW*32+1
+        ldd #HUD_ROW*32+PROMPT_COL
         adda <drawing
         tfr d,y
         clr <tcolour            ; yellow
@@ -1113,6 +1118,8 @@ dh_icon_draw
         leay -2,y               ; dh_glyph moved Y on by 1
         dec <count
         bne dh_icon
+        tst <demo               ; the prompt has the place of the names
+        lbne dh_done
 * The names of the gift (the power) and the jinx, at byte columns
 * NAME_GIFT and NAME_JINX. A name changes rarely, so each screen keeps
 * the types that it shows in hud_seen, and a name is drawn only when its
@@ -1180,7 +1187,7 @@ br_store
         leay 1,y
         decb
         bne br_byte
-        rts
+dh_done rts
 
 * A = a pickup type (0 = none), B = a byte column, X = the type that the
 * hidden screen shows there. If they differ, draw the name of type A in
@@ -1347,6 +1354,7 @@ start_demo
         lda <part
         lsla
         ldx a,x                 ; the scene list of the part
+        leax 2*FIRST_SCENE,x
         stx <scene_ptr
         lda <part               ; the next part, in a ring
         inca
@@ -2891,7 +2899,7 @@ level_text
 * with 0. Keys in a script: move keys in bits 3-0, shoot keys in bits 7-4.
 PARTS   equ 1
 parts   fdb part_a
-part_a  fdb scene_grunt,0
+part_a  fdb scene_grunt,scene_hunter,scene_shooter,0
 
 scene_grunt
         fdb cap_grunt
@@ -2915,6 +2923,64 @@ keys_grunt
         fcb UP*16,8             ; the right grunt
         fcb 0,16
         fcb 0,0
+* Two hunters come from the edges, one from the right and one from the left.
+scene_hunter
+        fdb cap_hunter
+        fcb 61,95
+        fcb 0
+        fdb 10,50               ; the first hunter after 10 frames, then each 50
+        fdb $1234               ; this start gives the right side, then the left
+        fcb 0,0,0
+        fcb 0,0
+        fdb keys_hunter
+        fcb 0
+keys_hunter
+        fcb 0,18
+        fcb RIGHT*16,6          ; shoot right: the first hunter
+        fcb 0,50
+        fcb LEFT*16,8           ; shoot left: the second hunter
+        fcb 0,16
+        fcb 0,0
+* A shooter fires down at the player, who steps aside and back, and shoots.
+scene_shooter
+        fdb cap_shooter
+        fcb 61,150
+        fcb 20                  ; a bullet each 20 frames
+        fdb 0,0
+        fdb SEED
+        fcb 0,0,0
+        fcb 0,0
+        fdb keys_shooter
+        fcb SHOOTER,61,30
+        fcb 0
+keys_shooter
+        fcb 0,12
+        fcb RIGHT,8             ; step aside before the bullet comes
+        fcb 0,14
+        fcb LEFT,8              ; step back
+        fcb UP*16,10            ; shoot up
+        fcb 0,16
+        fcb 0,0
+cap_hunter
+        fdb BANNER_ROW*32+10
+        fcb BIG+YELLOW_TEXT
+        fcc "HUNTER"
+        fcb 0
+        fdb 76*32+8
+        fcb GREEN_TEXT
+        fcc "FAST  50 POINTS"
+        fcb 0
+        fdb $FFFF
+cap_shooter
+        fdb BANNER_ROW*32+9
+        fcb BIG+YELLOW_TEXT
+        fcc "SHOOTER"
+        fcb 0
+        fdb 76*32+5
+        fcb GREEN_TEXT
+        fcc "FIRES BACK  30 POINTS"
+        fcb 0
+        fdb $FFFF
 cap_grunt
         fdb BANNER_ROW*32+11
         fcb BIG+YELLOW_TEXT
@@ -2926,10 +2992,10 @@ cap_grunt
         fcb 0
         fdb $FFFF
 shoot_on
-        fcc "SHOOT "
+        fcc "SHOOT TO START"
         fcb 0
 shoot_off
-        fcc "      "
+        fcc "              "
         fcb 0
 
 * --- The first levels: grunts, the first hunter wait, the hunter wait and
