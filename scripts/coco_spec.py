@@ -176,6 +176,22 @@ class DescribeSettings:
         with pytest.raises(ProjectError, match="is invalid"):
             coco.load_project(folder)
 
+    @pytest.mark.parametrize(
+        "variant,message",
+        [
+            ('defines = ["BIG"]\ntargets = ["coco3"]', r"targets \['coco3'\] are not declared"),
+            ('defines = ["BIG"]\ntargets = []', "at least 1 item"),
+            ('targets = ["coco2"]', "a variant needs defines"),
+        ],
+    )
+    def should_reject_unusable_variant_targets(
+        self, folder: Path, variant: str, message: str
+    ) -> None:
+        (folder / "coco.toml").write_text(f"{SETTINGS}\n[variants.big]\n{variant}\n")
+
+        with pytest.raises(ProjectError, match=message):
+            coco.load_project(folder)
+
     def should_explain_a_folder_without_settings(self, tmp_path: Path) -> None:
         with pytest.raises(ProjectError, match="needs coco.toml"):
             coco.load_project(tmp_path)
@@ -196,13 +212,35 @@ class DescribeModels:
     def should_pass_the_variant_only_when_variants_are_declared(
         self, folder: Path, project: coco.Project
     ) -> None:
-        assert coco.model_call(project, lambda frame: frame, 3, variant="") == 3
+        assert coco.model_call(project, lambda frame: frame, 3, variant="", target="coco1") == 3
         (folder / "coco.toml").write_text(SETTINGS + '\n[variants.fast]\ndefines = ["FAST"]\n')
         with_variants = coco.load_project(folder)
 
-        result = coco.model_call(with_variants, lambda f, v: (f, v), 3, variant="fast")
+        result = coco.model_call(
+            with_variants, lambda f, v: (f, v), 3, variant="fast", target="coco1"
+        )
 
         assert result == (3, "fast")
+
+    def should_pass_the_target_only_to_functions_that_declare_it(
+        self, folder: Path, project: coco.Project
+    ) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + '\n[variants.fast]\ndefines = ["FAST"]\n')
+        with_variants = coco.load_project(folder)
+
+        def by_keyword(frame, target):
+            return frame, target
+
+        def by_kwargs(frame, variant, **options):
+            return frame, variant, options
+
+        assert coco.model_call(project, by_keyword, 3, variant="", target="coco2") == (3, "coco2")
+        assert coco.model_call(with_variants, by_kwargs, 3, variant="fast", target="coco2") == (
+            3,
+            "fast",
+            {"target": "coco2"},
+        )
+        assert coco.model_call(project, len, b"ab", variant="", target="coco2") == 2
 
     def should_compare_every_screen_byte_and_then_the_state_model(
         self, project: coco.Project
@@ -500,6 +538,75 @@ class DescribeCommandLine:
         assert "Execution: coco1" in output and "Execution: coco2" in output
         assert output.rstrip().endswith(f"evidence in {project.output}")
         assert coco.main(["check", str(folder), "--target", "coco2"], emulated()) == 1
+
+
+ONLY_COCO2 = '\n[variants.wide]\ndefines = ["WIDE"]\ntargets = ["coco2"]\n'
+
+
+class DescribeVariantTargets:
+    @pytest.fixture
+    def restricted(self, folder: Path, tmp_path: Path, monkeypatch) -> coco.Project:
+        monkeypatch.setattr(coco, "ROOT", tmp_path)
+        (folder / "coco.toml").write_text(
+            SETTINGS + ONLY_COCO2 + '\n[variants.fast]\ndefines = ["FAST"]\n'
+        )
+        return coco.load_project(folder)
+
+    def should_select_only_the_variants_that_apply_to_a_target(
+        self, restricted: coco.Project
+    ) -> None:
+        assert coco.variants_for(restricted, "coco1") == ("", "fast")
+        assert coco.variants_for(restricted, "coco2") == ("", "wide", "fast")
+
+    def should_choose_the_first_target_the_variant_allows(self, restricted: coco.Project) -> None:
+        assert coco.variant_target(restricted, "wide", None) == "coco2"
+        assert coco.variant_target(restricted, "fast", None) == "coco1"
+        assert coco.variant_target(restricted, "", "coco2") == "coco2"
+        with pytest.raises(ProjectError, match=r"'wide' applies only to targets \['coco2'\]"):
+            coco.variant_target(restricted, "wide", "coco1")
+
+    def should_skip_a_variant_on_targets_it_does_not_name(self, restricted: coco.Project) -> None:
+        (restricted.directory / "expected.py").write_text(
+            "def verify_ram(ram, symbols, frame, variant, target):\n"
+            "    seen.append((variant, target))\n\nseen = []\n"
+        )
+        host = emulated(ram=bytes(32768))
+
+        coco1 = coco.check_target(restricted, host, "coco1")
+        coco2 = coco.check_target(restricted, host, "coco2")
+
+        assembled = [c.args[0] for c in host.run.call_args_list if "--6809" in c.args[0]]
+        assert sum("--define=WIDE" in command for command in assembled) == 1
+        assert list(coco1["variants"]) == ["main", "fast"]
+        assert coco1["variants_for_other_targets"] == {"wide": ["coco2"]}
+        assert list(coco2["variants"]) == ["main", "wide", "fast"]
+        assert coco2["variants_for_other_targets"] == {}
+        seen = coco.load_expected(restricted.directory).seen
+        assert ("wide", "coco2") in seen and ("wide", "coco1") not in seen
+        assert ("main", "coco1") not in seen and ("", "coco1") in seen
+        lines = coco.report(restricted, coco1)
+        assert "in build(s) main, fast;" in lines[0]
+        assert lines[1] == "Variant wide: not built for coco1; it applies only to coco2."
+
+    def should_snapshot_a_variant_on_its_first_allowed_target(
+        self, restricted: coco.Project, capsys
+    ) -> None:
+        host = emulated(ram=bytes(32768))
+
+        assert coco.main(["snapshot", str(restricted.directory), "--variant", "wide"], host) == 0
+
+        assert capsys.readouterr().out.splitlines() == [str(restricted.output / "wide-coco2-1.ram")]
+
+    def should_refuse_a_target_the_variant_does_not_allow_before_building(
+        self, restricted: coco.Project, capsys
+    ) -> None:
+        host = emulated()
+        arguments = ["run", str(restricted.directory), "--variant", "wide", "--target", "coco1"]
+
+        assert coco.main(arguments, host) == 1
+
+        assert not host.run.called and not host.launch.called
+        assert "applies only to targets ['coco2'], not 'coco1'" in capsys.readouterr().err
 
 
 class DescribeEquipmentSettings:

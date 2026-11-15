@@ -328,6 +328,11 @@ practice.
   - Optional `[variants.<name>]` tables add assembler defines, a key script
     (`keys = "file"`), or both.
 
+  - A variant can also name the targets that it applies to, for example
+    `targets = ["coco3-128", "coco3-512"]`. Each name must be a
+    `[targets.<name>]` table. Without `targets`, the variant applies to every
+    target. `targets` alone does not make a variant.
+
   - `[keys]` names the label where each script line takes effect (`at`). It
     also maps the script's letters to XRoar key names (`letters`).
 
@@ -343,11 +348,24 @@ practice.
   - `expected_frame(frame)` returns the rendered picture.
   - `verify_sound(sound, frame)` judges the mixer output.
   - The tool uses each of those two functions only when that capture runs.
-  - With variants, every function also receives the variant name.
+  - With variants, every function also receives the variant name as its last
+    argument.
+  - A function that declares a `target` parameter also receives `target=`,
+    the target name. An example is `expected_frame(frame, variant, target)`.
+    Use it when the picture or the memory layout differs between machines.
   - Write the model from sourced facts and requirements, never from the
     assembled bytes or a captured snapshot.
 
-`check` does these actions:
+`check` builds the main program for every target, or only for `--target`.
+It builds a variant only for the targets that the variant applies to. The
+results file and the report name the builds that ran on that target. They
+also name each variant that applies only to other targets.
+
+`run`, `build` and `snapshot` with `--variant` use the first target of the
+variant. If `--target` names a target that the variant does not apply to, the
+tool stops before it builds.
+
+For each build, `check` does these actions:
 
 - It starts from nonzero RAM.
 - It snapshots each frame.

@@ -6,6 +6,13 @@ screen and in sound. All CoCo facts (machine, firmware, memory layout, labels,
 pictures, keys) live in those project files. This tool only assembles with
 LWTOOLS and drives XRoar.
 
+check runs the main build on every [targets.<name>] table. A [variants.<name>]
+table with targets = [...] runs only on those targets; without targets it runs
+on every target. run, build and snapshot with --variant use the variant's first
+allowed target unless --target names one. expected.py functions receive the
+variant name last when coco.toml declares variants, and target=<name> when
+their signature declares a target parameter.
+
 Rendered frames (--video), mixer sound (--audio) and scripted keys ([keys] in
 coco.toml) need the instrumented XRoar, which is built once into local/ on
 first use; it needs a C compiler, make and autotools. Everything else uses
@@ -15,6 +22,7 @@ the installed XRoar.
 import argparse
 import hashlib
 import importlib.util
+import inspect
 import json
 import os
 import re
@@ -78,12 +86,19 @@ class Machine(BaseModel):
 
 
 class Variant(BaseModel):
-    """A [variants.<name>] table: assembler defines, a key script, or both."""
+    """A [variants.<name>] table: assembler defines, a key script, or both.
+
+    targets names the [targets.<name>] tables the build applies to; omitted means every one.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     defines: tuple[str, ...] = ()
     keys: str | None = None
+    targets: tuple[str, ...] | None = Field(default=None, min_length=1)
+
+    def applies_to(self, target: str) -> bool:
+        return self.targets is None or target in self.targets
 
     @model_validator(mode="after")
     def needs_defines_or_keys(self) -> "Variant":
@@ -176,6 +191,17 @@ class Settings(BaseModel):
     def keys_declared(self) -> "Settings":
         if self.keys is None and any(v.keys for v in self.variants.values()):
             raise ValueError("a variant names a key script, so [keys] must declare at and letters")
+        return self
+
+    @model_validator(mode="after")
+    def variant_targets_declared(self) -> "Settings":
+        for name, variant in self.variants.items():
+            unknown = [t for t in variant.targets or () if t not in self.targets]
+            if unknown:
+                raise ValueError(
+                    f"[variants.{name}] targets {unknown} are not declared; "
+                    f"coco.toml declares {list(self.targets)}"
+                )
         return self
 
 
@@ -471,9 +497,26 @@ def screen_difference(expected: bytes, actual: bytes, start: int) -> str | None:
     )
 
 
-def model_call(project: Project, function: Callable, *args: object, variant: str) -> object:
-    """Model functions receive the variant name only when coco.toml declares variants."""
-    return function(*args, variant) if project.settings.variants else function(*args)
+def accepts_target(function: Callable) -> bool:
+    """True when the signature declares a target parameter or **kwargs."""
+    try:
+        parameters = inspect.signature(function).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(p.name == "target" or p.kind is p.VAR_KEYWORD for p in parameters)
+
+
+def model_call(
+    project: Project, function: Callable, *args: object, variant: str, target: str
+) -> object:
+    """Call a model function in the convention its signature declares.
+
+    The variant name follows the arguments only when coco.toml declares variants. The
+    target name is passed as target= only to a function that declares it (or **kwargs).
+    """
+    positional = (*args, variant) if project.settings.variants else args
+    keywords = {"target": target} if accepts_target(function) else {}
+    return function(*positional, **keywords)
 
 
 def verify_snapshot(
@@ -483,29 +526,36 @@ def verify_snapshot(
     symbols: dict[str, int],
     frame: int,
     variant: str = "",
+    target: str = "",
 ) -> int:
     """Compare the screen, then the model's state checks; returns screen bytes compared."""
     check = project.settings.check
     compared = 0
     if check.screen is not None and hasattr(model, "expected_screen"):
-        expected = model_call(project, model.expected_screen, frame, variant=variant)
+        expected = model_call(project, model.expected_screen, frame, variant=variant, target=target)
         actual = ram[check.screen : check.screen + len(expected)]
         if difference := screen_difference(expected, actual, check.screen):
             raise ProjectError(f"Frame {frame}: {difference}.")
         compared = len(expected)
     if hasattr(model, "verify_ram"):
-        model_call(project, model.verify_ram, ram, symbols, frame, variant=variant)
+        model_call(project, model.verify_ram, ram, symbols, frame, variant=variant, target=target)
     return compared
 
 
 def verify_picture(
-    project: Project, model: ModuleType, picture: Picture | None, frame: int, variant: str = ""
+    project: Project,
+    model: ModuleType,
+    picture: Picture | None,
+    frame: int,
+    variant: str = "",
+    target: str = "",
 ) -> int:
     """Compare XRoar's rendered frame with expected_frame(); returns samples compared."""
     if picture is None or not hasattr(model, "expected_frame"):
         return 0
     expected = np.asarray(
-        model_call(project, model.expected_frame, frame, variant=variant), dtype=np.uint8
+        model_call(project, model.expected_frame, frame, variant=variant, target=target),
+        dtype=np.uint8,
     )
     if difference := recording.frame_difference(expected, picture.pixels):
         raise ProjectError(f"Frame {frame}: rendered display: {difference}.")
@@ -513,12 +563,17 @@ def verify_picture(
 
 
 def verify_sound(
-    project: Project, model: ModuleType, sound: Sound | None, frame: int, variant: str = ""
+    project: Project,
+    model: ModuleType,
+    sound: Sound | None,
+    frame: int,
+    variant: str = "",
+    target: str = "",
 ) -> object:
     """Let the model judge XRoar's mixer output; its return value is recorded."""
     if sound is None or not hasattr(model, "verify_sound"):
         return None
-    return model_call(project, model.verify_sound, sound, frame, variant=variant)
+    return model_call(project, model.verify_sound, sound, frame, variant=variant, target=target)
 
 
 def digest(path: Path) -> str:
@@ -540,6 +595,20 @@ def defines_for(project: Project, variant: str) -> tuple[str, ...]:
 
 def variant_names(project: Project) -> list[str]:
     return list(project.settings.variants)
+
+
+def variant_target(project: Project, variant: str, target: str | None) -> str:
+    """The target one build runs on: the named one, else the first the variant allows."""
+    declared = project.settings.variants.get(variant)
+    allowed = declared.targets if declared and declared.targets else None
+    if target is None:
+        return allowed[0] if allowed else project.default_target
+    name, _ = target_machine(project, target)
+    if allowed and name not in allowed:
+        raise ProjectError(
+            f"Variant {variant!r} applies only to targets {list(allowed)}, not {name!r}."
+        )
+    return name
 
 
 def build(
@@ -742,10 +811,10 @@ def check_variant(
         if model:
             current = evidence[-1]
             screen_bytes = verify_snapshot(
-                project, model, current.ram, built.symbols, frame, variant
+                project, model, current.ram, built.symbols, frame, variant, target
             )
-            rendered = verify_picture(project, model, current.picture, frame, variant)
-            sounds.append(verify_sound(project, model, current.sound, frame, variant))
+            rendered = verify_picture(project, model, current.picture, frame, variant, target)
+            sounds.append(verify_sound(project, model, current.sound, frame, variant, target))
     record: dict[str, object] = {
         "binary_sha256": digest(built.binary),
         "screen_bytes_each": screen_bytes,
@@ -756,7 +825,7 @@ def check_variant(
     if check.trace_from and model and hasattr(model, "verify_trace"):
         trace = evidence[-1].log.read_text()
         record["trace"] = model_call(
-            project, model.verify_trace, trace, built.symbols, variant=variant
+            project, model.verify_trace, trace, built.symbols, variant=variant, target=target
         )
     return record
 
@@ -770,14 +839,15 @@ def evidence_summary(model: ModuleType | None, captured: bool, function: str, ch
 def check_target(
     project: Project, host: Host, target: str, video: bool = False, audio: bool = False
 ) -> dict[str, object]:
-    """Write a success record only after every variant and frame passes."""
+    """Write a success record only after every variant for this target and frame passes."""
     check = require_check(project)
     result = project.output / f"{target}-results.json"
     result.unlink(missing_ok=True)
     name, machine = target_machine(project, target)
     model = load_expected(project.directory)
     builds = {
-        variant: equipment_for(project, variant, video, audio) for variant in variants(project)
+        variant: equipment_for(project, variant, video, audio)
+        for variant in variants_for(project, name)
     }
     record = {
         "target": name,
@@ -787,6 +857,11 @@ def check_target(
         "variants": {
             variant or "main": check_variant(project, host, model, name, variant, equipment)
             for variant, equipment in builds.items()
+        },
+        "variants_for_other_targets": {
+            variant: list(declared.targets)
+            for variant, declared in project.settings.variants.items()
+            if not declared.applies_to(name)
         },
         "ram_init": "set (nonzero)",
         "unreachable_checkpoint": "no snapshot",
@@ -806,8 +881,18 @@ def check_target(
     return record
 
 
-def variants(project: Project) -> tuple[str, ...]:
-    return ("", *project.settings.variants)
+def variants_for(project: Project, target: str) -> tuple[str, ...]:
+    """The main build, then each declared variant that applies to the target."""
+    declared = project.settings.variants.items()
+    return ("", *(name for name, variant in declared if variant.applies_to(target)))
+
+
+def other_target_lines(record: dict[str, object]) -> list[str]:
+    return [
+        f"Variant {variant}: not built for {record['target']}; it applies only to "
+        f"{', '.join(targets)}."
+        for variant, targets in record.get("variants_for_other_targets", {}).items()
+    ]
 
 
 def keys_lines(record: dict[str, object]) -> list[str]:
@@ -855,12 +940,12 @@ def sound_line(project: Project, record: dict[str, object]) -> str:
 def report(project: Project, record: dict[str, object]) -> list[str]:
     check = require_check(project)
     frames = len(check.frames)
-    builds = len(record["variants"])
+    builds = ", ".join(record["variants"])
     execution = (
         f"Execution: {record['target']} reached {check.checkpoint!r} at {frames} "
-        f"checkpoint(s) in {builds} build(s); the unreachable checkpoint left no snapshot."
+        f"checkpoint(s) in build(s) {builds}; the unreachable checkpoint left no snapshot."
     )
-    lines = [execution, *keys_lines(record)]
+    lines = [execution, *other_target_lines(record), *keys_lines(record)]
     if record["model"] == MODEL:
         screen = next(iter(record["variants"].values()))["screen_bytes_each"]
         detail = f"all {screen} screen bytes and " if screen else ""
@@ -915,7 +1000,7 @@ def parser() -> argparse.ArgumentParser:
     for name, text in COMMANDS.items():
         command = commands.add_parser(name, help=text, description=text)
         command.add_argument("project", type=Path, help="folder holding coco.toml")
-        default = "every target" if name == "check" else "the first"
+        default = "every target" if name == "check" else "the variant's first allowed target"
         command.add_argument("--target", help=f"a [targets.<name>] table; default: {default}")
         if name != "check":
             command.add_argument("--variant", default="", help="a [variants.<name>] build")
@@ -936,7 +1021,7 @@ def check_command(project: Project, arguments: argparse.Namespace, host: Host) -
 
 
 def snapshot_command(project: Project, arguments: argparse.Namespace, host: Host) -> None:
-    target, _ = target_machine(project, arguments.target)
+    target = variant_target(project, arguments.variant, arguments.target)
     equipment = equipment_for(
         project, arguments.variant, arguments.video, arguments.audio, arguments.keys
     )
@@ -956,7 +1041,7 @@ def execute(arguments: argparse.Namespace, host: Host) -> None:
     if arguments.command == "snapshot":
         snapshot_command(project, arguments, host)
         return
-    target, _ = target_machine(project, arguments.target)
+    target = variant_target(project, arguments.variant, arguments.target)
     built = build(project, host, arguments.variant)
     if arguments.command == "build":
         print(built.binary)
