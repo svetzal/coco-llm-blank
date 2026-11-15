@@ -69,7 +69,10 @@ class ProjectError(ValueError):
 
 
 class Machine(BaseModel):
-    """One [targets.<name>] table: an XRoar machine and its validated firmware."""
+    """One [targets.<name>] table: an XRoar machine and its validated firmware.
+
+    screen, when set, replaces [check].screen for this target: an offset into its snapshot.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -83,6 +86,7 @@ class Machine(BaseModel):
     basic: str | None = None
     extended: str | None = None
     options: tuple[str, ...] = ()
+    screen: int | None = None
 
 
 class Variant(BaseModel):
@@ -529,17 +533,25 @@ def verify_snapshot(
     target: str = "",
 ) -> int:
     """Compare the screen, then the model's state checks; returns screen bytes compared."""
-    check = project.settings.check
+    screen = screen_offset(project, target)
     compared = 0
-    if check.screen is not None and hasattr(model, "expected_screen"):
+    if screen is not None and hasattr(model, "expected_screen"):
         expected = model_call(project, model.expected_screen, frame, variant=variant, target=target)
-        actual = ram[check.screen : check.screen + len(expected)]
-        if difference := screen_difference(expected, actual, check.screen):
+        actual = ram[screen : screen + len(expected)]
+        if difference := screen_difference(expected, actual, screen):
             raise ProjectError(f"Frame {frame}: {difference}.")
         compared = len(expected)
     if hasattr(model, "verify_ram"):
         model_call(project, model.verify_ram, ram, symbols, frame, variant=variant, target=target)
     return compared
+
+
+def screen_offset(project: Project, target: str) -> int | None:
+    """The snapshot offset of the screen: the target's own screen, else [check].screen."""
+    machine = project.settings.targets.get(target)
+    if machine and machine.screen is not None:
+        return machine.screen
+    return project.settings.check.screen
 
 
 def verify_picture(
@@ -854,6 +866,7 @@ def check_target(
         "machine": machine.model_dump(mode="json", exclude_defaults=True),
         "checkpoint": check.checkpoint,
         "frames": list(check.frames),
+        "screen": screen_offset(project, name),
         "variants": {
             variant or "main": check_variant(project, host, model, name, variant, equipment)
             for variant, equipment in builds.items()
@@ -948,7 +961,9 @@ def report(project: Project, record: dict[str, object]) -> list[str]:
     lines = [execution, *other_target_lines(record), *keys_lines(record)]
     if record["model"] == MODEL:
         screen = next(iter(record["variants"].values()))["screen_bytes_each"]
-        detail = f"all {screen} screen bytes and " if screen else ""
+        offset = record.get("screen")
+        where = f" at snapshot offset ${offset:04X}" if offset is not None else ""
+        detail = f"all {screen} screen bytes{where} and " if screen else ""
         lines.append(f"Memory: {detail}the model's state checks matched at every checkpoint.")
     else:
         lines.append(f"Memory: not compared; add {MODEL} with an independent model.")

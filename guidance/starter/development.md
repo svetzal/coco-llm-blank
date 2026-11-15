@@ -325,6 +325,11 @@ practice.
     the frames to snapshot. It also names a label that must never run, and
     where the screen starts.
 
+  - The snapshot holds the physical RAM of the target. On a target that maps
+    its memory, such as the CoCo 3, the screen can be at a different offset.
+    Set `screen` in that `[targets.<name>]` table to replace `[check].screen`
+    for that target only.
+
   - Optional `[variants.<name>]` tables add assembler defines, a key script
     (`keys = "file"`), or both.
 
@@ -344,7 +349,8 @@ practice.
 - `expected.py` (optional): the independent model.
   - `expected_screen(frame)` returns the exact screen bytes.
   - `verify_ram(ram, symbols, frame)` raises `ValueError` when the state
-    differs.
+    differs. `ram` is the physical snapshot of the target. Use the `target`
+    keyword to find the addresses on each target.
   - `expected_frame(frame)` returns the rendered picture.
   - `verify_sound(sound, frame)` judges the mixer output.
   - The tool uses each of those two functions only when that capture runs.

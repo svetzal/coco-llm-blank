@@ -543,6 +543,54 @@ class DescribeCommandLine:
 ONLY_COCO2 = '\n[variants.wide]\ndefines = ["WIDE"]\ntargets = ["coco2"]\n'
 
 
+MAPPED_SCREEN = "[targets.coco2]\nscreen = 0x10400\n"
+
+
+class DescribeTargetScreens:
+    @pytest.mark.parametrize(
+        "check_screen,expected",
+        [
+            ("screen = 0x0400", {"coco1": 0x0400, "coco2": 0x10400}),
+            ("", {"coco1": None, "coco2": 0x10400}),
+        ],
+    )
+    def should_let_a_target_replace_the_check_screen(
+        self, folder: Path, check_screen: str, expected: dict
+    ) -> None:
+        settings = SETTINGS.replace("screen = 0x0400", check_screen)
+        (folder / "coco.toml").write_text(settings.replace("[targets.coco2]\n", MAPPED_SCREEN))
+        project = coco.load_project(folder)
+
+        offsets = {target: coco.screen_offset(project, target) for target in expected}
+
+        assert offsets == expected
+
+    def should_compare_the_screen_at_the_target_offset(
+        self, folder: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.setattr(coco, "ROOT", tmp_path)
+        settings = SETTINGS.replace("screen = 0x0400", "").replace('[1, "3-4"]', "[1]")
+        (folder / "coco.toml").write_text(settings.replace("[targets.coco2]\n", MAPPED_SCREEN))
+        (folder / "expected.py").write_text(
+            "def expected_screen(frame, target):\n    calls.append(target)\n    return bytes([frame]) * 4\n\n"
+            "calls = []\n"
+        )
+        project = coco.load_project(folder)
+        ram = bytearray(0x20000)
+        ram[0x10400:0x10404] = bytes([1]) * 4
+
+        coco1 = coco.check_target(project, emulated(ram=bytes(ram)), "coco1")
+        coco2 = coco.check_target(project, emulated(ram=bytes(ram)), "coco2")
+
+        assert coco1["screen"] is None and coco1["variants"]["main"]["screen_bytes_each"] == 0
+        assert coco2["screen"] == 0x10400 and coco2["variants"]["main"]["screen_bytes_each"] == 4
+        assert set(coco.load_expected(folder).calls) == {"coco2"}
+        assert "all 4 screen bytes at snapshot offset $10400" in coco.report(project, coco2)[1]
+        ram[0x10402] = 9
+        with pytest.raises(ProjectError, match=r"first at \$10402"):
+            coco.check_target(project, emulated(ram=bytes(ram)), "coco2")
+
+
 class DescribeVariantTargets:
     @pytest.fixture
     def restricted(self, folder: Path, tmp_path: Path, monkeypatch) -> coco.Project:
