@@ -40,6 +40,13 @@ other hand, in eight directions. The game uses four-colour graphics.
 > seconds. Put the name of the gift or the jinx at the top of the screen
 > while it lasts. Call them jinxes.
 
+> A demo sequence that starts after the high-score screen is idle for more
+> than 10 seconds, as on arcade machines. It introduces the enemy types and
+> their behaviour, then the gifts and the jinxes. Each scene shows the
+> player moving, shooting the enemy, or collecting the gift or the jinx and
+> shooting with that effect. "Press fire to start" flashes in the score
+> area. Break the demo up with several visits back to the title screen.
+
 The plan for these requests:
 
 | Increment | Contents |
@@ -50,6 +57,10 @@ The plan for these requests:
 | 8 | Enemies that shoot |
 | 9 | Things to collect: points, shots in more directions, a bomb |
 | 10 | Jinxes, and the names of the gift and the jinx at the top of the screen |
+| 11a | The demo: the idle time, scenes, captions, the flashing prompt, and the grunt scene |
+| 11b | Demo part A: the hunter and the shooter |
+| 11c | Demo parts B and C: points, the three powers and the bomb |
+| 11d | Demo part D: the three jinxes |
 
 The game, its name, its art and its rules are our own. They are not a copy of
 another game.
@@ -100,14 +111,18 @@ and types `LOADM"ARENA":EXEC`. On a real CoCo, type the same command. With
 `--check`, XRoar does the same without a window, and the game must reach its
 first frame.
 
-The check runs twenty-two builds for 200 frames each, with Extended BASIC in
+The check runs twenty-four builds for 200 frames each, with Extended BASIC in
 the machine. At each frame it compares
 both screens, the game state, the rendered picture and the mixer output with
 `expected.py`. See [Checks](#checks).
 
 ## Status
 
-Increment 10: jinxes from level 8. A jinx is a pickup that hurts: half
+Increment 11a: a demo. When the title has no key for 10 seconds, a part of
+the demo plays. Now there is one part with one scene: the grunt. A shoot key
+during the demo starts a game.
+
+Increment 10 added jinxes from level 8. A jinx is a pickup that hurts: half
 the fire speed, half the move speed, or a blitz of hunters. The band at the
 top shows the name of the gift and of the jinx, each with a bar of the
 time that is left.
@@ -168,7 +183,7 @@ Nobody has listened to it yet.
   BASIC (owner request).
 - Disk BASIC RAM: Disk BASIC keeps its RAM from `$600`, just above the text
   screen, up to the graphics pages (*Disk Basic Unravelled II*, PDF 20). The
-  game loads at `$3C00`-`$67B4`, above that area. After `EXEC`, the game
+  game loads at `$3C00`-`$6992`, above that area. After `EXEC`, the game
   does not go back to BASIC, so it uses all RAM.
 - Drive motor: Disk BASIC turns the motor off in its IRQ handler (PDF 70).
   The game masks the IRQ, so at its start it stores 0 in `$FF40`. Bit 3 of
@@ -188,11 +203,11 @@ The CoCo 1 defaults come from
 | `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`). An erase-list entry is the first screen byte and the erase routine of a sprite. |
 | `$2000`-`$23FF` | Stack, from `$2400` down |
 | `$2400`-`$3BFF` | Screen B, 6144 bytes |
-| `$3C00`-`$67B4` | Code, sprites, font, text and the high-score table |
-| `$67B5`-`$7FFF` | Free, about 6.1 KiB |
+| `$3C00`-`$6992` | Code, sprites, font, text, the demo and the high-score table |
+| `$6993`-`$7FFF` | Free, about 5.6 KiB |
 
 The game needs 32 KiB. The two screens use 12 KiB, so a 16 KiB machine
-does not have space for the program. The game state uses 184 of the 256
+does not have space for the program. The game state uses 197 of the 256
 bytes of the direct page. More state is at `$1F00`-`$1F91`, after the erase
 lists: a line buffer for text, the shot slots and the bullet slots.
 
@@ -418,11 +433,47 @@ pixel to red: the byte OR (the yellow bits shifted left). Green text sets
 each yellow pixel to green: the byte AND `$AA`. Big text shows each pixel as
 2x2 pixels, so a big character is 2 bytes wide and 10 rows high.
 
-A new screen (the arena, the title or the initials) goes into both screens.
-That work takes more than two fields. So after it, the frame waits for the
-start of a field, as at power-on. Then each frame draws only the part that
-changes into the hidden screen. On the title, this part is the prompt. On
-the initials screen, it is the letters and the bar.
+A new screen (the arena, the title or the initials) goes into the hidden
+screen only. The other screen is on view, and a change to it shows at once
+as a torn picture. The `demo` check found this tear at the change from the
+demo to the title. The first frame that draws into the other screen draws
+the new screen there first.
+
+A new screen takes more than two fields, so
+after it, the frame waits for the start of a field. Then each frame draws
+only the part that changes into the hidden screen. On the title, this part
+is the prompt. On the initials screen, it is the letters and the bar. A
+change of screen takes 15 to 20 fields over its two frames.
+
+### Demo
+
+The owner asked for a demo that starts when the title is idle, and for
+several visits back to the title. The scenes, the captions and the keys of
+the demo player are agent choices.
+
+- On the title, a frame with no game key adds 1 to the idle count. A game
+  key sets it to 0. At 300 frames (10 seconds), the next part of the demo
+  starts. A new shoot key on the title or in the demo starts a game.
+- A part is a list of scenes. After the last scene of a part, the title
+  shows again, and the next idle time plays the next part. After the last
+  part, the first part comes again. The next part stays the same during a
+  game.
+- A scene record gives the caption, the player, the enemies and a pickup.
+  It also gives the waits for bullets and hunters, the start of the random
+  sequence, a power and a jinx. So a scene plays the same each time.
+- A scene starts with the banner for 60 frames. It shows the caption: a
+  name in big yellow text and a line in green. Then the script gives the
+  keys of each frame: pairs of a key byte and a number of frames. The game
+  rules do the rest.
+- The demo player has one life and cannot die. The demo plays at level 1,
+  so no enemy leaves a pickup, and a clear arena does not start a level.
+  The end of the script ends the scene.
+- In place of the score, SHOOT flashes at the rate of the title prompt. No
+  reserve lives show.
+
+| Part | Scenes |
+| --- | --- |
+| A | Grunt: SLOW  10 POINTS. Three grunts. The player shoots up, walks left and shoots, then walks right and shoots. |
 
 ### Sound
 
@@ -463,14 +514,18 @@ two fields of the effect.
 1. Do one step of the random numbers. Read the keys. If O and K are held
    and both W and S read as held, use the vertical keys of the last frame.
    Find the new shoot keys: held now, but not in the last frame.
-   On the title, a new shoot key starts a game: go to step 9. If not, take
-   the next sound record, draw the prompt and go to step 10. For the
+   On the title, a new shoot key starts a game: go to step 9. If not, count
+   the idle frames. At 300, start the demo and go to step 9. If not, take
+   the next sound record, draw the prompt and go to step 10. In the demo, a
+   new shoot key starts a game: go to step 9. For the
    initials, do the rules of "Title and high scores". Then take the next
    sound record, draw the letters and the bar, and go to step 10.
    After game over, count down the pause and go to step 9. At 0, show the
    initials screen or the title. After a death, count down the pause and go
    to step 9. At 0, take a life. Then start the same level again, or start
-   game over. During the banner, count it down and go to step 9.
+   game over. During the banner, count it down and go to step 9. In the
+   demo, take the keys from the script. At its end, start the next scene
+   or show the title, and go to step 9.
 2. Move the player 2 pixels across and 4 rows down or up, or half that
    with the heavy jinx. Stop the player at
    the arena edge. The player is 6 pixels wide and 10 rows high. It starts at
@@ -571,6 +626,8 @@ remove one part of the game. The key scripts are short and written by hand.
 | `blitz` | `SKIP_TITLE` `NO_READY` `FIXED_ENEMIES` `NO_DEATH` `FIXED_PICKUP=8` | `blitz.txt` | A blitz at frame 8: 3 hunters, the jinx sound, BLITZ in the band until frame 68 |
 | `jinxdrop` | `SKIP_TITLE` `NO_READY` `FIXED_ENEMIES` `STILL` `FIRST_LEVEL=8` `DROP_EVERY=1` `FIRST_DROP=2` | `pickups.txt` | The grunt leaves a slow jinx at frame 9 (red icon), collected at frame 26. The hunter leaves a bomb at frame 34. |
 | `level8` | `SKIP_TITLE` `FIRST_LEVEL=8` `NO_DEATH` | none | The level 8 banner with its hint, 16 grunts and 4 shooters |
+| `demo` | `DEMO_SOON` | none | The title, the demo at frame 30, the grunt scene (hits at frames 104, 124 and 143), the title at frame 163 and the demo again at frame 193. SHOOT flashes. |
+| `demoshoot` | `DEMO_SOON` | `demoshoot.txt` | W at frame 10 starts the idle count again, so the demo starts at frame 40. A shoot key at frame 120 starts a game. |
 | `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | The banner with a two-digit level, 16 grunts and 4 shooters, a bullet up, a death at frame 91 |
 | `over` | `SKIP_TITLE` `NO_READY` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
 | `scores` | `NO_READY` `FIXED_ENEMIES` `FIRST_LIVES=1` `FIRST_SCORE=0x5000` | `scores.txt` | A start from the title (frame 3), game over (frame 82), the initials screen (frame 172), a held W that repeats, S from A to Z, the entry CZA at place 7 below REX (frame 192), a held shoot key that does not start a game |
@@ -590,6 +647,8 @@ The controls:
 - `FIRST_JINX=N`, `JINX_TIME=N`: a game starts with jinx N (6 slow, 7
   heavy), and a jinx lasts N frames.
 - `FIRST_DROP=N`: the first drop is place N of the drop order (from 0).
+- `DEMO_SOON`: the demo starts after 30 idle frames, not 300.
+- `FIRST_PART=N`: the first part of the demo (from 0).
 - `ONE_SHOOTER`: one shooter at x 61, y 30 that fires each 20 frames, and
   no other enemies.
 - `FIXED_ENEMIES`: a grunt at x 100, y 90 and a hunter at x 100, y 40. No
@@ -611,6 +670,8 @@ measured in these captures.
 
 Negative controls, run on copies. Each one must fail:
 
+- Increment 11a: a demo that does not stop the scene at the end of its
+  script fails at frame 163 (`demo`).
 - Increment 10: a slow jinx that keeps the shoot delay at 2 fails at frame
   1 (`slow`): the delay is 2, not 5.
 - Increment 9: a spread power with a step of 4 places, not 2, fails at

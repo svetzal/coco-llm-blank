@@ -104,6 +104,13 @@ keys = "pickups.txt"
 [variants.level8]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=8", "NO_DEATH"]
 
+[variants.demo]
+defines = ["DEMO_SOON"]
+
+[variants.demoshoot]
+defines = ["DEMO_SOON"]
+keys = "demoshoot.txt"
+
 [variants.level10]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=10"]
 

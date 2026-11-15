@@ -1,4 +1,5 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
+* Increment 11a: a demo that starts when the title is idle for 10 seconds.
 * Increment 10: jinxes, pickups that hurt, and the names of the gift and
 * the jinx in the band.
 * Increment 9: things to collect: points, power-ups and bombs.
@@ -116,6 +117,8 @@ FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
 *   DROP_EVERY, FIRST_POWER, POWER_TIME  other values for the pickups.
 *   FIRST_JINX, JINX_TIME  a jinx at the start of a game, and its time.
 *   FIRST_DROP   the first place in drop_order.
+*   DEMO_SOON    the demo starts after 30 idle frames on the title, not 300.
+*   FIRST_PART=N the first demo part.
 *   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
 
 * Things to collect (README.md "Things to collect"). Pickup types:
@@ -163,6 +166,29 @@ BAR_ROW equ 9                   ; the timer bars: rows 9-10, 6 bytes
 BAR_BYTES equ 6
 GIFT_STEP equ 50                ; frames for each byte of a bar
 JINX_STEP equ 25
+
+* The demo (README.md "Demo"). A part is a list of scenes. After a part,
+* the title shows again, and the next idle time starts the next part.
+        ifdef DEMO_SOON
+IDLE_FRAMES equ 30
+        else
+IDLE_FRAMES equ 300             ; 10 seconds of the title with no key
+        endc
+        ifndef FIRST_PART
+FIRST_PART equ 0
+        endc
+SC_CAPTION equ 0                ; scene record: the banner text list
+SC_X    equ 2                   ; the player's start
+SC_Y    equ 3
+SC_FIRE equ 4                   ; frames between two bullets, 0 = none
+SC_FIRST equ 5                  ; frames until the first hunter, 2 bytes
+SC_WAIT equ 7                   ; frames between two hunters, 0 = none
+SC_SEED equ 9                   ; the random sequence, 2 bytes
+SC_PICKUP equ 11                ; pickup type (0 = none), x, y
+SC_POWER equ 14
+SC_JINX equ 15
+SC_SCRIPT equ 16                ; the keys: pairs of keys and frames, 0 ends
+SC_ENEMIES equ 18               ; type, x, y for each enemy; 0 ends
 
 * Score, lives and pauses (README.md "Score and lives").
 EXTRA_EVERY equ $10             ; BCD hundreds: an extra life each 1000
@@ -372,6 +398,8 @@ clear   clr ,x+
         std <seed
         lda #$FF
         sta <new_rank           ; no entry of the table is new
+        lda #FIRST_PART
+        sta <part
         ifdef SKIP_TITLE        ; check only: a game at once
         lda #PLAY
         sta <phase
@@ -379,6 +407,9 @@ clear   clr ,x+
         jsr resync
         else
         jsr setup_title         ; phase = TITLE (0): the title screen
+        lda #SCREEN_A/256       ; at power-on, both screens at once
+        jsr title_screen
+        clr <fresh
         endc
 
 frame   jsr rand_step           ; one step of the random sequence a frame
@@ -391,12 +422,35 @@ frame   jsr rand_step           ; one step of the random sequence a frame
         sta <old_fire
         lda <phase
         cmpa #PLAY
-        beq frame_over
+        beq frame_game
         cmpa #ENTRY
         lbeq frame_entry
 * Title: a shoot key that was not held in the last frame starts a game.
+* Any other game key starts the idle count again. After IDLE_FRAMES
+* frames with no key, the next part of the demo starts.
         lda <fire_new
-        lbeq frame_still
+        bne frame_start
+        lda <move_keys
+        ora <fire_keys
+        beq frame_idle
+        ldd #0
+        std <idle
+        lbra frame_still
+frame_idle
+        ldd <idle
+        addd #1
+        std <idle
+        cmpd #IDLE_FRAMES
+        lbne frame_still
+        jsr start_demo
+        lbra frame_draw
+* In the demo, a new shoot key starts a game.
+frame_game
+        tst <demo
+        beq frame_over
+        lda <fire_new
+        beq frame_over
+frame_start
         jsr begin_game
         lbra frame_draw
 * After game over: wait. Then the initials for a high score, or the title.
@@ -404,7 +458,7 @@ frame_over
         lda <over
         beq frame_dying
         dec <over
-        bne frame_draw
+        lbne frame_draw
         jsr game_end
         lbra frame_still
 * After a death: wait. Then take a life, and start the level again or
@@ -413,7 +467,7 @@ frame_dying
         lda <dying
         beq frame_ready
         dec <dying
-        bne frame_draw
+        lbne frame_draw
         dec <lives
         bne frame_again
         ldx #fx_over
@@ -433,7 +487,24 @@ frame_ready
         beq frame_play
         dec <ready
         bra frame_draw
+* In the demo, the scene script gives the keys. At its end, the next scene
+* of the part starts. After the last scene, the title shows again.
 frame_play
+        tst <demo
+        beq frame_move
+        jsr demo_keys
+        bcc frame_move
+        ldx <scene_ptr
+        leax 2,x
+        stx <scene_ptr
+        ldd ,x
+        beq frame_title
+        jsr start_scene
+        bra frame_draw
+frame_title
+        jsr setup_title
+        lbra frame_still
+frame_move
         jsr move_player
         jsr move_shots
         jsr move_bullets
@@ -455,6 +526,8 @@ frame_clear
         ifdef NO_ENEMIES        ; check only: an empty arena is not clear
         bra frame_draw
         endc
+        tst <demo               ; the end of a scene is the end of its keys
+        bne frame_draw
         ldx #enemies
 fc_slot tst E_TYPE,x
         bne frame_draw          ; an enemy is left
@@ -468,6 +541,7 @@ fc_slot tst E_TYPE,x
         jsr start_level
 frame_draw
         jsr sound_frame
+        jsr fresh_screen
         jsr draw_frame
 frame_show
         jsr show
@@ -478,6 +552,7 @@ frame_show
 * Title and initials: the screens stay, and only one part changes.
 frame_still
         jsr sound_frame
+        jsr fresh_screen
         lda <phase
         cmpa #ENTRY
         beq fs_entry
@@ -902,6 +977,12 @@ df_end  ldd <next
 * --- The banner: "LEVEL N" in big text, and the hint of a first level
 * under it. An erase-list entry clears the banner area.
 draw_banner
+        tst <demo               ; the demo: the caption of the scene
+        beq db_level
+        ldx <scene
+        ldu SC_CAPTION,x
+        bra db_hint
+db_level
         ldd #BANNER_ROW*32+9
         adda <drawing
         tfr d,y
@@ -980,6 +1061,21 @@ eb_row  stu ,x
 * (font.txt). The score is at byte columns 1-6. Reserve lives are from
 * byte column 30 to the left; empty places get the floor.
 draw_hud
+        tst <demo               ; the demo: SHOOT flashes in place of the score
+        beq dh_score
+        ldd #HUD_ROW*32+1
+        adda <drawing
+        tfr d,y
+        clr <tcolour            ; yellow
+        ldu #shoot_on
+        lda <frames+1
+        bita #16
+        beq dh_prompt
+        ldu #shoot_off
+dh_prompt
+        jsr text_at
+        bra dh_lives
+dh_score
         lda <drawing
         ldb #HUD_ROW*32+1
         tfr d,y                 ; the first digit
@@ -995,6 +1091,7 @@ dh_byte lda ,x
         lbsr dh_glyph_digit     ; low digit
         cmpx #score+3
         blo dh_byte
+dh_lives
         lda <drawing
         ldb #HUD_ROW*32+30
         tfr d,y                 ; the first reserve life
@@ -1207,12 +1304,20 @@ resync  lda $FF02
 
 * --- From the title: a new game in the arena.
 begin_game
+        clr <demo
+        bsr arena_screens
+        jsr new_game
+        bra resync
+
+* --- The arena in both screens, for a game or the demo.
+arena_screens
         lda #PLAY
         sta <phase
-        ldx #SCREEN_A
+        lda <drawing
+        clrb
+        tfr d,x
         jsr prepare_screen
-        ldx #SCREEN_B
-        jsr prepare_screen
+        jsr other_fresh
         ldd #LIST_A             ; nothing to erase
         std <end_a
         ldd #LIST_B
@@ -1220,8 +1325,118 @@ begin_game
         ldd #0                  ; both screens show no names
         std <hud_seen
         std <hud_seen+2
-        jsr new_game
+        rts
+
+* --- From the idle title: the next part of the demo. The demo player has
+* one life and cannot die. It plays at level 1, so no enemy leaves a
+* pickup.
+start_demo
+        lda #1
+        sta <demo
+        bsr arena_screens
+        lda #1
+        sta <lives
+        sta <level
+        ldd #0
+        std <score
+        sta <score+2
+        clr <next_extra
+        ldd #EXTRA_EVERY*256
+        std <next_extra+1
+        ldx #parts
+        lda <part
+        lsla
+        ldx a,x                 ; the scene list of the part
+        stx <scene_ptr
+        lda <part               ; the next part, in a ring
+        inca
+        cmpa #PARTS
+        blo sd_part
+        clra
+sd_part sta <part
+        bsr start_scene
         bra resync
+
+* --- The scene at scene_ptr: the player, the enemies, the pickup, the
+* waits, the random sequence, the power and the jinx, from its record.
+* The caption shows in the banner.
+start_scene
+        ldx [scene_ptr]
+        stx <scene
+        ldd SC_X,x
+        std <px                 ; px and py
+        jsr clear_arena
+        ldx <scene
+        lda SC_FIRE,x
+        sta <fire_wait
+        sta <fire_timer
+        ldd SC_FIRST,x
+        std <hunter_timer
+        ldd SC_WAIT,x
+        std <hunter_wait
+        ldd SC_SEED,x
+        std <seed
+        lda SC_PICKUP,x
+        sta <pk_type
+        ldd SC_PICKUP+1,x
+        std <pk_x               ; pk_x and pk_y
+        lda #PICKUP_FRAMES
+        sta <pk_timer
+        lda SC_POWER,x
+        sta <power
+        ldd #POWER_TIME
+        std <power_timer
+        lda SC_JINX,x
+        sta <jinx
+        lda #JINX_TIME
+        sta <jinx_timer
+        ldd SC_SCRIPT,x
+        std <dptr
+        clr <dcount
+        lda #READY_FRAMES
+        sta <ready
+        leax SC_ENEMIES,x
+        ldu #enemies
+        ldy #periods
+sc_enemy
+        lda ,x+
+        beq sc_done
+        sta E_TYPE,u
+        ldb a,y
+        stb E_TICK,u
+        ldd ,x++
+        std E_X,u
+        leau E_SIZE,u
+        bra sc_enemy
+sc_done rts
+
+* --- The keys of the demo player for this frame, from the script: pairs
+* of a key byte (move keys in bits 3-0, shoot keys in bits 7-4) and a
+* count of frames. Carry set at the end of the script.
+demo_keys
+        lda <dcount
+        bne dk_keys
+        ldx <dptr
+        ldd ,x++
+        tstb
+        beq dk_end
+        stx <dptr
+        sta <dkeys
+        stb <dcount
+dk_keys dec <dcount
+        lda <dkeys
+        tfr a,b
+        anda #$0F
+        sta <move_keys
+        lsrb
+        lsrb
+        lsrb
+        lsrb
+        stb <fire_keys
+        andcc #$FE
+        rts
+dk_end  orcc #$01
+        rts
 
 * --- After the pause of game over: the initials if the score gets a
 * place in the table, if not the title.
@@ -1283,11 +1498,41 @@ ins_put ldd <score
 * --- The title screen in both screens.
 setup_title
         clr <phase              ; TITLE
-        lda #SCREEN_A/256
+        clr <demo
+        ldd #0
+        std <idle
+        lda <drawing
         bsr title_screen
-        lda #SCREEN_B/256
-        bsr title_screen
+        bsr other_fresh
         lbra resync
+
+* --- A new screen goes only into the hidden screen, so that the shown
+* screen does not change while the VDG shows it. 'fresh' keeps the other
+* screen. The first frame that draws into it draws the new screen first.
+other_fresh
+        lda <drawing
+        eora #(SCREEN_A^SCREEN_B)/256
+        sta <fresh
+        rts
+
+* At the start of drawing a frame: the new screen of the phase, if the
+* hidden screen does not have it yet.
+fresh_screen
+        lda <fresh
+        cmpa <drawing
+        bne fh_done
+        clr <fresh
+        ldb <phase
+        cmpb #ENTRY
+        lbeq entry_screen       ; A = the screen
+        cmpb #PLAY
+        beq fh_arena
+        bra title_screen
+fh_arena
+        clrb
+        tfr d,x
+        jmp prepare_screen
+fh_done rts
 
 * A = the screen. The name, the table, the enemies and their points, and
 * the keys. The prompt is drawn each frame (draw_prompt).
@@ -1402,10 +1647,9 @@ setup_entry
         sta <initials
         sta <initials+1
         sta <initials+2
-        lda #SCREEN_A/256
+        lda <drawing
         bsr entry_screen
-        lda #SCREEN_B/256
-        bsr entry_screen
+        lbsr other_fresh
         lbra resync
 
 * A = the screen. The texts and the score. The letters and the cursor are
@@ -1625,6 +1869,19 @@ start_level
         sta <px
         lda #START_Y
         sta <py
+        bsr clear_arena
+        ifdef FIXED_PICKUP      ; check only: a pickup above the player
+        lda #FIXED_PICKUP
+        sta <pk_type
+        ldd #60*256+60          ; x 60, y 60
+        std <pk_x
+        lda #PICKUP_FRAMES
+        sta <pk_timer
+        endc
+        lbra sl_ready
+
+* --- No shots, enemies, bullets or pickup.
+clear_arena
         clr <delay
         ldx #shots
 sl_shot clr S_ON,x
@@ -1646,15 +1903,9 @@ sl_bullet
         lda #$FF                ; the first shooter to fire is the first in
         sta <shooter_turn          ; slot order
         clr <pk_type            ; no pickup
-        ifdef FIXED_PICKUP      ; check only: a pickup above the player
-        lda #FIXED_PICKUP
-        sta <pk_type
-        ldd #60*256+60          ; x 60, y 60
-        std <pk_x
-        lda #PICKUP_FRAMES
-        sta <pk_timer
-        endc
+        rts
 * The banner "LEVEL N" first: nothing moves for READY_FRAMES frames.
+sl_ready
         ifndef NO_READY         ; check only: no banner
         lda #READY_FRAMES
         sta <ready
@@ -2293,6 +2544,11 @@ hit_player
         andcc #$FE
         rts
         endc
+        tst <demo               ; the demo player cannot die
+        beq hp_enemies
+        andcc #$FE
+        rts
+hp_enemies
         ldu #enemies
 hp_slot tst E_TYPE,u
         beq hp_next
@@ -2631,6 +2887,51 @@ level_text
         fcc "LEVEL "
         fcb 0
 
+* --- The demo. parts: the scene list of each part. A scene list ends
+* with 0. Keys in a script: move keys in bits 3-0, shoot keys in bits 7-4.
+PARTS   equ 1
+parts   fdb part_a
+part_a  fdb scene_grunt,0
+
+scene_grunt
+        fdb cap_grunt
+        fcb 61,150              ; the player
+        fcb 0                   ; no bullets
+        fdb 0,0                 ; no hunters
+        fdb SEED
+        fcb 0,0,0               ; no pickup
+        fcb 0,0                 ; no power, no jinx
+        fdb keys_grunt
+        fcb GRUNT,61,30
+        fcb GRUNT,21,50
+        fcb GRUNT,101,50
+        fcb 0
+keys_grunt
+        fcb 0,4
+        fcb UP*16,8             ; shoot up: the middle grunt
+        fcb LEFT,10             ; walk left
+        fcb UP*16,8             ; the left grunt
+        fcb RIGHT,18            ; walk right
+        fcb UP*16,8             ; the right grunt
+        fcb 0,16
+        fcb 0,0
+cap_grunt
+        fdb BANNER_ROW*32+11
+        fcb BIG+YELLOW_TEXT
+        fcc "GRUNT"
+        fcb 0
+        fdb 76*32+8
+        fcb GREEN_TEXT
+        fcc "SLOW  10 POINTS"
+        fcb 0
+        fdb $FFFF
+shoot_on
+        fcc "SHOOT "
+        fcb 0
+shoot_off
+        fcc "      "
+        fcb 0
+
 * --- The first levels: grunts, the first hunter wait, the hunter wait and
 * the hint. The hint is a text list, centred on row 76, in green.
 * Each row: grunts, shooters, the fire wait, then the first hunter wait,
@@ -2833,6 +3134,15 @@ fired   rmb 1                   ; shots that started in this frame
 jinx    rmb 1                   ; 0, PK_SLOW, PK_HEAVY or PK_BLITZ
 jinx_timer rmb 1                ; frames until the jinx ends
 hud_seen rmb 4                  ; the gift and jinx names on screens A, B
+idle    rmb 2                   ; title frames with no key
+demo    rmb 1                   ; 1 in the demo
+part    rmb 1                   ; the next demo part
+scene_ptr rmb 2                 ; the place of the scene in its part
+scene   rmb 2                   ; the scene record
+dptr    rmb 2                   ; the next key pair of the script
+dcount  rmb 1                   ; frames left of the current key pair
+dkeys   rmb 1
+fresh   rmb 1                   ; the screen that needs the new screen, or 0
 state_end
 
 * --- More state after the erase lists, in extended addressing.

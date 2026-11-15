@@ -7,7 +7,8 @@ the pixels itself.
 
 Frame N is drawn into the hidden screen and then shown. Odd frames are at $2400 and even
 frames at $0400. The model keeps both screens. A new screen (the arena, the title or the
-initials) goes into both screens. Then each frame draws its part into the hidden screen:
+initials) goes into the hidden screen, and into the other screen at the start of the
+next frame that draws into it. Then each frame draws its part into the hidden screen:
 in a game the whole picture, on the title the prompt, for the initials the letters and
 the cursor.
 """
@@ -75,6 +76,8 @@ CONTROLS = {
     "blitz": {"SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "NO_DEATH"},
     "level8": {"SKIP_TITLE", "NO_DEATH"},
     "jinxdrop": {"SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL"},
+    "demo": {"DEMO_SOON"},
+    "demoshoot": {"DEMO_SOON"},
     "over": {"SKIP_TITLE", "NO_READY"},
     "scores": {"NO_READY", "FIXED_ENEMIES"},
 }
@@ -117,7 +120,8 @@ SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt", "scores": "scores.txt",
            "shooter": "shooter.txt", "pickups": "pickups.txt", "bomb": "bomb.txt",
            "jinxdrop": "pickups.txt",
            "double": "powers.txt", "spread": "powers.txt", "star": "powers.txt",
-           "slow": "jinxes.txt", "heavy": "jinxes.txt", "blitz": "blitz.txt"}
+           "slow": "jinxes.txt", "heavy": "jinxes.txt", "blitz": "blitz.txt",
+           "demoshoot": "demoshoot.txt"}
 # Title and high scores (README.md "Title and high scores").
 TITLE, PLAY, ENTRY = 0, 1, 2
 TABLE = [(10000, "ZAP"), (9000, "ACE"), (8000, "MAX"), (7000, "JET"), (6000, "SKY"),
@@ -136,6 +140,39 @@ TEACH = {
     6: (13, 150, 150, "BOMBS CLEAR THE AREA", 6, 3, 36),
 }
 READY_FRAMES = 60
+# The demo (README.md "Demo"): after IDLE_FRAMES title frames with no game key, the
+# next part plays. A scene: the caption (big name at a byte column, a line in green at
+# a byte column), the player, the bullet wait, the first hunter wait, the hunter
+# wait, the seed, the pickup (type, x, y), the power, the jinx, the enemies (type,
+# x, y) and the script (held keys, frames).
+IDLE_FRAMES = 300
+IDLE_SOON = 30
+
+
+@dataclass
+class Scene:
+    name: str
+    name_column: int
+    line: str
+    line_column: int
+    player: tuple[int, int]
+    enemies: list[tuple[int, int, int]]
+    script: list[tuple[str, int]]
+    fire: int = 0
+    first: int = 0
+    wait: int = 0
+    seed: int = 0xACE1
+    pickup: tuple[int, int, int] = (0, 0, 0)
+    power: int = 0
+    jinx: int = 0
+
+
+SCENES = {
+    "grunt": Scene("GRUNT", 11, "SLOW  10 POINTS", 8, (61, 150),
+                   [(1, 61, 30), (1, 21, 50), (1, 101, 50)],
+                   [("", 4), ("O", 8), ("A", 10), ("O", 8), ("D", 18), ("O", 8), ("", 16)]),
+}
+PARTS = [["grunt"]]
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
 # field plays one record, so each frame plays two.
 SQUARE, NOISE = 0, 0x80
@@ -252,6 +289,13 @@ class Game:
     old_fire: frozenset = frozenset()
     fire_new: frozenset = frozenset()
     setup: bool = False  # a new screen in this frame
+    idle: int = 0
+    demo: bool = False
+    part: int = 0
+    scenes: list[str] = field(default_factory=list)  # the scenes left in the part
+    script: list[tuple[str, int]] = field(default_factory=list)  # the keys left
+    dcount: int = 0
+    dkeys: str = ""
 
     def start_sound(self, name: str) -> None:
         if EFFECTS[name][0] >= self.priority:
@@ -305,12 +349,7 @@ class Game:
 
 def start_level(game: Game) -> None:
     game.x, game.y = START
-    game.delay = 0
-    game.slots = [None] * SHOT_SLOTS
-    game.enemies = [None] * ENEMY_SLOTS
-    game.bullets = [None] * BULLET_SLOTS
-    game.shooter_turn = 0xFF
-    game.pickup = None
+    clear_arena(game)
     if game.variant in FIXED_PICKUP:
         game.pickup = [FIXED_PICKUP[game.variant], 60, 60, PICKUP_FRAMES]
     if "NO_READY" not in game.controls:
@@ -347,12 +386,61 @@ def start_level(game: Game) -> None:
         game.enemies[slot] = Enemy(GRUNT if slot < grunts else SHOOTER, x, y, slot % 2 + 1)
 
 
+def clear_arena(game: Game) -> None:
+    game.delay = 0
+    game.slots = [None] * SHOT_SLOTS
+    game.enemies = [None] * ENEMY_SLOTS
+    game.bullets = [None] * BULLET_SLOTS
+    game.shooter_turn = 0xFF
+    game.pickup = None
+
+
+def start_demo(game: Game) -> None:
+    """The next part: the arena, one life that cannot end, level 1, score 0."""
+    game.phase, game.demo, game.setup = PLAY, True, True
+    game.lives, game.level, game.score, game.next_extra = 1, 1, 0, EXTRA_EVERY
+    game.scenes = list(PARTS[game.part])
+    game.part = (game.part + 1) % len(PARTS)
+    start_scene(game)
+
+
+def start_scene(game: Game) -> None:
+    scene = SCENES[game.scenes[0]]
+    game.x, game.y = scene.player
+    clear_arena(game)
+    game.fire_wait = game.fire_timer = scene.fire
+    game.hunter_timer, game.hunter_wait = scene.first, scene.wait
+    game.seed = scene.seed
+    if scene.pickup[0]:
+        game.pickup = [*scene.pickup, PICKUP_FRAMES]
+    game.power, game.power_timer = scene.power, POWER_TIME.get(game.variant, 300)
+    game.jinx, game.jinx_timer = scene.jinx, JINX_TIME
+    game.script, game.dcount = list(scene.script), 0
+    game.ready = READY_FRAMES
+    for slot, (kind, x, y) in enumerate(scene.enemies):
+        game.enemies[slot] = Enemy(kind, x, y, PERIOD[kind])
+
+
+def demo_keys(game: Game) -> str | None:
+    """The keys of the demo player for this frame, or None at the end of the script."""
+    if game.dcount == 0:
+        if not game.script:
+            return None
+        game.dkeys, game.dcount = game.script.pop(0)
+    game.dcount -= 1
+    return game.dkeys
+
+
+def setup_title(game: Game) -> None:
+    game.phase, game.demo, game.idle, game.setup = TITLE, False, 0, True
+
+
 def power_on(variant: str) -> Game:
     """The program clears its state, then shows the title (or starts a game at once)."""
     if "SKIP_TITLE" in CONTROLS[variant]:
         return new_game(variant)
     return Game(x=0, y=0, level=0, lives=0, next_extra=0, phase=TITLE,
-                controls=frozenset(CONTROLS[variant]))
+                controls=frozenset(CONTROLS[variant]), variant=variant)
 
 
 def game_end(game: Game) -> None:
@@ -363,7 +451,7 @@ def game_end(game: Game) -> None:
     if game.rank < 10:
         game.phase, game.pos, game.rpt, game.initials = ENTRY, 0, 0, ["A"] * 3
     else:
-        game.phase = TITLE
+        setup_title(game)
 
 
 def entry(game: Game, keys: str) -> None:
@@ -392,7 +480,7 @@ def entry(game: Game, keys: str) -> None:
             game.table.pop()
             game.new_rank = game.rank
             game.start_sound("level")
-            game.phase, game.setup = TITLE, True
+            setup_title(game)
 
 
 def new_game(variant: str, game: Game | None = None) -> Game:
@@ -478,7 +566,7 @@ def hit_enemies(game: Game) -> None:
 
 
 def touched(game: Game) -> bool:
-    if "NO_DEATH" in game.controls:
+    if "NO_DEATH" in game.controls or game.demo:
         return False
     return any(
         e and overlap(e.x, e.y, ENEMY_W, ENEMY_H, game.x, game.y, PLAYER_W, PLAYER_H)
@@ -566,8 +654,17 @@ def step(game: Game, keys: str, variant: str) -> None:
     game.fire_new, game.old_fire = fire - game.old_fire, fire
     if game.phase == TITLE:
         if game.fire_new:
-            game.phase, game.setup = PLAY, True
+            game.phase, game.setup, game.demo = PLAY, True, False
             new_game(variant, game)
+        elif any(k in MOVE or k in SHOOT for k in keys):
+            game.idle = 0
+        else:
+            game.idle += 1
+            if game.idle == (IDLE_SOON if "DEMO_SOON" in game.controls else IDLE_FRAMES):
+                start_demo(game)
+    elif game.demo and game.fire_new:
+        game.phase, game.setup, game.demo = PLAY, True, False
+        new_game(variant, game)
     elif game.phase == ENTRY:
         entry(game, keys)
     elif game.over:
@@ -586,6 +683,15 @@ def step(game: Game, keys: str, variant: str) -> None:
                 start_level(game)
     elif game.ready:
         game.ready -= 1
+    elif game.demo:
+        demo = demo_keys(game)
+        if demo is not None:
+            play(game, demo)
+        elif len(game.scenes) > 1:
+            game.scenes.pop(0)
+            start_scene(game)
+        else:
+            setup_title(game)
     else:
         play(game, keys)
     game.sound_frame()  # the first field of the frame
@@ -613,7 +719,7 @@ def play(game: Game, keys: str) -> None:
     if touched(game):
         game.start_sound("death")
         game.dying = DYING_FRAMES
-    elif not any(game.enemies) and "NO_ENEMIES" not in game.controls:
+    elif not any(game.enemies) and "NO_ENEMIES" not in game.controls and not game.demo:
         game.start_sound("level")
         game.level += 1
         start_level(game)
@@ -761,13 +867,18 @@ def _games(frames: int, variant: str) -> list[tuple[Game, dict[int, np.ndarray]]
     first = still(game)
     bufs = {0: first, 1: first}
     result = [(copy.deepcopy(game), bufs)]
+    fresh = None  # the screen that does not have the new screen yet
     for n in range(frames):
         keys, position = script[n] if n < len(script) else ("", None)
         game.setup = False
         step(game, keys, variant)
-        if game.setup:
-            bufs = {0: still(game), 1: still(game)}
         hidden = (n + 1) % 2
+        # A new screen goes into the hidden screen only. The other screen gets it at
+        # the start of the next frame that draws into it.
+        if game.setup:
+            bufs, fresh = {**bufs, hidden: still(game)}, 1 - hidden
+        elif fresh == hidden:
+            bufs, fresh = {**bufs, hidden: still(game)}, None
         bufs = {**bufs, hidden: changing(game, bufs[hidden], n + 1)}
         if position is not None and position != (game.x, game.y):
             raise ValueError(
@@ -792,7 +903,7 @@ def stamp(codes: np.ndarray, name: str, left: int, top: int) -> None:
                 codes[top + y, left + x] = CODES[char]
 
 
-def picture(game: Game | None) -> np.ndarray:
+def picture(game: Game | None, frame: int = 0) -> np.ndarray:
     """Pixel codes: the arena, then the shots and the enemies in slot order, then the player."""
     codes = arena()
     if game is not None:
@@ -810,25 +921,32 @@ def picture(game: Game | None) -> np.ndarray:
             if enemy:
                 stamp(codes, SPRITE[enemy.kind], enemy.x, enemy.y)
         stamp(codes, "player", game.x, game.y)
-        if game.ready:
+        if game.ready and game.demo:
+            scene = SCENES[game.scenes[0]]
+            text(codes, scene.name, 60, scene.name_column, big=True)
+            text(codes, scene.line, 76, scene.line_column, "G")
+        elif game.ready:
             text(codes, f"LEVEL {game.level}", 60, 9, big=True)
             if game.level in TEACH:
                 text(codes, TEACH[game.level][3], 76, TEACH[game.level][4], "G")
             elif game.level == JINX_LEVEL:
                 text(codes, JINX_HINT[0], 76, JINX_HINT[1], "G")
-        hud(codes, game)
+        hud(codes, game, frame)
     return codes
 
 
-def hud(codes: np.ndarray, game: Game) -> None:
+def hud(codes: np.ndarray, game: Game, frame: int = 0) -> None:
     """The 6-digit score at pixels 4-27 and the reserve lives from pixel 120 to the
     left, on rows HUD_ROW to HUD_ROW + 4. Glyphs from font.txt cover every pixel."""
     def glyph(name: str, left: int) -> None:
         for y, row in enumerate(FONT[name]):
             for x, char in enumerate(row):
                 codes[HUD_ROW + y, left + x] = CODES[char]
-    for k, digit in enumerate(f"{game.score:06d}"):
-        glyph(digit, 4 + 4 * k)
+    if game.demo:  # SHOOT flashes in the place of the score, at the rate of the prompt
+        text(codes, "SHOOT" if (frame - 1) & 16 == 0 else "", HUD_ROW, 1)
+    else:
+        for k, digit in enumerate(f"{game.score:06d}"):
+            glyph(digit, 4 + 4 * k)
     for i in range(min(max(game.lives - 1, 0), ICONS)):
         glyph("life", 120 - 4 * i)
     # The gift name in yellow and the jinx name in red, each with a bar of the time
@@ -892,7 +1010,7 @@ def still(game: Game) -> np.ndarray:
 def changing(game: Game, base: np.ndarray, frame: int) -> np.ndarray:
     """The hidden screen after frame N draws its part. The frame counter is N - 1."""
     if game.phase == PLAY:
-        return picture(game)
+        return picture(game, frame)
     codes = base.copy()
     if game.phase == TITLE:
         text(codes, "SHOOT TO START" if (frame - 1) & 16 == 0 else " " * 14, 156, 9)
@@ -975,6 +1093,9 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
         raise ValueError(f"Frame {frame}: the pickup differs: expected {p}.")
     if ram[symbols["shooter_turn"]] != game.shooter_turn and game.phase == PLAY:
         raise ValueError(f"Frame {frame}: shooter_turn differs.")
+    got = (ram[symbols["demo"]], ram[symbols["part"]])
+    if got != (int(game.demo), game.part):
+        raise ValueError(f"Frame {frame}: demo, part = {got}, expected {(game.demo, game.part)}.")
     if ram[symbols["level"]] != game.level:
         raise ValueError(f"Frame {frame}: level {ram[symbols['level']]}, expected {game.level}.")
     for i, enemy in enumerate(game.enemies):
