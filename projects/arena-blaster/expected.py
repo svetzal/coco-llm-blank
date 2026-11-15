@@ -46,9 +46,12 @@ SLOT_SIZE = 11  # on, x, y, vx, vy, sprite (2), maxx, maxy, w, h
 # Enemies (README.md "Levels and enemies").
 ENEMY_SLOTS, ENEMY_SIZE = 24, 4  # type, x, y, tick
 ENEMY_W, ENEMY_H = 6, 10
-GRUNT, HUNTER = 1, 2
-PERIOD = {GRUNT: 2, HUNTER: 1}
-SPRITE = {GRUNT: "grunt", HUNTER: "hunter"}
+GRUNT, HUNTER, SHOOTER = 1, 2, 3
+PERIOD = {GRUNT: 2, HUNTER: 1, SHOOTER: 3}
+SPRITE = {GRUNT: "grunt", HUNTER: "hunter", SHOOTER: "shooter"}
+# Enemy bullets (README.md "Shooters").
+BULLET_SLOTS, BULLET_SIZE = 4, 5  # on, x, y, vx, vy
+BULLET_W, BULLET_H, BULLET_VX, BULLET_VY = 3, 3, 3, 6
 SEED = 0xACE1
 # Test-harness controls of each variant (coco.toml), and its first level.
 CONTROLS = {
@@ -59,20 +62,23 @@ CONTROLS = {
     "hunter": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"},
     "level1": {"SKIP_TITLE"},
     "level3": {"SKIP_TITLE", "NO_DEATH"},
+    "level5": {"SKIP_TITLE", "NO_DEATH"},
+    "shooter": {"SKIP_TITLE", "NO_READY", "ONE_SHOOTER"},
     "level10": {"SKIP_TITLE"},
     "over": {"SKIP_TITLE", "NO_READY"},
     "scores": {"NO_READY", "FIXED_ENEMIES"},
 }
-START_LEVEL = {"level3": 3, "level10": 10}
+START_LEVEL = {"level3": 3, "level5": 5, "level10": 10}
 START_LIVES = {"over": 1, "scores": 1}
 START_SCORE = {"hit": 990, "scores": 5000}
 # Score and lives (README.md "Score and lives").
-POINTS = {1: 10, 2: 50}  # grunt, hunter
+POINTS = {GRUNT: 10, HUNTER: 50, SHOOTER: 30}
 EXTRA_EVERY = 1000
 LIVES = 3
 DYING_FRAMES, OVER_FRAMES = 45, 90
 HUD_ROW, ICONS = 3, 6
-SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt", "scores": "scores.txt"}
+SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt", "scores": "scores.txt",
+           "shooter": "shooter.txt"}
 # Title and high scores (README.md "Title and high scores").
 TITLE, PLAY, ENTRY = 0, 1, 2
 TABLE = [(10000, "ZAP"), (9000, "ACE"), (8000, "MAX"), (7000, "JET"), (6000, "SKY"),
@@ -80,12 +86,14 @@ TABLE = [(10000, "ZAP"), (9000, "ACE"), (8000, "MAX"), (7000, "JET"), (6000, "SK
 REPEAT_FIRST, REPEAT_NEXT = 12, 4
 NO_RANK = 0xFF
 # The first levels (README.md "Levels and enemies"): grunts, frames until the first
-# hunter, frames between hunters (0 = no hunters), the hint and its byte column.
+# hunter, frames between hunters (0 = no hunters), the hint and its byte column,
+# shooters, frames between bullets (0 = no bullets).
 TEACH = {
-    1: (4, 0, 0, "SHOOT THE GRUNTS", 8),
-    2: (8, 0, 0, "HOLD TWO KEYS FOR DIAGONALS", 2),
-    3: (6, 60, 240, "HUNTERS ARE FAST", 8),
-    4: (10, 210, 210, "MORE OF EVERYTHING", 7),
+    1: (4, 0, 0, "SHOOT THE GRUNTS", 8, 0, 0),
+    2: (8, 0, 0, "HOLD TWO KEYS FOR DIAGONALS", 2, 0, 0),
+    3: (6, 60, 240, "HUNTERS ARE FAST", 8, 0, 0),
+    4: (10, 210, 210, "MORE OF EVERYTHING", 7, 0, 0),
+    5: (12, 180, 180, "SHOOTERS FIRE BACK", 7, 2, 60),
 }
 READY_FRAMES = 60
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
@@ -105,6 +113,7 @@ EFFECTS = {
     "level": (4, square((30, 28, 3), (22, 28, 3), (16, 28, 3), (11, 28, 3), (11, 20, 1),
                         (11, 12, 1))),
     "extra": (4, square(*[(15, 30, 2), (10, 30, 2)] * 3, (10, 20, 2))),
+    "zap": (1, square((12, 22, 1), (16, 18, 1), (20, 14, 1))),
     "death": (5, [(NOISE, p, v, 1) for p, v in
                   ((1, 60), (1, 56), (2, 52), (2, 48), (3, 44), (3, 40), (4, 36), (4, 32),
                    (5, 28), (6, 24), (7, 20), (8, 16), (9, 12), (10, 8))]),
@@ -176,6 +185,10 @@ class Game:
     dying: int = 0
     over: int = 0
     ready: int = 0
+    bullets: list[list[int] | None] = field(default_factory=lambda: [None] * BULLET_SLOTS)
+    fire_wait: int = 0
+    fire_timer: int = 0
+    shooter_turn: int = 0
     phase: int = PLAY
     table: list[tuple[int, str]] = field(default_factory=lambda: list(TABLE))
     rank: int = 0
@@ -242,29 +255,40 @@ def start_level(game: Game) -> None:
     game.delay = 0
     game.slots = [None] * SHOT_SLOTS
     game.enemies = [None] * ENEMY_SLOTS
+    game.bullets = [None] * BULLET_SLOTS
+    game.shooter_turn = 0xFF
     if "NO_READY" not in game.controls:
         game.ready = READY_FRAMES
     if game.level in TEACH:
-        grunts, game.hunter_timer, game.hunter_wait, _, _ = TEACH[game.level]
+        grunts, game.hunter_timer, game.hunter_wait, _, _, shooters, fire = TEACH[game.level]
     else:
-        grunts = min(20, 4 + 2 * game.level)
+        shooters = min(4, game.level - 3)
+        grunts = min(20, 4 + 2 * game.level) - shooters
+        fire = max(24, 84 - 8 * game.level)
         game.hunter_wait = game.hunter_timer = max(45, 330 - 30 * game.level)
+    game.fire_wait = game.fire_timer = fire
     if "HUNTER_SOON" in game.controls:
         game.hunter_wait = game.hunter_timer = 15
     if "FIXED_ENEMIES" in game.controls:
-        game.hunter_wait = game.hunter_timer = 0
+        game.hunter_wait = game.hunter_timer = game.fire_wait = 0
         game.enemies[0] = Enemy(GRUNT, 100, 90, 1)
         game.enemies[1] = Enemy(HUNTER, 100, 40, PERIOD[HUNTER])
         return
-    if "NO_ENEMIES" in game.controls:
+    if "ONE_SHOOTER" in game.controls:
+        game.hunter_wait = game.hunter_timer = 0
+        game.fire_wait = game.fire_timer = 20
+        game.enemies[0] = Enemy(SHOOTER, START[0], 30, PERIOD[SHOOTER])
         return
-    for slot in range(grunts):
+    if "NO_ENEMIES" in game.controls:
+        game.fire_wait = 0
+        return
+    for slot in range(grunts + shooters):
         while True:
             x = game.random_x()
             y = game.random_y()
             if not (abs(x - START[0]) <= SAFE_X and abs(y - START[1]) <= SAFE_Y):
                 break
-        game.enemies[slot] = Enemy(GRUNT, x, y, slot % 2 + 1)
+        game.enemies[slot] = Enemy(GRUNT if slot < grunts else SHOOTER, x, y, slot % 2 + 1)
 
 
 def power_on(variant: str) -> Game:
@@ -388,7 +412,50 @@ def touched(game: Game) -> bool:
     return any(
         e and overlap(e.x, e.y, ENEMY_W, ENEMY_H, game.x, game.y, PLAYER_W, PLAYER_H)
         for e in game.enemies
+    ) or any(
+        b and overlap(b[0], b[1], BULLET_W, BULLET_H, game.x, game.y, PLAYER_W, PLAYER_H)
+        for b in game.bullets
     )
+
+
+def move_bullets(game: Game) -> None:
+    for i, b in enumerate(game.bullets):
+        if b:
+            b[0] += b[2]
+            b[1] += b[3]
+            if not (MIN_X <= b[0] <= END_X - BULLET_W and MIN_Y <= b[1] <= END_Y - BULLET_H):
+                game.bullets[i] = None
+
+
+def enemy_fire(game: Game) -> None:
+    """Each fire wait, the next shooter after the last one in slot order fires at the
+    player, if a bullet slot is free."""
+    if game.fire_wait == 0:
+        return
+    game.fire_timer -= 1
+    if game.fire_timer:
+        return
+    game.fire_timer = game.fire_wait
+    for _ in range(ENEMY_SLOTS):
+        game.shooter_turn = game.shooter_turn + 1 if game.shooter_turn + 1 < ENEMY_SLOTS else 0
+        enemy = game.enemies[game.shooter_turn]
+        if enemy and enemy.kind == SHOOTER:
+            break
+    else:
+        return
+    if None not in game.bullets:
+        return
+    ax, ay = abs(game.x - enemy.x), abs(game.y - enemy.y)
+    vx = BULLET_VX if game.x >= enemy.x else -BULLET_VX
+    vy = BULLET_VY if game.y >= enemy.y else -BULLET_VY
+    if ax > ay:
+        vy = 0
+    elif ay // 4 > ax:
+        vx = 0
+    x = enemy.x + (ENEMY_W - BULLET_W) // 2
+    y = enemy.y + (ENEMY_H - BULLET_H) // 2
+    game.bullets[game.bullets.index(None)] = [x, y, vx, vy]
+    game.start_sound("zap")
 
 
 def direction(keys: str, table: dict[str, tuple[int, int]]) -> tuple[int, int]:
@@ -463,9 +530,11 @@ def play(game: Game, keys: str) -> None:
             shot.y += shot.vy
             if not inside(shot.x, shot.y, shot.name):
                 game.slots[i] = None
+    move_bullets(game)
     fire(game, keys)
     move_enemies(game)
     spawn_hunter(game)
+    enemy_fire(game)
     hit_enemies(game)
     if touched(game):
         game.start_sound("death")
@@ -582,6 +651,9 @@ def picture(game: Game | None) -> np.ndarray:
         for shot in game.slots:
             if shot:
                 stamp(codes, shot.name, shot.x, shot.y)
+        for b in game.bullets:
+            if b:
+                stamp(codes, "bullet", b[0], b[1])
         for enemy in game.enemies:
             if enemy:
                 stamp(codes, SPRITE[enemy.kind], enemy.x, enemy.y)
@@ -638,10 +710,12 @@ def still(game: Game) -> np.ndarray:
         for i, (score, name) in enumerate(game.table):
             text(codes, f"{i + 1:2d} {name} {score:06d}", 40 + 9 * i, 9,
                  "G" if i == game.new_rank else "Y")
-        stamp(codes, "grunt", 36, 136)
-        text(codes, "10", 138, 11)
-        stamp(codes, "hunter", 76, 136)
-        text(codes, "50", 138, 21)
+        stamp(codes, "grunt", 20, 136)
+        text(codes, "10", 138, 7)
+        stamp(codes, "hunter", 52, 136)
+        text(codes, "50", 138, 15)
+        stamp(codes, "shooter", 84, 136)
+        text(codes, "30", 138, 23)
         text(codes, "MOVE WASD  SHOOT OKL;", 172, 5, "G")
     else:
         text(codes, "NEW HIGH SCORE", 20, 2, big=True)
@@ -715,6 +789,14 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
     if got != want:
         raise ValueError(f"Frame {frame}: score, lives, dying, over, ready = {got}, "
                          f"expected {want}.")
+    for i, b in enumerate(game.bullets):
+        base = symbols["bullets"] + i * BULLET_SIZE
+        got = tuple(ram[base + 1 : base + 5]) if ram[base] else None
+        want = (b[0], b[1], b[2] & 0xFF, b[3] & 0xFF) if b else None
+        if got != want:
+            raise ValueError(f"Frame {frame}: bullet slot {i} is {got}, expected {want}.")
+    if ram[symbols["shooter_turn"]] != game.shooter_turn and game.phase == PLAY:
+        raise ValueError(f"Frame {frame}: shooter_turn differs.")
     if ram[symbols["level"]] != game.level:
         raise ValueError(f"Frame {frame}: level {ram[symbols['level']]}, expected {game.level}.")
     for i, enemy in enumerate(game.enemies):

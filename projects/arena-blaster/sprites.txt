@@ -67,3 +67,22 @@ R.RR.R
 R....R
 .R..R.
 R....R
+
+# A shooter walks slower than a grunt and fires bullets at the player.
+[shooter]
+.YYYY.
+YGYYGY
+YYYYYY
+..YY..
+GYYYYG
+G.YY.G
+..YY..
+.YYYY.
+.Y..Y.
+YY..YY
+
+# An enemy bullet.
+[bullet]
+.R.
+RYR
+.R.

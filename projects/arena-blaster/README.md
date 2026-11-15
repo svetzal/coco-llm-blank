@@ -25,6 +25,8 @@ other hand, in eight directions. The game uses four-colour graphics.
 
 > Increment 7: the first levels that teach the game.
 
+> Increment 8: enemies that shoot.
+
 The plan for these requests:
 
 | Increment | Contents |
@@ -71,18 +73,20 @@ uv run python scripts/coco.py check projects/arena-blaster
 
 The `run` command opens XRoar. Close the window to stop it.
 
-The check runs ten builds for 200 frames each. At each frame it compares
+The check runs twelve builds for 200 frames each. At each frame it compares
 both screens, the game state, the rendered picture and the mixer output with
 `expected.py`. See [Checks](#checks).
 
 ## Status
 
-Increment 7: the first levels that teach the game, and a "LEVEL N" banner
-at the start of each level.
+Increment 8: shooters, enemies that fire bullets at the player, from
+level 5.
+Increment 7 added the first levels that teach the game, and a "LEVEL N"
+banner at the start of each level.
 Increment 6 added the title screen, the high-score table and the initials.
 Increment 5 added score, lives, game over and the start and game-over sounds.
 Increment 4 added faster drawing and the fixed speed of 30 frames each second.
-Increment 8 adds enemies that shoot.
+Increment 9 adds things to collect.
 
 The owner chose the fixed speed of 30 frames each second. Each frame lasts two
 fields of the picture (one field is 1/60 second). Measured speed in XRoar, in
@@ -91,7 +95,7 @@ fields for each frame:
 | Build | Increment 3 | Faster drawing | Now (fixed speed) |
 | --- | --- | --- | --- |
 | `main` (level 1, 6 grunts) | 1.71 | 1.01 | 2.00 |
-| `level10` (20 grunts) | 3.02 | 2.01 | 2.00, but 3 or 4 when the player dies |
+| `level10` (20 grunts; now 16 grunts and 4 shooters) | 3.02 | 2.01 | 2.00, but 4 when the player dies |
 
 When the player dies on level 10, the restart places 20 grunts and draws them
 all, so that frame takes one or two more fields. All the other frames in the
@@ -139,12 +143,13 @@ The CoCo 1 defaults come from
 | `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`). An erase-list entry is the first screen byte and the erase routine of a sprite. |
 | `$2000`-`$23FF` | Stack, from `$2400` down |
 | `$2400`-`$3BFF` | Screen B, 6144 bytes |
-| `$3C00`-`$5995` | Code, sprites, font, text and the high-score table |
-| `$5996`-`$7FFF` | Free, about 9.6 KiB |
+| `$3C00`-`$5F50` | Code, sprites, font, text and the high-score table |
+| `$5F51`-`$7FFF` | Free, about 8.2 KiB |
 
 The game needs 32 KiB. The two screens use 12 KiB, so a 16 KiB machine
-does not have space for the program. The game state uses 243 of the 256
-bytes of the direct page.
+does not have space for the program. The game state uses 251 of the 256
+bytes of the direct page. A line buffer for text is at `$1F00`, after the
+erase lists.
 
 ### Arena
 
@@ -193,13 +198,18 @@ thing. The numbers and the hints are agent choices:
 | 2 | 8 | None | HOLD TWO KEYS FOR DIAGONALS |
 | 3 | 6 | The first after 60 frames (2 seconds), then each 240 frames (8 seconds) | HUNTERS ARE FAST |
 | 4 | 10 | Each 210 frames (7 seconds) | MORE OF EVERYTHING |
-| 5 and more | 4 + 2 x level, not more than 20 | Each 330 - 30 x level frames, not less than 45 | None |
+| 5 | 12, and 2 shooters. A bullet each 60 frames. | Each 180 frames (6 seconds) | SHOOTERS FIRE BACK |
+| 6 and more | See below | Each 330 - 30 x level frames, not less than 45 | None |
 
-So level 5 has 14 grunts and a hunter each 180 frames (6 seconds). Level 10
-has 20 grunts and a hunter each 45 frames (1.5 seconds).
+From level 6, a level has 4 + 2 x level enemies at the start, not more
+than 20. Of these, level - 3 are shooters, not more than 4. The rest are
+grunts. A shooter fires each 84 - 8 x level frames, not less than 24. So
+level 6 has 13 grunts and 3 shooters, with a bullet each 36 frames. Level
+10 has 16 grunts and 4 shooters, with a bullet each 24 frames, and a hunter
+each 45 frames (1.5 seconds).
 
 - Grunts (green) make one step each 2 frames. Hunters (red) make one step
-  each frame.
+  each frame. Shooters (yellow) make one step each 3 frames.
 - At the start of a level, a banner shows for 60 frames (2 seconds). It
   has "LEVEL N" in big yellow text on rows 60-69. The hint of the level is
   in green on rows 76-80. Nothing moves during the banner. The banner also
@@ -211,6 +221,8 @@ has 20 grunts and a hunter each 45 frames (1.5 seconds).
 - An enemy step is 1 pixel across and up to 2 rows down or up, toward the
   player. Enemies are 6x10 pixels, the same size as the player.
 - There are 24 enemy slots. A hunter needs a free slot.
+- At the start of a level, the grunts fill the first slots, and the
+  shooters fill the slots after them.
 - Grunt number N (from 0) makes its first step after (N AND 1) + 1 frames, so
   the grunts do not all step together.
 - At the start of a level, each grunt goes to a random place. A place with x
@@ -225,11 +237,31 @@ has 20 grunts and a hunter each 45 frames (1.5 seconds).
   above 114. A random y is 13 + byte, and tries again above 164. A random
   side is byte AND 3: top, bottom, left, right.
 
+### Shooters
+
+The numbers are agent choices. The owner can change them.
+
+- A level has one fire wait. When it ends, the next shooter in slot order,
+  after the one that fired last, fires one bullet. Then the wait starts
+  again. If no bullet slot is free, that shooter does not fire.
+- There are 4 bullet slots. A bullet is 3x3 pixels. It moves 3 pixels
+  across and 6 rows down or up each frame, about the speed of the player.
+- The bullet starts in the middle of the shooter and goes toward the
+  player in one of 8 directions. AX is the number of pixels across to the
+  player and AY is the number of rows. A pixel is about two rows wide. If
+  AX is more than AY, the bullet goes only across. If AY / 4 is more than
+  AX, it goes only down or up. If not, it goes on a diagonal.
+- A bullet that leaves the arena goes away. A bullet that overlaps the
+  player starts the pause after a death. Shots do not stop bullets.
+- Bullets do not move during the banner or the pause after a death. A new
+  level, or the same level again, removes all bullets.
+
 ### Score and lives
 
 The numbers are agent choices. The owner can change them.
 
-- A grunt gives 10 points. A hunter gives 50 points.
+- A grunt gives 10 points. A shooter gives 30 points. A hunter gives 50
+  points.
 - The score has 6 digits. It shows at the top left, in yellow on the blue
   band: pixels 4-27, rows 3-7. The program keeps it as 3 BCD bytes.
 - A game starts with 3 lives. Each 1000 points give one more life.
@@ -248,8 +280,8 @@ The program has three phases: the title, a game and the initials. The
 numbers and the words are agent choices. The owner can change them.
 
 - At power-on, the title screen shows. It has the name of the game in big
-  text, the high-score table, a grunt and a hunter with their points, and
-  the keys. "SHOOT TO START" shows for 16 frames, then goes for 16 frames.
+  text and the high-score table. Under the table are a grunt, a hunter and
+  a shooter with their points, and the keys. "SHOOT TO START" shows for 16 frames, then goes for 16 frames.
 - A shoot key starts a game. The key must be new: held now, but not held
   in the last frame. So a shoot key that is held from before does not
   start a game.
@@ -297,6 +329,7 @@ two fields of the effect.
 | Hunter | 3 | A hunter comes | Square, periods 10 and 14 in turn, 8 fields; volume 26 |
 | Level | 4 | The arena is clear | Square, periods 30, 22, 16, 11, 3 fields each; volume 28 |
 | Extra life | 4 | The score reaches the next 1000 | Square, periods 15 and 10 in turn, 2 fields each, 14 fields; volume 30 |
+| Bullet | 1 | A shooter fires | Square, periods 12, 16, 20; volume 22 down to 14 |
 | Letter | 1 | A change or the next letter in the initials | The shot sound |
 | Entry | 4 | The initials go into the table | The level sound |
 | Death | 5 | An enemy touches the player | Noise, periods 1-10, 14 fields; volume 60 down to 8 |
@@ -329,20 +362,22 @@ two fields of the effect.
    the arena edge. The player is 6 pixels wide and 10 rows high. It starts at
    pixel 61, row 95.
 3. Move each shot 6 pixels across and 12 rows down or up. Remove a shot that
-   leaves the arena.
+   leaves the arena. Then move each bullet, and remove a bullet that leaves
+   the arena.
 4. If the shoot delay is more than 0, decrease it by 1. If not, and a shoot
    key is held, and a shot slot is free, start a shot from the player. Then
    set the delay to 2.
 5. Move each enemy whose step count reaches 0.
-6. Count down the hunter wait. At 0, try to start a hunter.
+6. Count down the hunter wait. At 0, try to start a hunter. Then count
+   down the fire wait. At 0, the next shooter fires.
 7. A shot that overlaps an enemy removes the shot and the enemy, and adds its
    points. Each shot removes only the first enemy in slot order.
-8. If an enemy overlaps the player, start the pause after a death. If not, and no
-   enemy is left, start the next level. A new level puts the player back at
-   the start and removes all shots.
+8. If an enemy or a bullet overlaps the player, start the pause after a
+   death. If not, and no enemy is left, start the next level. A new level
+   puts the player back at the start and removes all shots and bullets.
 9. Take the next sound record. Erase what this screen showed two frames
-   before. Draw the shots and the enemies. Draw the player. During the
-   banner, draw the banner. Then draw the score and the reserve lives.
+   before. Draw the shots, the bullets and the enemies. Draw the player.
+   During the banner, draw the banner. Then draw the score and the reserve lives.
 10. Wait for the end of the first field, unless it ended during the work.
     The field-sync flag stays set until a read of `$FF02` (MC6821 PDF 10,
     Figure 18), so a set flag tells that the first field ended. Take the next
@@ -399,7 +434,9 @@ remove one part of the game. The key scripts are short and written by hand.
 | `hunter` | `SKIP_TITLE` `NO_READY` `NO_ENEMIES` `HUNTER_SOON` `NO_DEATH` | none | A hunter each 15 frames, its place and the hunter sound |
 | `level1` | `SKIP_TITLE` | none | The level 1 banner and hint, 4 grunts, no hunter. A death at frame 119 and the banner again at frame 164. |
 | `level3` | `SKIP_TITLE` `FIRST_LEVEL=3` `NO_DEATH` | none | The level 3 banner and hint, 6 grunts, the first hunter at frame 120 |
-| `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | The banner with a two-digit level, 20 grunts and the level-10 hunter wait |
+| `level5` | `SKIP_TITLE` `FIRST_LEVEL=5` `NO_DEATH` | none | The level 5 banner and hint, 12 grunts and 2 shooters, bullets across at frames 120 and 180 |
+| `shooter` | `SKIP_TITLE` `NO_READY` `ONE_SHOOTER` | `shooter.txt` | Bullets down, on both diagonals and across, the bullet sound, deaths by a bullet at frames 28 and 176 |
+| `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | The banner with a two-digit level, 16 grunts and 4 shooters, a bullet up, a death at frame 91 |
 | `over` | `SKIP_TITLE` `NO_READY` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
 | `scores` | `NO_READY` `FIXED_ENEMIES` `FIRST_LIVES=1` `FIRST_SCORE=0x5000` | `scores.txt` | A start from the title (frame 3), game over (frame 82), the initials screen (frame 172), a held W that repeats, S from A to Z, the entry CZA at place 7 below REX (frame 192), a held shoot key that does not start a game |
 
@@ -408,9 +445,12 @@ The controls:
 - `SKIP_TITLE`: at power-on, a game starts at once, with no title screen.
 - `NO_READY`: a level starts with no banner. The builds with key scripts
   use it, so that their scripts stay short.
-- `NO_ENEMIES`: no grunts, and an empty arena does not end the level.
+- `NO_ENEMIES`: no grunts, no bullets, and an empty arena does not end
+  the level.
+- `ONE_SHOOTER`: one shooter at x 61, y 30 that fires each 20 frames, and
+  no other enemies.
 - `FIXED_ENEMIES`: a grunt at x 100, y 90 and a hunter at x 100, y 40. No
-  other hunters.
+  other hunters and no bullets.
 - `STILL`: enemies do not move.
 - `HUNTER_SOON`: the hunter wait is 15 frames.
 - `NO_DEATH`: a touch does not kill the player.
@@ -428,6 +468,8 @@ measured in these captures.
 
 Negative controls, run on copies. Each one must fail:
 
+- Increment 8: an aim that never sends a bullet only across fails at frame
+  120 (`level5`), at the first bullet.
 - Increment 7: an `erase_banner` without the store to byte columns 12-13
   fails at frame 60 (`level1`), the first frame after the banner. A copy
   without the store to columns 28-29 passed, because no text of the level 1

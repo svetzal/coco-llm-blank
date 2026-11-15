@@ -1,4 +1,5 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
+* Increment 8: shooters, enemies that fire bullets at the player.
 * Increment 7: first levels that teach the game, and a "LEVEL N" banner.
 * Increment 6: title screen, high-score table and initials. Increment 5:
 * score, lives and game over. Increment 4: compiled sprites and a fixed
@@ -38,6 +39,7 @@ SCREEN_B equ $2400
 STATE   equ $1C00
 LIST_A  equ $1D00               ; erase list of screen A: first byte, erase routine
 LIST_B  equ $1E00               ; erase list of screen B
+line    equ $1F00               ; a line of text, 16 bytes
 STACK   equ $2400
 
 * Screen bytes. Four pixels for each byte, code 2 (blue) is the floor.
@@ -67,6 +69,15 @@ ENEMY_W equ 6
 ENEMY_H equ 10
 GRUNT   equ 1                   ; enemy types; 0 = free slot
 HUNTER  equ 2
+SHOOTER equ 3
+SHOOTER_PERIOD equ 3            ; frames between two shooter steps
+MAX_SHOOTERS equ 4              ; level - 3, up to this number
+MIN_FIRE_WAIT equ 24            ; 84 - 8 * level, down to this number
+BULLETS equ 4                   ; enemy bullet slots
+BULLET_W equ 3
+BULLET_H equ 3
+BULLET_VX equ 3                 ; pixels across each frame
+BULLET_VY equ 6                 ; rows down or up each frame
 GRUNT_PERIOD equ 2              ; frames between two grunt steps
 HUNTER_PERIOD equ 1             ; frames between two hunter steps
 MAX_GRUNTS equ 20               ; 4 + 2 * level, up to this number
@@ -93,11 +104,11 @@ FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
 *   NO_DEATH     a touch does not kill the player.
 *   SKIP_TITLE   at power-on a game starts at once, with no title screen.
 *   NO_READY     a level starts with no banner: play starts at once.
+*   ONE_SHOOTER  a level starts with one shooter at x 61, y 30, which
+*                fires each 20 frames, and no other enemies.
 *   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
 
 * Score, lives and pauses (README.md "Score and lives").
-GRUNT_POINTS equ $10            ; BCD
-HUNTER_POINTS equ $50           ; BCD
 EXTRA_EVERY equ $10             ; BCD hundreds: an extra life each 1000
 DYING_FRAMES equ 45             ; the pause after a death
 OVER_FRAMES equ 90              ; the pause after game over
@@ -120,23 +131,26 @@ BIG     equ $80                 ; each pixel shows as 2x2 pixels
 CURSOR  equ $55                 ; four yellow pixels
 
 * The first levels and the banner (README.md "Levels and enemies").
-TEACH_LEVELS equ 4              ; levels with their own row in teach_table
+TEACH_LEVELS equ 5              ; levels with their own row in teach_table
 READY_FRAMES equ 60             ; the banner: 2 seconds
 BANNER_ROW equ 60               ; "LEVEL N" in big text: rows 60-69
 BANNER_ROWS equ 21              ; the hint is on rows 76-80
 BANNER_COL equ 2                ; the banner is in byte columns 2-29
 * Fields of a teach_table row.
 T_GRUNTS equ 0
-T_FIRST equ 1                   ; frames until the first hunter, 0 = none
-T_WAIT  equ 3                   ; frames between two hunters, 0 = none
-T_HINT  equ 5                   ; the hint: a list of text records
-T_SIZE  equ 7
+T_SHOOTERS equ 1
+T_FIRE  equ 2                   ; frames between two bullets, 0 = none
+T_FIRST equ 3                   ; frames until the first hunter, 0 = none
+T_WAIT  equ 5                   ; frames between two hunters, 0 = none
+T_HINT  equ 7                   ; the hint: a list of text records
+T_SIZE  equ 9
 
 * Sound effects: records of mode, period, volume and fields (README.md
 * "Sound").
 NOISE   equ $80                 ; record mode: noise; 0 is a square wave
 FX_END  equ $FF                 ; record mode: end of the effect
 P_SHOT  equ 1                   ; priorities: a new effect replaces the
+P_ZAP   equ 1
 P_BOOM  equ 2                   ; current one only if its priority is
 P_HUNTER equ 3                  ; the same or higher
 P_LEVEL equ 4
@@ -184,6 +198,14 @@ E_X     equ 1
 E_Y     equ 2
 E_TICK  equ 3                   ; frames until the next step
 E_SIZE  equ 4
+
+* Fields of an enemy bullet slot.
+B_ON    equ 0                   ; 0 = free
+B_X     equ 1
+B_Y     equ 2
+B_VX    equ 3
+B_VY    equ 4
+B_SIZE  equ 5
 
         org $3C00
 start   orcc #$50               ; mask IRQ and FIRQ: no handler runs
@@ -347,9 +369,11 @@ frame_ready
 frame_play
         jsr move_player
         jsr move_shots
+        jsr move_bullets
         jsr fire
         jsr move_enemies
         jsr spawn_hunter
+        jsr enemy_fire
         jsr hit_enemies
         jsr hit_player
         bcc frame_clear
@@ -686,16 +710,28 @@ df_shot tst S_ON,x
 df_skip leax S_SIZE,x
         cmpx #shots_end
         blo df_shot
+        ldx #bullets
+df_bullet
+        tst B_ON,x
+        beq df_bullet_skip
+        pshs x
+        ldu #bullet
+        lda B_X,x
+        ldb B_Y,x
+        lbsr draw_sprite
+        puls x
+df_bullet_skip
+        leax B_SIZE,x
+        cmpx #bullets_end
+        blo df_bullet
         ldx #enemies
 df_enemy
         lda E_TYPE,x
         beq df_enemy_skip
         pshs x
-        ldu #grunt
-        cmpa #GRUNT
-        beq df_enemy_draw
-        ldu #hunter
-df_enemy_draw
+        lsla
+        ldu #enemy_sprites
+        ldu a,u                 ; the sprite of this enemy type
         lda E_X,x
         ldb E_Y,x
         lbsr draw_sprite
@@ -1020,11 +1056,14 @@ title_screen
         sta <drawing
         ldd #LIST_A             ; a place for the erase entries, not used
         std <next
-        ldd #36*256+136
+        ldd #20*256+136
         ldu #grunt
         lbsr draw_sprite
-        ldd #76*256+136
+        ldd #52*256+136
         ldu #hunter
+        lbsr draw_sprite
+        ldd #84*256+136
+        ldu #shooter
         lbsr draw_sprite
         puls a
         sta <drawing
@@ -1351,14 +1390,24 @@ sl_enemy
         leax E_SIZE,x
         cmpx #enemies_end
         blo sl_enemy
+        ldx #bullets
+sl_bullet
+        clr B_ON,x
+        leax B_SIZE,x
+        cmpx #bullets_end
+        blo sl_bullet
+        lda #$FF                ; the first shooter to fire is the first in
+        sta <shooter_turn          ; slot order
 * The banner "LEVEL N" first: nothing moves for READY_FRAMES frames.
         ifndef NO_READY         ; check only: no banner
         lda #READY_FRAMES
         sta <ready
         endc
-* Levels 1 to TEACH_LEVELS take the grunts and the hunter waits from
-* teach_table. After them: 4 + 2 * level grunts, but not more than 20, and
-* a hunter each 330 - 30 * level frames, but not less than 45.
+* Levels 1 to TEACH_LEVELS take the enemies and the waits from
+* teach_table. After them: level - 3 shooters, but not more than 4. 4 + 2 *
+* level enemies, but not more than 20: the shooters, and grunts for the
+* rest. A bullet each 84 - 8 * level frames, but not less than 24. A hunter
+* each 330 - 30 * level frames, but not less than 45.
         lda <level
         cmpa #TEACH_LEVELS
         bhi sl_formula
@@ -1368,7 +1417,12 @@ sl_enemy
         addd #teach_table
         tfr d,x
         lda T_GRUNTS,x
-        sta <count
+        sta <grunts
+        adda T_SHOOTERS,x
+        sta <count              ; grunts and shooters
+        lda T_FIRE,x
+        sta <fire_wait
+        sta <fire_timer
         ldd T_WAIT,x
         std <hunter_wait
         ldd T_FIRST,x
@@ -1383,7 +1437,29 @@ sl_formula
         addb #4
         tfr b,a
 sl_count
-        sta <count
+        sta <count              ; all enemies at the start
+        ldb <level
+        subb #3
+        cmpb #MAX_SHOOTERS
+        bls sl_shooters
+        ldb #MAX_SHOOTERS
+sl_shooters
+        stb <temp
+        suba <temp
+        sta <grunts             ; the rest are grunts
+        lda <level
+        cmpa #(84-MIN_FIRE_WAIT)/8+1  ; level 8 and up
+        blo sl_fire_calc
+        lda #MIN_FIRE_WAIT
+        bra sl_fire
+sl_fire_calc
+        lsla
+        lsla
+        lsla                    ; 8 * level
+        nega
+        adda #84
+sl_fire sta <fire_wait
+        sta <fire_timer
         lda <level
         cmpa #10
         blo sl_calc
@@ -1402,12 +1478,30 @@ sl_controls
         std <hunter_wait
         std <hunter_timer
         endc
-        ifdef FIXED_ENEMIES     ; check only: no hunter
+        ifdef FIXED_ENEMIES     ; check only: no hunter and no bullets
         ldd #0
         std <hunter_wait
         std <hunter_timer
+        clr <fire_wait
         endc
-        ifdef NO_ENEMIES        ; check only: no grunts
+        ifdef ONE_SHOOTER       ; check only: one shooter, no hunter
+        ldd #0
+        std <hunter_wait
+        std <hunter_timer
+        lda #20
+        sta <fire_wait
+        sta <fire_timer
+        ldu #enemies
+        lda #SHOOTER
+        sta E_TYPE,u
+        ldd #START_X*256+30
+        std E_X,u
+        lda #SHOOTER_PERIOD
+        sta E_TICK,u
+        rts
+        endc
+        ifdef NO_ENEMIES        ; check only: no grunts and no bullets
+        clr <fire_wait
         rts
         endc
         ifdef FIXED_ENEMIES     ; check only: a grunt and a hunter
@@ -1444,8 +1538,14 @@ sl_grunt
         cmpa #START_Y+SAFE_Y
         bls sl_grunt
 sl_place
-        lda #GRUNT
-        sta E_TYPE,u
+        lda #GRUNT              ; the first 'grunts' enemies are grunts,
+        tst <grunts             ; the rest are shooters
+        beq sl_shooter
+        dec <grunts
+        bra sl_type
+sl_shooter
+        lda #SHOOTER
+sl_type sta E_TYPE,u
 * First step after 1-2 frames (slot number AND 1, plus 1), so that the
 * grunts do not all step in the same frame.
         tfr u,d
@@ -1511,11 +1611,9 @@ me_slot lda E_TYPE,u
         beq me_next
         dec E_TICK,u
         bne me_next
-        ldb #GRUNT_PERIOD
-        cmpa #GRUNT
-        beq me_tick
-        ldb #HUNTER_PERIOD
-me_tick stb E_TICK,u
+        ldx #periods
+        ldb a,x                 ; the period of this enemy type
+        stb E_TICK,u
         lda E_X,u
         cmpa <px
         beq me_y
@@ -1612,6 +1710,111 @@ sh_place
         lda #P_HUNTER
         jmp start_sound
 
+* --- Move each enemy bullet one step. Remove a bullet that leaves the
+* arena.
+move_bullets
+        ldx #bullets
+mb_slot tst B_ON,x
+        beq mb_next
+        lda B_X,x
+        adda B_VX,x
+        sta B_X,x
+        cmpa #MIN_X
+        blo mb_off
+        cmpa #END_X-BULLET_W
+        bhi mb_off
+        lda B_Y,x
+        adda B_VY,x
+        sta B_Y,x
+        cmpa #MIN_Y
+        blo mb_off
+        cmpa #END_Y-BULLET_H
+        bls mb_next
+mb_off  clr B_ON,x
+mb_next leax B_SIZE,x
+        cmpx #bullets_end
+        blo mb_slot
+        rts
+
+* --- Count down the fire wait. At 0, the next shooter in slot order, after
+* the one that fired last, fires a bullet at the player if a bullet slot is
+* free.
+enemy_fire
+        lda <fire_wait
+        beq ef_done             ; no bullets on this level
+        dec <fire_timer
+        bne ef_done
+        sta <fire_timer
+        lda #ENEMIES
+        sta <count
+ef_scan ldb <shooter_turn
+        incb
+        cmpb #ENEMIES
+        blo ef_wrap
+        clrb
+ef_wrap stb <shooter_turn
+        lslb
+        lslb                    ; E_SIZE = 4
+        ldu #enemies
+        leau b,u
+        lda E_TYPE,u
+        cmpa #SHOOTER
+        beq ef_found
+        dec <count
+        bne ef_scan
+ef_done rts                     ; no shooter is left
+ef_found
+        ldx #bullets
+ef_free tst B_ON,x
+        beq ef_aim
+        leax B_SIZE,x
+        cmpx #bullets_end
+        blo ef_free
+        rts                     ; no free slot: this shooter does not fire
+* The bullet starts in the middle of the shooter. AX = the pixels across
+* to the player, AY = the rows down or up. A pixel is about two rows wide.
+* If AX > AY, the bullet goes only across. If AY / 4 > AX, it goes only
+* down or up. If not, it goes on a diagonal.
+ef_aim  lda E_X,u
+        adda #(ENEMY_W-BULLET_W)/2
+        sta B_X,x
+        lda E_Y,u
+        adda #(ENEMY_H-BULLET_H)/2
+        sta B_Y,x
+        ldb #BULLET_VX
+        lda <px
+        suba E_X,u
+        bhs ef_ax
+        nega
+        negb                    ; the player is to the left
+ef_ax   sta <right              ; AX
+        stb B_VX,x
+        ldb #BULLET_VY
+        lda <py
+        suba E_Y,u
+        bhs ef_ay
+        nega
+        negb                    ; the player is above
+ef_ay   sta <bottom             ; AY
+        stb B_VY,x
+        lda <right
+        cmpa <bottom
+        bls ef_steep
+        clr B_VY,x              ; AX > AY: only across
+        bra ef_on
+ef_steep
+        lda <bottom
+        lsra
+        lsra
+        cmpa <right
+        bls ef_on
+        clr B_VX,x              ; AY / 4 > AX: only down or up
+ef_on   lda #1
+        sta B_ON,x
+        ldx #fx_zap
+        lda #P_ZAP
+        jmp start_sound
+
 * --- A shot that overlaps an enemy removes the enemy and the shot. Shots
 * in slot order; each shot removes the first enemy in slot order.
 hit_enemies
@@ -1640,12 +1843,11 @@ he_enemy
         adda #ENEMY_H
         cmpa S_Y,x
         bls he_next_enemy
-        ldb #GRUNT_POINTS
+        pshs x
+        ldx #points
         lda E_TYPE,u
-        cmpa #GRUNT
-        beq he_remove
-        ldb #HUNTER_POINTS
-he_remove
+        ldb a,x                 ; the points of this enemy type
+        puls x
         clr E_TYPE,u
         clr S_ON,x
         pshs x,u
@@ -1692,6 +1894,31 @@ hp_dy   cmpa #ENEMY_H
 hp_next leau E_SIZE,u
         cmpu #enemies_end
         blo hp_slot
+* A bullet hits when it overlaps the player.
+        ldu #bullets
+hp_bullet
+        tst B_ON,u
+        beq hp_bullet_next
+        lda B_X,u
+        adda #BULLET_W
+        cmpa <px                ; bullet right > player left
+        bls hp_bullet_next
+        lda <px
+        adda #PLAYER_W
+        cmpa B_X,u              ; player right > bullet left
+        bls hp_bullet_next
+        lda B_Y,u
+        adda #BULLET_H
+        cmpa <py
+        bls hp_bullet_next
+        lda <py
+        adda #PLAYER_H
+        cmpa B_Y,u
+        bhi hp_touch
+hp_bullet_next
+        leau B_SIZE,u
+        cmpu #bullets_end
+        blo hp_bullet
         andcc #$FE              ; carry clear: not touched
         rts
 hp_touch
@@ -1866,6 +2093,16 @@ fx_start
 fx_over fcb 0,32,28,20,0,40,28,20,0,43,28,20,0,48,28,30,0,48,20,15
         fcb 0,48,12,15,FX_END
 no_icon fcb FLOOR,FLOOR,FLOOR,FLOOR,FLOOR
+* Enemy bullet: a short falling note. Periods 12, 16, 20 are about 1897,
+* 1449 and 1172 Hz.
+fx_zap  fcb 0,12,22,1,0,16,18,1,0,20,14,1,FX_END
+
+* For each enemy type (0, GRUNT, HUNTER, SHOOTER): the frames between two
+* steps, the points (BCD) and the sprite.
+periods fcb 0,GRUNT_PERIOD,HUNTER_PERIOD,SHOOTER_PERIOD
+points  fcb 0,$10,$50,$30
+enemy_sprites
+        fdb 0,grunt,hunter,shooter
 
 * --- Text records: the byte offset in the screen (row x 32 + byte
 * column), the colour, the characters, 0. $FFFF ends a list.
@@ -1878,13 +2115,17 @@ title_texts
         fcb YELLOW_TEXT
         fcc "HIGH SCORES"
         fcb 0
-        fdb 138*32+11           ; beside the grunt at pixel 36, row 136
+        fdb 138*32+7            ; beside the grunt at pixel 20, row 136
         fcb YELLOW_TEXT
         fcc "10"
         fcb 0
-        fdb 138*32+21           ; beside the hunter at pixel 76, row 136
+        fdb 138*32+15           ; beside the hunter at pixel 52, row 136
         fcb YELLOW_TEXT
         fcc "50"
+        fcb 0
+        fdb 138*32+23           ; beside the shooter at pixel 84, row 136
+        fcb YELLOW_TEXT
+        fcc "30"
         fcb 0
         fdb 172*32+5
         fcb GREEN_TEXT
@@ -1915,15 +2156,19 @@ level_text
 
 * --- The first levels: grunts, the first hunter wait, the hunter wait and
 * the hint. The hint is a text list, centred on row 76, in green.
+* Each row: grunts, shooters, the fire wait, then the first hunter wait,
+* the hunter wait and the hint.
 teach_table
-        fcb 4
+        fcb 4,0,0
         fdb 0,0,hint_1
-        fcb 8
+        fcb 8,0,0
         fdb 0,0,hint_2
-        fcb 6
+        fcb 6,0,0
         fdb 60,240,hint_3
-        fcb 10
+        fcb 10,0,0
         fdb 210,210,hint_4
+        fcb 12,2,60
+        fdb 180,180,hint_5
 hint_1  fdb 76*32+8
         fcb GREEN_TEXT
         fcc "SHOOT THE GRUNTS"
@@ -1942,6 +2187,11 @@ hint_3  fdb 76*32+8
 hint_4  fdb 76*32+7
         fcb GREEN_TEXT
         fcc "MORE OF EVERYTHING"
+        fcb 0
+        fdb $FFFF
+hint_5  fdb 76*32+7
+        fcb GREEN_TEXT
+        fcc "SHOOTERS FIRE BACK"
         fcb 0
         fdb $FFFF
 prompt_on
@@ -2075,7 +2325,12 @@ new_rank rmb 1                  ; the place of the last new entry, or $FF
 pos     rmb 1                   ; the letter at the cursor, 0-2
 rpt     rmb 1                   ; frames until a held W or S repeats
 initials rmb 3
-line    rmb 16                  ; a line of text
 ready   rmb 1                   ; frames left of the banner
+grunts  rmb 1                   ; grunts left to place in start_level
+fire_wait rmb 1                 ; frames between two bullets, 0 = none
+fire_timer rmb 1                ; frames until the next bullet
+shooter_turn rmb 1              ; the slot of the shooter that fired last
+bullets rmb BULLETS*B_SIZE
+bullets_end
 state_end
         end start

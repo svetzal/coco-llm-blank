@@ -52,6 +52,13 @@ defines = ["SKIP_TITLE"]
 [variants.level3]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=3", "NO_DEATH"]
 
+[variants.level5]
+defines = ["SKIP_TITLE", "FIRST_LEVEL=5", "NO_DEATH"]
+
+[variants.shooter]
+defines = ["SKIP_TITLE", "NO_READY", "ONE_SHOOTER"]
+keys = "shooter.txt"
+
 [variants.level10]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=10"]
 
