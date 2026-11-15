@@ -1,4 +1,5 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
+* Increment 7: first levels that teach the game, and a "LEVEL N" banner.
 * Increment 6: title screen, high-score table and initials. Increment 5:
 * score, lives and game over. Increment 4: compiled sprites and a fixed
 * speed of 30 frames each second. README.md has the contract,
@@ -91,6 +92,7 @@ FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
 *   HUNTER_SOON  the hunter wait is 15 frames on every level.
 *   NO_DEATH     a touch does not kill the player.
 *   SKIP_TITLE   at power-on a game starts at once, with no title screen.
+*   NO_READY     a level starts with no banner: play starts at once.
 *   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
 
 * Score, lives and pauses (README.md "Score and lives").
@@ -116,6 +118,19 @@ RED_TEXT equ 1
 GREEN_TEXT equ 2
 BIG     equ $80                 ; each pixel shows as 2x2 pixels
 CURSOR  equ $55                 ; four yellow pixels
+
+* The first levels and the banner (README.md "Levels and enemies").
+TEACH_LEVELS equ 4              ; levels with their own row in teach_table
+READY_FRAMES equ 60             ; the banner: 2 seconds
+BANNER_ROW equ 60               ; "LEVEL N" in big text: rows 60-69
+BANNER_ROWS equ 21              ; the hint is on rows 76-80
+BANNER_COL equ 2                ; the banner is in byte columns 2-29
+* Fields of a teach_table row.
+T_GRUNTS equ 0
+T_FIRST equ 1                   ; frames until the first hunter, 0 = none
+T_WAIT  equ 3                   ; frames between two hunters, 0 = none
+T_HINT  equ 5                   ; the hint: a list of text records
+T_SIZE  equ 7
 
 * Sound effects: records of mode, period, volume and fields (README.md
 * "Sound").
@@ -309,7 +324,7 @@ frame_over
 * end the game.
 frame_dying
         lda <dying
-        beq frame_play
+        beq frame_ready
         dec <dying
         bne frame_draw
         dec <lives
@@ -322,6 +337,12 @@ frame_dying
         bra frame_draw
 frame_again
         jsr start_level         ; the same level again
+        bra frame_draw
+* The banner at the start of a level: wait.
+frame_ready
+        lda <ready
+        beq frame_play
+        dec <ready
         bra frame_draw
 frame_play
         jsr move_player
@@ -677,7 +698,7 @@ df_enemy
 df_enemy_draw
         lda E_X,x
         ldb E_Y,x
-        bsr draw_sprite
+        lbsr draw_sprite
         puls x
 df_enemy_skip
         leax E_SIZE,x
@@ -686,10 +707,85 @@ df_enemy_skip
         lda <px
         ldb <py
         ldu #player
-        bsr draw_sprite
-        ldd <next
+        lbsr draw_sprite
+        lda <ready
+        beq df_end
+        jsr draw_banner
+df_end  ldd <next
         std [end_ptr]
         jmp draw_hud
+
+* --- The banner: "LEVEL N" in big text, and the hint of a first level
+* under it. An erase-list entry clears the banner area.
+draw_banner
+        ldd #BANNER_ROW*32+9
+        adda <drawing
+        tfr d,y
+        lda #BIG+YELLOW_TEXT
+        sta <tcolour
+        ldu #level_text
+        jsr text_at             ; Y moves on after the text
+        ldx #line               ; the level number in decimal
+        lda <level
+        ldb #'0
+db_tens cmpa #10
+        blo db_ones
+        suba #10
+        incb
+        bra db_tens
+db_ones cmpb #'0
+        beq db_one              ; no tens digit
+        stb ,x+
+db_one  adda #'0
+        clrb
+        std ,x
+        ldu #line
+        jsr text_at
+        lda <level
+        cmpa #TEACH_LEVELS
+        bhi db_erase
+        deca
+        ldb #T_SIZE
+        mul
+        addd #teach_table
+        tfr d,x
+        ldu T_HINT,x
+        lda <drawing
+        sta <target
+        jsr texts
+db_erase
+        ldd #BANNER_ROW*32+BANNER_COL
+        adda <drawing
+        ldy <next
+        std ,y++
+        ldd #erase_banner
+        std ,y++
+        sty <next
+        rts
+
+* Erase routine of the banner: X = its first byte. The floor in 28 bytes
+* of BANNER_ROWS rows. Keeps Y, as each erase routine does.
+erase_banner
+        ldb #BANNER_ROWS
+        ldu #FLOOR*257
+eb_row  stu ,x
+        stu 2,x
+        stu 4,x
+        stu 6,x
+        stu 8,x
+        stu 10,x
+        stu 12,x
+        stu 14,x
+        stu 16,x
+        stu 18,x
+        stu 20,x
+        stu 22,x
+        stu 24,x
+        stu 26,x
+        leax 32,x
+        decb
+        bne eb_row
+        rts
 
 * --- The score and the reserve lives, in the blue band above the arena
 * (rows HUD_ROW to HUD_ROW+4). Each glyph is one byte for each row
@@ -1255,7 +1351,39 @@ sl_enemy
         leax E_SIZE,x
         cmpx #enemies_end
         blo sl_enemy
-* Hunter wait: 330 - 30 * level frames, but not less than 45.
+* The banner "LEVEL N" first: nothing moves for READY_FRAMES frames.
+        ifndef NO_READY         ; check only: no banner
+        lda #READY_FRAMES
+        sta <ready
+        endc
+* Levels 1 to TEACH_LEVELS take the grunts and the hunter waits from
+* teach_table. After them: 4 + 2 * level grunts, but not more than 20, and
+* a hunter each 330 - 30 * level frames, but not less than 45.
+        lda <level
+        cmpa #TEACH_LEVELS
+        bhi sl_formula
+        deca
+        ldb #T_SIZE
+        mul
+        addd #teach_table
+        tfr d,x
+        lda T_GRUNTS,x
+        sta <count
+        ldd T_WAIT,x
+        std <hunter_wait
+        ldd T_FIRST,x
+        std <hunter_timer
+        bra sl_controls
+sl_formula
+        lda #MAX_GRUNTS
+        ldb <level
+        cmpb #(MAX_GRUNTS-4)/2
+        bhs sl_count
+        lslb
+        addb #4
+        tfr b,a
+sl_count
+        sta <count
         lda <level
         cmpa #10
         blo sl_calc
@@ -1266,15 +1394,19 @@ sl_calc ldb #30
         std <temp
         ldd #330
         subd <temp
-sl_wait
+sl_wait std <hunter_wait
+        std <hunter_timer
+sl_controls
         ifdef HUNTER_SOON       ; check only: a hunter each 15 frames
         ldd #15
+        std <hunter_wait
+        std <hunter_timer
         endc
         ifdef FIXED_ENEMIES     ; check only: no hunter
         ldd #0
-        endc
         std <hunter_wait
         std <hunter_timer
+        endc
         ifdef NO_ENEMIES        ; check only: no grunts
         rts
         endc
@@ -1294,16 +1426,6 @@ sl_wait
         sta E_SIZE+E_TICK,u
         rts
         endc
-* Grunts: 4 + 2 * level, but not more than 20.
-        lda #MAX_GRUNTS
-        ldb <level
-        cmpb #(MAX_GRUNTS-4)/2
-        bhs sl_count
-        lslb
-        addb #4
-        tfr b,a
-sl_count
-        sta <count
         ldu #enemies
 sl_grunt
         jsr random_x
@@ -1787,6 +1909,41 @@ entry_texts
         fcc "SHOOT FOR THE NEXT LETTER"
         fcb 0
         fdb $FFFF
+level_text
+        fcc "LEVEL "
+        fcb 0
+
+* --- The first levels: grunts, the first hunter wait, the hunter wait and
+* the hint. The hint is a text list, centred on row 76, in green.
+teach_table
+        fcb 4
+        fdb 0,0,hint_1
+        fcb 8
+        fdb 0,0,hint_2
+        fcb 6
+        fdb 60,240,hint_3
+        fcb 10
+        fdb 210,210,hint_4
+hint_1  fdb 76*32+8
+        fcb GREEN_TEXT
+        fcc "SHOOT THE GRUNTS"
+        fcb 0
+        fdb $FFFF
+hint_2  fdb 76*32+2
+        fcb GREEN_TEXT
+        fcc "HOLD TWO KEYS FOR DIAGONALS"
+        fcb 0
+        fdb $FFFF
+hint_3  fdb 76*32+8
+        fcb GREEN_TEXT
+        fcc "HUNTERS ARE FAST"
+        fcb 0
+        fdb $FFFF
+hint_4  fdb 76*32+7
+        fcb GREEN_TEXT
+        fcc "MORE OF EVERYTHING"
+        fcb 0
+        fdb $FFFF
 prompt_on
         fcc "SHOOT TO START"
         fcb 0
@@ -1919,5 +2076,6 @@ pos     rmb 1                   ; the letter at the cursor, 0-2
 rpt     rmb 1                   ; frames until a held W or S repeats
 initials rmb 3
 line    rmb 16                  ; a line of text
+ready   rmb 1                   ; frames left of the banner
 state_end
         end start

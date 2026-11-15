@@ -53,15 +53,17 @@ SEED = 0xACE1
 # Test-harness controls of each variant (coco.toml), and its first level.
 CONTROLS = {
     "": set(),
-    "moves": {"SKIP_TITLE", "NO_ENEMIES"},
-    "hit": {"SKIP_TITLE", "FIXED_ENEMIES", "STILL"},
+    "moves": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES"},
+    "hit": {"SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL"},
     "touch": {"SKIP_TITLE", "FIXED_ENEMIES"},
-    "hunter": {"SKIP_TITLE", "NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"},
+    "hunter": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES", "HUNTER_SOON", "NO_DEATH"},
+    "level1": {"SKIP_TITLE"},
+    "level3": {"SKIP_TITLE", "NO_DEATH"},
     "level10": {"SKIP_TITLE"},
-    "over": {"SKIP_TITLE"},
-    "scores": {"FIXED_ENEMIES"},
+    "over": {"SKIP_TITLE", "NO_READY"},
+    "scores": {"NO_READY", "FIXED_ENEMIES"},
 }
-START_LEVEL = {"level10": 10}
+START_LEVEL = {"level3": 3, "level10": 10}
 START_LIVES = {"over": 1, "scores": 1}
 START_SCORE = {"hit": 990, "scores": 5000}
 # Score and lives (README.md "Score and lives").
@@ -77,6 +79,15 @@ TABLE = [(10000, "ZAP"), (9000, "ACE"), (8000, "MAX"), (7000, "JET"), (6000, "SK
          (5000, "REX"), (4000, "ION"), (3000, "VOX"), (2000, "KIT"), (1000, "DOT")]
 REPEAT_FIRST, REPEAT_NEXT = 12, 4
 NO_RANK = 0xFF
+# The first levels (README.md "Levels and enemies"): grunts, frames until the first
+# hunter, frames between hunters (0 = no hunters), the hint and its byte column.
+TEACH = {
+    1: (4, 0, 0, "SHOOT THE GRUNTS", 8),
+    2: (8, 0, 0, "HOLD TWO KEYS FOR DIAGONALS", 2),
+    3: (6, 60, 240, "HUNTERS ARE FAST", 8),
+    4: (10, 210, 210, "MORE OF EVERYTHING", 7),
+}
+READY_FRAMES = 60
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
 # field plays one record, so each frame plays two.
 SQUARE, NOISE = 0, 0x80
@@ -164,6 +175,7 @@ class Game:
     lives: int = LIVES
     dying: int = 0
     over: int = 0
+    ready: int = 0
     phase: int = PLAY
     table: list[tuple[int, str]] = field(default_factory=lambda: list(TABLE))
     rank: int = 0
@@ -230,7 +242,13 @@ def start_level(game: Game) -> None:
     game.delay = 0
     game.slots = [None] * SHOT_SLOTS
     game.enemies = [None] * ENEMY_SLOTS
-    game.hunter_wait = game.hunter_timer = max(45, 330 - 30 * game.level)
+    if "NO_READY" not in game.controls:
+        game.ready = READY_FRAMES
+    if game.level in TEACH:
+        grunts, game.hunter_timer, game.hunter_wait, _, _ = TEACH[game.level]
+    else:
+        grunts = min(20, 4 + 2 * game.level)
+        game.hunter_wait = game.hunter_timer = max(45, 330 - 30 * game.level)
     if "HUNTER_SOON" in game.controls:
         game.hunter_wait = game.hunter_timer = 15
     if "FIXED_ENEMIES" in game.controls:
@@ -240,7 +258,7 @@ def start_level(game: Game) -> None:
         return
     if "NO_ENEMIES" in game.controls:
         return
-    for slot in range(min(20, 4 + 2 * game.level)):
+    for slot in range(grunts):
         while True:
             x = game.random_x()
             y = game.random_y()
@@ -427,6 +445,8 @@ def step(game: Game, keys: str, variant: str) -> None:
                 game.over = OVER_FRAMES
             else:
                 start_level(game)
+    elif game.ready:
+        game.ready -= 1
     else:
         play(game, keys)
     game.sound_frame()  # the first field of the frame
@@ -566,6 +586,10 @@ def picture(game: Game | None) -> np.ndarray:
             if enemy:
                 stamp(codes, SPRITE[enemy.kind], enemy.x, enemy.y)
         stamp(codes, "player", game.x, game.y)
+        if game.ready:
+            text(codes, f"LEVEL {game.level}", 60, 9, big=True)
+            if game.level in TEACH:
+                text(codes, TEACH[game.level][3], 76, TEACH[game.level][4], "G")
         hud(codes, game)
     return codes
 
@@ -685,10 +709,12 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
             if got != want:
                 raise ValueError(f"Frame {frame}: shot slot {i} is {got}, expected {want}.")
     bcd = int(ram[symbols["score"] : symbols["score"] + 3].hex())
-    got = (bcd, ram[symbols["lives"]], ram[symbols["dying"]], ram[symbols["over"]])
-    want = (game.score, game.lives, game.dying, game.over)
+    got = (bcd, ram[symbols["lives"]], ram[symbols["dying"]], ram[symbols["over"]],
+           ram[symbols["ready"]])
+    want = (game.score, game.lives, game.dying, game.over, game.ready)
     if got != want:
-        raise ValueError(f"Frame {frame}: score, lives, dying, over = {got}, expected {want}.")
+        raise ValueError(f"Frame {frame}: score, lives, dying, over, ready = {got}, "
+                         f"expected {want}.")
     if ram[symbols["level"]] != game.level:
         raise ValueError(f"Frame {frame}: level {ram[symbols['level']]}, expected {game.level}.")
     for i, enemy in enumerate(game.enemies):

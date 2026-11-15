@@ -23,6 +23,8 @@ other hand, in eight directions. The game uses four-colour graphics.
 > directions, or a bomb that clears the enemies near the player. Easy first
 > levels that teach the game. A high-score table.
 
+> Increment 7: the first levels that teach the game.
+
 The plan for these requests:
 
 | Increment | Contents |
@@ -69,16 +71,18 @@ uv run python scripts/coco.py check projects/arena-blaster
 
 The `run` command opens XRoar. Close the window to stop it.
 
-The check runs eight builds for 200 frames each. At each frame it compares
+The check runs ten builds for 200 frames each. At each frame it compares
 both screens, the game state, the rendered picture and the mixer output with
 `expected.py`. See [Checks](#checks).
 
 ## Status
 
-Increment 6: the title screen, the high-score table and the initials.
+Increment 7: the first levels that teach the game, and a "LEVEL N" banner
+at the start of each level.
+Increment 6 added the title screen, the high-score table and the initials.
 Increment 5 added score, lives, game over and the start and game-over sounds.
 Increment 4 added faster drawing and the fixed speed of 30 frames each second.
-Increment 7 adds the first levels that teach the game.
+Increment 8 adds enemies that shoot.
 
 The owner chose the fixed speed of 30 frames each second. Each frame lasts two
 fields of the picture (one field is 1/60 second). Measured speed in XRoar, in
@@ -135,11 +139,11 @@ The CoCo 1 defaults come from
 | `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`). An erase-list entry is the first screen byte and the erase routine of a sprite. |
 | `$2000`-`$23FF` | Stack, from `$2400` down |
 | `$2400`-`$3BFF` | Screen B, 6144 bytes |
-| `$3C00`-`$5850` | Code, sprites, font, text and the high-score table |
-| `$5851`-`$7FFF` | Free, about 10 KiB |
+| `$3C00`-`$5995` | Code, sprites, font, text and the high-score table |
+| `$5996`-`$7FFF` | Free, about 9.6 KiB |
 
 The game needs 32 KiB. The two screens use 12 KiB, so a 16 KiB machine
-does not have space for the program. The game state uses 242 of the 256
+does not have space for the program. The game state uses 243 of the 256
 bytes of the direct page.
 
 ### Arena
@@ -179,16 +183,29 @@ so we removed it.
 ### Levels and enemies
 
 The owner asked for slow enemies that increase in number on each level, and
-for hunters that come more often on higher levels. The numbers are agent
-choices:
+for hunters that come more often on higher levels. The owner also asked for
+first levels that teach the game. Each of the first four levels adds one
+thing. The numbers and the hints are agent choices:
 
-| Item | Rule |
-| --- | --- |
-| Grunts (green) | 4 + 2 x level, not more than 20. One step each 2 frames. |
-| Hunters (red) | One step each frame. One comes each 330 - 30 x level frames, not less than 45. |
-| Level 1 | 6 grunts, a hunter each 300 frames (10 seconds) |
-| Level 5 | 14 grunts, a hunter each 180 frames (6 seconds) |
-| Level 10 | 20 grunts, a hunter each 45 frames (1.5 seconds) |
+| Level | Grunts | Hunters | Hint |
+| --- | --- | --- | --- |
+| 1 | 4 | None | SHOOT THE GRUNTS |
+| 2 | 8 | None | HOLD TWO KEYS FOR DIAGONALS |
+| 3 | 6 | The first after 60 frames (2 seconds), then each 240 frames (8 seconds) | HUNTERS ARE FAST |
+| 4 | 10 | Each 210 frames (7 seconds) | MORE OF EVERYTHING |
+| 5 and more | 4 + 2 x level, not more than 20 | Each 330 - 30 x level frames, not less than 45 | None |
+
+So level 5 has 14 grunts and a hunter each 180 frames (6 seconds). Level 10
+has 20 grunts and a hunter each 45 frames (1.5 seconds).
+
+- Grunts (green) make one step each 2 frames. Hunters (red) make one step
+  each frame.
+- At the start of a level, a banner shows for 60 frames (2 seconds). It
+  has "LEVEL N" in big yellow text on rows 60-69. The hint of the level is
+  in green on rows 76-80. Nothing moves during the banner. The banner also
+  shows when the same level starts again after a death.
+- The banner is drawn after the enemies and the player. Its erase-list
+  entry stores the floor in byte columns 2-29 of rows 60-80.
 
 - All counts in frames are at 30 frames each second.
 - An enemy step is 1 pixel across and up to 2 rows down or up, toward the
@@ -307,7 +324,7 @@ two fields of the effect.
    After game over, count down the pause and go to step 9. At 0, show the
    initials screen or the title. After a death, count down the pause and go
    to step 9. At 0, take a life. Then start the same level again, or start
-   game over.
+   game over. During the banner, count it down and go to step 9.
 2. Move the player 2 pixels across and 4 rows down or up. Stop the player at
    the arena edge. The player is 6 pixels wide and 10 rows high. It starts at
    pixel 61, row 95.
@@ -324,8 +341,8 @@ two fields of the effect.
    enemy is left, start the next level. A new level puts the player back at
    the start and removes all shots.
 9. Take the next sound record. Erase what this screen showed two frames
-   before. Draw the shots and the enemies. Draw the player. Then draw the
-   score and the reserve lives.
+   before. Draw the shots and the enemies. Draw the player. During the
+   banner, draw the banner. Then draw the score and the reserve lives.
 10. Wait for the end of the first field, unless it ended during the work.
     The field-sync flag stays set until a read of `$FF02` (MC6821 PDF 10,
     Figure 18), so a set flag tells that the first field ended. Take the next
@@ -376,17 +393,21 @@ remove one part of the game. The key scripts are short and written by hand.
 | Build | Controls | Keys | What it checks |
 | --- | --- | --- | --- |
 | `main` | none | none | The real power-on: the title screen, the table and the prompt that comes and goes |
-| `moves` | `SKIP_TITLE` `NO_ENEMIES` | `moves.txt` | Movement, walls, shots, the wrong key C, the K/O/S/W rectangle rule, shot sounds |
-| `hit` | `SKIP_TITLE` `FIXED_ENEMIES` `STILL` `FIRST_SCORE=0x0990` | `hit.txt` | Hits on a grunt (frame 9) and a hunter (frame 32), their points, an extra life at 1000, the extra-life and level sounds, level 2 |
-| `touch` | `SKIP_TITLE` `FIXED_ENEMIES` | none | The hunter reaches the player at frames 34, 113 and 192 |
-| `hunter` | `SKIP_TITLE` `NO_ENEMIES` `HUNTER_SOON` `NO_DEATH` | none | A hunter each 15 frames, its place and the hunter sound |
-| `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | 20 grunts and the level-10 hunter wait |
-| `over` | `SKIP_TITLE` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
-| `scores` | `FIXED_ENEMIES` `FIRST_LIVES=1` `FIRST_SCORE=0x5000` | `scores.txt` | A start from the title (frame 3), game over (frame 82), the initials screen (frame 172), a held W that repeats, S from A to Z, the entry CZA at place 7 below REX (frame 192), a held shoot key that does not start a game |
+| `moves` | `SKIP_TITLE` `NO_READY` `NO_ENEMIES` | `moves.txt` | Movement, walls, shots, the wrong key C, the K/O/S/W rectangle rule, shot sounds |
+| `hit` | `SKIP_TITLE` `NO_READY` `FIXED_ENEMIES` `STILL` `FIRST_SCORE=0x0990` | `hit.txt` | Hits on a grunt (frame 9) and a hunter (frame 32), their points, an extra life at 1000, the extra-life and level sounds, level 2 |
+| `touch` | `SKIP_TITLE` `FIXED_ENEMIES` | none | The banner, then the hunter reaches the player at frame 94. The banner shows again at frame 139. |
+| `hunter` | `SKIP_TITLE` `NO_READY` `NO_ENEMIES` `HUNTER_SOON` `NO_DEATH` | none | A hunter each 15 frames, its place and the hunter sound |
+| `level1` | `SKIP_TITLE` | none | The level 1 banner and hint, 4 grunts, no hunter. A death at frame 119 and the banner again at frame 164. |
+| `level3` | `SKIP_TITLE` `FIRST_LEVEL=3` `NO_DEATH` | none | The level 3 banner and hint, 6 grunts, the first hunter at frame 120 |
+| `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | The banner with a two-digit level, 20 grunts and the level-10 hunter wait |
+| `over` | `SKIP_TITLE` `NO_READY` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
+| `scores` | `NO_READY` `FIXED_ENEMIES` `FIRST_LIVES=1` `FIRST_SCORE=0x5000` | `scores.txt` | A start from the title (frame 3), game over (frame 82), the initials screen (frame 172), a held W that repeats, S from A to Z, the entry CZA at place 7 below REX (frame 192), a held shoot key that does not start a game |
 
 The controls:
 
 - `SKIP_TITLE`: at power-on, a game starts at once, with no title screen.
+- `NO_READY`: a level starts with no banner. The builds with key scripts
+  use it, so that their scripts stay short.
 - `NO_ENEMIES`: no grunts, and an empty arena does not end the level.
 - `FIXED_ENEMIES`: a grunt at x 100, y 90 and a hunter at x 100, y 40. No
   other hunters.
@@ -407,6 +428,10 @@ measured in these captures.
 
 Negative controls, run on copies. Each one must fail:
 
+- Increment 7: an `erase_banner` without the store to byte columns 12-13
+  fails at frame 60 (`level1`), the first frame after the banner. A copy
+  without the store to columns 28-29 passed, because no text of the level 1
+  banner is in those columns.
 - Increment 6: an `insert` that does not move the lower entries down fails
   at frame 192 (`scores`).
 - Increment 5: an `add_score` without `DAA` fails at frame 9 (`hit`).
