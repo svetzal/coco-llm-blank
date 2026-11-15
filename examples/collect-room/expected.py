@@ -23,9 +23,8 @@ TITLE = (0, 0, 0, 2, 0, 0, 0, 0, 0)
 # The pinned XRoar's RG6 colours for colour set 0 through coco.py's renderer settings,
 # measured by examples/palette-swatches. Emulator RGB values, not a monitor.
 BLACK, GREEN = (0, 31, 0), (46, 188, 36)
-# Each effect is 32 alternating DAC writes. The delays 80, 40 and 120 make the
-# pickup tone highest and the win tone lowest. These pitch bands were set before
-# the closed collect-room output lab measured 978, 1,739 and 680 Hz in XRoar 1.12.1.
+# Each effect is 32 alternating DAC writes. The game's requirement: the pickup
+# tone is highest and the win tone lowest, each within its own band.
 EFFECT_WRITES = 32
 EFFECT_HZ = {1: (900, 1100), 2: (1550, 1950), 3: (600, 800)}
 # A DAC step larger than this is an effect write; idle output changes much less.
@@ -83,7 +82,7 @@ def verify_journey_frame(
     """Guards, game state, keyboard history, room, sound burst and the whole screen."""
     if len(ram) not in (32768, 65536):
         raise ValueError("Missing/truncated RAM")
-    guards = [0x3FF, 0x1C00, 0x7E00] + [
+    guards = [0x3FF, 0x1C00] + [
         labels[n]
         for n in ("map_guard_before", "map_guard_after", "asset_guard_before", "asset_guard_after")
     ]

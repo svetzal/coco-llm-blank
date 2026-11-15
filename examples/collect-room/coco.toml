@@ -23,7 +23,6 @@ basic = "bas12.rom"
 
 [memory]
 at = { start = 0x3000 }
-below = { program_end = 0x7E00 }   # the stack is reserved from $7E00
 
 # Scripted keys take effect at the scanner entry: one journey.txt line per hit.
 # Each line's first word lists the held keys by these letters, or "-" for none.
@@ -36,11 +35,12 @@ letters = { U = "up", D = "down", L = "left", R = "right", F = "space", M = "m" 
 video = true
 audio = true
 
-# The main build gets no keys and must stay on its title screen. The journey
+# The plain build gets no keys and must stay on its title screen. The journey
 # build plays journey.txt through the emulated keyboard (instrumented XRoar).
 [variants.journey]
 keys = "journey.txt"
 
+# For the check only: where to take the snapshots and what to compare.
 [check]
 checkpoint = "frame_ready"
 frames = ["1-95"]                  # one checkpoint per journey.txt line

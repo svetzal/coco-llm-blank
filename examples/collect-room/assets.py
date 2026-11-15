@@ -60,6 +60,7 @@ def prepare(output: Path) -> None:
     if tuple(packed) != art[:4]:
         raise ValueError("Terrain art changed: review the independent expected pixels first")
     values = b"".join(expand(picture) for picture in (*packed, art[4]))
+    # The two guard bytes exist only for the check.
     lines = ["asset_guard_before fcb $a5", "art"]
     for label, block in (("", values), ("headers", headers())):
         if label:
