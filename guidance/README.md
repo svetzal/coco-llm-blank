@@ -1,7 +1,7 @@
 # Agent guidance
 
 This folder holds everything an agent reads to work well in this starter.
-Beginners do not need it; they start with the [README](../README.md).
+Beginners do not need it. They start with the [README](../README.md).
 Agents enter through [AGENTS.md](../AGENTS.md), which says when to read each part.
 [PLAN.md](../PLAN.md) holds outstanding work.
 
@@ -14,14 +14,14 @@ Agents enter through [AGENTS.md](../AGENTS.md), which says when to read each par
 | `starter/validation/` | Measured results for setup and permissions | Diagnosing setup on a new host |
 
 Read the guide for the task at hand. Research and validation records are the
-evidence trail; open them when a guide's claim matters to the work.
+evidence trail. Open them when a guide's claim matters to the work.
 
 ## Using the starter
 
 - [Set up manually or recover a first run](starter/setup.md).
 - [Build binaries and launch with verified firmware](starter/toolchain.md).
 - [Move the instrumented XRoar's patch to a new XRoar release](starter/xroar-patch.md).
-- [Establish a target and verify CoCo behavior](starter/development.md).
+- [Establish a target and check CoCo behavior](starter/development.md).
 - [Work on host scripts and prepare the full starter suite](starter/python.md).
 - [Find source pages and inspect diagrams](starter/references.md).
 - [Choose extracted text or page images](starter/conversion-quality.md).
@@ -56,8 +56,8 @@ For practical implementation advice, start with the [technique guides](technique
 
 Use these reports to inspect recorded commands, targets, expectations, failure
 controls and limitations. They record earlier measurements, not a fresh check
-of your environment. Reproduction code is indexed under
-[experiments](../experiments/README.md); example-specific checks also live in
+of your environment. The index under [experiments](../experiments/README.md)
+lists the reproduction code. Example-specific checks are also in the
 [example READMEs](../examples/README.md).
 
 ### Starter setup and permissions
@@ -91,6 +91,13 @@ of your environment. Reproduction code is indexed under
 - [CoCo 2 cooperative sound, input and drawing](techniques/validation/sound-coco2.md).
 - [Validate modeled audio output](techniques/validation/audio-output.md).
 
-Keep assembly, emulator state, software-renderer output, host playback,
-listening and physical-hardware evidence distinct. A report supports only the
-boundary and target it actually measured.
+Keep these kinds of evidence distinct:
+
+- assembly
+- emulator state
+- software-renderer output
+- host playback
+- listening
+- physical hardware
+
+A report supports only the boundary and target that it measured.

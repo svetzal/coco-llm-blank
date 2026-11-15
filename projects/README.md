@@ -1,6 +1,6 @@
 # Projects
 
-Each project the owner builds lives in its own folder here, named after the
+Each project the owner builds is in its own folder here. The folder name is the
 idea in a few lowercase words joined by hyphens, such as `bouncing-lines`.
 
 A project folder holds:
@@ -15,8 +15,8 @@ A project folder holds:
 - Key scripts (optional): text files of keys to hold at each keyboard scan,
   named by a variant in `coco.toml`.
 
-Start a project by copying [first-screen](../examples/first-screen/README.md).
+To start a project, copy [first-screen](../examples/first-screen/README.md).
 Build, run and check it with `uv run python scripts/coco.py <command> projects/<name>`.
 [Development practice](../guidance/starter/development.md#reusable-launchers)
-describes every setting and command. The starter keeps only this file here;
-your projects are yours.
+describes every setting and command. The starter keeps only this file here.
+Your projects are yours.
