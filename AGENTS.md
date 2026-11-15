@@ -59,6 +59,10 @@ a small complete increment and test it with `scripts/coco.py check`, keeping
 `coco.toml` and an independent `expected.py` current. Separate build, runtime,
 and visual evidence. Never call a build alone a working project.
 
+For a game with opponents, randomness or levels, add
+[test-harness controls](guidance/starter/development.md#test-harness-controls-for-dynamic-games)
+such as a player that cannot die. Do not script a full play-through.
+
 Commit the project folder in the owner's copy of the starter. Keep downloads
 outside Git and do not push or publish the project unless the owner asks.
 

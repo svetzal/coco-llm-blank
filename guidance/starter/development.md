@@ -299,6 +299,40 @@ Static captures do not establish animation cadence or tearing.
 For those tasks, obey the [animation guide](../techniques/animation.md).
 Host presentation and physical displays remain separate checks.
 
+### Test-harness controls for dynamic games
+
+A game with moving opponents, random events or levels changes with each rule
+you adjust. Do not write a key script that plays the game as a person would.
+Do not model the whole game so that a script can follow it. That work takes much time and
+many tokens, and a small change to a rule breaks it.
+
+Build test-harness controls into the program instead. Each control removes one
+dynamic part, so a short key script can reach one game element and check it.
+Examples of controls:
+
+- The player does not lose a life when an opponent hits it.
+- The opponents do not move, or they move on a fixed path.
+- The random-number generator starts from a fixed seed.
+- The game starts at level N, or with a fixed arena layout.
+- There is only one opponent, at a fixed position.
+- A collision sets a flag but does not end the game.
+
+Obey these rules for controls:
+
+1. Select each control with an assembler define, for example
+   `ifdef NO_DEATH`. Declare a `coco.toml` variant for each set of controls
+   that a check uses. The main build has no controls.
+2. Put a comment on each control that says it is only for the check.
+3. Use one set of controls to check one element. Write a short script, and in
+   `expected.py` model only that element.
+4. Keep at least one check of the main build without controls. For example,
+   check the first frames of play and the no-input control. Then the checks
+   show that no control is active in the game that the owner plays.
+5. A pass with a control does not prove the behavior that the control removes.
+   Check that behavior with its own short script. For example, let one
+   opponent hit a player that does not move.
+6. List the controls and the checks that use them in the project's README.
+
 ## Reusable launchers
 
 Do not write or copy a launcher. A project is a folder that
