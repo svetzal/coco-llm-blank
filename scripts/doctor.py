@@ -1,31 +1,25 @@
 """Check CoCo executables and optional target firmware without launching XRoar."""
 
 import argparse
-import os
-import shutil
 import sys
 
 import instrumented_xroar
-from native import ROOT, tool_path
+from native import ROOT, VARIABLES, tool_path
 from roms import TARGETS, verify_installed
 
 TOOLS = {
-    "lwasm": ("LWASM", "LWTOOLS assembler"),
-    "lwlink": ("LWLINK", "LWTOOLS linker"),
-    "decb": ("DECB", "ToolShed Disk BASIC disk utility"),
-    "xroar": ("XROAR", "XRoar machine emulator"),
+    "lwasm": "LWTOOLS assembler",
+    "lwlink": "LWTOOLS linker",
+    "decb": "ToolShed Disk BASIC disk utility",
+    "xroar": "XRoar machine emulator",
 }
 
 
 class ExecutableGateway:
-    """Resolve explicit environment overrides or search PATH."""
+    """Resolve overrides, project tools, PATH and Apple Silicon Homebrew, as the installer does."""
 
-    def find(self, command: str, variable: str) -> str | None:
-        return (
-            tool_path(command)
-            if command != "decb"
-            else shutil.which(os.environ.get(variable, command))
-        )
+    def find(self, command: str) -> str | None:
+        return tool_path(command)
 
 
 def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None = None) -> int:
@@ -45,12 +39,12 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
     executables = executables or ExecutableGateway()
     print(f"Python: {sys.executable}")
     missing = []
-    for command, (variable, purpose) in TOOLS.items():
-        executable = executables.find(command, variable)
+    for command, purpose in TOOLS.items():
+        executable = executables.find(command)
         if executable:
             print(f"{command}: {executable} ({purpose})")
         else:
-            print(f"{command}: missing ({purpose}); set {variable} or add it to PATH")
+            print(f"{command}: missing ({purpose}); set {VARIABLES[command]} or add it to PATH")
             if options.profile == "demo" and command == "decb":
                 print("  Optional for this demo; only needed to build disk images.")
             else:
@@ -78,7 +72,8 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
     if missing:
         print("Setup is incomplete. Ask your agent to install: " + ", ".join(missing))
         print(
-            "On Apple Silicon macOS, Homebrew provides assembly and emulator tools: brew install lwtools xroar"
+            "Run uv run python scripts/native.py. It installs LWTOOLS and XRoar, and builds "
+            "ToolShed from a pinned source release into local/toolchain/."
         )
     print("Read guidance/starter/toolchain.md for installation and verification.")
     return 1 if missing or not firmware_ok else 0

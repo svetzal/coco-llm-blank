@@ -21,8 +21,9 @@ trial without a new request.
 - Clean Apple Silicon host and native Linux desktop onboarding, including
   x86-64 Linux. Current container and configured host results do not
   establish these journeys.
-- Disk-tool installation and Linux distribution coverage beyond the tested
-  Ubuntu setup.
+- ToolShed installation on a clean Ubuntu 24.04 host, and Linux distribution
+  coverage beyond the tested Ubuntu setup. The ToolShed source build has run
+  only on Apple Silicon macOS.
 - Target-specific reference groups and further difficult-page conversion checks.
   Existing page samples do not establish whole-book OCR quality.
 - Technique-driven source and errata reading, especially scrolling and broader

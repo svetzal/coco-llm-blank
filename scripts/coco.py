@@ -13,6 +13,11 @@ allowed target unless --target names one. expected.py functions receive the
 variant name last when coco.toml declares variants, and target=<name> when
 their signature declares a target parameter.
 
+disk puts the build on a Disk BASIC disk image made with ToolShed's decb. With
+--run it opens XRoar with the target's disk ROM and types LOADM and EXEC; with
+--check it does the same headless and requires the [check] checkpoint. The
+target names its Disk BASIC ROM with disk = "<name>.rom".
+
 Rendered frames (--video), mixer sound (--audio) and scripted keys ([keys] in
 coco.toml) need the instrumented XRoar, which is built once into local/ on
 first use; it needs a C compiler, make and autotools. Everything else uses
@@ -62,6 +67,11 @@ MODEL_FUNCTIONS = (
 VIDEO_OPTIONS = ["-tv-input", "svideo", "-ccr", "none", "-vo-picture", "zoomed", "-fskip", "0"]
 # Emulated seconds after the checkpoint: two complete video frames and a full audio buffer.
 RUN_ON_SECONDS = 0.06
+# Emulated seconds a disk check adds to [check].emulated_seconds for the boot, the typed
+# command and the load. The template needs 3 to 4; this is an allowance, not a limit.
+DISK_SECONDS = 10
+# XRoar's cartridge profile for the Disk BASIC controller (xroar -cart help).
+DISK_CARTRIDGE = "rsdos"
 
 
 class ProjectError(ValueError):
@@ -85,6 +95,7 @@ class Machine(BaseModel):
     keyboard: str | None = None
     basic: str | None = None
     extended: str | None = None
+    disk: str | None = None
     options: tuple[str, ...] = ()
     screen: int | None = None
 
@@ -140,6 +151,14 @@ class Capture(BaseModel):
     audio: bool = False
 
 
+class Disk(BaseModel):
+    """[disk]: the program's name on the disk image, without the .BIN extension."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str | None = Field(default=None, pattern=r"^[A-Z0-9]{1,8}$")
+
+
 class Memory(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -190,6 +209,7 @@ class Settings(BaseModel):
     check: Check | None = None
     keys: Keys | None = None
     capture: Capture = Capture()
+    disk: Disk = Disk()
 
     @model_validator(mode="after")
     def keys_declared(self) -> "Settings":
@@ -226,6 +246,12 @@ class Project(BaseModel):
     @property
     def default_target(self) -> str:
         return next(iter(self.settings.targets))
+
+    @property
+    def disk_name(self) -> str:
+        """[disk].name, else the folder name's first eight letters and digits."""
+        derived = re.sub(r"[^A-Z0-9]", "", self.name.upper())[:8]
+        return self.settings.disk.name or derived or "PROGRAM"
 
 
 class Build(BaseModel):
@@ -388,8 +414,13 @@ def firmware_names(machine: Machine) -> tuple[str, ...]:
     return tuple(name for name in (machine.basic, machine.extended) if name)
 
 
-def xroar_command(xroar: str, machine: Machine, roms: dict[str, Path]) -> list[str]:
-    """Translate one target table into explicit XRoar options; user config is ignored."""
+def xroar_command(
+    xroar: str, machine: Machine, roms: dict[str, Path], disk: bool = False
+) -> list[str]:
+    """Translate one target table into explicit XRoar options; user config is ignored.
+
+    With disk, the target's Disk BASIC ROM goes in the disk controller cartridge.
+    """
     command = [xroar, "-no-c", "-machine", machine.machine]
     for option, value in (
         ("-machine-cpu", machine.cpu),
@@ -408,7 +439,32 @@ def xroar_command(xroar: str, machine: Machine, roms: dict[str, Path]) -> list[s
         command += ["-extbas", str(roms[machine.extended])]
     else:
         command += ["-no-extbas"]
-    return command + ["-no-cart", *machine.options]
+    if disk:
+        command += ["-cart", DISK_CARTRIDGE, "-cart-rom", str(roms[machine.disk])]
+    else:
+        command += ["-no-cart"]
+    return [*command, *machine.options]
+
+
+def disk_commands(decb: str, binary: str, image: str, name: str) -> list[list[str]]:
+    """Format a blank image, then copy the DECB binary as a machine-language file (-2 -b).
+
+    decb reads "image,file" as a file on an image, so pass names in the working folder:
+    a comma in a full path would split it.
+    """
+    return [
+        [decb, "dskini", image],
+        [decb, "copy", "-2", "-b", binary, f"{image},{name}.BIN"],
+    ]
+
+
+def disk_options(image: Path, name: str, write_back: bool = True) -> list[str]:
+    """Insert the image in drive 0 and type the commands that load and start the program."""
+    options = ["-load-fd0", str(image)]
+    if not write_back:
+        options.append("-no-disk-write-back")
+    # XRoar's -type reads \r as RETURN.
+    return options + ["-type", f'LOADM"{name}":EXEC\\r']
 
 
 def trap_condition(symbols: dict[str, int], expression: str) -> str:
@@ -423,6 +479,7 @@ def capture_options(
     unreachable: Path,
     equipment: Equipment = NO_EQUIPMENT,
     keys: Keys | None = None,
+    extra_seconds: float = 0,
 ) -> list[str]:
     """Headless, accelerated run from nonzero RAM that snapshots the Nth checkpoint hit.
 
@@ -442,7 +499,7 @@ def capture_options(
         "set",
         "-no-ratelimit",
         "-timeout",
-        f"{check.emulated_seconds:g}",
+        f"{check.emulated_seconds + extra_seconds:g}",
         "-trap",
         f"pc=0x{address(symbols, check.unreachable):04x}",
         "-trap-snap",
@@ -662,12 +719,37 @@ def target_machine(project: Project, target: str | None) -> tuple[str, Machine]:
 
 
 def emulator(
-    project: Project, host: Host, target: str | None, xroar: str | None = None
+    project: Project, host: Host, target: str | None, xroar: str | None = None, disk: bool = False
 ) -> list[str]:
     """Validate the actual firmware bytes before producing any launch command."""
     name, machine = target_machine(project, target)
-    roms = host.firmware(machine.firmware or name, firmware_names(machine))
-    return xroar_command(xroar or host.executable("xroar"), machine, roms)
+    names = firmware_names(machine)
+    if disk:
+        if not machine.disk:
+            raise ProjectError(
+                f'[targets.{name}] names no Disk BASIC ROM; add disk = "<name>.rom" from '
+                "the target tables in guidance/starter/toolchain.md."
+            )
+        names += (machine.disk,)
+    roms = host.firmware(machine.firmware or name, names)
+    return xroar_command(xroar or host.executable("xroar"), machine, roms, disk)
+
+
+def make_disk(project: Project, host: Host, built: Build) -> Path:
+    """Write a fresh disk image beside the binary that holds only the program."""
+    image = built.binary.with_suffix(".dsk")
+    image.unlink(missing_ok=True)
+    decb = host.executable("decb")
+    for step, command in zip(
+        ("dskini", "copy"),
+        disk_commands(decb, built.binary.name, image.name, project.disk_name),
+        strict=True,
+    ):
+        log = built.binary.with_suffix(f".{step}.log")
+        host.run(command, log, timeout=30, cwd=image.parent)
+    if not image.exists():
+        raise ProjectError(f"decb did not write {image}; read the logs beside it.")
+    return image
 
 
 def equipment_for(
@@ -736,32 +818,44 @@ def capture(
     target: str,
     frame: int,
     equipment: Equipment = NO_EQUIPMENT,
+    disk: Path | None = None,
 ) -> Evidence:
-    """Snapshot the Nth checkpoint hit; an unreachable checkpoint must leave no snapshot."""
+    """Snapshot the Nth checkpoint hit; an unreachable checkpoint must leave no snapshot.
+
+    With a disk image, Disk BASIC loads the program from drive 0 instead of XRoar's -run.
+    """
     check = require_check(project)
-    paths = recording_paths(built, target, frame)
-    unreachable = built.binary.with_name(f"{built.binary.stem}-{target}-unreachable.ram")
+    run = f"{target}-disk" if disk else target
+    paths = recording_paths(built, run, frame)
+    unreachable = built.binary.with_name(f"{built.binary.stem}-{run}-unreachable.ram")
     for path in (*paths.values(), unreachable):
         path.unlink(missing_ok=True)
     keys = project.settings.keys
     xroar = host.instrumented() if equipment.instrumented else None
-    command = emulator(project, host, target, xroar) + capture_options(
-        check, built.symbols, frame, paths["ram"], unreachable, equipment, keys
+    extra = DISK_SECONDS if disk else 0
+    command = emulator(project, host, target, xroar, disk=disk is not None) + capture_options(
+        check, built.symbols, frame, paths["ram"], unreachable, equipment, keys, extra
     )
-    command += ["-run", str(built.binary)]
+    if disk:
+        command += disk_options(disk, project.disk_name, write_back=False)
+    else:
+        command += ["-run", str(built.binary)]
     environment = None
     if equipment.instrumented:
         if equipment.keys is not None:
             paths["keys"].write_text(recording.key_lines(equipment.keys))
         inherited = {k: v for k, v in os.environ.items() if not k.startswith("COCO_")}
         environment = inherited | recording_environment(equipment, built.symbols, keys, paths)
-    host.run(command, paths["log"], timeout=max(30.0, check.emulated_seconds), env=environment)
+    host.run(
+        command, paths["log"], timeout=max(30.0, check.emulated_seconds + extra), env=environment
+    )
     if unreachable.exists():
         raise ProjectError(f"The unreachable checkpoint {check.unreachable!r} fired.")
     if not paths["ram"].exists():
+        loaded = " after LOADM from the disk" if disk else ""
         raise ProjectError(
-            f"{target} did not reach {check.checkpoint!r} {frame} times within "
-            f"{check.emulated_seconds:g} emulated seconds."
+            f"{target} did not reach {check.checkpoint!r} {frame} times{loaded} within "
+            f"{check.emulated_seconds + extra:g} emulated seconds."
         )
     picture, sound, delivered = collect(paths, equipment) if equipment.instrumented else (None,) * 3
     return Evidence(
@@ -978,6 +1072,56 @@ def report(project: Project, record: dict[str, object]) -> list[str]:
     return lines
 
 
+def disk_check(
+    project: Project, host: Host, built: Build, image: Path, target: str
+) -> dict[str, object]:
+    """Boot Disk BASIC, load the program from the image and require its first checkpoint hit.
+
+    Only execution is checked: the typed command is on the screen, so expected.py does not
+    describe it.
+    """
+    check = require_check(project)
+    name, machine = target_machine(project, target)
+    result = project.output / f"{name}-{built.variant or 'main'}-disk-results.json"
+    result.unlink(missing_ok=True)
+    frame = check.frames[0]
+    capture(project, host, built, name, frame, disk=image)
+    record = {
+        "target": name,
+        "machine": machine.model_dump(mode="json", exclude_defaults=True),
+        "build": built.variant or "main",
+        "disk_rom": machine.disk,
+        "disk_image": str(image),
+        "disk_image_sha256": digest(image),
+        "program": f"{project.disk_name}.BIN",
+        "typed": f'LOADM"{project.disk_name}":EXEC',
+        "checkpoint": check.checkpoint,
+        "frame": frame,
+        "ram_init": "set (nonzero)",
+        "unreachable_checkpoint": "no snapshot",
+        "memory": "not compared: the typed command changes the screen",
+        "visual": "not inspected by a person",
+        "physical_hardware": "not tested",
+    }
+    result.write_text(json.dumps(record, indent=2) + "\n")
+    return record
+
+
+def disk_report(record: dict[str, object]) -> list[str]:
+    return [
+        (
+            f"Disk: {record['target']} booted Disk BASIC with {record['disk_rom']}, typed "
+            f"{record['typed']} and reached {record['checkpoint']!r} (hit {record['frame']}) in "
+            f"build {record['build']}; the unreachable checkpoint left no snapshot."
+        ),
+        (
+            "Memory: not compared on the disk boot; the typed command changes the screen. "
+            "Run check for the screen and the model."
+        ),
+        "Visual: not inspected by a person; use disk --run and look.",
+    ]
+
+
 # --- Command line ---------------------------------------------------------------------------
 
 
@@ -986,6 +1130,7 @@ COMMANDS = {
     "run": "assemble and open XRoar at normal speed",
     "snapshot": "save RAM (and any captures) at the Nth checkpoint hit and print the paths",
     "check": "compare each checkpoint with expected.py and report the evidence",
+    "disk": "assemble the project onto a Disk BASIC disk image and print its path",
 }
 
 
@@ -1015,10 +1160,26 @@ def parser() -> argparse.ArgumentParser:
     for name, text in COMMANDS.items():
         command = commands.add_parser(name, help=text, description=text)
         command.add_argument("project", type=Path, help="folder holding coco.toml")
-        default = "every target" if name == "check" else "the variant's first allowed target"
+        default = {
+            "check": "every target",
+            "disk": "the variant's first allowed target; with --check, every disk target",
+        }.get(name, "the variant's first allowed target")
         command.add_argument("--target", help=f"a [targets.<name>] table; default: {default}")
         if name != "check":
             command.add_argument("--variant", default="", help="a [variants.<name>] build")
+        if name == "disk":
+            action = command.add_mutually_exclusive_group()
+            action.add_argument(
+                "--run", action="store_true", help="open XRoar and load the program from the disk"
+            )
+            action.add_argument(
+                "--check",
+                action="store_true",
+                help=(
+                    "boot the disk headless and require the first [check] checkpoint hit; "
+                    "a variant's key script is not used"
+                ),
+            )
         if name == "snapshot":
             command.add_argument("--frame", type=int, default=1, help="checkpoint hit (from 1)")
         if name in ("snapshot", "check"):
@@ -1048,6 +1209,51 @@ def snapshot_command(project: Project, arguments: argparse.Namespace, host: Host
             print(recorded.path)
 
 
+def disk_targets(project: Project, arguments: argparse.Namespace) -> list[str]:
+    """The named target, else every target the variant allows; each must name a disk ROM."""
+    if arguments.target:
+        name = variant_target(project, arguments.variant, arguments.target)
+        if not project.settings.targets[name].disk:
+            raise ProjectError(
+                f'[targets.{name}] names no Disk BASIC ROM; add disk = "<name>.rom" from '
+                "the target tables in guidance/starter/toolchain.md."
+            )
+        return [name]
+    declared = project.settings.variants.get(arguments.variant)
+    targets = [
+        name
+        for name, machine in project.settings.targets.items()
+        if machine.disk and (declared is None or declared.applies_to(name))
+    ]
+    if not targets:
+        raise ProjectError(
+            'No target names a Disk BASIC ROM; add disk = "<name>.rom" to a target table.'
+        )
+    return targets
+
+
+def disk_command(project: Project, arguments: argparse.Namespace, host: Host) -> None:
+    """Make the image; --run opens the first disk target, --check boots every one."""
+    targets = disk_targets(project, arguments) if arguments.run or arguments.check else []
+    if arguments.check:
+        require_check(project)
+    built = build(project, host, arguments.variant)
+    image = make_disk(project, host, built)
+    if arguments.run:
+        host.launch(
+            emulator(project, host, targets[0], disk=True)
+            + ["-ratelimit", *disk_options(image, project.disk_name)]
+        )
+        return
+    if arguments.check:
+        for target in targets:
+            for line in disk_report(disk_check(project, host, built, image, target)):
+                print(line)
+        print(f"PASS: {project.name} disk; evidence in {project.output}")
+        return
+    print(image)
+
+
 def execute(arguments: argparse.Namespace, host: Host) -> None:
     project = load_project(arguments.project)
     if arguments.command == "check":
@@ -1055,6 +1261,9 @@ def execute(arguments: argparse.Namespace, host: Host) -> None:
         return
     if arguments.command == "snapshot":
         snapshot_command(project, arguments, host)
+        return
+    if arguments.command == "disk":
+        disk_command(project, arguments, host)
         return
     target = variant_target(project, arguments.variant, arguments.target)
     built = build(project, host, arguments.variant)

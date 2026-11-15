@@ -16,7 +16,8 @@ These are host executables, separate from the uv Python environment. Check
 availability with `uv run python scripts/doctor.py`.
 
 For an emulator demo that you launch directly, use `--profile demo`.
-This profile treats ToolShed as optional.
+This profile treats ToolShed as optional. Bootstrap installs ToolShed all the
+same, because the `disk` command needs it.
 Add `--target` with `coco1`, `coco2`, `coco2b` or `coco3` to validate firmware
 as well.
 Without a target, the doctor explicitly reports that firmware is unchecked.
@@ -74,7 +75,20 @@ again. Bootstrap does not change the folders in `projects/`.
 changes. For custom commands, use the paths that the doctor reports, or add
 `local/toolchain/bin` to PATH.
 
-ToolShed installation is still separate. Only disk images need it.
+Homebrew has no ToolShed formula. On both hosts, the installer builds a
+ToolShed release from source into `local/toolchain/`. `native.py` pins the
+release and the SHA-256 of its archive. The build leaves out `cocofuse`,
+because that tool needs FUSE. `decb` and `os9` do not need it.
+
+On macOS, the ToolShed build needs the Xcode Command Line Tools. The installer
+asks `xcode-select -p`, because `/usr/bin/cc` and `/usr/bin/make` are present
+without the tools. If the tools are missing, install them with
+`xcode-select --install`. Then run the installer again.
+
+A ToolShed failure does not stop bootstrap. Directly launched programs do not
+need ToolShed. The installer gives the cause and continues. The doctor then
+reports `decb` as missing.
+
 Other Linux distributions need manual installation.
 
 - [LWTOOLS downloads and build instructions](https://www.lwtools.ca/)
@@ -126,8 +140,8 @@ commands. `bootstrap_spec.py` covers sudo and apt. `roms_spec.py` and
 Finding an executable does not prove a working build. Assemble an original
 small program. Inspect its load and execution addresses.
 
-Build and inspect a disk image only when the project needs one.
-For Disk BASIC, use the DECB binary format. Test `LOADM` from the disk.
+Build a disk image only when the project needs one. Use the `disk` command in
+[Disk images](#disk-images). It tests `LOADM` from the disk.
 Read [development.md](development.md) for memory and evidence requirements.
 
 ## Firmware and launching
@@ -160,8 +174,8 @@ hashes. It does not use file existence as proof of valid firmware.
 `scripts/coco.py` does the same checks for the ROMs that a project's
 `coco.toml` names before it starts XRoar. It passes their absolute paths.
 
-The tool does not yet set up a Disk BASIC cartridge. Disk BASIC work needs
-`disk11.rom` and a reviewed launch configuration.
+`scripts/coco.py disk` sets up the Disk BASIC cartridge from the target's
+`disk` ROM. Read [Disk images](#disk-images).
 
 Custom firmware needs an explicit, reviewed configuration and independent boot
 validation.
@@ -180,7 +194,8 @@ Setup installs each profile in `local/roms/<target>/`.
 | `coco2b` | CoCo 2B, NTSC | `coco2bus` | MC6847T1 | 1.3, `bas13.rom` | 1.1, `extbas11.rom` |
 | `coco3` | CoCo 3, NTSC | `coco3` | GIME 1986 | In `coco3.rom` | In `coco3.rom` |
 
-Each profile also holds `disk11.rom` for later Disk BASIC work.
+Each profile also holds `disk11.rom`, Disk Extended Color BASIC 1.1. Each
+target table names it with `disk`. Only the `disk` command loads it.
 
 The CoCo 1 and CoCo 2 targets load Extended Color BASIC. Most real machines
 have it, and the CoCo 3 ROM includes it. Extended BASIC turns on the
@@ -202,8 +217,9 @@ PAL firmware for the CoCo 3.
 #### Target tables
 
 Copy the table of the target into `coco.toml`. Examples and projects use these
-tables. Change a value only when the project contract records a different
-machine. Then record the reason in the contract.
+tables. Examples leave out `disk`, because no example makes a disk image.
+Change a value only when the project contract records a different machine.
+Then record the reason in the contract.
 
 ```toml
 [targets.coco1]
@@ -214,6 +230,7 @@ vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
 extended = "extbas11.rom"
+disk = "disk11.rom"
 
 [targets.coco2]
 machine = "cocous"
@@ -223,6 +240,7 @@ vdg = "6847"
 ram_kib = 32
 basic = "bas12.rom"
 extended = "extbas11.rom"
+disk = "disk11.rom"
 
 [targets.coco2b]
 machine = "coco2bus"
@@ -232,6 +250,7 @@ vdg = "6847t1"
 ram_kib = 32
 basic = "bas13.rom"
 extended = "extbas11.rom"
+disk = "disk11.rom"
 
 [targets.coco3]
 machine = "coco3"
@@ -240,6 +259,7 @@ tv = "ntsc"
 vdg = "gime1986"
 ram_kib = 128
 extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+disk = "disk11.rom"
 screen = 0x10400         # logical $0400 in the physical RAM snapshot
 ```
 
@@ -279,14 +299,84 @@ xroar -machine cocous -tv-type ntsc -vdg-type 6847 -ram 32 \
 A target with no `extended` ROM gets `-no-extbas`. XRoar's machine profiles
 otherwise search for an Extended BASIC ROM.
 
-Use the actual project's binary name and RAM requirement. For Disk BASIC,
-replace `-no-cart` with `-cart rsdos -cart-rom local/roms/coco1/disk11.rom`.
+Use the actual project's binary name and RAM requirement. The `disk` command
+replaces `-no-cart` with `-cart rsdos -cart-rom local/roms/coco1/disk11.rom`.
 Direct auto-run of a binary is not evidence that a disk boots or that `LOADM`
 works.
 
 Do not require ToolShed for a direct launch of a DECB binary.
 Disk work needs ToolShed.
 Read the installed XRoar help for other machine profiles and ROM options.
+
+## Disk images
+
+Use the `disk` command to put a project on a Disk BASIC disk image. The target
+table must name the Disk BASIC ROM with `disk = "disk11.rom"`, as the
+[target tables](#target-tables) do.
+
+```sh
+uv run python scripts/coco.py disk projects/<name>
+uv run python scripts/coco.py disk projects/<name> --run
+uv run python scripts/coco.py disk projects/<name> --check
+```
+
+- Without a flag, the command assembles the program. It writes a new image,
+  `build/<name>/main.dsk`, and prints the path.
+- With `--run`, XRoar opens at normal speed with the image in drive 0. XRoar
+  types `LOADM"<NAME>":EXEC` and RETURN.
+- With `--check`, XRoar boots the image without a window and types the same
+  command. The program must reach the first `[check]` checkpoint before the
+  unreachable label runs.
+
+`--variant` selects a variant build, as for `build`. A variant key script is
+not used on a disk boot.
+
+The image holds one file, `<NAME>.BIN`. ToolShed's `decb dskini` formats a
+blank image. `decb copy -2 -b` copies the DECB binary as a machine-language
+file. Give the name in `coco.toml`:
+
+```toml
+[disk]
+name = "ARENA"   # 1 to 8 capital letters or digits
+```
+
+Without `[disk]`, the command uses the first eight letters and digits of the
+folder name in capitals. For `arena-blaster`, the name is `ARENABLA`.
+
+### What the disk check shows
+
+The disk check shows that Disk BASIC loaded the program and that the program
+reached its checkpoint. It does not compare the screen or the model. The typed
+command is on the screen, and `expected.py` does not describe it. Run `check`
+for that evidence. The check uses `-no-disk-write-back`, so it does not change
+the image.
+
+The record of the check is `build/<name>/<target>-<build>-disk-results.json`.
+The build is `main` or the variant name.
+
+The check adds 10 emulated seconds to `[check] emulated_seconds` for the boot
+and the load. The template needs 3 to 4 seconds.
+
+Measured in XRoar 1.13 with the `disk11.rom` of each profile:
+
+- The template loads from a disk and reaches its checkpoint on `coco1`,
+  `coco2`, `coco2b` and `coco3`.
+- On `coco1` with Color BASIC and no Extended BASIC, Disk BASIC never runs the
+  typed command. A disk target needs Extended BASIC.
+
+`DescribeDisksInXRoar` in `scripts/coco_spec.py` repeats these checks.
+
+### Memory for a disk program
+
+Disk BASIC uses some RAM for its own work. The disk check measures only one
+program. Before you place code or data for a disk program, find the RAM that
+Disk BASIC uses in a reference. Cite it in the project contract. If no
+reference settles it, open a lab.
+
+A program that ran only without Extended BASIC can fail on a disk target.
+Extended BASIC starts the field-sync interrupt, as
+[Standard targets](#standard-targets) describes. Run `check` on a target with
+Extended BASIC first. Then make the disk.
 
 Keep ROMs in ignored local storage or use an explicit user-provided location.
 Record machine, RAM, video standard, CPU, and ROM selection in the project

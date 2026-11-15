@@ -28,7 +28,8 @@ installs missing native tools on Apple Silicon macOS and Ubuntu 24.04.
 Other Linux distributions still need manual installation of the native tools.
 If permissions or installation fail, use [toolchain.md](toolchain.md).
 
-ToolShed is optional for directly launched demos. Disk projects still need it.
+Bootstrap also builds ToolShed. Directly launched demos do not need it. The
+`disk` command of `scripts/coco.py` needs it to make disk images.
 
 ## Setup
 

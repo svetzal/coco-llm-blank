@@ -12,6 +12,7 @@ vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
 extended = "extbas11.rom"
+disk = "disk11.rom"      # Disk BASIC, used only by the disk command
 
 [memory]
 at = { start = 0x3000 }

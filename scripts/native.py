@@ -1,4 +1,4 @@
-"""Install the assembly and emulator tools for Apple Silicon macOS or Ubuntu 24.04."""
+"""Install the assembly, disk and emulator tools for Apple Silicon macOS or Ubuntu 24.04."""
 
 import hashlib
 import json
@@ -26,12 +26,22 @@ SOURCES = {
     ),
     # Ubuntu's ordinary XRoar and the instrumented XRoar share one pin.
     "xroar": (XROAR_PIN["version"], XROAR_PIN["archive_url"], XROAR_PIN["archive_sha256"]),
+    # Homebrew has no ToolShed formula, so both hosts build this release.
+    "toolshed": (
+        "2.6.1",
+        "https://github.com/nitros9project/toolshed/archive/refs/tags/v2.6.1.tar.gz",
+        "99f0bb23f14b7d0c4b69b7fa0b846ee31e042e4e81ac8f8586064b45855854d2",
+    ),
 }
+# Each tool's override variable, in the order the doctor reports them.
+VARIABLES = {"lwasm": "LWASM", "lwlink": "LWLINK", "decb": "DECB", "xroar": "XROAR"}
+# The source release that supplies each tool.
+PACKAGES = {"lwasm": "lwtools", "lwlink": "lwtools", "decb": "toolshed", "xroar": "xroar"}
 
 
 def tool_path(name: str, root: Path = ROOT) -> str | None:
     """Honor overrides, project tools, PATH, then Apple Silicon Homebrew."""
-    variable = {"lwasm": "LWASM", "lwlink": "LWLINK", "xroar": "XROAR"}[name]
+    variable = VARIABLES[name]
     if variable in os.environ:
         return shutil.which(os.environ[variable])
     local = root / "local/toolchain/bin" / name
@@ -58,6 +68,20 @@ class HostGateway:
 
     def run(self, command: list[str], cwd: Path | None = None) -> None:
         subprocess.run(command, cwd=cwd, check=True)
+
+    def has_build_tools(self) -> bool:
+        """A C compiler and make that work, not only their names on PATH.
+
+        On macOS, /usr/bin/cc and /usr/bin/make exist without the Command Line Tools: they
+        are stubs that offer to install them. xcode-select -p fails until they are installed.
+        """
+        if self.system() == "Darwin":
+            try:
+                found = subprocess.run(["xcode-select", "-p"], capture_output=True, check=False)
+            except OSError:
+                return False
+            return found.returncode == 0
+        return all(shutil.which(command) for command in ("cc", "make"))
 
     def download(self, url: str, destination: Path) -> None:
         with urllib.request.urlopen(url, timeout=60) as response:
@@ -124,6 +148,12 @@ def build_source(name: str, root: Path, host: HostGateway) -> None:
         with tarfile.open(archive) as source:
             source.extractall(directory, filter="data")
         work = Path(directory) / f"{name}-{version}"
+        if name == "toolshed":
+            # The FUSE file system tool needs libfuse; the disk tools do not.
+            work = work / "build/unix"
+            host.run(["make", "NO_COCOFUSE=1"], cwd=work)
+            host.run(["make", "NO_COCOFUSE=1", "install", f"prefix={prefix}"], cwd=work)
+            return
         if name == "xroar":
             host.run(
                 [
@@ -140,6 +170,38 @@ def build_source(name: str, root: Path, host: HostGateway) -> None:
         host.run(["make", "install", f"PREFIX={prefix}"], cwd=work)
 
 
+def install_toolshed(root: Path, host: HostGateway) -> bool:
+    """Build ToolShed, or explain why not; only disk images need it, so it never stops setup."""
+    try:
+        if not host.has_build_tools():
+            raise ValueError(
+                "building it needs a C compiler and make. On macOS, install the Xcode "
+                "Command Line Tools with xcode-select --install"
+            )
+        build_source("toolshed", root, host)
+        if not tool_path("decb", root):
+            raise ValueError("the build finished but decb is not discoverable")
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        print(
+            f"ToolShed was not installed: {error}. Directly launched programs do not need it. "
+            "Disk images do: resolve the cause, then run uv run python scripts/native.py again.",
+            file=sys.stderr,
+        )
+        return False
+    return True
+
+
+def missing_tools(root: Path) -> list[str]:
+    """Tools to install; an override that names an unavailable executable is an error."""
+    missing = [name for name in VARIABLES if not tool_path(name, root)]
+    for name in missing:
+        if VARIABLES[name] in os.environ:
+            raise ValueError(
+                f"{VARIABLES[name]} points to an unavailable executable; correct the override."
+            )
+    return missing
+
+
 def install(root: Path = ROOT, host: HostGateway | None = None) -> None:
     host = host or HostGateway()
     if host.system() == "Darwin" and host.machine() != "arm64":
@@ -148,40 +210,30 @@ def install(root: Path = ROOT, host: HostGateway | None = None) -> None:
             "Use a native arm64 terminal and Python on Apple Silicon, or Ubuntu 24.04. "
             "See guidance/starter/toolchain.md."
         )
-    missing = [name for name in ("lwasm", "lwlink", "xroar") if not tool_path(name, root)]
+    missing = missing_tools(root)
     if not missing:
-        print("Assembly and emulator tools are already available.")
+        print("Assembly, disk and emulator tools are already available.")
         return
-    for name in missing:
-        variable = {"lwasm": "LWASM", "lwlink": "LWLINK", "xroar": "XROAR"}[name]
-        if variable in os.environ:
-            raise ValueError(
-                f"{variable} points to an unavailable executable; correct the override."
-            )
+    packages = list(dict.fromkeys(PACKAGES[name] for name in missing))
+    required = [package for package in packages if package != "toolshed"]
     if host.system() == "Darwin":
-        packages = [
-            name
-            for name, needed in (
-                ("lwtools", any(n != "xroar" for n in missing)),
-                ("xroar", "xroar" in missing),
-            )
-            if needed
-        ]
-        host.run([host.brew(), "install", *packages])
+        # Homebrew supplies LWTOOLS and XRoar. It has no ToolShed formula.
+        if required:
+            host.run([host.brew(), "install", *required])
     elif host.system() == "Linux" and host.ubuntu_supported():
         host.dependencies()
-        if any(name != "xroar" for name in missing):
-            build_source("lwtools", root, host)
-        if "xroar" in missing:
-            build_source("xroar", root, host)
+        for package in required:
+            build_source(package, root, host)
     else:
         raise ValueError(
             "Automatic installation supports Apple Silicon macOS and Ubuntu 24.04. See guidance/starter/toolchain.md."
         )
-    if any(not tool_path(name, root) for name in missing):
+    if any(not tool_path(name, root) for name in missing if PACKAGES[name] in required):
         raise ValueError(
             "Installation finished but tools are not discoverable. See guidance/starter/toolchain.md."
         )
+    if "toolshed" in packages:
+        install_toolshed(root, host)
 
 
 def main() -> int:

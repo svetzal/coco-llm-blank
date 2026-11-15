@@ -136,6 +136,10 @@ def emulated(
 
     def run(command, log, timeout, cwd=None, env=None):
         log.write_text(trace)
+        if command[0] == "/tools/decb":
+            if command[1] == "dskini":
+                (cwd / command[2]).write_bytes(b"DISK")
+            return
         if "--6809" in command:
             symbols = next(arg for arg in command if arg.startswith("--symbol-dump="))
             Path(symbols.split("=", 1)[1]).write_text(SYMBOLS)
@@ -501,6 +505,204 @@ class DescribeCheck:
         assert record["variants"]["fast"]["trace"] == {"lines": 2, "variant": "fast"}
         assert "Trace (fast)" in "\n".join(coco.report(project, record))
         assert record["variants"]["main"]["screen_bytes_each"] == 0
+
+
+def with_disk(folder: Path, extra: str = "") -> Path:
+    """The fixture folder with a Disk BASIC ROM on coco1 only."""
+    text = (folder / "coco.toml").read_text()
+    text = text.replace('basic = "bas11.rom"\n', 'basic = "bas11.rom"\ndisk = "disk11.rom"\n')
+    (folder / "coco.toml").write_text(text + extra)
+    return folder
+
+
+class DescribeDiskImages:
+    @pytest.mark.parametrize(
+        "folder_name,declared,expected",
+        [("arena-blaster", None, "ARENABLA"), ("demo", "GAME1", "GAME1"), ("---", None, "PROGRAM")],
+    )
+    def should_name_the_program_from_settings_or_the_folder(
+        self, tmp_path: Path, folder_name: str, declared: str | None, expected: str
+    ) -> None:
+        directory = tmp_path / folder_name
+        directory.mkdir()
+        disk = f'\n[disk]\nname = "{declared}"\n' if declared else ""
+        (directory / "coco.toml").write_text(SETTINGS + disk)
+
+        assert coco.load_project(directory).disk_name == expected
+
+    @pytest.mark.parametrize("name", ["game", "TOOLONGNAME", "A.B", ""])
+    def should_reject_a_name_disk_basic_cannot_hold(self, folder: Path, name: str) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + f'\n[disk]\nname = "{name}"\n')
+
+        with pytest.raises(ProjectError, match="disk"):
+            coco.load_project(folder)
+
+    def should_put_the_disk_rom_in_the_controller_cartridge(self) -> None:
+        machine = coco.Machine(machine="cocous", ram_kib=32, basic="b.rom", disk="d.rom")
+        roms = {"b.rom": Path("/r/b"), "d.rom": Path("/r/d")}
+
+        command = coco.xroar_command("xroar", machine, roms, disk=True)
+
+        assert command[-4:] == ["-cart", "rsdos", "-cart-rom", "/r/d"]
+        assert "-no-cart" not in command
+
+    def should_format_then_copy_a_machine_language_file(self) -> None:
+        commands = coco.disk_commands("decb", "main.bin", "main.dsk", "GAME")
+
+        assert commands == [
+            ["decb", "dskini", "main.dsk"],
+            ["decb", "copy", "-2", "-b", "main.bin", "main.dsk,GAME.BIN"],
+        ]
+
+    def should_type_the_load_and_start_commands(self) -> None:
+        options = coco.disk_options(Path("/b/main.dsk"), "GAME", write_back=False)
+
+        assert options == [
+            "-load-fd0",
+            "/b/main.dsk",
+            "-no-disk-write-back",
+            "-type",
+            'LOADM"GAME":EXEC\\r',
+        ]
+
+    def should_print_a_fresh_image_path(self, folder: Path, project, capsys) -> None:
+        stale = project.output / "main.dsk"
+        stale.parent.mkdir(parents=True)
+        stale.write_bytes(b"old")
+        host = emulated()
+
+        assert coco.main(["disk", str(folder)], host) == 0
+
+        assert capsys.readouterr().out.splitlines() == [str(stale)]
+        assert stale.read_bytes() == b"DISK"
+        copy = host.run.call_args_list[-1]
+        assert copy.args[0][-1] == "main.dsk,DEMO.BIN"
+        assert copy.kwargs["cwd"] == project.output
+
+    def should_fail_when_decb_writes_no_image(self, folder: Path, project, capsys) -> None:
+        host = emulated()
+        assemble = host.run.side_effect
+        host.run.side_effect = lambda command, *args, **kwargs: (
+            None if command[1] == "dskini" else assemble(command, *args, **kwargs)
+        )
+
+        assert coco.main(["disk", str(folder)], host) == 1
+
+        assert "decb did not write" in capsys.readouterr().err
+
+    def should_launch_the_disk_at_normal_speed(self, folder: Path, project) -> None:
+        host = emulated()
+
+        assert coco.main(["disk", str(with_disk(folder)), "--run"], host) == 0
+
+        command = host.launch.call_args.args[0]
+        cartridge = command.index("-cart")
+        assert command[cartridge : cartridge + 4] == [
+            "-cart",
+            "rsdos",
+            "-cart-rom",
+            "/roms/disk11.rom",
+        ]
+        assert command[-5:] == [
+            "-ratelimit",
+            "-load-fd0",
+            str(project.output / "main.dsk"),
+            "-type",
+            'LOADM"DEMO":EXEC\\r',
+        ]
+
+    def should_refuse_a_target_without_a_disk_rom_before_launching(
+        self, folder: Path, capsys
+    ) -> None:
+        host = emulated()
+
+        assert coco.main(["disk", str(folder), "--run", "--target", "coco2"], host) == 1
+
+        assert not host.run.called
+        assert not host.launch.called
+        assert "[targets.coco2] names no Disk BASIC ROM" in capsys.readouterr().err
+
+    def should_run_the_first_target_that_names_a_disk_rom(self, folder: Path) -> None:
+        text = (folder / "coco.toml").read_text()
+        text = text.replace('basic = "bas12.rom"\n', 'basic = "bas12.rom"\ndisk = "disk11.rom"\n')
+        (folder / "coco.toml").write_text(text)
+        host = emulated()
+
+        assert coco.main(["disk", str(folder), "--run"], host) == 0
+
+        assert host.launch.call_args.args[0][3] == "coco2bus"
+
+    def should_make_an_image_for_a_target_without_a_disk_rom(self, folder: Path, project):
+        assert coco.main(["disk", str(folder), "--target", "coco2"], emulated()) == 0
+
+        assert (project.output / "main.dsk").exists()
+
+    def should_check_every_disk_target_from_the_image(self, folder: Path, project, capsys):
+        host = emulated(ram=bytes(32768))
+
+        assert coco.main(["disk", str(with_disk(folder)), "--check"], host) == 0
+
+        output = capsys.readouterr().out
+        assert "Disk: coco1 booted Disk BASIC with disk11.rom" in output
+        assert "coco2" not in output
+        boot = host.run.call_args_list[-1]
+        command = boot.args[0]
+        assert command[-5:] == [
+            "-load-fd0",
+            str(project.output / "main.dsk"),
+            "-no-disk-write-back",
+            "-type",
+            'LOADM"DEMO":EXEC\\r',
+        ]
+        assert "-run" not in command
+        assert command[command.index("-timeout") + 1] == "70"
+        assert boot.args[1] == project.output / "main-coco1-disk-1.log"
+        record = json.loads((project.output / "coco1-main-disk-results.json").read_text())
+        assert record["typed"] == 'LOADM"DEMO":EXEC'
+        assert record["memory"].startswith("not compared")
+
+    def should_fail_a_disk_that_never_reaches_the_checkpoint(self, folder: Path, project, capsys):
+        assert coco.main(["disk", str(with_disk(folder)), "--check"], emulated()) == 1
+
+        assert "after LOADM from the disk" in capsys.readouterr().err
+        assert not (project.output / "coco1-main-disk-results.json").exists()
+
+    def should_explain_a_disk_check_without_disk_targets(self, folder: Path, capsys) -> None:
+        host = emulated()
+
+        assert coco.main(["disk", str(folder), "--check"], host) == 1
+
+        assert "No target names a Disk BASIC ROM" in capsys.readouterr().err
+        assert not host.run.called
+
+    def should_keep_a_record_for_each_variant(self, folder: Path, project) -> None:
+        with_disk(folder, '\n[variants.wide]\ndefines = ["WIDE"]\n')
+        host = emulated(ram=bytes(32768))
+
+        assert coco.main(["disk", str(folder), "--check"], host) == 0
+        assert coco.main(["disk", str(folder), "--check", "--variant", "wide"], host) == 0
+
+        main = json.loads((project.output / "coco1-main-disk-results.json").read_text())
+        wide = json.loads((project.output / "coco1-wide-disk-results.json").read_text())
+        assert (main["build"], wide["build"]) == ("main", "wide")
+        assert main["disk_image"] != wide["disk_image"]
+
+    def should_skip_disk_targets_the_variant_does_not_allow(self, folder: Path, capsys) -> None:
+        with_disk(folder, '\n[variants.wide]\ndefines = ["WIDE"]\ntargets = ["coco2"]\n')
+
+        assert coco.main(["disk", str(folder), "--check", "--variant", "wide"], emulated()) == 1
+
+        assert "No target names a Disk BASIC ROM" in capsys.readouterr().err
+
+    def should_require_a_check_section_before_building(self, folder: Path, capsys) -> None:
+        text = (with_disk(folder) / "coco.toml").read_text()
+        (folder / "coco.toml").write_text(text.split("[check]")[0])
+        host = emulated()
+
+        assert coco.main(["disk", str(folder), "--check", "--target", "coco1"], host) == 1
+
+        assert "has no [check] section" in capsys.readouterr().err
+        assert not host.run.called
 
 
 class DescribeCommandLine:
@@ -1521,3 +1723,62 @@ class DescribeRealAssembler:
         prepare.write_text(prepare.read_text().replace('"--size", "8x8"', '"--size", "16x16"'))
 
         assert "each picture row must be 1 byte" in self.assembler_log(tile_room)
+
+
+@pytest.mark.integration
+class DescribeDisksInXRoar:
+    """A real ToolShed image, booted by real Disk BASIC firmware in XRoar."""
+
+    @pytest.fixture
+    def template(self, tmp_path: Path) -> Path:
+        if not (native_ready("coco1") and tool_path("decb")):
+            pytest.skip("Native tools, ToolShed or firmware are not installed")
+        directory = tmp_path / "disk-demo"
+        shutil.copytree(ROOT / "template", directory)
+        return directory
+
+    def should_load_the_template_from_its_disk_and_reach_the_checkpoint(
+        self, template: Path, capsys
+    ) -> None:
+        assert coco.main(["disk", str(template), "--check"]) == 0
+
+        output = capsys.readouterr().out
+        assert "Disk: coco1 booted Disk BASIC with disk11.rom" in output
+        listing = subprocess.run(
+            [tool_path("decb"), "dir", str(ROOT / "build/disk-demo/main.dsk")],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+        assert re.search(r"DISKDEMO\s+BIN\s+2\s+B", listing)
+
+    @pytest.mark.parametrize(
+        "target,table",
+        [
+            ("coco2", 'machine = "cocous"\nbasic = "bas12.rom"\nextended = "extbas11.rom"'),
+            ("coco2b", 'machine = "coco2bus"\nbasic = "bas13.rom"\nextended = "extbas11.rom"'),
+            ("coco3", 'machine = "coco3"\nextended = "coco3.rom"'),
+        ],
+    )
+    def should_load_the_template_from_a_disk_on_each_other_target(
+        self, template: Path, target: str, table: str
+    ) -> None:
+        if not native_ready(target):
+            pytest.skip(f"{target} firmware is not installed")
+        ram = 128 if target == "coco3" else 32
+        settings = template / "coco.toml"
+        settings.write_text(
+            settings.read_text()
+            + f'\n[targets.{target}]\n{table}\nram_kib = {ram}\ndisk = "disk11.rom"\n'
+        )
+
+        assert coco.main(["disk", str(template), "--check", "--target", target]) == 0
+
+    def should_not_reach_the_program_without_extended_basic(self, template: Path, capsys) -> None:
+        # Measured: Disk BASIC 1.1 on a CoCo 1 with only Color BASIC never runs the typed LOADM.
+        settings = template / "coco.toml"
+        settings.write_text(settings.read_text().replace('extended = "extbas11.rom"\n', ""))
+
+        assert coco.main(["disk", str(template), "--check"]) == 1
+
+        assert "after LOADM from the disk" in capsys.readouterr().err

@@ -61,7 +61,7 @@ echo 'Preparing the project Python environment. The first run can take a while.'
 uv sync --locked
 echo 'Preparing the local reference index without converting books or downloading firmware.'
 uv run python scripts/setup.py --target "$target" --guidance-only
-echo 'Installing missing assembly and emulator tools.'
+echo 'Installing missing assembly, disk and emulator tools.'
 uv run python scripts/native.py
 echo 'Downloading and verifying firmware for the selected machine.'
 uv run python scripts/setup.py --target "$target" --roms-only

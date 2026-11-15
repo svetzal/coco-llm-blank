@@ -36,6 +36,8 @@ the owner.
   `extbas11.rom` (starter default)
 - Controls: none yet
 - Loader: XRoar runs the DECB binary directly (starter default)
+- Disk: `coco.toml` names Disk BASIC, `disk11.rom`, for a disk image only.
+  Read [disk images](../guidance/starter/toolchain.md#disk-images).
 
 ## Check
 

@@ -15,7 +15,7 @@ import pytest
 def isolated_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("PATH", str(tmp_path / "bin"))
     monkeypatch.setattr(native, "HOMEBREW_BIN", tmp_path / "brew/bin")
-    for variable in ("LWASM", "LWLINK", "XROAR"):
+    for variable in native.VARIABLES.values():
         monkeypatch.delenv(variable, raising=False)
     return tmp_path
 
@@ -28,6 +28,39 @@ def provide(root: Path, *names: str) -> None:
         path.chmod(0o755)
 
 
+INSTALLED = "\tmkdir -p $(PREFIX)/bin\n\tprintf '#!/bin/sh\\nexit 0\\n' > $(PREFIX)/bin/{tool}\n\tchmod +x $(PREFIX)/bin/{tool}\n"
+
+
+def source_archive(name: str, tool: str) -> bytes:
+    """An original release archive laid out as the named package's build expects."""
+    if name == "toolshed":
+        # ToolShed's makefile lives in build/unix and takes a lowercase prefix.
+        rule = INSTALLED.replace("$(PREFIX)", "$(prefix)").format(tool=tool)
+        files = {"build/unix/Makefile": f"all:\n\t@true\ninstall:\n{rule}"}
+    else:
+        rule = INSTALLED.format(tool=tool)
+        files = {"configure": "#!/bin/sh\nexit 0\n", "Makefile": f"all:\n\t@true\ninstall:\n{rule}"}
+    stream = io.BytesIO()
+    with tarfile.open(fileobj=stream, mode="w:gz") as archive:
+        for filename, text in files.items():
+            member = tarfile.TarInfo(f"{name}-1/{filename}")
+            member.size = len(text.encode())
+            member.mode = 0o755
+            archive.addfile(member, io.BytesIO(text.encode()))
+    return stream.getvalue()
+
+
+def system_path(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
+    """Keep the isolated tool folder first, and let real builds find make and the shell."""
+    monkeypatch.setenv("PATH", f"{root / 'bin'}:/usr/bin:/bin")
+
+
+def pin_source(monkeypatch: pytest.MonkeyPatch, name: str, data: bytes) -> None:
+    monkeypatch.setitem(
+        native.SOURCES, name, ("1", "https://fixture/source", hashlib.sha256(data).hexdigest())
+    )
+
+
 class DescribeNativeInstallation:
     @pytest.mark.parametrize(
         "system,machine", [("Darwin", "arm64"), ("Linux", "x86_64"), ("Linux", "aarch64")]
@@ -35,7 +68,7 @@ class DescribeNativeInstallation:
     def should_reuse_existing_tools_without_system_changes(
         self, isolated_tools: Path, system: str, machine: str
     ) -> None:
-        provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        provide(isolated_tools, "lwasm", "lwlink", "decb", "xroar")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = system
         host.machine.return_value = machine
@@ -44,7 +77,7 @@ class DescribeNativeInstallation:
         host.dependencies.assert_not_called()
 
     def should_install_only_missing_mac_packages(self, isolated_tools: Path) -> None:
-        provide(isolated_tools, "xroar")
+        provide(isolated_tools, "decb", "xroar")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Darwin"
         host.machine.return_value = "arm64"
@@ -59,13 +92,112 @@ class DescribeNativeInstallation:
         assert native.tool_path("lwasm", isolated_tools)
         assert native.tool_path("lwlink", isolated_tools)
 
+    def should_build_toolshed_from_its_pinned_source_on_a_mac(
+        self, isolated_tools: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        system_path(monkeypatch, isolated_tools)
+        provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        data = source_archive("toolshed", "decb")
+        pin_source(monkeypatch, "toolshed", data)
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
+        host.has_build_tools.return_value = True
+        host.download.side_effect = lambda url, path: path.write_bytes(data)
+        host.run.side_effect = native.HostGateway().run
+
+        native.install(isolated_tools, host)
+
+        assert native.tool_path("decb", isolated_tools) == str(
+            isolated_tools / "local/toolchain/bin/decb"
+        )
+        host.brew.assert_not_called()
+
+    def should_explain_missing_compilers_without_stopping_setup(
+        self, isolated_tools: Path, capsys
+    ) -> None:
+        provide(isolated_tools, "xroar")
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
+        host.brew.return_value = "brew"
+        host.has_build_tools.return_value = False
+        host.run.side_effect = lambda command: provide(isolated_tools, "lwasm", "lwlink")
+
+        native.install(isolated_tools, host)
+
+        assert native.tool_path("lwasm", isolated_tools)
+        assert not native.tool_path("decb", isolated_tools)
+        host.download.assert_not_called()
+        error = capsys.readouterr().err
+        assert "ToolShed was not installed" in error and "xcode-select --install" in error
+
+    def should_report_a_failed_toolshed_build_without_stopping_setup(
+        self, isolated_tools: Path, capsys
+    ) -> None:
+        provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Linux"
+        host.machine.return_value = "x86_64"
+        host.ubuntu_supported.return_value = True
+        host.has_build_tools.return_value = True
+        host.download.side_effect = lambda url, path: path.write_bytes(b"not the release")
+
+        native.install(isolated_tools, host)
+
+        assert "ToolShed was not installed: toolshed: source checksum" in capsys.readouterr().err
+
+    def should_report_a_toolshed_build_that_supplied_no_decb(
+        self, isolated_tools: Path, monkeypatch: pytest.MonkeyPatch, capsys
+    ) -> None:
+        system_path(monkeypatch, isolated_tools)
+        provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        data = source_archive("toolshed", "os9")
+        pin_source(monkeypatch, "toolshed", data)
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
+        host.has_build_tools.return_value = True
+        host.download.side_effect = lambda url, path: path.write_bytes(data)
+        host.run.side_effect = native.HostGateway().run
+
+        native.install(isolated_tools, host)
+
+        assert "decb is not discoverable" in capsys.readouterr().err
+
+    def should_build_every_missing_package_on_ubuntu(
+        self, isolated_tools: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        archives = {
+            "lwtools": source_archive("lwtools", "lwasm"),
+            "toolshed": source_archive("toolshed", "decb"),
+        }
+        for name, data in archives.items():
+            pin_source(monkeypatch, name, data)
+        system_path(monkeypatch, isolated_tools)
+        provide(isolated_tools, "lwlink", "xroar")
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Linux"
+        host.machine.return_value = "x86_64"
+        host.ubuntu_supported.return_value = True
+        host.has_build_tools.return_value = True
+        downloads = iter(archives.values())
+        host.download.side_effect = lambda url, path: path.write_bytes(next(downloads))
+        host.run.side_effect = native.HostGateway().run
+
+        native.install(isolated_tools, host)
+
+        host.dependencies.assert_called_once()
+        assert native.tool_path("lwasm", isolated_tools)
+        assert native.tool_path("decb", isolated_tools)
+
     @pytest.mark.parametrize("machine", ["x86_64", "i386", "unknown"])
     @pytest.mark.parametrize("tools_present", [False, True])
     def should_reject_non_arm64_macos_before_installation(
         self, isolated_tools: Path, machine: str, tools_present: bool
     ) -> None:
         if tools_present:
-            provide(isolated_tools, "lwasm", "lwlink", "xroar")
+            provide(isolated_tools, "lwasm", "lwlink", "decb", "xroar")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Darwin"
         host.machine.return_value = machine
@@ -82,7 +214,7 @@ class DescribeNativeInstallation:
     def should_not_hide_a_broken_override(
         self, isolated_tools: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        provide(isolated_tools, "lwasm", "lwlink", "decb", "xroar")
         monkeypatch.setenv("LWASM", "/missing/assembler")
         with pytest.raises(ValueError, match="LWASM"):
             native.install(isolated_tools, Mock(spec=native.HostGateway))
@@ -95,6 +227,7 @@ class DescribeNativeInstallation:
         host.run.assert_not_called()
 
     def should_detect_an_install_that_did_not_supply_tools(self, isolated_tools: Path) -> None:
+        provide(isolated_tools, "decb")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Darwin"
         host.machine.return_value = "arm64"
@@ -126,29 +259,12 @@ class DescribeNativeInstallation:
 
 
 class DescribeVerifiedSourceBuild:
-    @pytest.mark.parametrize("name", ["lwtools", "xroar"])
+    @pytest.mark.parametrize("name", ["lwtools", "xroar", "toolshed"])
     def should_build_verified_sources_and_reuse_the_download(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
     ) -> None:
-        stream = io.BytesIO()
-        files = {
-            "configure": "#!/bin/sh\nexit 0\n",
-            "Makefile": (
-                "all:\n\t@true\ninstall:\n\tmkdir -p $(PREFIX)/bin\n"
-                f"\tprintf '#!/bin/sh\\nexit 0\\n' > $(PREFIX)/bin/{name}\n"
-                f"\tchmod +x $(PREFIX)/bin/{name}\n"
-            ),
-        }
-        with tarfile.open(fileobj=stream, mode="w:gz") as archive:
-            for filename, text in files.items():
-                member = tarfile.TarInfo(f"{name}-1/{filename}")
-                member.size = len(text.encode())
-                member.mode = 0o755
-                archive.addfile(member, io.BytesIO(text.encode()))
-        data = stream.getvalue()
-        monkeypatch.setitem(
-            native.SOURCES, name, ("1", "https://fixture/source", hashlib.sha256(data).hexdigest())
-        )
+        data = source_archive(name, name)
+        pin_source(monkeypatch, name, data)
         host = Mock(spec=native.HostGateway)
         host.download.side_effect = lambda url, path: path.write_bytes(data)
         host.run.side_effect = native.HostGateway().run
@@ -218,13 +334,57 @@ class DescribeHostGateway:
         assert host.run.call_args_list[-1].args[0][: len(prefix)] == prefix
 
 
+class DescribeBuildToolDiscovery:
+    @pytest.fixture
+    def commands(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+        monkeypatch.setenv("PATH", str(tmp_path))
+        return tmp_path
+
+    def command(self, directory: Path, name: str, status: int = 0) -> None:
+        path = directory / name
+        path.write_text(f"#!/bin/sh\nexit {status}\n")
+        path.chmod(0o755)
+
+    @pytest.mark.parametrize("status,expected", [(0, True), (2, False)])
+    def should_ask_xcode_select_on_a_mac(
+        self, commands: Path, monkeypatch: pytest.MonkeyPatch, status: int, expected: bool
+    ) -> None:
+        monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
+        self.command(commands, "cc")
+        self.command(commands, "make")
+        self.command(commands, "xcode-select", status)
+
+        assert native.HostGateway().has_build_tools() is expected
+
+    def should_not_trust_mac_stubs_without_xcode_select(
+        self, commands: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
+        self.command(commands, "cc")
+        self.command(commands, "make")
+
+        assert native.HostGateway().has_build_tools() is False
+
+    def should_need_both_a_compiler_and_make_on_linux(
+        self, commands: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(native.platform, "system", lambda: "Linux")
+        self.command(commands, "cc")
+
+        assert native.HostGateway().has_build_tools() is False
+
+        self.command(commands, "make")
+
+        assert native.HostGateway().has_build_tools() is True
+
+
 class DescribeHomebrewDiscovery:
     def should_discover_new_homebrew_tools_without_shell_reload(self, isolated_tools, monkeypatch):
         monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
         monkeypatch.setattr(native.platform, "machine", lambda: "arm64")
         assert native.tool_path("lwasm", isolated_tools) is None
         native.HOMEBREW_BIN.mkdir(parents=True)
-        for name in ("lwasm", "lwlink", "xroar"):
+        for name in ("lwasm", "lwlink", "decb", "xroar"):
             executable = native.HOMEBREW_BIN / name
             executable.write_text("#!/bin/sh\nexit 0\n")
             executable.chmod(0o755)

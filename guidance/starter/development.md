@@ -160,7 +160,8 @@ The exit of a process is not proof of a successful boot. Check a meaningful
 program state.
 
 A direct load of a binary is not proof that a disk image works.
-Test `LOADM` from the disk.
+Test `LOADM` from the disk with `scripts/coco.py disk <project> --check`. Read
+[disk images](toolchain.md#disk-images).
 Report minimum RAM and loading instructions with any distributable artifact.
 
 ## Check the feature you claim
