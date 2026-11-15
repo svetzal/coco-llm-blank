@@ -35,6 +35,11 @@ other hand, in eight directions. The game uses four-colour graphics.
 > Increment 9: things to collect (agreed with the owner: points, shots in
 > 2, 4 or 8 directions, and a bomb).
 
+> Negative pickups: half fire speed, half move speed, or a hunter blitz.
+> Make them different from the good pickups, but subtle. A jinx lasts 5
+> seconds. Put the name of the gift or the jinx at the top of the screen
+> while it lasts. Call them jinxes.
+
 The plan for these requests:
 
 | Increment | Contents |
@@ -44,6 +49,7 @@ The plan for these requests:
 | 7 | The first levels: each one teaches one new thing |
 | 8 | Enemies that shoot |
 | 9 | Things to collect: points, shots in more directions, a bomb |
+| 10 | Jinxes, and the names of the gift and the jinx at the top of the screen |
 
 The game, its name, its art and its rules are our own. They are not a copy of
 another game.
@@ -94,16 +100,20 @@ and types `LOADM"ARENA":EXEC`. On a real CoCo, type the same command. With
 `--check`, XRoar does the same without a window, and the game must reach its
 first frame.
 
-The check runs seventeen builds for 200 frames each, with Extended BASIC in
+The check runs twenty-two builds for 200 frames each, with Extended BASIC in
 the machine. At each frame it compares
 both screens, the game state, the rendered picture and the mixer output with
 `expected.py`. See [Checks](#checks).
 
 ## Status
 
-Increment 9: things to collect, from level 4: points, shots in 2, 4 or 8
-directions, and bombs from level 6. This completes the plan.
+Increment 10: jinxes from level 8. A jinx is a pickup that hurts: half
+the fire speed, half the move speed, or a blitz of hunters. The band at the
+top shows the name of the gift and of the jinx, each with a bar of the
+time that is left.
 
+Increment 9 added things to collect, from level 4: points, shots in 2, 4
+or 8 directions, and bombs from level 6.
 Increment 8 added shooters, enemies that fire bullets at the player, from
 level 5.
 Increment 7 added the first levels that teach the game, and a "LEVEL N"
@@ -158,7 +168,7 @@ Nobody has listened to it yet.
   BASIC (owner request).
 - Disk BASIC RAM: Disk BASIC keeps its RAM from `$600`, just above the text
   screen, up to the graphics pages (*Disk Basic Unravelled II*, PDF 20). The
-  game loads at `$3C00`-`$64B7`, above that area. After `EXEC`, the game
+  game loads at `$3C00`-`$67B4`, above that area. After `EXEC`, the game
   does not go back to BASIC, so it uses all RAM.
 - Drive motor: Disk BASIC turns the motor off in its IRQ handler (PDF 70).
   The game masks the IRQ, so at its start it stores 0 in `$FF40`. Bit 3 of
@@ -178,11 +188,11 @@ The CoCo 1 defaults come from
 | `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`). An erase-list entry is the first screen byte and the erase routine of a sprite. |
 | `$2000`-`$23FF` | Stack, from `$2400` down |
 | `$2400`-`$3BFF` | Screen B, 6144 bytes |
-| `$3C00`-`$64B7` | Code, sprites, font, text and the high-score table |
-| `$64B8`-`$7FFF` | Free, about 6.8 KiB |
+| `$3C00`-`$67B4` | Code, sprites, font, text and the high-score table |
+| `$67B5`-`$7FFF` | Free, about 6.1 KiB |
 
 The game needs 32 KiB. The two screens use 12 KiB, so a 16 KiB machine
-does not have space for the program. The game state uses 178 of the 256
+does not have space for the program. The game state uses 184 of the 256
 bytes of the direct page. More state is at `$1F00`-`$1F91`, after the erase
 lists: a line buffer for text, the shot slots and the bullet slots.
 
@@ -235,7 +245,8 @@ thing. The numbers and the hints are agent choices:
 | 4 | 10. Pickups start. | Each 210 frames (7 seconds) | COLLECT THE POWER UPS |
 | 5 | 12, and 2 shooters. A bullet each 60 frames. | Each 180 frames (6 seconds) | SHOOTERS FIRE BACK |
 | 6 | 13, and 3 shooters. A bullet each 36 frames. Bombs start. | Each 150 frames (5 seconds) | BOMBS CLEAR THE AREA |
-| 7 and more | See below | Each 330 - 30 x level frames, not less than 45 | None |
+| 7 and more | See below | Each 330 - 30 x level frames, not less than 45 | None, except level 8 |
+| 8 | See below. Jinxes start. | Each 90 frames (3 seconds) | SOME GIFTS BITE |
 
 From level 7, a level has 4 + 2 x level enemies at the start, not more
 than 20. Of these, level - 3 are shooters, not more than 4. The rest are
@@ -250,6 +261,10 @@ each 45 frames (1.5 seconds).
   has "LEVEL N" in big yellow text on rows 60-69. The hint of the level is
   in green on rows 76-80. Nothing moves during the banner. The banner also
   shows when the same level starts again after a death.
+- Level 8 is the first level without a row in the teaching table, but it
+  has a hint, because jinxes start there. The first hint was NOT EVERY
+  GIFT IS KIND. It made the banner frames too long, and the start sound had
+  a gap in the last 4 ms of frame 3 (`level8`). The shorter hint has no gap.
 - The banner is drawn after the enemies and the player. Its erase-list
   entry stores the floor in byte columns 2-29 of rows 60-80.
 
@@ -284,19 +299,31 @@ choices. The owner can change them.
 | Double | 2 | For 300 frames (10 seconds), each shot is 2 shots: forward and back |
 | Spread | 4 | For 300 frames, each shot is 4 shots, at right angles |
 | Star | 8 | For 300 frames, each shot is 8 shots, in all directions |
-| Bomb | A red bomb | Removes each enemy less than 40 pixels across and 60 rows from the player, with its points. Removes all bullets. |
+| Bomb | A yellow bomb | Removes each enemy less than 40 pixels across and 60 rows from the player, with its points. Removes all bullets. |
+| Slow (jinx) | A red hourglass | For 150 frames (5 seconds), the shoot delay is 5, not 2: half as many shots |
+| Heavy (jinx) | A red weight | For 150 frames, each player step is half: 1 pixel across and 2 rows down or up |
+| Blitz (jinx) | A red lightning bolt | Up to 3 hunters come in at once, each as a normal hunter comes. The name shows for 60 frames. |
+
+The good pickups are gifts. A gift has a yellow icon and a jinx has a red
+icon, in the same green box. The difference is small, as the owner asked:
+a player who looks closely can tell them apart. The bomb was red in
+increment 9. Now it is yellow, so that red is only on jinxes.
 
 - From level 4, each 6th enemy that a shot removes leaves a pickup at its
   place, if no pickup is on the floor. The count goes on from level to
   level, and starts again with each game.
-- The types come in this order: points, double, bomb, spread, points,
-  star, bomb, double. After that, the order starts again. Before level 6, a bomb is points.
+- The types come in this order: points, double, slow, bomb, spread,
+  heavy, points, star, bomb, blitz, double. After that, the order starts
+  again. Before level 6, a bomb is points. Before level 8, a jinx is
+  skipped, so levels 4-7 have the order of increment 9. From level 8,
+  3 of each 11 pickups are jinxes.
 - A pickup is 6x7 pixels in a green box. Its x is a multiple of 4, so it
   is in whole bytes, and it needs only one draw routine.
 - A pickup stays for 150 frames (5 seconds). In its last 60 frames, it
   blinks: it does not show when bit 2 of its frame count is 1.
-- A new power replaces the old one. A death ends the power. A new level
-  keeps it.
+- A new power replaces the old one. A new jinx replaces the old one, so a
+  blitz ends a slow or a heavy jinx. A power and a jinx can be on at the
+  same time. A death ends both. A new level keeps both.
 - With a power, the shots go around a ring of the 8 directions. The first
   shot goes in the direction of the keys. A double puts 2 shots each 4
   places, a spread 4 shots each 2 places, and a star 8 shots each place. Each shot needs a free slot of the 10 shot slots. A
@@ -307,9 +334,16 @@ choices. The owner can change them.
   tested against each enemy, so 10 shots and 20 enemies are the heaviest
   load. A copy with 8 shot slots measured 1 frame of 3 fields, so we kept
   10 slots. A frame of 3 fields also has a short gap in the sound.
-- The band at the top shows the power: its digit (2, 4 or 8) at pixel 32,
-  and a yellow bar of (frames left + 31) / 32 bytes from pixel 36, on rows
-  4-6.
+- The band at the top shows the name of the gift (the power) in yellow at
+  byte column 8. The name of the jinx is in red at byte column 17. Both are
+  on rows 3-7. Points and the bomb have no time, so they have no name.
+- Under each name, on rows 9-10, a bar shows the time that is left. It has
+  1 byte for each 50 frames of a gift, or for each 25 frames of a jinx. The
+  count is rounded up, and a bar has 6 bytes at most. The gift bar is
+  yellow and the jinx bar is red.
+- A name changes rarely, so each screen keeps the gift and the jinx that it
+  shows. The game draws a name only when it changes. The bars are drawn in
+  each frame.
 
 ### Shooters
 
@@ -407,6 +441,7 @@ two fields of the effect.
 | Extra life | 4 | The score reaches the next 1000 | Square, periods 15 and 10 in turn, 2 fields each, 14 fields; volume 30 |
 | Bullet | 1 | A shooter fires | Square, periods 12, 16, 20; volume 22 down to 14 |
 | Pickup | 4 | The player collects points or a power | Square, periods 31, 23, 16 (C, E, G); volume 26 |
+| Jinx | 4 | The player collects a jinx | Square, periods 16, 23, 31, 40 (the pickup notes in reverse, then lower); volume 26 |
 | Bomb | 5 | The player collects a bomb | Noise, periods 1-12, 22 fields; volume 62 down to 8 |
 | Letter | 1 | A change or the next letter in the initials | The shot sound |
 | Entry | 4 | The initials go into the table | The level sound |
@@ -436,15 +471,17 @@ two fields of the effect.
    initials screen or the title. After a death, count down the pause and go
    to step 9. At 0, take a life. Then start the same level again, or start
    game over. During the banner, count it down and go to step 9.
-2. Move the player 2 pixels across and 4 rows down or up. Stop the player at
+2. Move the player 2 pixels across and 4 rows down or up, or half that
+   with the heavy jinx. Stop the player at
    the arena edge. The player is 6 pixels wide and 10 rows high. It starts at
    pixel 61, row 95.
 3. Move each shot 6 pixels across and 12 rows down or up. Remove a shot that
    leaves the arena. Then move each bullet, and remove a bullet that leaves
    the arena.
-4. If a power is on, count down its time. If the shoot delay is more than
-   0, decrease it by 1. If not, and a shoot key is held, start the shots
-   of the power in the free slots. If a shot started, set the delay to 2.
+4. If a power is on, count down its time. If a jinx is on, count down its
+   time. If the shoot delay is more than 0, decrease it by 1. If not, and
+   a shoot key is held, start the shots of the power in the free slots. If
+   a shot started, set the delay to 2, or to 5 with the slow jinx.
 5. Move each enemy whose step count reaches 0.
 6. Count down the hunter wait. At 0, try to start a hunter. Then count
    down the fire wait. At 0, the next shooter fires.
@@ -458,7 +495,7 @@ two fields of the effect.
 9. Take the next sound record. Erase what this screen showed two frames
    before. Draw the shots, the bullets, the pickup and the enemies. Draw
    the player. During the banner, draw the banner. Then draw the score, the
-   reserve lives and the power.
+   reserve lives, the names of the gift and the jinx, and their bars.
 10. Wait for the end of the first field, unless it ended during the work.
     The field-sync flag stays set until a read of `$FF02` (MC6821 PDF 10,
     Figure 18), so a set flag tells that the first field ended. Take the next
@@ -529,6 +566,11 @@ remove one part of the game. The key scripts are short and written by hand.
 | `double` | `SKIP_TITLE` `NO_READY` `NO_ENEMIES` `FIRST_POWER=2` `POWER_TIME=100` | `powers.txt` | 2 shots for each shot, the bar in the band, the end of the power at frame 100, then single shots |
 | `spread` | the same, with `FIRST_POWER=3` | `powers.txt` | 4 shots for each shot, and all 10 shot slots in use |
 | `star` | the same, with `FIRST_POWER=4` | `powers.txt` | 8 shots for each shot, and shots that get no slot |
+| `slow` | `SKIP_TITLE` `NO_READY` `NO_ENEMIES` `FIRST_POWER=3` `FIRST_JINX=6` | `jinxes.txt` | A spread at half the fire speed, both names and both bars in the band, the end of the jinx at frame 150, then the normal speed |
+| `heavy` | `SKIP_TITLE` `NO_READY` `NO_ENEMIES` `FIRST_JINX=7` | `jinxes.txt` | Half steps across and up, the end of the jinx at frame 150, then normal steps |
+| `blitz` | `SKIP_TITLE` `NO_READY` `FIXED_ENEMIES` `NO_DEATH` `FIXED_PICKUP=8` | `blitz.txt` | A blitz at frame 8: 3 hunters, the jinx sound, BLITZ in the band until frame 68 |
+| `jinxdrop` | `SKIP_TITLE` `NO_READY` `FIXED_ENEMIES` `STILL` `FIRST_LEVEL=8` `DROP_EVERY=1` `FIRST_DROP=2` | `pickups.txt` | The grunt leaves a slow jinx at frame 9 (red icon), collected at frame 26. The hunter leaves a bomb at frame 34. |
+| `level8` | `SKIP_TITLE` `FIRST_LEVEL=8` `NO_DEATH` | none | The level 8 banner with its hint, 16 grunts and 4 shooters |
 | `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | The banner with a two-digit level, 16 grunts and 4 shooters, a bullet up, a death at frame 91 |
 | `over` | `SKIP_TITLE` `NO_READY` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
 | `scores` | `NO_READY` `FIXED_ENEMIES` `FIRST_LIVES=1` `FIRST_SCORE=0x5000` | `scores.txt` | A start from the title (frame 3), game over (frame 82), the initials screen (frame 172), a held W that repeats, S from A to Z, the entry CZA at place 7 below REX (frame 192), a held shoot key that does not start a game |
@@ -541,10 +583,13 @@ The controls:
 - `NO_ENEMIES`: no grunts, no bullets, and an empty arena does not end
   the level.
 - `FIXED_PICKUP=N`: a level starts with a pickup of type N at x 60, y 60.
-  Type 5 is a bomb.
+  Type 5 is a bomb and type 8 is a blitz.
 - `DROP_EVERY=N`: each Nth enemy that a shot removes leaves a pickup.
 - `FIRST_POWER=N`, `POWER_TIME=N`: a game starts with power N (2 double, 3
   spread, 4 star), and a power lasts N frames.
+- `FIRST_JINX=N`, `JINX_TIME=N`: a game starts with jinx N (6 slow, 7
+  heavy), and a jinx lasts N frames.
+- `FIRST_DROP=N`: the first drop is place N of the drop order (from 0).
 - `ONE_SHOOTER`: one shooter at x 61, y 30 that fires each 20 frames, and
   no other enemies.
 - `FIXED_ENEMIES`: a grunt at x 100, y 90 and a hunter at x 100, y 40. No
@@ -566,6 +611,8 @@ measured in these captures.
 
 Negative controls, run on copies. Each one must fail:
 
+- Increment 10: a slow jinx that keeps the shoot delay at 2 fails at frame
+  1 (`slow`): the delay is 2, not 5.
 - Increment 9: a spread power with a step of 4 places, not 2, fails at
   frame 1 (`spread`): it fires 2 directions, not 4.
 - Increment 8: an aim that never sends a bullet only across fails at frame

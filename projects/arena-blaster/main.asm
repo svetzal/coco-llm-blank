@@ -1,4 +1,6 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
+* Increment 10: jinxes, pickups that hurt, and the names of the gift and
+* the jinx in the band.
 * Increment 9: things to collect: points, power-ups and bombs.
 * Increment 8: shooters, enemies that fire bullets at the player.
 * Increment 7: first levels that teach the game, and a "LEVEL N" banner.
@@ -112,6 +114,8 @@ FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
 *                fires each 20 frames, and no other enemies.
 *   FIXED_PICKUP=N a level starts with a pickup of type N at x 60, y 60.
 *   DROP_EVERY, FIRST_POWER, POWER_TIME  other values for the pickups.
+*   FIRST_JINX, JINX_TIME  a jinx at the start of a game, and its time.
+*   FIRST_DROP   the first place in drop_order.
 *   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
 
 * Things to collect (README.md "Things to collect"). Pickup types:
@@ -120,10 +124,17 @@ PK_DOUBLE equ 2                 ; shots in 2 directions: also the power
 PK_SPREAD equ 3                 ; shots in 4 directions
 PK_STAR equ 4                   ; shots in 8 directions
 PK_BOMB equ 5                   ; clears the enemies near the player
+PK_SLOW equ 6                   ; jinx: half the fire speed
+PK_HEAVY equ 7                  ; jinx: half the move speed
+PK_BLITZ equ 8                  ; jinx: hunters come in at once
+DROP_TYPES equ 11               ; entries in drop_order
 PICKUP_W equ 6
 PICKUP_H equ 7
 PICKUP_LEVEL equ 4              ; the first level with pickups
 BOMB_LEVEL equ 6                ; the first level with bombs
+JINX_LEVEL equ 8                ; the first level with jinxes
+BLITZ_HUNTERS equ 3             ; hunters that a blitz tries to place
+BLITZ_FRAMES equ 60             ; the band shows BLITZ for 2 seconds
 PICKUP_FRAMES equ 150           ; a pickup stays 5 seconds
 BLINK_FRAMES equ 60             ; it blinks in its last 2 seconds
 BOMB_X  equ 40                  ; a bomb clears enemies less than 40
@@ -137,6 +148,21 @@ POWER_TIME equ 300              ; a power lasts 10 seconds
         ifndef FIRST_POWER
 FIRST_POWER equ 0               ; the power at the start of a game
         endc
+        ifndef JINX_TIME
+JINX_TIME equ 150               ; a jinx lasts 5 seconds
+        endc
+        ifndef FIRST_JINX
+FIRST_JINX equ 0                ; the jinx at the start of a game
+        endc
+        ifndef FIRST_DROP
+FIRST_DROP equ 0                ; the first place in drop_order
+        endc
+NAME_GIFT equ 8                 ; byte columns of the names in the band
+NAME_JINX equ 17
+BAR_ROW equ 9                   ; the timer bars: rows 9-10, 6 bytes
+BAR_BYTES equ 6
+GIFT_STEP equ 50                ; frames for each byte of a bar
+JINX_STEP equ 25
 
 * Score, lives and pauses (README.md "Score and lives").
 EXTRA_EVERY equ $10             ; BCD hundreds: an extra life each 1000
@@ -182,6 +208,7 @@ FX_END  equ $FF                 ; record mode: end of the effect
 P_SHOT  equ 1                   ; priorities: a new effect replaces the
 P_ZAP   equ 1
 P_PICKUP equ 4
+P_JINX  equ 4
 P_BOMB  equ 5
 P_BOOM  equ 2                   ; current one only if its priority is
 P_HUNTER equ 3                  ; the same or higher
@@ -396,7 +423,8 @@ frame_dying
         sta <over
         bra frame_draw
 frame_again
-        clr <power              ; a death ends the power
+        clr <power              ; a death ends the power and the jinx
+        clr <jinx
         jsr start_level         ; the same level again
         bra frame_draw
 * The banner at the start of a level: wait.
@@ -624,8 +652,12 @@ direction
 move_player
         ldb <move_keys
         bsr direction
-        lda <px
-        adda D_MDX,x
+        lda D_MDX,x
+        ldb <jinx
+        cmpb #PK_HEAVY
+        bne mp_x
+        asra                    ; heavy: half the step
+mp_x    adda <px
         cmpa #MIN_X
         bhs mp_right
         lda #MIN_X
@@ -635,8 +667,12 @@ mp_right
         lda #END_X-PLAYER_W
 mp_store_x
         sta <px
-        lda <py
-        adda D_MDY,x
+        lda D_MDY,x
+        ldb <jinx
+        cmpb #PK_HEAVY
+        bne mp_y
+        asra
+mp_y    adda <py
         cmpa #MIN_Y
         bhs mp_bottom
         lda #MIN_Y
@@ -676,12 +712,18 @@ ms_next leax S_SIZE,x
 * --- Start a shot when the delay is 0, a shoot key is held and a slot
 * is free.
 fire    lda <power                ; a power counts down its time
-        beq fire_delay
+        beq fire_jinx
         ldd <power_timer
         subd #1
         std <power_timer
-        bne fire_delay
+        bne fire_jinx
         clr <power
+fire_jinx
+        lda <jinx               ; so does a jinx
+        beq fire_delay
+        dec <jinx_timer
+        bne fire_delay
+        clr <jinx
 fire_delay
         lda <delay
         beq fire_ready
@@ -726,6 +768,11 @@ fire_dir
         tst <fired
         beq fire_done           ; no free slot
         lda #SHOT_DELAY
+        ldb <jinx
+        cmpb #PK_SLOW
+        bne fire_wait_store
+        lda #2*SHOT_DELAY+1     ; slow: half as many shots
+fire_wait_store
         sta <delay
         ldx #fx_shot
         lda #P_SHOT
@@ -880,14 +927,18 @@ db_one  adda #'0
         jsr text_at
         lda <level
         cmpa #TEACH_LEVELS
-        bhi db_erase
+        bhi db_jinx
         deca
         ldb #T_SIZE
         mul
         addd #teach_table
         tfr d,x
         ldu T_HINT,x
-        lda <drawing
+        bra db_hint
+db_jinx cmpa #JINX_LEVEL        ; the first level with jinxes has a hint
+        bne db_erase
+        ldu #hint_jinx
+db_hint lda <drawing
         sta <target
         jsr texts
 db_erase
@@ -938,10 +989,10 @@ dh_byte lda ,x
         lsra
         lsra
         lsra
-        bsr dh_glyph_digit      ; high digit
+        lbsr dh_glyph_digit     ; high digit
         lda ,x+
         anda #$0F
-        bsr dh_glyph_digit      ; low digit
+        lbsr dh_glyph_digit     ; low digit
         cmpx #score+3
         blo dh_byte
         lda <drawing
@@ -961,53 +1012,103 @@ dh_icon ldu #life_icon
         incb
 dh_icon_draw
         decb
-        bsr dh_glyph
+        lbsr dh_glyph
         leay -2,y               ; dh_glyph moved Y on by 1
         dec <count
         bne dh_icon
-* The power: its digit (2, 4 or 8) at byte column 8, and a yellow bar of
-* (time + 31) / 32 bytes from byte column 9, on rows HUD_ROW+1 to +3.
+* The names of the gift (the power) and the jinx, at byte columns
+* NAME_GIFT and NAME_JINX. A name changes rarely, so each screen keeps
+* the types that it shows in hud_seen, and a name is drawn only when its
+* type differs. Under each name, a bar of the time that is left.
+        ldx #hud_seen
         lda <drawing
-        ldb #HUD_ROW*32+8
-        tfr d,y
-        ldb <power
-        bne dh_power
-        ldu #no_icon
-        lbsr dh_glyph
+        cmpa #SCREEN_A/256
+        beq dh_seen
+        leax 2,x
+dh_seen lda <power
+        ldb #NAME_GIFT
+        bsr dh_name
+        leax 1,x
+        lda <jinx
+        ldb #NAME_JINX
+        bsr dh_name
+        lda #CURSOR             ; the gift bar: yellow
+        sta <tbits
+        ldd #GIFT_STEP
+        std <temp
         ldd #0
-        bra dh_bar
-dh_power
-        ldx #power_digit
-        lda b,x
-        lbsr dh_glyph_digit
+        tst <power
+        beq dh_gift_bar
         ldd <power_timer
-dh_bar  addd #31
-        lsra
-        rorb
-        lsra
-        rorb
-        lsra
-        rorb
-        lsra
-        rorb
-        lsra
-        rorb                    ; B = bytes of the bar
-        lda #10
-        sta <count
-dh_bar_byte
-        lda #FLOOR
-        tstb
-        beq dh_bar_store
-        decb
-        lda #CURSOR             ; four yellow pixels
-dh_bar_store
+dh_gift_bar
+        pshs d
+        ldd #BAR_ROW*32+NAME_GIFT
+        adda <drawing
+        tfr d,y
+        puls d
+        bsr dh_bar
+        lda #WALL               ; the jinx bar: red
+        sta <tbits
+        ldd #JINX_STEP
+        std <temp
+        clra
+        ldb <jinx
+        beq dh_jinx_bar
+        ldb <jinx_timer
+dh_jinx_bar
+        pshs d
+        ldd #BAR_ROW*32+NAME_JINX
+        adda <drawing
+        tfr d,y
+        puls d
+* D = frames left, temp = frames for each byte, tbits = the bar byte,
+* Y = the first byte. (D + temp - 1) / temp bytes of bar on 2 rows, then
+* the floor, BAR_BYTES bytes in all.
+dh_bar  clr <rows
+br_count
+        cmpd #0
+        ble br_draw
+        inc <rows
+        subd <temp
+        bra br_count
+br_draw ldb #BAR_BYTES
+br_byte lda #FLOOR
+        tst <rows
+        beq br_store
+        dec <rows
+        lda <tbits
+br_store
+        sta ,y
         sta 32,y
-        sta 64,y
-        sta 96,y
         leay 1,y
-        dec <count
-        bne dh_bar_byte
+        decb
+        bne br_byte
         rts
+
+* A = a pickup type (0 = none), B = a byte column, X = the type that the
+* hidden screen shows there. If they differ, draw the name of type A in
+* the band (a jinx in red) and keep A at X.
+dh_name cmpa ,x
+        beq dn_done
+        sta ,x
+        pshs b
+        ldb #7
+        mul
+        addd #names
+        tfr d,u
+        puls b
+        lda ,x
+        cmpa #PK_SLOW
+        lda #YELLOW_TEXT        ; LDA keeps the carry
+        blo dn_colour
+        lda #RED_TEXT
+dn_colour
+        sta <tcolour
+        lda <drawing
+        addd #HUD_ROW*32
+        tfr d,y
+        jmp text_at
+dn_done rts
 
 * A = a digit 0-9: its glyph from digits, 5 bytes each.
 dh_glyph_digit
@@ -1116,6 +1217,9 @@ begin_game
         std <end_a
         ldd #LIST_B
         std <end_b
+        ldd #0                  ; both screens show no names
+        std <hud_seen
+        std <hud_seen+2
         jsr new_game
         bra resync
 
@@ -1810,13 +1914,26 @@ spawn_hunter
         subd #1
         std <hunter_timer
         bne sh_done
-sh_try  ldu #enemies
+sh_try  bsr new_hunter
+        bcc sh_done
+        ldd <hunter_wait
+        std <hunter_timer
+        ldx #fx_hunter
+        lda #P_HUNTER
+        jmp start_sound
+sh_done rts
+
+* --- A hunter in the first free slot, at a random place on a random edge,
+* but not near the player. Carry set if a hunter came in.
+new_hunter
+        ldu #enemies
 sh_slot tst E_TYPE,u
         beq sh_free
         leau E_SIZE,u
         cmpu #enemies_end
         blo sh_slot
-sh_done rts
+nh_none andcc #$FE              ; carry clear: no hunter
+        rts
 sh_free jsr rand
         andb #3                 ; side: 0 top, 1 bottom, 2 left, 3 right
         stb <temp
@@ -1850,17 +1967,14 @@ sh_dx   cmpa #20
         bhs sh_dy
         nega
 sh_dy   cmpa #30
-        blo sh_done
+        blo nh_none
 sh_place
         lda #HUNTER
         sta E_TYPE,u
         lda #HUNTER_PERIOD
         sta E_TICK,u
-        ldd <hunter_wait
-        std <hunter_timer
-        ldx #fx_hunter
-        lda #P_HUNTER
-        jmp start_sound
+        orcc #$01               ; carry set: a hunter came in
+        rts
 
 * --- Move each enemy bullet one step. Remove a bullet that leaves the
 * arena.
@@ -1970,7 +2084,7 @@ ef_on   lda #1
 * --- An enemy at U was removed by a shot. From PICKUP_LEVEL, each
 * DROP_EVERY-th such enemy leaves a pickup at its place, if no pickup is
 * there. The types come in the order of drop_order. Before BOMB_LEVEL, a
-* bomb is points. The pickup x is a multiple of 4, so assets.py makes only
+* bomb is points. Before JINX_LEVEL, a jinx is skipped. The pickup x is a multiple of 4, so assets.py makes only
 * one draw routine for each pickup.
 drop_pickup
         lda <level
@@ -1982,12 +2096,21 @@ drop_pickup
         sta <drop_count
         tst <pk_type
         bne dp_done
-        lda <pk_next
-        inc <pk_next
-        anda #7
+dp_next ldb <pk_next            ; the next place in drop_order, in a ring
+        tfr b,a
+        inca
+        cmpa #DROP_TYPES
+        blo dp_ring
+        clra
+dp_ring sta <pk_next
         ldx #drop_order
-        lda a,x
-        cmpa #PK_BOMB
+        lda b,x
+        cmpa #PK_SLOW
+        blo dp_gift
+        ldb <level
+        cmpb #JINX_LEVEL
+        blo dp_next             ; a jinx before JINX_LEVEL: the next place
+dp_gift cmpa #PK_BOMB
         bne dp_type
         ldb <level
         cmpb #BOMB_LEVEL
@@ -2042,12 +2165,33 @@ up_collect
 up_power
         cmpa #PK_BOMB
         beq bomb
+        cmpa #PK_SLOW
+        bhs up_jinx
         sta <power              ; PK_DOUBLE, PK_SPREAD or PK_STAR
         ldd #POWER_TIME
         std <power_timer
 up_sound
         ldx #fx_pickup
         lda #P_PICKUP
+        jmp start_sound
+* A jinx takes the place of the jinx before it. A blitz shows its name for
+* BLITZ_FRAMES, and tries to bring in BLITZ_HUNTERS hunters at once.
+up_jinx sta <jinx
+        ldb #JINX_TIME
+        stb <jinx_timer
+        cmpa #PK_BLITZ
+        bne up_jinx_sound
+        ldb #BLITZ_FRAMES
+        stb <jinx_timer
+        lda #BLITZ_HUNTERS
+        sta <count
+up_blitz
+        jsr new_hunter
+        dec <count
+        bne up_blitz
+up_jinx_sound
+        ldx #fx_jinx
+        lda #P_JINX
         jmp start_sound
 
 * --- A bomb removes each enemy less than BOMB_X pixels across and BOMB_Y
@@ -2214,11 +2358,16 @@ new_game
         sta <level
         lda #DROP_EVERY
         sta <drop_count
-        clr <pk_next
+        lda #FIRST_DROP
+        sta <pk_next
         lda #FIRST_POWER
         sta <power
         ldd #POWER_TIME
         std <power_timer
+        lda #FIRST_JINX
+        sta <jinx
+        lda #JINX_TIME
+        sta <jinx_timer
         ldx #fx_start
         lda #P_START
         jsr start_sound
@@ -2381,6 +2530,8 @@ fx_zap  fcb 0,12,22,1,0,16,18,1,0,20,14,1,FX_END
 * 1467 Hz.
 fx_pickup
         fcb 0,31,26,2,0,23,26,2,0,16,26,3,0,16,14,2,FX_END
+* Jinx: a slow falling G-E-C, the pickup sound in reverse, and lower.
+fx_jinx fcb 0,16,26,3,0,23,26,3,0,31,26,3,0,40,26,4,0,40,14,2,FX_END
 * Bomb: a long, loud noise that falls.
 fx_bomb fcb NOISE,1,62,2,NOISE,1,58,2,NOISE,2,54,2,NOISE,2,50,2
         fcb NOISE,3,44,2,NOISE,4,38,2,NOISE,5,32,2,NOISE,6,26,2
@@ -2389,18 +2540,39 @@ fx_bomb fcb NOISE,1,62,2,NOISE,1,58,2,NOISE,2,54,2,NOISE,2,50,2
 * --- Shots of a power. ring: the 8 direction numbers in turn, from up,
 * clockwise. ring_pos: the place of each direction number in ring. For
 * each power (0 none, PK_DOUBLE, PK_SPREAD, PK_STAR): the number of shots
-* and the step around the ring. power_digit: the digit in the band.
+* and the step around the ring.
 ring    fcb 1,2,5,8,7,6,3,0
 ring_pos fcb 7,0,1,6,0,2,5,4,3
 power_count fcb 1,1,2,4,8
 power_step fcb 8,8,4,2,1
-power_digit fcb 0,0,2,4,8
-* The order of the pickup types that enemies leave.
+* The order of the pickup types that enemies leave: DROP_TYPES entries.
+* Without the jinxes, it is the order of increment 9.
 drop_order
-        fcb PK_POINTS,PK_DOUBLE,PK_BOMB,PK_SPREAD
-        fcb PK_POINTS,PK_STAR,PK_BOMB,PK_DOUBLE
+        fcb PK_POINTS,PK_DOUBLE,PK_SLOW,PK_BOMB,PK_SPREAD,PK_HEAVY
+        fcb PK_POINTS,PK_STAR,PK_BOMB,PK_BLITZ,PK_DOUBLE
 pickup_sprites
         fdb 0,pk_points,pk_double,pk_spread,pk_star,pk_bomb
+        fdb pk_slow,pk_heavy,pk_blitz
+* The name of each pickup type in the band: 6 characters and 0. Points
+* and the bomb have no time, so they have no name.
+names   fcc "      "
+        fcb 0
+        fcc "      "
+        fcb 0
+        fcc "DOUBLE"
+        fcb 0
+        fcc "SPREAD"
+        fcb 0
+        fcc "STAR  "
+        fcb 0
+        fcc "      "
+        fcb 0
+        fcc "SLOW  "
+        fcb 0
+        fcc "HEAVY "
+        fcb 0
+        fcc "BLITZ "
+        fcb 0
 
 * For each enemy type (0, GRUNT, HUNTER, SHOOTER): the frames between two
 * steps, the points (BCD) and the sprite.
@@ -2504,6 +2676,12 @@ hint_5  fdb 76*32+7
 hint_6  fdb 76*32+6
         fcb GREEN_TEXT
         fcc "BOMBS CLEAR THE AREA"
+        fcb 0
+        fdb $FFFF
+hint_jinx
+        fdb 76*32+8
+        fcb GREEN_TEXT
+        fcc "SOME GIFTS BITE"
         fcb 0
         fdb $FFFF
 prompt_on
@@ -2652,6 +2830,9 @@ fpos    rmb 1                   ; fire: the place in ring
 fstep   rmb 1
 fcount  rmb 1
 fired   rmb 1                   ; shots that started in this frame
+jinx    rmb 1                   ; 0, PK_SLOW, PK_HEAVY or PK_BLITZ
+jinx_timer rmb 1                ; frames until the jinx ends
+hud_seen rmb 4                  ; the gift and jinx names on screens A, B
 state_end
 
 * --- More state after the erase lists, in extended addressing.

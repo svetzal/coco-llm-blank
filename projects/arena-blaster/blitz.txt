@@ -1,0 +1,12 @@
+# Held keys for each frame of the blitz variant: FIXED_ENEMIES, NO_DEATH and a
+# blitz at x 60, y 60. Written by hand; the frames of the events come from
+# expected.py.
+W      up, to the blitz at x 60, y 60
+W
+W
+W
+W
+W
+W
+W
+-

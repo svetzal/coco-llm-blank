@@ -85,6 +85,25 @@ keys = "powers.txt"
 defines = ["SKIP_TITLE", "NO_READY", "NO_ENEMIES", "FIRST_POWER=4", "POWER_TIME=100"]
 keys = "powers.txt"
 
+[variants.slow]
+defines = ["SKIP_TITLE", "NO_READY", "NO_ENEMIES", "FIRST_POWER=3", "FIRST_JINX=6"]
+keys = "jinxes.txt"
+
+[variants.heavy]
+defines = ["SKIP_TITLE", "NO_READY", "NO_ENEMIES", "FIRST_JINX=7"]
+keys = "jinxes.txt"
+
+[variants.blitz]
+defines = ["SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "NO_DEATH", "FIXED_PICKUP=8"]
+keys = "blitz.txt"
+
+[variants.jinxdrop]
+defines = ["SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL", "FIRST_LEVEL=8", "DROP_EVERY=1", "FIRST_DROP=2"]
+keys = "pickups.txt"
+
+[variants.level8]
+defines = ["SKIP_TITLE", "FIRST_LEVEL=8", "NO_DEATH"]
+
 [variants.level10]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=10"]
 

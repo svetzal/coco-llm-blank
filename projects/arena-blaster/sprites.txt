@@ -129,8 +129,37 @@ GGGGGG
 [pk_bomb]
 GGGGGG
 GBBYBG
+GBYYBG
+GYYYYG
+GYYYYG
+GBYYBG
+GGGGGG
+
+# Jinxes: the same green box, but a red icon. slow: an hourglass.
+# heavy: a weight with a handle. blitz: a lightning bolt.
+[pk_slow]
+GGGGGG
+GRRRRG
+GBRRBG
+GBRRBG
+GBRRBG
+GRRRRG
+GGGGGG
+
+[pk_heavy]
+GGGGGG
+GBRRBG
 GBRRBG
 GRRRRG
 GRRRRG
+GRRRRG
+GGGGGG
+
+[pk_blitz]
+GGGGGG
+GBBRRG
 GBRRBG
+GRRRRG
+GBRRBG
+GRRBBG
 GGGGGG

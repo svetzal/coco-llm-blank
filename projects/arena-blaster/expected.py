@@ -70,26 +70,41 @@ CONTROLS = {
     "spread": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES"},
     "star": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES"},
     "level10": {"SKIP_TITLE"},
+    "slow": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES"},
+    "heavy": {"SKIP_TITLE", "NO_READY", "NO_ENEMIES"},
+    "blitz": {"SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "NO_DEATH"},
+    "level8": {"SKIP_TITLE", "NO_DEATH"},
+    "jinxdrop": {"SKIP_TITLE", "NO_READY", "FIXED_ENEMIES", "STILL"},
     "over": {"SKIP_TITLE", "NO_READY"},
     "scores": {"NO_READY", "FIXED_ENEMIES"},
 }
-START_LEVEL = {"level3": 3, "level5": 5, "level10": 10, "pickups": 4}
+START_LEVEL = {"level3": 3, "level5": 5, "level10": 10, "pickups": 4, "level8": 8, "jinxdrop": 8}
 # Things to collect (README.md "Things to collect").
 PK_POINTS, PK_DOUBLE, PK_SPREAD, PK_STAR, PK_BOMB = 1, 2, 3, 4, 5
-PICKUP_SPRITE = {1: "pk_points", 2: "pk_double", 3: "pk_spread", 4: "pk_star", 5: "pk_bomb"}
+PK_SLOW, PK_HEAVY, PK_BLITZ = 6, 7, 8  # jinxes
+PICKUP_SPRITE = {1: "pk_points", 2: "pk_double", 3: "pk_spread", 4: "pk_star", 5: "pk_bomb",
+                 6: "pk_slow", 7: "pk_heavy", 8: "pk_blitz"}
 PICKUP_W, PICKUP_H = 6, 7
 PICKUP_LEVEL, BOMB_LEVEL = 4, 6
 PICKUP_FRAMES, BLINK_FRAMES = 150, 60
 BOMB_X, BOMB_Y = 40, 60
-DROP_ORDER = [PK_POINTS, PK_DOUBLE, PK_BOMB, PK_SPREAD, PK_POINTS, PK_STAR, PK_BOMB, PK_DOUBLE]
+DROP_ORDER = [PK_POINTS, PK_DOUBLE, PK_SLOW, PK_BOMB, PK_SPREAD, PK_HEAVY, PK_POINTS, PK_STAR,
+              PK_BOMB, PK_BLITZ, PK_DOUBLE]
+JINX_LEVEL, JINX_TIME, BLITZ_FRAMES, BLITZ_HUNTERS = 8, 150, 60, 3
+JINX_HINT = ("SOME GIFTS BITE", 8)
+# The band: the names at byte columns 8 and 17, bars of 6 bytes on rows 9-10.
+NAME = {PK_DOUBLE: "DOUBLE", PK_SPREAD: "SPREAD", PK_STAR: "STAR", PK_SLOW: "SLOW",
+        PK_HEAVY: "HEAVY", PK_BLITZ: "BLITZ"}
+NAME_GIFT, NAME_JINX, BAR_ROW, BAR_BYTES, GIFT_STEP, JINX_STEP = 8, 17, 9, 6, 50, 25
 # The 8 directions in turn from up, clockwise, as (dx, dy).
 RING = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
 SHOTS_OF = {0: 1, PK_DOUBLE: 2, PK_SPREAD: 4, PK_STAR: 8}
-DIGIT_OF = {PK_DOUBLE: "2", PK_SPREAD: "4", PK_STAR: "8"}
-DROP_EVERY = {"pickups": 1}
-FIRST_POWER = {"double": PK_DOUBLE, "spread": PK_SPREAD, "star": PK_STAR}
+DROP_EVERY = {"pickups": 1, "jinxdrop": 1}
+FIRST_DROP = {"jinxdrop": 2}
+FIRST_POWER = {"double": PK_DOUBLE, "spread": PK_SPREAD, "star": PK_STAR, "slow": PK_SPREAD}
 POWER_TIME = {"double": 100, "spread": 100, "star": 100}
-FIXED_PICKUP = {"bomb": PK_BOMB}
+FIXED_PICKUP = {"bomb": PK_BOMB, "blitz": PK_BLITZ}
+FIRST_JINX = {"slow": PK_SLOW, "heavy": PK_HEAVY}
 START_LIVES = {"over": 1, "scores": 1}
 START_SCORE = {"hit": 990, "scores": 5000}
 # Score and lives (README.md "Score and lives").
@@ -100,7 +115,9 @@ DYING_FRAMES, OVER_FRAMES = 45, 90
 HUD_ROW, ICONS = 3, 6
 SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt", "scores": "scores.txt",
            "shooter": "shooter.txt", "pickups": "pickups.txt", "bomb": "bomb.txt",
-           "double": "powers.txt", "spread": "powers.txt", "star": "powers.txt"}
+           "jinxdrop": "pickups.txt",
+           "double": "powers.txt", "spread": "powers.txt", "star": "powers.txt",
+           "slow": "jinxes.txt", "heavy": "jinxes.txt", "blitz": "blitz.txt"}
 # Title and high scores (README.md "Title and high scores").
 TITLE, PLAY, ENTRY = 0, 1, 2
 TABLE = [(10000, "ZAP"), (9000, "ACE"), (8000, "MAX"), (7000, "JET"), (6000, "SKY"),
@@ -137,6 +154,7 @@ EFFECTS = {
                         (11, 12, 1))),
     "extra": (4, square(*[(15, 30, 2), (10, 30, 2)] * 3, (10, 20, 2))),
     "pickup": (4, square((31, 26, 2), (23, 26, 2), (16, 26, 3), (16, 14, 2))),
+    "jinx": (4, square((16, 26, 3), (23, 26, 3), (31, 26, 3), (40, 26, 4), (40, 14, 2))),
     "bomb": (5, [(NOISE, p, v, 2) for p, v in
                  ((1, 62), (1, 58), (2, 54), (2, 50), (3, 44), (4, 38), (5, 32), (6, 26),
                   (8, 20), (10, 14), (12, 8))]),
@@ -221,6 +239,8 @@ class Game:
     drop_count: int = 0
     power: int = 0
     power_timer: int = 0
+    jinx: int = 0
+    jinx_timer: int = 0
     variant: str = ""
     phase: int = PLAY
     table: list[tuple[int, str]] = field(default_factory=lambda: list(TABLE))
@@ -384,9 +404,11 @@ def new_game(variant: str, game: Game | None = None) -> Game:
     game.lives = START_LIVES.get(variant, LIVES)
     game.variant = variant
     game.drop_count = DROP_EVERY.get(variant, 6)
-    game.pk_next = 0
+    game.pk_next = FIRST_DROP.get(variant, 0)
     game.power = FIRST_POWER.get(variant, 0)
     game.power_timer = POWER_TIME.get(variant, 300)
+    game.jinx = FIRST_JINX.get(variant, 0)
+    game.jinx_timer = JINX_TIME
     game.level = START_LEVEL.get(variant, 1)
     game.start_sound("start")
     start_level(game)
@@ -414,8 +436,16 @@ def spawn_hunter(game: Game) -> None:
         return
     if game.hunter_timer > 0:
         game.hunter_timer -= 1
-    if game.hunter_timer > 0 or None not in game.enemies:
+    if game.hunter_timer > 0 or not new_hunter(game):
         return
+    game.hunter_timer = game.hunter_wait
+    game.start_sound("hunter")
+
+
+def new_hunter(game: Game) -> bool:
+    """A hunter in the first free slot on a random edge, but not near the player."""
+    if None not in game.enemies:
+        return False
     side = game.rand() & 3
     if side < 2:
         x, y = game.random_x(), (MIN_Y, END_Y - ENEMY_H)[side]
@@ -423,10 +453,9 @@ def spawn_hunter(game: Game) -> None:
         y = game.random_y()
         x = (MIN_X, END_X - ENEMY_W)[side - 2]
     if abs(x - game.x) < 20 and abs(y - game.y) < 30:
-        return
+        return False
     game.enemies[game.enemies.index(None)] = Enemy(HUNTER, x, y, PERIOD[HUNTER])
-    game.hunter_timer = game.hunter_wait
-    game.start_sound("hunter")
+    return True
 
 
 def overlap(ax: int, ay: int, aw: int, ah: int, bx: int, by: int, bw: int, bh: int) -> bool:
@@ -553,7 +582,7 @@ def step(game: Game, keys: str, variant: str) -> None:
                 game.start_sound("over")
                 game.over = OVER_FRAMES
             else:
-                game.power = 0
+                game.power = game.jinx = 0
                 start_level(game)
     elif game.ready:
         game.ready -= 1
@@ -565,8 +594,9 @@ def step(game: Game, keys: str, variant: str) -> None:
 
 def play(game: Game, keys: str) -> None:
     dx, dy = direction(keys, MOVE)
-    game.x = min(max(game.x + 2 * dx, MIN_X), END_X - PLAYER_W)
-    game.y = min(max(game.y + 4 * dy, MIN_Y), END_Y - PLAYER_H)
+    scale = 1 if game.jinx == PK_HEAVY else 2  # heavy: half the step
+    game.x = min(max(game.x + scale * dx, MIN_X), END_X - PLAYER_W)
+    game.y = min(max(game.y + 2 * scale * dy, MIN_Y), END_Y - PLAYER_H)
     for i, shot in enumerate(game.slots):
         if shot:
             shot.x += shot.vx
@@ -617,6 +647,10 @@ def fire(game: Game, keys: str) -> None:
         game.power_timer -= 1
         if game.power_timer == 0:
             game.power = 0
+    if game.jinx:
+        game.jinx_timer -= 1
+        if game.jinx_timer == 0:
+            game.jinx = 0
     if game.delay > 0:
         game.delay -= 1
         return
@@ -637,7 +671,7 @@ def fire(game: Game, keys: str) -> None:
         game.slots[game.slots.index(None)] = shot
         fired = True
     if fired:
-        game.delay = SHOT_DELAY
+        game.delay = 2 * SHOT_DELAY + 1 if game.jinx == PK_SLOW else SHOT_DELAY
         game.start_sound("shot")
 
 
@@ -651,8 +685,11 @@ def drop_pickup(game: Game, enemy: Enemy) -> None:
     game.drop_count = DROP_EVERY.get(game.variant, 6)
     if game.pickup:
         return
-    kind = DROP_ORDER[game.pk_next % 8]
-    game.pk_next = (game.pk_next + 1) & 0xFF
+    while True:
+        kind = DROP_ORDER[game.pk_next]
+        game.pk_next = (game.pk_next + 1) % len(DROP_ORDER)
+        if kind < PK_SLOW or game.level >= JINX_LEVEL:
+            break
     if kind == PK_BOMB and game.level < BOMB_LEVEL:
         kind = PK_POINTS
     game.pickup = [kind, enemy.x & ~3, enemy.y + (ENEMY_H - PICKUP_H) // 2, PICKUP_FRAMES]
@@ -678,6 +715,14 @@ def update_pickup(game: Game) -> None:
                 game.add_score(POINTS[e.kind])
         game.bullets = [None] * BULLET_SLOTS
         game.start_sound("bomb")
+        return
+    elif kind >= PK_SLOW:
+        game.jinx, game.jinx_timer = kind, JINX_TIME
+        if kind == PK_BLITZ:
+            game.jinx_timer = BLITZ_FRAMES
+            for _ in range(BLITZ_HUNTERS):
+                new_hunter(game)
+        game.start_sound("jinx")
         return
     else:
         game.power, game.power_timer = kind, POWER_TIME.get(game.variant, 300)
@@ -769,6 +814,8 @@ def picture(game: Game | None) -> np.ndarray:
             text(codes, f"LEVEL {game.level}", 60, 9, big=True)
             if game.level in TEACH:
                 text(codes, TEACH[game.level][3], 76, TEACH[game.level][4], "G")
+            elif game.level == JINX_LEVEL:
+                text(codes, JINX_HINT[0], 76, JINX_HINT[1], "G")
         hud(codes, game)
     return codes
 
@@ -784,10 +831,15 @@ def hud(codes: np.ndarray, game: Game) -> None:
         glyph(digit, 4 + 4 * k)
     for i in range(min(max(game.lives - 1, 0), ICONS)):
         glyph("life", 120 - 4 * i)
-    if game.power:
-        glyph(DIGIT_OF[game.power], 32)
-        bar = (game.power_timer + 31) // 32
-        codes[HUD_ROW + 1 : HUD_ROW + 4, 36 : 36 + 4 * bar] = YELLOW
+    # The gift name in yellow and the jinx name in red, each with a bar of the time
+    # that is left: one byte (4 pixels) for each step of frames, rounded up.
+    for kind, timer, column, colour, step in (
+            (game.power, game.power_timer, NAME_GIFT, "Y", GIFT_STEP),
+            (game.jinx, game.jinx_timer, NAME_JINX, "R", JINX_STEP)):
+        if kind:
+            text(codes, NAME[kind], HUD_ROW, column, colour)
+            bar = min(BAR_BYTES, -(-timer // step))
+            codes[BAR_ROW : BAR_ROW + 2, 4 * column : 4 * (column + bar)] = CODES[colour]
 
 
 def text(codes: np.ndarray, words: str, row: int, column: int, colour: str = "Y",
@@ -914,6 +966,11 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
         raise ValueError(f"Frame {frame}: pk_type, power = {got[:2]}, expected {want[:2]}.")
     if game.power and got[2] != want[2]:
         raise ValueError(f"Frame {frame}: power_timer {got[2]}, expected {want[2]}.")
+    got = (ram[symbols["jinx"]], ram[symbols["jinx_timer"]])
+    if game.phase == PLAY and got[0] != game.jinx:
+        raise ValueError(f"Frame {frame}: jinx {got[0]}, expected {game.jinx}.")
+    if game.jinx and got[1] != game.jinx_timer:
+        raise ValueError(f"Frame {frame}: jinx_timer {got[1]}, expected {game.jinx_timer}.")
     if p and tuple(ram[symbols[n]] for n in ("pk_x", "pk_y", "pk_timer")) != tuple(p[1:]):
         raise ValueError(f"Frame {frame}: the pickup differs: expected {p}.")
     if ram[symbols["shooter_turn"]] != game.shooter_turn and game.phase == PLAY:
