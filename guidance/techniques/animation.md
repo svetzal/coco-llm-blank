@@ -41,8 +41,8 @@ The flag records an event, not the current level. Let one routine only read
 `$FF02`. A keyboard scan or a ROM interrupt handler can clear the flag first.
 Keep the other `$FF03` bits when you change bits 0 and 1.
 
-The example's check runs 14 checkpoints on CoCo 1 and non-T1 CoCo 2 targets.
-At each checkpoint it compares the drawn screen and every rendered sample.
+The example's check runs eight checkpoints on the CoCo 1 target. At each
+checkpoint it compares both screens and every rendered sample.
 
 ### Flip pages on a CoCo 3
 

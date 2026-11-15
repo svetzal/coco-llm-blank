@@ -1031,7 +1031,9 @@ class DescribeEquipmentInXRoar:
         source = directory / "main.asm"
         source.write_text(source.read_text().replace("eora #$20", "eora #0"))
         settings = directory / "coco.toml"
-        single = settings.read_text().replace("frames = [1, 2, 15,", "frames = [1] # ")
+        single = settings.read_text().replace(
+            "frames = [1, 2, 3, 4, 32, 33, 64, 65]", "frames = [1]"
+        )
 
         settings.write_text(single.replace("video = true", "video = false"))
         assert coco.main(["check", str(directory), "--target", "coco1"]) == 0
