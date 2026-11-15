@@ -37,6 +37,10 @@ working example still requires reading its cited primary passages for the
 selected target before reuse. Downloading or converting a page does not count
 as reading it. Reuse facts already checked in this session.
 
+For CoCo 1/2, the [graphics guide](../techniques/graphics.md) gives the VDG
+mode table, colour sets and pixel order with citations. To turn an image into
+screen or sprite bytes, use `scripts/graphics.py` (run it with `--help`).
+
 Establish these facts from passages that apply to the selected hardware:
 
 - The mode's name and meaning in its context. Distinguish BASIC mode numbers,

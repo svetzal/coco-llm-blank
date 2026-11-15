@@ -86,7 +86,8 @@ local reference passage and check that it applies to the selected machine.
 This includes graphics modes, register addresses and bit meanings, memory maps,
 pixel packing, palettes, ROM calls, and instruction behavior or timing.
 
-For graphics, start with
+For graphics, start with the [graphics guide](guidance/techniques/graphics.md)
+and the datasheet pages it cites. Then read
 `local/references/assembly-graphics/text.md`, using the
 [reference lookup procedure](guidance/starter/references.md). Read the relevant table
 or diagram as an image when OCR leaves any doubt. Before implementation, state
