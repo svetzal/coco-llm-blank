@@ -46,7 +46,8 @@ Start with what you want to see or do. For example:
 - "Help me learn how to draw a sprite, one small step at a time."
 
 Name your Color Computer model if you know it. The starter lets you select
-CoCo 1, 2, or 3. Its initial reference collection mainly covers CoCo 1 and 2.
+a CoCo 1, CoCo 2, CoCo 2B or CoCo 3. A CoCo 2B has a different video chip,
+the MC6847T1. Its initial reference collection mainly covers CoCo 1 and 2.
 Your agent may need more references for a CoCo 3 project.
 
 If you are unsure, ask for a CoCo 1 project in the emulator. The agent has

@@ -17,7 +17,7 @@ availability with `uv run python scripts/doctor.py`.
 
 For an emulator demo that you launch directly, use `--profile demo`.
 This profile treats ToolShed as optional.
-Add `--target coco1`, `--target coco2`, or `--target coco3` to validate firmware
+Add `--target` with `coco1`, `coco2`, `coco2b` or `coco3` to validate firmware
 as well.
 Without a target, the doctor explicitly reports that firmware is unchecked.
 
@@ -167,30 +167,117 @@ Custom firmware needs an explicit, reviewed configuration and independent boot
 validation.
 Renaming different bytes to a manifest filename does not validate them.
 
-| Target | Firmware directory | BASIC | Disk BASIC |
+### Standard targets
+
+The starter has four standard targets. Each target has a firmware profile with
+the same name in `roms.json`. Setup, doctor and bootstrap accept these names.
+Setup installs each profile in `local/roms/<target>/`.
+
+| Target | Machine | XRoar machine | VDG | Color BASIC | Extended BASIC |
+| --- | --- | --- | --- | --- | --- |
+| `coco1` | CoCo 1, NTSC | `cocous` | MC6847 | 1.1, `bas11.rom` | 1.1, `extbas11.rom` |
+| `coco2` | CoCo 2, NTSC | `cocous` | MC6847 | 1.2, `bas12.rom` | 1.1, `extbas11.rom` |
+| `coco2b` | CoCo 2B, NTSC | `coco2bus` | MC6847T1 | 1.3, `bas13.rom` | 1.1, `extbas11.rom` |
+| `coco3` | CoCo 3, NTSC | `coco3` | GIME 1986 | In `coco3.rom` | In `coco3.rom` |
+
+Each profile also holds `disk11.rom` for later Disk BASIC work.
+
+The CoCo 1 and CoCo 2 targets load Extended Color BASIC. Most real machines
+have it, and the CoCo 3 ROM includes it. Extended BASIC turns on the
+field-sync interrupt (IRQ) at each cold start. Thus a program starts in the
+same machine state as on most real machines. A check without Extended BASIC
+hides this interrupt.
+
+Evidence for the interrupt:
+
+- Bit 0 of `$FF03` enables the IRQ from the field-sync input. Source: Color
+  Computer Technical Reference Manual (Tandy), PDF page 13.
+- Measured in XRoar on `cocous` with `bas11.rom`: `$FF03` holds `$35` at the
+  entry of a program with `extbas11.rom`. It holds `$34` without it.
+
+The CoCo 3 has one combined BASIC image. XRoar loads it with `-extbas`.
+The CoCo 3 profile supplies NTSC firmware. The manifest does not yet include
+PAL firmware for the CoCo 3.
+
+#### Target tables
+
+Copy the table of the target into `coco.toml`. Examples and projects use these
+tables. Change a value only when the project contract records a different
+machine. Then record the reason in the contract.
+
+```toml
+[targets.coco1]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas11.rom"
+extended = "extbas11.rom"
+
+[targets.coco2]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
+[targets.coco2b]
+machine = "coco2bus"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847t1"
+ram_kib = 32
+basic = "bas13.rom"
+extended = "extbas11.rom"
+
+[targets.coco3]
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+screen = 0x10400         # logical $0400 in the physical RAM snapshot
+```
+
+The table name selects the firmware profile. A table with a different name
+must give the profile with `firmware = "<target>"`. Add `keyboard = "coco"`,
+or `keyboard = "coco3"` on the CoCo 3, when a check sends keys.
+
+#### Firmware sources
+
+The archive ZIP files are copies of the MAME ROM sets. The table gives the
+CoCo 1 and CoCo 2 ROMs. Their CRC32 and SHA-1 agree with the MAME ROM
+definitions in
+[`src/mame/trs/coco12.cpp`](https://github.com/mamedev/mame/blob/518bb5e53379c124833415da5cb2d22d6acf845a/src/mame/trs/coco12.cpp).
+Their CRC32 agrees with the ROM table in `src/rom.c` of XRoar 1.13. At launch,
+XRoar gives the name of each image and marks none as a bad dump.
+
+| ROM | SHA-256 | CRC32 | ZIP files |
 | --- | --- | --- | --- |
-| CoCo 1 | `local/roms/coco1/` | `bas11.rom` | `disk11.rom` |
-| CoCo 2 | `local/roms/coco2/` | `bas12.rom` | `disk11.rom` |
-| CoCo 3 | `local/roms/coco3/` | `coco3.rom` | `disk11.rom` |
+| `bas11.rom` | `f772ee5e...` | `6270955a` | `coco.zip` |
+| `bas12.rom` | `40413d0f...` | `54368805` | `coco2.zip` |
+| `bas13.rom` | `5375b1ca...` | `d8f4d15e` | `coco2b.zip` |
+| `extbas11.rom` | `a18f270d...` | `a82a6254` | `coco.zip`, `coco2.zip`, `coco2b.zip` |
 
-The starter does not use Extended Color BASIC on the CoCo 1 or CoCo 2. XRoar's
-machine profiles load it by default, so `scripts/coco.py` passes `-no-extbas`.
-Add an Extended BASIC ROM only when a project has a specific need for it.
+`roms.json` holds the full checksums. Do not use `extbas10.rom`. XRoar marks
+the archive copy as a bad dump.
 
-The CoCo 3 profile supplies NTSC firmware. The CoCo 3 has one combined BASIC
-image. XRoar loads it with `-extbas`.
-Select appropriate user-provided firmware for a PAL CoCo 3.
-The manifest does not yet include that variant.
-
-For reference, `scripts/coco.py run` launches a CoCo 1 NTSC, 32 KiB project
+For reference, `scripts/coco.py run` launches a project on the `coco1` target
 with options equivalent to:
 
 ```sh
-xroar -machine cocous -ram 32 \
+xroar -machine cocous -tv-type ntsc -vdg-type 6847 -ram 32 \
   -bas local/roms/coco1/bas11.rom \
-  -no-extbas \
+  -extbas local/roms/coco1/extbas11.rom \
   -no-cart -ratelimit -run build/demo.bin
 ```
+
+A target with no `extended` ROM gets `-no-extbas`. XRoar's machine profiles
+otherwise search for an Extended BASIC ROM.
 
 Use the actual project's binary name and RAM requirement. For Disk BASIC,
 replace `-no-cart` with `-cart rsdos -cart-rom local/roms/coco1/disk11.rom`.
@@ -321,7 +408,7 @@ For a bounded headless check:
 ```sh
 xroar -ui null -machine cocous -ram 32 \
   -bas local/roms/coco1/bas11.rom \
-  -no-extbas \
+  -extbas local/roms/coco1/extbas11.rom \
   -no-cart -no-ratelimit -timeout 10 \
   -trap "pc=$READY_ADDRESS" -trap-snap build/ready.ram \
   -trap-timeout 0.01 -run build/demo.bin

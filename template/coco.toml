@@ -2,7 +2,8 @@
 source = "main.asm"
 
 # The first target is the default. Firmware is checked against roms.json.
-# Record these values in the contract of the project README.
+# Record these values in the contract of the project README. The tables of the
+# standard targets are in guidance/starter/toolchain.md, under "Target tables".
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -10,6 +11,7 @@ tv = "ntsc"
 vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
+extended = "extbas11.rom"
 
 [memory]
 at = { start = 0x3000 }

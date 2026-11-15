@@ -40,8 +40,9 @@ uv run python scripts/setup.py
 ```
 
 uv creates a real `.venv` using the Python version in `.python-version` and the
-packages pinned by `uv.lock`. Setup asks for CoCo 1, 2, or 3. It downloads the
-reference manifest and converts it with Docling. Full-book conversion is slow.
+packages pinned by `uv.lock`. Setup downloads the reference manifest and converts
+it with Docling. With `--roms-only` and no `--target`, setup asks for `coco1`,
+`coco2`, `coco2b` or `coco3`. Full-book conversion is slow.
 Start with a few pages to inspect the output:
 
 ```sh

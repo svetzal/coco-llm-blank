@@ -308,6 +308,29 @@ class DescribeCommands:
             "coco",
         ]
 
+    def should_load_both_basic_roms_when_a_target_names_extended_basic(self) -> None:
+        machine = coco.Machine(
+            machine="cocous", ram_kib=32, basic="bas11.rom", extended="extbas11.rom"
+        )
+        roms = {"bas11.rom": Path("/r/b"), "extbas11.rom": Path("/r/e")}
+
+        command = coco.xroar_command("xroar", machine, roms)
+
+        assert coco.firmware_names(machine) == ("bas11.rom", "extbas11.rom")
+        assert command == [
+            "xroar",
+            "-no-c",
+            "-machine",
+            "cocous",
+            "-ram",
+            "32",
+            "-bas",
+            "/r/b",
+            "-extbas",
+            "/r/e",
+            "-no-cart",
+        ]
+
     def should_capture_from_nonzero_ram_with_an_unreachable_control(
         self, project: coco.Project
     ) -> None:

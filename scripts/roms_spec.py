@@ -9,7 +9,10 @@ from zipfile import ZipFile
 
 import pytest
 import setup
-from roms import RomDownloadGateway, provision, verify_installed
+from pydantic import TypeAdapter
+from roms import TARGETS, RomArchive, RomDownloadGateway, provision, verify_installed
+
+MANIFEST = Path(__file__).resolve().parents[1] / "roms.json"
 
 
 def fixture_archive(root: Path, *, name: str = "basic.rom", size: int = 8) -> Mock:
@@ -157,3 +160,32 @@ class DescribeInstalledFirmware:
 
         assert f"--target {target} --roms-only" in str(error.value)
         assert "do not launch XRoar" in str(error.value)
+
+
+class DescribeCommittedFirmwareRecords:
+    @pytest.fixture
+    def profiles(self) -> dict[str, RomArchive]:
+        return TypeAdapter(dict[str, RomArchive]).validate_json(MANIFEST.read_text())
+
+    def should_record_one_profile_for_each_offered_target(
+        self, profiles: dict[str, RomArchive]
+    ) -> None:
+        assert tuple(profiles) == TARGETS
+
+    def should_record_the_same_bytes_wherever_a_rom_name_appears(
+        self, profiles: dict[str, RomArchive]
+    ) -> None:
+        checksums: dict[str, set[tuple[int, str]]] = {}
+        for profile in profiles.values():
+            for member in profile.members:
+                checksums.setdefault(member.name, set()).add((member.size, member.sha256))
+
+        assert {name: len(found) for name, found in checksums.items() if len(found) > 1} == {}
+
+    @pytest.mark.parametrize("target", TARGETS)
+    def should_name_each_rom_only_once_in_a_profile(
+        self, profiles: dict[str, RomArchive], target: str
+    ) -> None:
+        names = [member.name for member in profiles[target].members]
+
+        assert len(names) == len(set(names))

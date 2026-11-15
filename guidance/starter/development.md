@@ -14,6 +14,7 @@ language. Its contract section records these items:
 - CPU
 - Video standard
 - Clock
+- Firmware
 - Controls
 - Loader
 
@@ -28,12 +29,19 @@ Setup selects a starting target. Setup does not establish that an application
 supports that target. Keep unknowns explicit.
 Do not silently enable a 6309, more RAM, or a faster clock to pass a test.
 
+The starter has four standard targets: `coco1`, `coco2`, `coco2b` and
+`coco3`. The [standard targets](toolchain.md#standard-targets) section gives
+the machine and firmware of each target. It also gives the `[targets.<name>]`
+table to copy into `coco.toml`.
+
 For a new emulator demo on the CoCo 1 with no RAM or video requirement, start
 with these defaults:
 
+- The `coco1` target table
 - 32 KiB RAM
 - NTSC
 - A stock-clock 6809
+- Color BASIC 1.1 and Extended Color BASIC 1.1
 - Direct auto-run of a DECB binary in XRoar
 
 Record these as starter defaults in the project contract. State them to the
@@ -46,9 +54,12 @@ Explicit requirements and existing project notes take precedence.
 Ask when you must resolve the configuration of a physical machine or a
 conflicting requirement.
 
-These are CoCo 1 defaults, not CoCo 2 defaults. For each configuration choice,
-distinguish an owner requirement, a documented default applicable to that model,
-and an agent-selected prototype choice.
+These are CoCo 1 defaults. For another model, use the table of its standard
+target. For each configuration choice, identify which of these it is:
+
+- An owner requirement
+- A documented default for that model
+- An agent-selected prototype choice
 
 Cite the applicable guidance for a default. State agent-selected choices to the
 owner without attributing consent.

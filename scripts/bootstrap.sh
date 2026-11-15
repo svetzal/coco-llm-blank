@@ -3,13 +3,13 @@
 set -eu
 
 case "${1:-}" in
-    coco1|coco2|coco3) target=$1 ;;
+    coco1|coco2|coco2b|coco3) target=$1 ;;
     -h|--help)
-        echo 'Usage: sh scripts/bootstrap.sh coco1|coco2|coco3'
+        echo 'Usage: sh scripts/bootstrap.sh coco1|coco2|coco2b|coco3'
         echo 'Prepare Python, tools, project notes, and verified firmware for an emulator demo.'
         echo 'Missing uv is installed with Homebrew when available, otherwise its official installer.'
         exit 0 ;;
-    *) echo 'Choose a machine: sh scripts/bootstrap.sh coco1|coco2|coco3' >&2; exit 2 ;;
+    *) echo 'Choose a machine: sh scripts/bootstrap.sh coco1|coco2|coco2b|coco3' >&2; exit 2 ;;
 esac
 if [ "$#" -ne 1 ]; then
     echo 'Supply exactly one machine target.' >&2

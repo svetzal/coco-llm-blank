@@ -83,8 +83,8 @@ example and its negative controls.
 
 Setup for a selected target prepares the demo, not the whole test suite of the
 starter. The suite also runs emulator checks for CoCo 1, CoCo 2, and CoCo 3.
-Install native tools using [toolchain.md](toolchain.md). Then provision all
-three ROM profiles without changing any project:
+Install native tools using [toolchain.md](toolchain.md). Then provision the ROM
+profile of each standard target without changing any project:
 
 ```sh
 uv sync --locked
@@ -93,10 +93,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path("scripts").resolve()))
-from roms import provision, verify_installed
+from roms import TARGETS, provision, verify_installed
 
 root = Path.cwd()
-for target in ("coco1", "coco2", "coco3"):
+for target in TARGETS:
     provision(root, target)
     verify_installed(root, target)
 PY
@@ -111,6 +111,7 @@ Then run:
 ```sh
 uv run python scripts/doctor.py --profile demo --target coco1 &&
 uv run python scripts/doctor.py --profile demo --target coco2 &&
+uv run python scripts/doctor.py --profile demo --target coco2b &&
 uv run python scripts/doctor.py --profile demo --target coco3 &&
 uv run pytest --cov -ra
 ```

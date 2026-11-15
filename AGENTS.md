@@ -30,7 +30,9 @@ where the project is.
 Read [the contract checklist](guidance/starter/development.md#establish-the-contract)
 to establish the target before implementation.
 Run `sh scripts/bootstrap.sh coco1` for a CoCo 1 project, or use the chosen
-target.
+target. The standard targets are `coco1`, `coco2`, `coco2b` and `coco3`.
+Copy their `coco.toml` tables from
+[the target tables](guidance/starter/toolchain.md#target-tables).
 This prepares Python, the reference index, native tools, and checksum-verified
 firmware.
 

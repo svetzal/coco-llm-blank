@@ -65,8 +65,12 @@ When you know of other ways, name them in the README.
 - If a line exists only for the check, put a comment on it that says so. Then
   an agent knows to remove it from a real project. The `ready` loop in
   first-screen is an example.
-- Do not load firmware that the example does not use. The starter does not
-  load Extended Color BASIC on the CoCo 1 or CoCo 2.
+- Do not load firmware that the example does not use. Extended Color BASIC
+  is different: it is part of the standard CoCo 1 and CoCo 2 targets. It sets
+  the machine state that programs start in. At each cold start, it turns on
+  the field-sync interrupt (IRQ), as on most real machines. Copy the target
+  tables from
+  [the standard targets](../guidance/starter/toolchain.md#target-tables).
 
 ## Test with the oracle, not with specs
 

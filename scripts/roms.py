@@ -9,6 +9,9 @@ from pathlib import Path
 from pydantic import BaseModel, Field, TypeAdapter
 from references import atomic_bytes
 
+# The firmware profiles in roms.json that setup, doctor and bootstrap offer.
+TARGETS = ("coco1", "coco2", "coco2b", "coco3")
+
 
 class RomMember(BaseModel):
     name: str = Field(pattern=r"^[a-zA-Z0-9_-]+\.rom$")

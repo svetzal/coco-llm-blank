@@ -55,7 +55,7 @@ class DescribeProjectSetup:
     ) -> None:
         console = Mock(spec=setup.ConsoleGateway)
         console.choose_target.side_effect = ValueError(
-            "Choose a target with --target coco1, coco2, or coco3"
+            "Choose a target with --target: coco1, coco2, coco2b, coco3"
         )
 
         result = setup.main(["--roms-only"], project, console=console)

@@ -18,10 +18,10 @@ from references import (
     convert,
     digest,
 )
-from roms import RomDownloadGateway, provision
+from roms import TARGETS, RomDownloadGateway, provision
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGETS = {"coco1": "CoCo 1", "coco2": "CoCo 2", "coco3": "CoCo 3"}
+TARGET_LIST = ", ".join(TARGETS)
 
 
 class SetupOptions(BaseModel):
@@ -39,11 +39,11 @@ class ConsoleGateway:
 
     def choose_target(self) -> str:
         if not sys.stdin.isatty():
-            raise ValueError("Choose a target with --target coco1, coco2, or coco3")
-        print("Choose a target: coco1, coco2, coco3")
+            raise ValueError(f"Choose a target with --target: {TARGET_LIST}")
+        print(f"Choose a target: {TARGET_LIST}")
         target = input("Target: ").strip().lower()
         if target not in TARGETS:
-            raise ValueError("Unknown target; choose coco1, coco2, or coco3")
+            raise ValueError(f"Unknown target; choose one of: {TARGET_LIST}")
         return target
 
 

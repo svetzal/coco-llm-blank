@@ -7,7 +7,7 @@ import sys
 
 import instrumented_xroar
 from native import ROOT, tool_path
-from roms import verify_installed
+from roms import TARGETS, verify_installed
 
 TOOLS = {
     "lwasm": ("LWASM", "LWTOOLS assembler"),
@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
     )
     parser.add_argument(
         "--target",
-        choices=("coco1", "coco2", "coco3"),
+        choices=TARGETS,
         help="also validate installed firmware for this machine",
     )
     options = parser.parse_args(argv)
@@ -69,7 +69,11 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
             print(str(error))
             firmware_ok = False
     else:
-        print("Firmware NOT checked. Add --target coco1, coco2, or coco3 before launching XRoar.")
+        print(
+            "Firmware NOT checked. Add --target with one of "
+            + ", ".join(TARGETS)
+            + " before launching XRoar."
+        )
     print("Discovery and file checks do not prove boot. Run the selected example's check command.")
     if missing:
         print("Setup is incomplete. Ask your agent to install: " + ", ".join(missing))

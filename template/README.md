@@ -32,7 +32,8 @@ the owner.
 - RAM: 32 KiB (starter default)
 - CPU and clock: 6809 at the stock clock (starter default)
 - Video standard: NTSC (starter default)
-- Firmware: Color BASIC 1.1, `bas11.rom` (starter default)
+- Firmware: Color BASIC 1.1, `bas11.rom`, and Extended Color BASIC 1.1,
+  `extbas11.rom` (starter default)
 - Controls: none yet
 - Loader: XRoar runs the DECB binary directly (starter default)
 

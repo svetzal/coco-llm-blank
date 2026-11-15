@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from roms import TARGETS
 
 SCRIPT = Path(__file__).with_name("bootstrap.sh")
 
@@ -96,23 +97,24 @@ class DescribeBootstrap:
             in Path(env["BOOTSTRAP_LOG"]).read_text()
         )
 
+    @pytest.mark.parametrize("target", TARGETS)
     def should_prepare_selected_target_firmware_without_book_conversion(
-        self, bootstrap_workspace: tuple[Path, dict[str, str]]
+        self, bootstrap_workspace: tuple[Path, dict[str, str]], target: str
     ) -> None:
         project, env = bootstrap_workspace
         commands = Path(env["PATH"].split(":")[0])
         shutil.copyfile(commands / "uv-template", commands / "uv")
         (commands / "uv").chmod(0o755)
 
-        result = run_bootstrap(project, env, "coco2")
+        result = run_bootstrap(project, env, target)
 
         assert result.returncode == 0, result.stderr
         assert Path(env["BOOTSTRAP_LOG"]).read_text().splitlines() == [
             "sync --locked",
-            "run python scripts/setup.py --target coco2 --guidance-only",
+            f"run python scripts/setup.py --target {target} --guidance-only",
             "run python scripts/native.py",
-            "run python scripts/setup.py --target coco2 --roms-only",
-            "run python scripts/doctor.py --profile demo --target coco2",
+            f"run python scripts/setup.py --target {target} --roms-only",
+            f"run python scripts/doctor.py --profile demo --target {target}",
         ]
 
     def should_stop_before_readiness_when_firmware_preparation_fails(
@@ -208,7 +210,7 @@ class DescribeBootstrap:
         result = run_bootstrap(project, env, "--help")
 
         assert result.returncode == 0
-        assert "coco1|coco2|coco3" in result.stdout
+        assert "coco1|coco2|coco2b|coco3" in result.stdout
         assert not Path(env["BOOTSTRAP_LOG"]).exists()
 
     def should_use_the_official_installer_when_no_host_manager_is_available(
