@@ -23,8 +23,8 @@ basic = "bas12.rom"
 [memory]
 at = { start = 0x3000 }
 
-# The plain build shows CG6 with colour set 0 (CSS=0). The variants show the
-# same screen bytes with colour set 1, and in RG6 with each colour set.
+# The plain build shows CG6 with colour set 0 (CSS=0). Each variant selects one
+# other colour set and mode for the same screen bytes.
 [variants.css1]
 defines = ["CSS1"]
 
@@ -34,8 +34,9 @@ defines = ["RG6"]
 [variants.rg6-css1]
 defines = ["RG6", "CSS1"]
 
+# For the check only: where to take the snapshot and compare the screen.
 [check]
-checkpoint = "ready"       # reached once the picture is drawn
+checkpoint = "ready"       # reached once the picture is shown
 frames = [1]               # snapshot at the first time it is reached
 unreachable = "ready+1"    # mid-instruction: must never execute
 screen = 0x0400            # expected_screen() is compared from here

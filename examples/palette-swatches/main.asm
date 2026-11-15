@@ -1,58 +1,76 @@
-* Palette swatches: CoCo 1 NTSC, 32 KiB, stock 6809, VDG CG6 (128x192, 4 colours).
-* Source facts:
-* Motorola MC6847 datasheet, PDF 20: CG6 is 128x192, four colours, 6k x 8.
-* MC6847 PDF 19 Table 3 and PDF 21 Figure 22: one pair of bits per pixel,
-*   leftmost pixel in bits 7-6; PDF 21 colour table: pair 00/01/10/11 is
-*   green/yellow/blue/red with CSS=0 and buff/cyan/magenta/orange with CSS=1.
-* Tandy Color Computer Technical Reference Manual, PDF 31 Table 1: CG6 is
-*   SAM V2..V0=110 and $FF22 bits 7-4=1110, bit 3=CSS, bits 2-0 unchanged.
-*   PDF 14-15: PIA data register select and SAM display offset, as first-screen.
-* RAM: screen $0400-$1BFF; marker $2FFF; code $3000 onward;
-* stack grows down from $7F00 (reserve $7E00-$7EFF).
-*   Same table: RG6 shares SAM V2..V0=110; $FF22 bits 7-4=1111.
-* Defines: CSS1 selects colour set 1; RG6 shows the same bytes in RG6
-* (256x192, two colours, bit 7 leftmost: MC6847 PDF 19 Table 3, PDF 20).
-        ifdef RG6
-VDGMODE equ $F0
-        else
-VDGMODE equ $E0
-        endc
+* Select a colour set on a CoCo 1/2 graphics screen (MC6847 VDG).
+*
+* $FF22 bit 3 is the colour-set select (CSS). It selects one of two sets of
+* colours for the full screen. Each colour code in a screen byte then shows
+* one colour of that set.
+*
+* The example is in two parts, each between ">>> EXAMPLE" and
+* "<<< END EXAMPLE". The rest is context: it draws bars of each colour code
+* and a band that shows the pixel order, sets up the screen at $0400 as in
+* first-screen, and holds the picture for the check. A project does not need
+* the context.
+*
+* Variants (coco.toml) select the colour set and the mode:
+*   (none)    CG6  CSS=0  green, yellow, blue, red
+*   css1      CG6  CSS=1  buff, cyan, magenta, orange
+*   rg6       RG6  CSS=0  black, green
+*   rg6-css1  RG6  CSS=1  black, buff
+*
+* Sources:
+*   Motorola, MC6847 datasheet:
+*     PDF 20: CG6 is 128x192 with four colours, RG6 is 256x192 with two.
+*       Both use 6K bytes. CSS selects the colour and the border.
+*     PDF 21 Figure 22(c): the colour of each code for each colour set.
+*     PDF 19 Table 3: the leftmost pixel is in the high bits of a byte.
+*   Tandy, Color Computer Technical Reference Manual:
+*     PDF 14: $FF22 bit 3 = CSS, bits 4..7 = GM0, GM1, GM2, A/G.
+*     PDF 31 Table 1: CG6 and RG6 are SAM V2..V0 = 110, $FF22 bits 7..4 =
+*       1110 and 1111. $FF22 bits 2..0 are "do not change".
+*     PDF 11 and 15: SAM bits. The even address clears a bit, the odd
+*       address sets it. F6..F0 is the screen start / 512.
+
+* >>> EXAMPLE 1 of 2: the colour set and the mode.
+* CSS is $FF22 bit 3: 0 selects colour set 0, %00001000 selects colour set 1.
+*   Code  CG CSS=0  CG CSS=1  RG CSS=0  RG CSS=1
+*   00/0  green     buff      black     black
+*   01/1  yellow    cyan      green     buff
+*   10    blue      magenta
+*   11    red       orange
+* VDG is $FF22 bits 7..4: %1110 for CG6, %1111 for RG6.
         ifdef CSS1
-CSSBIT  equ $08
+CSS     equ %00001000
         else
-CSSBIT  equ $00
+CSS     equ 0
         endc
+        ifdef RG6
+VDG     equ %11110000
+        else
+VDG     equ %11100000
+        endc
+* <<< END EXAMPLE
+
         org $3000
-start   orcc #$50
-        lds #$7F00
-        clra
-        tfr a,dp
-* Rows 0-159: four bars of 32 pixels (8 bytes) each, pair values 00, 01, 10, 11.
-        ldx #$0400
-        ldb #160
-bars    pshs b
-        ldu #pattern
-        ldb #4
+* --- CONTEXT: draw the picture. Rows 0-159 hold four bars, 8 bytes each,
+* of $00, $55, $AA and $FF. In CG6 each bar is one colour code: 0, 1, 2, 3.
+start   ldx #$0400
+        ldy #160
+row     ldu #bars
 bar     lda ,u+
-        sta ,x+
-        sta ,x+
-        sta ,x+
-        sta ,x+
-        sta ,x+
-        sta ,x+
-        sta ,x+
-        sta ,x+
+        ldb #8
+fill    sta ,x+
         decb
+        bne fill
+        cmpu #bars+4
         bne bar
-        puls b
-        decb
-        bne bars
-* Rows 160-191: every byte $1B, pixels 00 01 10 11 from the left.
+        leay -1,y
+        bne row
+* Rows 160-191: every byte is $1B, codes 0, 1, 2, 3 from the left in CG6.
         lda #$1B
 order   sta ,x+
         cmpx #$1C00
         blo order
-* Set SAM video base to $0400: 512-byte units, F6..F0=0000010.
+* --- CONTEXT: show the screen at $0400 in CG6 or RG6, as in first-screen.
+* SAM offset F6..F0 = 0000010 ($0400 / 512), then SAM mode V2..V0 = 110.
         sta $FFC6
         sta $FFC9
         sta $FFCA
@@ -60,23 +78,21 @@ order   sta ,x+
         sta $FFCE
         sta $FFD0
         sta $FFD2
-        sta $FFD4
-* Stock clock, SAM display mode V2..V0=110.
-        sta $FFD6
-        sta $FFD8
         sta $FFC0
         sta $FFC3
         sta $FFC5
-* Select PIA data register. Preserve unrelated control and low data bits.
-        lda $FF23
-        ora #4
-        sta $FF23
+* >>> EXAMPLE 2 of 2: write the mode and the colour set to $FF22.
+* Keep bits 2..0. Other hardware uses them.
         lda $FF22
-        anda #7
-        ora #VDGMODE+CSSBIT
+        anda #%00000111
+        ora #VDG+CSS
         sta $FF22
-        lda #$A5
-        sta $2FFF
+* <<< END EXAMPLE
+
+* --- CONTEXT: hold the picture. The check takes its snapshot at this label.
+* A project replaces this loop with its own main loop.
 ready   bra ready
-pattern fcb $00,$55,$AA,$FF
+
+* --- CONTEXT: the bytes of the four bars.
+bars    fcb $00,$55,$AA,$FF
         end start

@@ -134,9 +134,8 @@ These checks already run on the examples:
 | Check | Target | What it proves |
 | --- | --- | --- |
 | [First screen](../../examples/first-screen/README.md) `check --video` | CoCo 1 | Border pixels at each edge and four bars, in each of the eight modes. |
-| [Palette swatches](../../examples/palette-swatches/README.md) `check --video` | CoCo 1 and CoCo 2 | Every colour of CG6 and RG6 in both colour sets, bit order, byte boundaries and orientation. |
+| [Palette swatches](../../examples/palette-swatches/README.md) `check --video` | CoCo 1 and CoCo 2 | Every colour of CG6 and RG6 in both colour sets, bit order, byte boundaries and orientation. The picture is not symmetric, so a mirrored, upside-down or shifted frame fails. |
 | Wrong SAM mode, in `scripts/coco_spec.py` | CoCo 1 and CoCo 2 | The memory check passes and the rendered check fails. |
-| Mirrored, upside-down or shifted frames, in the palette spec | Model only | The expected picture is not symmetric, so orientation and row errors fail. |
 
 The wrong-SAM control writes `$FFC4` in place of `$FFC5`. That write clears
 SAM bit V2, so the mode bits are not `110`, the value for CG6 and RG6.

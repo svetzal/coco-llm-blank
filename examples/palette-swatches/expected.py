@@ -1,25 +1,28 @@
-"""Independent model of the palette swatches: written from the layout, not the assembly.
+"""Independent model of the palette swatches in each colour set and mode.
 
-Functions take the build variant: "" (CG6, CSS=0), "css1" (CG6, CSS=1), "rg6" (RG6, CSS=0)
-or "rg6-css1" (RG6, CSS=1). Every variant writes the same screen bytes.
+Written from the picture rule and the MC6847 datasheet, not from the assembly.
+Variants: "" (CG6, CSS=0), "css1" (CG6, CSS=1), "rg6" (RG6, CSS=0) and
+"rg6-css1" (RG6, CSS=1). Every variant writes the same screen bytes.
 
-The rendered frame is drawn with scripts/graphics.py's unpack and render and its `xroar`
-palette, so `check --video` tests that palette, the unpacking bit order and the pixel sizes
-against XRoar's renderer.
+The rendered frame uses scripts/graphics.py's unpack and render with its `xroar`
+palette. So `check --video` tests that palette, the pixel order in a byte and the
+pixel sizes against XRoar's renderer. This example is the evidence for that palette.
 """
 
 import numpy as np
 from graphics import MODES, XROAR, render, unpack
 
-SCREEN_BYTES = 6144
+SCREEN_BYTES = 6144  # CG6 and RG6: 6K bytes (MC6847 PDF 20)
 BYTES_PER_ROW = 32
 BAR_ROWS = 160
-READY_MARKER = 0x2FFF
-# Rows 0-159: four bars, 8 bytes each. Every pixel pair in a byte holds one code, so the
-# CG6 bars are codes 0, 1, 2, 3 from the left.
+# Rows 0-159: four bars of 8 bytes each. Every pixel in a byte has the same bits,
+# so each CG6 bar is one colour code: 0, 1, 2, 3 from the left.
 BAR_BYTES = (0x00, 0x55, 0xAA, 0xFF)
-# Rows 160-191: 00 01 10 11 in every byte, codes 0, 1, 2, 3 from the left in CG6.
+# Rows 160-191: 00 01 10 11 in every byte. The leftmost pixel is in the high bits
+# (MC6847 PDF 19 Table 3), so CG6 shows codes 0, 1, 2, 3 from the left.
 ORDER_BYTE = 0x1B
+# Mode and CSS of each variant. The colour of each code for each CSS is
+# MC6847 PDF 21 Figure 22(c).
 VARIANTS = {"": ("CG6", 0), "css1": ("CG6", 1), "rg6": ("RG6", 0), "rg6-css1": ("RG6", 1)}
 # scripts/coco.py's capture: two samples per VDG half-clock, one row per scan line.
 SAMPLES_PER_HALF_CLOCK = 2
@@ -37,8 +40,3 @@ def expected_frame(frame: int, variant: str) -> np.ndarray:
     mode = MODES[name]
     codes = unpack(expected_screen(frame, variant), mode.width, mode.height, mode.bits_per_pixel)
     return render(codes, mode, css, XROAR, SAMPLES_PER_HALF_CLOCK)
-
-
-def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) -> None:
-    if len(ram) != 32768 or ram[READY_MARKER] != 0xA5:
-        raise ValueError("The emulator did not reach the initialized program state.")
