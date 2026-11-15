@@ -61,13 +61,18 @@ UNSUPPORTED = ("deleted file", "rename ", "copy ", "similarity", "old mode", "ne
 
 
 class Upstream(BaseModel):
-    """The pinned XRoar release: its git tag and its checksum-pinned source archive."""
+    """The pinned XRoar release: its git tag and its checksum-pinned source archive.
+
+    The series is made against base_commit, whose files match the archive's. That is
+    usually the tag's commit; a release archive cut from a later commit names that one.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     version: str
     tag: str
     tag_commit: str
+    base_commit: str
     git_url: str
     archive_url: str
     archive_sha256: str
@@ -119,6 +124,7 @@ class Provenance(BaseModel):
     upstream_version: str
     tag: str
     tag_commit: str
+    base_commit: str
     archive_url: str
     archive_sha256: str
     series: list[str]
@@ -405,6 +411,7 @@ def build(host: BuildHost, pin: Upstream, series: Series, archive: Path, home: P
         upstream_version=pin.version,
         tag=pin.tag,
         tag_commit=pin.tag_commit,
+        base_commit=pin.base_commit,
         archive_url=pin.archive_url,
         archive_sha256=pin.archive_sha256,
         series=[patch.name for patch in series.patches],

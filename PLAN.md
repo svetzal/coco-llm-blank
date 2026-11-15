@@ -38,6 +38,13 @@ trial without a new request; the completed Claude 03 assessment is under
 - Technique-driven source and errata reading, especially scrolling and broader
   sound/input integration. Continue only against a concrete builder need;
   the stopped historical tile-ID hunt is not reopened.
+- Make the instrumented XRoar's patch series acceptable to XRoar upstream, as
+  [Toward upstream](guidance/starter/xroar-patch.md#toward-upstream) lists:
+  XRoar-native trap actions and an audio module instead of environment
+  variables, Dragon and MC-10 coverage where cheap, XRoar's code style and
+  licence headers, and Texinfo documentation. Keep it current with
+  [the XRoar patch procedure](guidance/starter/xroar-patch.md). Submit nothing
+  and contact no one until the owner asks.
 - Host keyboard delivery, window presentation, listening, and physical-machine
   validation where required by a guide's claim. Emulator-only checks must keep
   their stated limits.

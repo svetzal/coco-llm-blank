@@ -2,6 +2,7 @@
   "version": "1.12.1",
   "tag": "1.12.1",
   "tag_commit": "def530d0269bd9f8b33d1727fcda9f8dbdebb3c6",
+  "base_commit": "def530d0269bd9f8b33d1727fcda9f8dbdebb3c6",
   "git_url": "https://www.6809.org.uk/git/xroar.git",
   "archive_url": "https://www.6809.org.uk/xroar/dl/xroar-1.12.1.tar.gz",
   "archive_sha256": "ba525225fbd732c4dbf2cbb571dc9d2810fd9dcedf0482133cf637e2eef61f88"

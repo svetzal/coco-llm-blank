@@ -162,7 +162,8 @@ install:
 - Ubuntu 24.04: `sudo apt-get install build-essential pkg-config autoconf automake`.
 
 `scripts/xroar_patches/upstream.json` is the one XRoar pin: the release
-version, its git tag and commit, and the source archive's URL and SHA-256. The
+version, its git tag and commit, the base commit the series is made against,
+and the source archive's URL and SHA-256. The
 native installer's Ubuntu build of the ordinary XRoar reads the same file. The
 archive is cached under `local/toolchain-sources/` and must match the pinned
 SHA-256. The series is a set of `git format-patch` files exported with
@@ -179,6 +180,11 @@ why and rebuilds.
 Set `XROAR_INSTRUMENTED` to an executable path to make `scripts/coco.py` use
 that instrumented XRoar instead. It is not verified; the XRoar patch procedure
 uses it to run the same checks against a trial build.
+
+To move the series to a new XRoar release, or to change the equipment, obey
+[the XRoar patch procedure](xroar-patch.md). Run
+`uv run python scripts/xroar_upstream.py report` to see how far the pin is
+behind upstream.
 
 ## Diagnose binary startup
 

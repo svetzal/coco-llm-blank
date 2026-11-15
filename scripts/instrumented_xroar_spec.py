@@ -20,6 +20,7 @@ PIN = Upstream(
     version="9.9",
     tag="9.9",
     tag_commit="c" * 40,
+    base_commit="c" * 40,
     git_url="https://fixture/xroar.git",
     archive_url="https://fixture/xroar-9.9.tar.gz",
     archive_sha256="0" * 64,

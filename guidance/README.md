@@ -20,6 +20,7 @@ evidence trail; open them when a guide's claim matters to the work.
 
 - [Set up manually or recover a first run](starter/setup.md).
 - [Build binaries and launch with verified firmware](starter/toolchain.md).
+- [Move the instrumented XRoar's patch to a new XRoar release](starter/xroar-patch.md).
 - [Establish a target and verify CoCo behavior](starter/development.md).
 - [Work on host scripts and prepare the full starter suite](starter/python.md).
 - [Find source pages and inspect diagrams](starter/references.md).
