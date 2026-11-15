@@ -11,12 +11,18 @@ tv = "ntsc"
 vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
+extended = "extbas11.rom"   # Disk BASIC needs Extended BASIC
+disk = "disk11.rom"
 
 # Code starts after screen B ($2400-$3BFF). State and erase lists are in
 # $1C00-$1FFF, between the screens. The stack is $2000-$23FF.
 [memory]
 at = { start = 0x3C00, state = 0x1C00 }
 below = { state_end = 0x1D00, program_end = 0x7000 }
+
+# The disk command puts ARENA.BIN on a Disk BASIC disk image.
+[disk]
+name = "ARENA"
 
 # Scripted keys take effect at the scanner entry: one script line per frame.
 # Each line's first word lists the held keys by these letters. C is not a

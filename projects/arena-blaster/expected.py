@@ -51,7 +51,7 @@ PERIOD = {GRUNT: 2, HUNTER: 1, SHOOTER: 3}
 SPRITE = {GRUNT: "grunt", HUNTER: "hunter", SHOOTER: "shooter"}
 # Enemy bullets (README.md "Shooters").
 BULLET_SLOTS, BULLET_SIZE = 4, 5  # on, x, y, vx, vy
-BULLET_W, BULLET_H, BULLET_VX, BULLET_VY = 3, 3, 3, 6
+BULLET_W, BULLET_H, BULLET_VX, BULLET_VY = 4, 6, 3, 6
 SEED = 0xACE1
 # Test-harness controls of each variant (coco.toml), and its first level.
 CONTROLS = {

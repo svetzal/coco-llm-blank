@@ -33,6 +33,9 @@
 *     selected edge of CB1 and stays set until a read of the data register
 *     (read as a page image).
 *   The Rainbow, October 1986, PDF 119: PMODE 3 is graphics mode 6C.
+*   Disk Basic Unravelled II (Spectral Associates; revised by W. K. Zydhek,
+*     1999), PDF 15: $FF40 bits. PDF 20: Disk BASIC RAM starts at $600.
+*     PDF 70: the IRQ handler turns the drive motors off.
 
 SCREEN_A equ $0400
 SCREEN_B equ $2400
@@ -74,8 +77,8 @@ SHOOTER_PERIOD equ 3            ; frames between two shooter steps
 MAX_SHOOTERS equ 4              ; level - 3, up to this number
 MIN_FIRE_WAIT equ 24            ; 84 - 8 * level, down to this number
 BULLETS equ 4                   ; enemy bullet slots
-BULLET_W equ 3
-BULLET_H equ 3
+BULLET_W equ 4
+BULLET_H equ 6
 BULLET_VX equ 3                 ; pixels across each frame
 BULLET_VY equ 6                 ; rows down or up each frame
 GRUNT_PERIOD equ 2              ; frames between two grunt steps
@@ -210,6 +213,12 @@ B_SIZE  equ 5
         org $3C00
 start   orcc #$50               ; mask IRQ and FIRQ: no handler runs
         lds #STACK
+* Disk BASIC turns the drive motor off in its IRQ handler, which no longer
+* runs. So turn the motors off here: $FF40 is a write-only latch, bit 3 = 1
+* motors on (Disk Basic Unravelled II, PDF 15). 0 also clears the drive
+* selects and the halt flag. The Disk BASIC IRQ handler stores the same
+* way (PDF 70).
+        clr $FF40
         lda #STATE/256
         tfr a,dp
         setdp STATE/256

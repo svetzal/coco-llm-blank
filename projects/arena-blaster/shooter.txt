@@ -1,8 +1,8 @@
 # Held keys for each frame of the shooter variant: one shooter at x 61, y 30
 # that fires each 20 frames. Written by hand; the frames of the events come
-# from expected.py. The first life stays under the shooter: a bullet down.
-# The second life moves right (diagonal bullets) and then left (a diagonal
-# bullet and a bullet across). A bullet across hits it at frame 176.
+# from expected.py. The first life stays under the shooter: a bullet down
+# hits it. The second life moves right (bullets on a diagonal), then left
+# (a bullet on the other diagonal, then bullets across).
 -      frame 1
 -
 -
@@ -76,7 +76,7 @@
 -
 -
 -      frame 73: the second life
-D      frame 74: right; bullets on a diagonal at frames 93 and 113
+D      frame 74: right; bullets down and right at frames 93 and 113
 D
 D
 D
@@ -121,35 +121,8 @@ D      frame 85
 -
 -
 -
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
-A      frame 147: left
+-      frame 119
+A      frame 120: left; a bullet down and left at frame 133
 A
 A
 A
@@ -158,4 +131,49 @@ A
 A
 A
 A
-A      frame 156
+A
+A
+A
+A
+A
+A
+A      frame 135
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-      frame 153: a bullet across
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-      frame 174: a bullet across hits the player

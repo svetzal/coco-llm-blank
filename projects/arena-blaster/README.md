@@ -27,6 +27,9 @@ other hand, in eight directions. The game uses four-colour graphics.
 
 > Increment 8: enemies that shoot.
 
+> Make the bullets a bit bigger: they are hard to see. Make sure that the
+> game runs on Disk BASIC, from a disk.
+
 The plan for these requests:
 
 | Increment | Contents |
@@ -73,7 +76,21 @@ uv run python scripts/coco.py check projects/arena-blaster
 
 The `run` command opens XRoar. Close the window to stop it.
 
-The check runs twelve builds for 200 frames each. At each frame it compares
+To run the game from a Disk BASIC disk:
+
+```sh
+uv run python scripts/coco.py disk projects/arena-blaster --run
+uv run python scripts/coco.py disk projects/arena-blaster --check
+```
+
+The `disk` command writes `build/arena-blaster/main.dsk` with one file,
+`ARENA.BIN`. With `--run`, XRoar starts Disk BASIC with the disk in drive 0
+and types `LOADM"ARENA":EXEC`. On a real CoCo, type the same command. With
+`--check`, XRoar does the same without a window, and the game must reach its
+first frame.
+
+The check runs twelve builds for 200 frames each, with Extended BASIC in
+the machine. At each frame it compares
 both screens, the game state, the rendered picture and the mixer output with
 `expected.py`. See [Checks](#checks).
 
@@ -117,7 +134,9 @@ Nobody has listened to it yet.
 - RAM: 32 KiB (starter default)
 - CPU and clock: 6809 at the stock clock (starter default)
 - Video standard: NTSC (starter default)
-- Firmware: Color BASIC 1.1, `bas11.rom` (starter default)
+- Firmware: Color BASIC 1.1 `bas11.rom` and Extended Color BASIC 1.1
+  `extbas11.rom` (starter default). Disk Extended Color BASIC 1.1
+  `disk11.rom` for the disk (owner request).
 - Keyboard: the CoCo layout, `keyboard = "coco"` in XRoar (agent choice)
 - Graphics: CG6, the mode of PMODE 3: 128x192 pixels, four colours (owner
   request). Colour set 0: green, yellow, blue and red (agent choice). The
@@ -127,8 +146,17 @@ Nobody has listened to it yet.
   (agent choice). The rule for the K, O, S and W rectangle is an agent choice.
 - Sound: the six-bit DAC (owner request for audio). One effect at a time,
   played in the wait for the end of the picture (agent choice).
-- Loader: XRoar runs the DECB binary directly (starter default). There is no
-  disk image yet.
+- Loader: XRoar runs the DECB binary directly (starter default). The disk
+  `main.dsk` holds `ARENA.BIN`, and `LOADM"ARENA":EXEC` runs it from Disk
+  BASIC (owner request).
+- Disk BASIC RAM: Disk BASIC keeps its RAM from `$600`, just above the text
+  screen, up to the graphics pages (*Disk Basic Unravelled II*, PDF 20). The
+  game loads at `$3C00`-`$5F50`, above that area. After `EXEC`, the game
+  does not go back to BASIC, so it uses all RAM.
+- Drive motor: Disk BASIC turns the motor off in its IRQ handler (PDF 70).
+  The game masks the IRQ, so at its start it stores 0 in `$FF40`. Bit 3 of
+  that write-only latch is the motor enable (PDF 15). XRoar does not show
+  the motor, so this is not measured.
 
 The CoCo 1 defaults come from
 [development practice](../../guidance/starter/development.md#establish-the-contract).
@@ -244,7 +272,8 @@ The numbers are agent choices. The owner can change them.
 - A level has one fire wait. When it ends, the next shooter in slot order,
   after the one that fired last, fires one bullet. Then the wait starts
   again. If no bullet slot is free, that shooter does not fire.
-- There are 4 bullet slots. A bullet is 3x3 pixels. It moves 3 pixels
+- There are 4 bullet slots. A bullet is 4x6 pixels: a yellow ring with a
+  red middle. The owner asked for a bigger bullet than the first 3x3 one. It moves 3 pixels
   across and 6 rows down or up each frame, about the speed of the player.
 - The bullet starts in the middle of the shooter and goes toward the
   player in one of 8 directions. AX is the number of pixels across to the
@@ -418,6 +447,13 @@ two fields of the effect.
   byte. Leventhal, *6809 Assembly Language Programming*, PDF 488.
 - Cycle counts of the sound loop: Leventhal, *6809 Assembly Language
   Programming*, Appendix C, PDF 553-555.
+- Disk BASIC: `$FF40` is a write-only latch, and bit 3 = 0 turns the drive
+  motors off (PDF 15). Disk BASIC RAM starts at `$600` (PDF 20). The IRQ
+  handler turns the motors off after a wait (PDF 70). *Disk Basic Unravelled
+  II*, Spectral Associates, revised by Walter K. Zydhek, 1999, read as page
+  images. The PDF is not in the starter manifest. It is in the
+  `Unravelled Series` folder of the Color Computer Archive, beside
+  *Color Basic Unravelled II*.
 
 ## Checks
 
@@ -435,7 +471,7 @@ remove one part of the game. The key scripts are short and written by hand.
 | `level1` | `SKIP_TITLE` | none | The level 1 banner and hint, 4 grunts, no hunter. A death at frame 119 and the banner again at frame 164. |
 | `level3` | `SKIP_TITLE` `FIRST_LEVEL=3` `NO_DEATH` | none | The level 3 banner and hint, 6 grunts, the first hunter at frame 120 |
 | `level5` | `SKIP_TITLE` `FIRST_LEVEL=5` `NO_DEATH` | none | The level 5 banner and hint, 12 grunts and 2 shooters, bullets across at frames 120 and 180 |
-| `shooter` | `SKIP_TITLE` `NO_READY` `ONE_SHOOTER` | `shooter.txt` | Bullets down, on both diagonals and across, the bullet sound, deaths by a bullet at frames 28 and 176 |
+| `shooter` | `SKIP_TITLE` `NO_READY` `ONE_SHOOTER` | `shooter.txt` | Bullets down, on both diagonals and across, the bullet sound, deaths by a bullet at frames 28 and 174 |
 | `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | The banner with a two-digit level, 16 grunts and 4 shooters, a bullet up, a death at frame 91 |
 | `over` | `SKIP_TITLE` `NO_READY` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
 | `scores` | `NO_READY` `FIXED_ENEMIES` `FIRST_LIVES=1` `FIRST_SCORE=0x5000` | `scores.txt` | A start from the title (frame 3), game over (frame 82), the initials screen (frame 172), a held W that repeats, S from A to Z, the entry CZA at place 7 below REX (frame 192), a held shoot key that does not start a game |
