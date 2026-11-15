@@ -1,0 +1,44 @@
+# Original sprite art for Arena Blaster, one CG6 pixel per character.
+# . = transparent, G = green (0), Y = yellow (1), B = blue (2), R = red (3).
+# Colour set 0 codes: MC6847 datasheet PDF 21, Figure 22.
+# A CG6 pixel shows about 12:7 (wide:high), so 6x10 looks almost square.
+
+[player]
+..YY..
+..YY..
+.RRRR.
+Y.RR.Y
+YRRRRY
+..RR..
+..RR..
+.Y..Y.
+.Y..Y.
+YY..YY
+
+# Shots: horizontal, vertical, back slash (\) and forward slash (/).
+[shot_horizontal]
+YYYY
+
+[shot_vertical]
+Y
+Y
+Y
+Y
+Y
+Y
+
+[shot_back]
+Y..
+Y..
+.Y.
+.Y.
+..Y
+..Y
+
+[shot_forward]
+..Y
+..Y
+.Y.
+.Y.
+Y..
+Y..

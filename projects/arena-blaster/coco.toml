@@ -1,0 +1,41 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+# Keep these values the same as the contract in README.md.
+source = "main.asm"
+prepare = "assets.py"   # writes assets.inc into the build folder first
+
+[targets.coco1]
+machine = "cocous"
+cpu = "6809"
+keyboard = "coco"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas11.rom"
+
+# Code starts after screen B ($2400-$3BFF). State and erase lists are in
+# $1C00-$1FFF, between the screens. The stack is $2000-$23FF.
+[memory]
+at = { start = 0x3C00, state = 0x1C00 }
+below = { state_end = 0x1D00, program_end = 0x7000 }
+
+# Scripted keys take effect at the scanner entry: one journey.txt line per
+# frame. Each line's first word lists the held keys by these letters.
+# D is not a game key: it is the wrong-key control.
+[keys]
+at = "scan"
+letters = { E = "e", C = "c", S = "s", F = "f", I = "i", J = "j", L = "l", "," = "comma", D = "d" }
+
+[capture]
+video = true
+
+# The plain build gets no keys: the player stays at the start and no shot
+# starts. The journey build plays journey.txt through the emulated keyboard.
+[variants.journey]
+keys = "journey.txt"
+
+[check]
+checkpoint = "published"   # reached once for each frame, after the flip
+frames = ["1-170"]       # one checkpoint for each journey.txt line
+unreachable = "state"      # a data label: executing it is a fault
+screen = 0x0400
+emulated_seconds = 20
