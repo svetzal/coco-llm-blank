@@ -1,39 +1,59 @@
 # Schedule turns and menu transitions
 
-Read this when building a turn-based strategy game with journeys that take
-several turns, or a menu operated by one switch. Keep world state, pending
-commands and presentation state separate. A redraw must not advance a turn.
+Read this when you build a turn-based strategy game with journeys that take
+several turns.
+Read it also when you build a menu operated by one switch.
+Keep world state, pending commands and presentation state separate.
+A redraw must not advance a turn.
 
-The pseudocode and design rules below are original adaptations. A bounded
-[host reference model](validation/game-state.md) now checks 60
-scenarios for commands, journeys, phases and menu transitions. This is not
-CoCo execution evidence. A separate
-[CoCo 3 experiment](validation/game-state-coco3.md) now checks a
-small assembly subset, described below. The host rules can inform CoCo 1, 2
-or 3 projects, but the host results establish no machine compatibility, RAM
-budget or timing result. The sources use contemporary BASIC; *Conqueror!*
-also requires an external assembly screen expander and does not state its RAM
-requirement (printed 11, PDF 13). Verify each target's input and display adapters
-separately. No register writes, wiring or BASIC delay loops are recommended here.
+The pseudocode and design rules below are original adaptations.
+
+A bounded [host reference model](validation/game-state.md) now checks 60
+scenarios for commands, journeys, phases and menu transitions.
+This is not evidence of CoCo execution.
+A separate [CoCo 3 experiment](validation/game-state-coco3.md) now checks a
+small assembly subset, described below.
+
+The host rules can inform CoCo 1, 2 or 3 projects, but the host results
+establish no machine compatibility, RAM budget or timing result.
+
+The sources use contemporary BASIC.
+*Conqueror!* also needs an external assembly screen expander and does not state
+its RAM requirement (printed 11, PDF 13).
+
+Check each target's input and display adapters separately.
+This guide recommends no register writes, wiring or BASIC delay loops.
 
 ## Store an arrival, not every position along the route
 
 Tony Byorick's "Conqueror!", *Undercolor*, volume 1, issue 6, March 8, 1985,
-printed 10–12, PDF 12–14, separates planet data from scheduled arrivals. Its
-turn has arrival, command and production phases. The command path checks source
-ownership and available strength before recording destination, strength, player
-and arrival turn. [Source pages][conqueror]
+printed 10–12, PDF 12–14, separates planet data from scheduled arrivals.
+Its turn has arrival, command and production phases.
+The command path checks source ownership and available strength before
+recording destination, strength, player and arrival turn.
+[Source pages][conqueror]
 
-For a new game, give each journey an active flag, owner, destination, strength
-and arrival turn. Add departure data only if route animation needs it. Keep that
-animation subordinate to the scheduled arrival rule. Choose one capacity `N`
-for allocation, arrival resolution and checks for fleets still in transit.
-Storage is bounded by `N * bytes_per_record`, plus planet and control state;
-field widths and alignment belong to the new game's format.
+For a new game, give each journey these fields:
 
-This trades a fixed event table for repeated movement calculations. Scanning
-that table still costs work each turn, and a full table must have defined
-behavior. It suits delayed orders; it does not supply arcade movement physics.
+- an active flag
+- owner
+- destination
+- strength
+- arrival turn
+
+Add departure data only if route animation needs it.
+Keep that animation subordinate to the scheduled arrival rule.
+Choose one capacity `N` for allocation, arrival resolution and checks for
+fleets still in transit.
+
+The storage bound is `N * bytes_per_record`, plus planet and control state.
+Field widths and alignment belong to the new game's format.
+
+This trades a fixed event table for repeated movement calculations.
+Scanning that table still costs work each turn, and a full table must have
+defined behavior.
+It suits delayed orders.
+It does not supply arcade movement physics.
 
 ### Reject a command before changing the world
 
@@ -58,16 +78,21 @@ try_send(player, source, destination, count):
     return ACCEPTED
 ```
 
-`commit_together` specifies an observable contract, not a hardware instruction:
-no observer sees half a command, and neither write can fail after mutation starts.
-A single-owner game loop can keep input and drawing outside that commit. Choose
-an explicit turn limit or a wrap-safe time representation before implementing
-`representable`; this example does not handle clock wrap.
+`commit_together` specifies an observable contract, not a hardware instruction.
+No observer sees half a command, and neither write can fail after mutation
+starts.
+A single-owner game loop can keep input and drawing outside that commit.
+
+Choose an explicit turn limit or a wrap-safe time representation before
+implementing `representable`.
+This example does not handle clock wrap.
 
 ## Make phase order part of the rules
 
-Use one explicit order and keep it stable. This proposed order follows the
-article's three phases but places the final continuation check after production:
+Use one explicit order.
+Keep it stable.
+This proposed order uses the article's three phases but places the final
+continuation check after production:
 
 ```text
 start_next_turn():
@@ -84,42 +109,58 @@ start_next_turn():
 ```
 
 Slot order is this example's tie rule, not a claim that simultaneous battles
-must work that way. Reusing a low slot can change battle order. If that is
-undesirable, assign a sequence number or resolve simultaneous arrivals together.
-Likewise, define whether a newly captured planet produces immediately and whether
-a player with no planets but a fleet in transit remains active. Presentation
-updates may occur within phases, but cannot repeat production or resolve an
-arrival twice. Do not start another turn while commands are still pending.
+must work that way.
+Reusing a low slot can change battle order.
+If that is undesirable, assign a sequence number or resolve simultaneous
+arrivals together.
+
+Likewise, define whether a newly captured planet produces immediately.
+Define whether a player with no planets but a fleet in transit remains active.
+
+Presentation updates may occur within phases, but cannot repeat production or
+resolve an arrival twice.
+Do not start another turn while commands are still pending.
 
 ### Preserve the source discrepancies
 
-Do not copy the listing's bounds as a reusable queue contract. It initializes
-and searches slots 1–25, but arrival resolution checks 1–15. The player-out
-check also scans only 1–15. The free-slot search returns slot 1 when full.
-See lines 590–610 and 1000, printed 11–12, PDF 13–14; lines 3890–3930 and
-4360–4380, printed 16, PDF 18. [Listing continuation][conqueror-slots]
+Do not copy the listing's bounds as a reusable queue contract.
+
+It initializes and searches slots 1–25, but arrival resolution checks 1–15.
+The player-out check also scans only 1–15.
+The free-slot search returns slot 1 when full.
+See lines 590–610 and 1000, printed 11–12, PDF 13–14.
+See also lines 3890–3930 and 4360–4380, printed 16, PDF 18.
+[Listing continuation][conqueror-slots]
+
 The final page repeats lines 5200–5270 after 5320 (printed 17, PDF 19).
 [Final listing page][conqueror-ending]
 
 These are image-reading findings, not reproduced failures or published fixes.
-The research did not locate a correction for them. Its issue-6 contents footer
-also repeats February 20 while the article pages say March 8; use issue identity
-and PDF position. The proposed rejection and consistent capacity deliberately
-replace these listing behaviors.
+The research did not locate a correction for them.
+Its issue-6 contents footer also repeats February 20 while the article pages
+say March 8.
+Use issue identity and PDF position.
+
+The proposed rejection and consistent capacity deliberately replace these
+listing behaviors.
 
 ## Consume one selection in one menu state
 
-Mike Rigsby's "Entry Way", *Undercolor*, volume 1, issue 5, February 20, 1985,
-printed 10–12, PDF 12–14, describes scanning columns, then entries within a
-selected column. Passing the entries without selecting returns to column scan.
-Its input routines support keyboard, audio or switch activation; short delays
-address long sounds and contact bounce. They do not establish release-before-
-reselection behavior. [Software explanation, printed 11, PDF 13][entry-way]
+Mike Rigsby's "Entry Way" is in *Undercolor*, volume 1, issue 5,
+February 20, 1985, printed 10–12, PDF 12–14.
+It describes scanning columns, then entries within a selected column.
+Passing the entries without selecting returns to column scan.
 
-Our menu adaptation consumes an already accepted `SELECT` event. The input
-adapter must emit only one event per press and require release before another;
-keep its held/pressed and debounce algorithm outside this state machine. A held
-switch must not select a column and then immediately select an item in it.
+Its input routines support keyboard, audio or switch activation.
+Short delays address long sounds and contact bounce.
+They do not establish release-before-reselection behavior.
+[Software explanation, printed 11, PDF 13][entry-way]
+
+Our menu adaptation consumes an already accepted `SELECT` event.
+The input adapter must emit only one event per press and require release before
+another.
+Keep its held/pressed and debounce algorithm outside this state machine.
+A held switch must not select a column and immediately select an item in it.
 
 ```text
 on_menu_event(event):
@@ -137,63 +178,93 @@ on_menu_event(event):
         restart_dwell()
 ```
 
-When selection and dwell expiry coincide, process selection and discard that
-expiry. Start a fresh dwell after the transition. Changing menu state does not
-reset the input adapter's release requirement. Keep a composed command outside
-the menu display so changing dwell speed need not erase it; the historical SPEED
-option clears the message (printed 11, PDF 13). This is a proposal for accessible
-menus and turn-based commands, not evidence for simultaneous arcade controls.
+When selection and dwell expiry coincide, process selection.
+Discard that expiry.
+Start a fresh dwell after the transition.
+Changing menu state does not reset the input adapter's release requirement.
+
+Keep a composed command outside the menu display.
+Then changing dwell speed need not erase it.
+The historical SPEED option clears the message (printed 11, PDF 13).
+
+This is a proposal for accessible menus and turn-based commands, not evidence
+for simultaneous arcade controls.
 
 ## Check the behavior before relying on it
 
-The host model checks bounded versions of these behaviors. Target acceptance
-must cover the chosen game's full contract; only the smaller CoCo 3 subset
-below has assembly execution evidence:
+Target acceptance must cover the chosen game's full contract.
+Only the smaller CoCo 3 subset below has assembly execution evidence.
+The host model checks bounded versions of these behaviors:
 
 - Fill all `N` slots. Reject the next send with identical planet and journey
-  state; then resolve a journey in the last slot and reuse that slot.
+  state. Then resolve a journey in the last slot. Reuse that slot.
+
 - Reject invalid ownership, count, destination and time without mutation.
   Cancel a partially entered command with the same result.
-- Resolve two arrivals on one turn in the declared order, retire both once,
-  and apply production once. Check a captured planet and a fleet-only player.
+
+- Resolve two arrivals on one turn in the declared order. Retire both once.
+  Apply production once. Check a captured planet and a fleet-only player.
+
 - Redraw or animate repeatedly while awaiting commands. The turn and world
   state must remain unchanged.
+
 - Hold selection across a column-to-item transition. It must cause only one
-  transition. Release and press again to select the item. Exercise no input,
-  the last item, timeout, coincident expiry and selection, and a speed change
-  with a command partly composed.
+  transition. Release the selection. Press again to select the item.
+  Exercise these cases:
+
+  - no input
+  - the last item
+  - timeout
+  - coincident expiry and selection
+  - a speed change with a command partly composed
 
 ## Bounded CoCo 3 execution
 
 The [target report](validation/game-state-coco3.md) records 35 passing
-tests and all 44 checkpoints matching on both 128 and 512 KiB CoCo 3 profiles
-(NTSC, GIME 1986, 6809, slow MPU rate). The
-[reproduction guide](../../experiments/game-state-coco3/README.md) fixes the subset
-and commands. This original adaptation uses two friendly planets, two journey
-slots, byte ship counts and 16-bit turns. It checks rejection without mutation,
-successful sends after rejection without resetting the world, slot reuse,
-once-only arrivals, saturation and phase/turn limits. Five faulty builds fail
-their named expectations at both RAM sizes.
+tests.
+It also records all 44 checkpoints matching on both 128 and 512 KiB CoCo 3
+profiles (NTSC, GIME 1986, 6809, slow MPU rate).
+
+The [reproduction guide](../../experiments/game-state-coco3/README.md) fixes the
+subset and commands.
+This original adaptation uses two friendly planets, two journey slots, byte
+ship counts and 16-bit turns.
+It checks these items:
+
+- rejection without mutation
+- successful sends after rejection without resetting the world
+- slot reuse
+- once-only arrivals
+- saturation and phase/turn limits
+
+Five faulty builds fail their named expectations at both RAM sizes.
 
 This is a bounded adaptation of the host model, not all 60 host cases or either
-historical BASIC listing. Combat, production, ownership changes, victory,
-menus and input are absent. IRQ/FIRQ stay masked; routine-boundary rejection
-atomicity does not establish interrupt-safe multi-field updates. The evidence
-is assembly execution and RAM state, without framebuffer, rendered display,
-audio, performance or physical-hardware claims.
+historical BASIC listing.
+Combat, production, ownership changes, victory, menus and input are absent.
+
+IRQ/FIRQ stay masked.
+Rejection atomicity at routine boundaries does not establish interrupt-safe
+multi-field updates.
+The evidence is assembly execution and RAM state, without framebuffer, rendered
+display, audio, performance or physical-hardware claims.
 
 ## Sources and provenance
 
 The [Undercolor research record](research/undercolor-game.md)
 contains archive hashes, full reading coverage, correction-search limits and
-configuration gaps. These sources have no manifest resource IDs. PDF pages are
-one-based positions in the archived files. No historical listing has been
-run here. The host and CoCo 3 results above apply to our original adaptations;
-they supply no rendered-display, audio or physical-hardware evidence.
+configuration gaps.
+These sources have no manifest resource IDs.
+PDF pages are one-based positions in the archived files.
+
+We have not run any historical listing here.
+The host and CoCo 3 results above apply to our original adaptations.
+They supply no rendered-display, audio or physical-hardware evidence.
 
 - Byorick, Tony. "Conqueror!" *Undercolor*, volume 1, issue 6, March 8, 1985.
   Passages used here: printed 10–12 and 16–17, PDF 12–14 and 18–19.
   [Archive][conqueror]
+
 - Rigsby, Mike. "Entry Way." *Undercolor*, volume 1, issue 5, February 20, 1985.
   Passages used here: printed 10–12, PDF 12–14.
   [Archive][entry-way]

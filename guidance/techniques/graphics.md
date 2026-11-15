@@ -3,13 +3,21 @@
 Read this before you choose a graphics mode for a CoCo 1 or CoCo 2 project, or
 before you turn artwork into screen bytes.
 
-This guide covers the eight full-graphics modes of the MC6847 video chip (VDG):
-size, colours, how pixels pack into bytes, and pixel shape. It also covers
-`scripts/graphics.py`, the tool that converts images into those bytes.
+This guide covers the eight full-graphics modes of the MC6847 video chip (VDG).
+For these modes, it covers:
+
+- size
+- colours
+- how pixels pack into bytes
+- pixel shape
+
+It also covers `scripts/graphics.py`, the tool that converts images into those
+bytes.
 
 Other guides cover the next steps:
 
-- [Colour](colour.md): how colours look on a given display, and artifact colours.
+- [Colour](colour.md): how colours look on a given display, and artifact
+  colours.
 - [Assets](assets.md): how prepared pictures get into a game.
 - [Moving objects](moving-objects.md): how to draw pictures over scenery.
 
@@ -38,12 +46,13 @@ For most games, select CG6 for colour or RG6 for detail. Both use 6144 bytes.
 The smaller modes use less memory and are faster to redraw, but their pixels
 are larger.
 
-Select the mode before you draw any art, because a change of mode
-changes the pixel grid, the colours and the pixel shape.
+Select the mode before you draw any art. A change of mode changes the pixel
+grid, the colours and the pixel shape.
 
-The Tandy Technical Reference Manual gives 2K for RG2. The datasheet gives
-1.5K. The tool uses 1536 bytes from the datasheet. Do a check on a real
-program before you trust either value. [Tandy, PDF 30][coco-modes]
+The Tandy Technical Reference Manual gives 2K for RG2.
+The datasheet gives 1.5K. The tool uses 1536 bytes from the datasheet.
+Do a check on a real program before you trust either value.
+[Tandy, PDF 30][coco-modes]
 
 To set the mode, write the SAM display bits and the PIA bits at `$FF22`.
 [Tandy, PDF 31 Table 1][coco-modes]
@@ -68,12 +77,14 @@ The CSS bit selects one of two colour sets for the whole screen.
 | 10 | blue | magenta | | |
 | 11 | red | orange | | |
 
-CSS=0 gives a green border and CSS=1 gives a buff border. A picture can only use the
-four colours (or two) of one set.
+CSS=0 gives a green border and CSS=1 gives a buff border. A picture can only
+use the four colours (or two) of one set.
 
 The datasheet names the colours, but it does not give RGB values. We
 measured the tool's `xroar` palette from the instrumented XRoar's rendered
-frame. [Palette swatches](../../examples/palette-swatches/README.md) is the
+frame.
+
+[Palette swatches](../../examples/palette-swatches/README.md) is the
 evidence: its `check --video` compares every rendered sample with the palette.
 Run `uv run python scripts/graphics.py palettes` to see the values.
 
@@ -86,7 +97,8 @@ CSS=0 and dark grey when CSS=1. The palette stores each black separately.
 ## Know the pixel order
 
 In RG modes, bit 7 of a byte is the leftmost pixel. In CG modes, bits 7 and 6
-are the leftmost pixel. [Motorola, PDF 19 Table 3 and PDF 21 Figure 22][mc6847-order]
+are the leftmost pixel.
+[Motorola, PDF 19 Table 3 and PDF 21 Figure 22][mc6847-order]
 
 The `$1B` band in palette-swatches shows this. In CG6 it shows green, yellow,
 blue and red from the left. If you reverse the bit order, the rendered check
@@ -106,8 +118,9 @@ These facts come from the datasheet:
 - One scan line is 227.5 clocks. [Motorola, PDF 8 Figure 8][mc6847-sync]
 
 The tool's `ntsc` display setting adds one assumption that is not from our
-sources: a square pixel on a 4:3 NTSC picture of about 240 lines is about
-6.136 MHz. From that, one half-clock is about 6/7 of a line height.
+sources. The assumption is that a square pixel on a 4:3 NTSC picture of about
+240 lines is about 6.136 MHz. From that, one half-clock is about 6/7 of a line
+height.
 
 - An RG6 pixel is 6:7, a little narrow.
 - A CG6 pixel is about 12:7, almost twice as wide as it is high.
@@ -119,8 +132,8 @@ XRoar's capture layout. `ntsc` is the default.
 
 ## Convert an image
 
-Run `uv run python scripts/graphics.py --help`, then the help of the command
-you need. Do not read the source. The commands are:
+Run `uv run python scripts/graphics.py --help`. Then run the help of the
+command you need. Do not read the source. The commands are:
 
 - `convert`: one image to one screen or one sprite.
 - `sheet`: a sprite sheet to one labelled block for each cell.
@@ -169,7 +182,7 @@ any other art:
    converts cleanly.
 4. Ask for the target shape, with correction for pixel shape. For a full CG6
    screen, a 128x192 grid of pixels at about 12:7 displays at about 4:3.
-5. Convert the image, look at the preview, and correct pixels by hand when
+5. Convert the image. Look at the preview. Correct pixels by hand when
    necessary.
 
 Do not let a generator draw words, numbers or scores. Draw those from data in
@@ -186,9 +199,9 @@ supply its account and key.
 - We measured the `xroar` palette on the CoCo 1 target, in CG6 and RG6, for
   both colour sets. The rendered check fails for each negative control: a
   changed colour set, two exchanged colours and a reversed bit order.
-- The border colour, other modes, CoCo 2 and other XRoar video paths are not
-  measured in a capture.
-- The `ntsc` pixel shape is a deduction. The dither settings are not tuned.
+- We did not measure the border colour, other modes, CoCo 2 or other XRoar
+  video paths in a capture.
+- The `ntsc` pixel shape is a deduction. Nobody has tuned the dither settings.
 - Nobody has checked a colour or a shape on real hardware or a television.
 
 ## Sources
