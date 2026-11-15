@@ -152,7 +152,7 @@ On macOS, the supported host is Apple Silicon.
 ```sh
 uv run --locked --no-sync python scripts/validate_repository.py list
 uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
-uv run --locked --no-sync python scripts/validate_repository.py run assets game-state
+uv run --locked --no-sync python scripts/validate_repository.py run assets sudo-policy
 ```
 
 Each selection runs pytest, Ruff, and Ruff's format check in separate processes
@@ -165,8 +165,8 @@ Experiment names select only that experiment. Coverage uses its `coverage.ini`
 where present. Otherwise, coverage uses the root configuration with the
 documented module targets.
 
-The light experiment scopes are `assets`, `game-state`,
-`linux-onboarding`, and `sudo-policy`. The last two run host specifications with
+The light experiment scopes are `assets`, `linux-onboarding`, and
+`sudo-policy`. The last two run host specifications with
 controlled process boundaries, not the Docker onboarding or sudo journeys.
 `linux-onboarding`, `macos-onboarding`, and `sudo-policy` have no scoped
 coverage gate. The runner does not invent one or borrow the root's

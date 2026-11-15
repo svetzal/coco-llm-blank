@@ -1,275 +1,208 @@
-# Schedule turns and menu transitions
+# Separate game state from presentation
 
-Read this when you build a turn-based strategy game with journeys that take
-several turns.
-Read it also when you build a menu operated by one switch.
-Keep world state, pending commands and presentation state separate.
-A redraw must not advance a turn.
+Read this for a turn-based game, a menu for one switch, or a game that waits
+for a command before it plays a sequence.
+Keep the world state, the pending commands and the presentation state apart.
+A redraw, an animation or a sound must never advance a turn or apply a command
+again.
 
-The pseudocode and design rules below are original adaptations.
+The design can inform the CoCo 1, 2 and 3.
+The [turn-queue example](../../examples/turn-queue/README.md) tests the state
+rules on the CoCo 3 only.
+The sources are BASIC programs from 1983 to 1985, which we did not run.
+Each target needs its own checks of input, clock and display.
 
-A bounded [host reference model](validation/game-state.md) now checks 60
-scenarios for commands, journeys, phases and menu transitions.
-This is not evidence of CoCo execution.
-A separate [CoCo 3 experiment](validation/game-state-coco3.md) now checks a
-small assembly subset, described below.
+## Store an arrival, not every position on the route
 
-The host rules can inform CoCo 1, 2 or 3 projects, but the host results
-establish no machine compatibility, RAM budget or timing result.
-
-The sources use contemporary BASIC.
-*Conqueror!* also needs an external assembly screen expander and does not state
-its RAM requirement (printed 11, PDF 13).
-
-Check each target's input and display adapters separately.
-This guide recommends no register writes, wiring or BASIC delay loops.
-
-## Store an arrival, not every position along the route
-
-Tony Byorick's "Conqueror!", *Undercolor*, volume 1, issue 6, March 8, 1985,
-printed 10–12, PDF 12–14, separates planet data from scheduled arrivals.
+**Published explanation.** Tony Byorick's *Conqueror!*, *Undercolor* 1(6),
+March 8, 1985, keeps the planet data apart from the scheduled arrivals.
 Its turn has arrival, command and production phases.
-The command path checks source ownership and available strength before
-recording destination, strength, player and arrival turn.
-[Source pages][conqueror]
+A command checks the source owner and strength before it records the
+destination, strength, player and arrival turn.
+[Printed 10–12, PDF 12–14][conqueror]
+It needs an external assembly screen expander and does not state its RAM need.
 
-For a new game, give each journey these fields:
+**Our adaptation.** Give each journey a used flag, an owner, a destination, a
+strength and an arrival turn.
+Add departure data only if a route animation needs it.
+Use one capacity `N` to allocate journeys, land them and find fleets in
+transit.
+The table costs `N` times the record size.
+A scan each turn replaces the movement calculations.
+This suits delayed orders, not arcade movement.
 
-- an active flag
-- owner
-- destination
-- strength
-- arrival turn
+Do every check before the first write: phase, player, planets, ships, time and
+a free slot.
+Then fill the slot and take the ships as one commit.
+A rejected command, an overflow and a full queue leave the world unchanged.
+Choose a turn limit, or a time that cannot wrap, before you write the time
+check.
+The `send` routine in the turn-queue example does this in 6809 code.
+No observer may see half a commit.
+An interrupt handler that reads the world needs more care, and nothing here
+tests it.
 
-Add departure data only if route animation needs it.
-Keep that animation subordinate to the scheduled arrival rule.
-Choose one capacity `N` for allocation, arrival resolution and checks for
-fleets still in transit.
+## Make the phase order part of the rules
 
-The storage bound is `N * bytes_per_record`, plus planet and control state.
-Field widths and alignment belong to the new game's format.
-
-This trades a fixed event table for repeated movement calculations.
-Scanning that table still costs work each turn, and a full table must have
-defined behavior.
-It suits delayed orders.
-It does not supply arcade movement physics.
-
-### Reject a command before changing the world
-
-Validate the whole command and construct its event before deducting ships.
-Cancellation, invalid input, arithmetic overflow and queue exhaustion must
-leave both planets and journeys unchanged.
-
-```text
-try_send(player, source, destination, count):
-    if not command_phase_for(player): return WRONG_PHASE
-    if not valid_distinct_planets(source, destination): return INVALID
-    if source.owner != player: return NOT_OWNER
-    if count <= 0 or count > source.ships: return INVALID_COUNT
-    delay = travel_turns(source, destination)
-    if delay < 1 or not representable(turn + delay): return INVALID_TIME
-    slot = first_inactive_slot(journeys[0:N])
-    if slot is absent: return QUEUE_FULL
-    event = Journey(player, destination, count, turn + delay)
-    commit_together:
-        journeys[slot] = active(event)
-        source.ships -= count
-    return ACCEPTED
-```
-
-`commit_together` specifies an observable contract, not a hardware instruction.
-No observer sees half a command, and neither write can fail after mutation
-starts.
-A single-owner game loop can keep input and drawing outside that commit.
-
-Choose an explicit turn limit or a wrap-safe time representation before
-implementing `representable`.
-This example does not handle clock wrap.
-
-## Make phase order part of the rules
-
-Use one explicit order.
-Keep it stable.
-This proposed order uses the article's three phases but places the final
-continuation check after production:
+**Our adaptation.** This order uses the article's three phases.
+It puts the check for the end of play after production.
 
 ```text
 start_next_turn():
-    require previous turn finished and next turn representable
+    require the previous turn complete and the next turn in range
     turn += 1
-    phase = ARRIVALS
-    resolve each active journey with arrival_turn <= turn in slot order
-    retire each resolved journey exactly once
-    phase = COMMANDS
-    collect and validate each player's commands in the declared player order
-    phase = PRODUCTION
-    apply production and planet capacity limits
-    phase = FINISHED if victory_or_turn_limit() else TURN_COMPLETE
+    land each due or overdue journey in slot order; free each slot once
+    collect and check each player's commands, in the declared player order
+    apply production and capacity limits
+    phase = FINISHED if victory or turn limit, else COMPLETE
 ```
 
-Slot order is this example's tie rule, not a claim that simultaneous battles
-must work that way.
-Reusing a low slot can change battle order.
-If that is undesirable, assign a sequence number or resolve simultaneous
-arrivals together.
+Slot order is our tie rule, and a reused low slot can change the battle order.
+If that matters, give each journey a sequence number.
+Decide whether a captured planet produces at once.
+Decide whether a player with only a fleet in transit is still active.
+Do not start a turn while commands are pending.
 
-Likewise, define whether a newly captured planet produces immediately.
-Define whether a player with no planets but a fleet in transit remains active.
+**Published listing.** Do not copy the listing's bounds.
+It allocates and searches slots 1–25, but the arrival scan checks only 1–15
+(lines 590–610 and 1000, PDF 13–14).
+The check for a player who is out also scans 1–15.
+The free-slot search returns slot 1 when the queue is full (lines 3890–3930
+and 4360–4380, printed 16, PDF 18). [Listing][conqueror-slots]
 
-Presentation updates may occur within phases, but cannot repeat production or
-resolve an arrival twice.
-Do not start another turn while commands are still pending.
-
-### Preserve the source discrepancies
-
-Do not copy the listing's bounds as a reusable queue contract.
-
-It initializes and searches slots 1–25, but arrival resolution checks 1–15.
-The player-out check also scans only 1–15.
-The free-slot search returns slot 1 when full.
-See lines 590–610 and 1000, printed 11–12, PDF 13–14.
-See also lines 3890–3930 and 4360–4380, printed 16, PDF 18.
-[Listing continuation][conqueror-slots]
-
-The final page repeats lines 5200–5270 after 5320 (printed 17, PDF 19).
-[Final listing page][conqueror-ending]
-
-These are image-reading findings, not reproduced failures or published fixes.
-The research did not locate a correction for them.
-Its issue-6 contents footer also repeats February 20 while the article pages
-say March 8.
-Use issue identity and PDF position.
-
-The proposed rejection and consistent capacity deliberately replace these
-listing behaviors.
+The last page repeats lines 5200–5270 (PDF 19).
+We read these from page images, ran none of them and found no correction.
+The `BAD_LAST` and `BAD_FULL` controls of the example are faults of this kind.
 
 ## Consume one selection in one menu state
 
-Mike Rigsby's "Entry Way" is in *Undercolor*, volume 1, issue 5,
-February 20, 1985, printed 10–12, PDF 12–14.
-It describes scanning columns, then entries within a selected column.
-Passing the entries without selecting returns to column scan.
+**Published explanation.** Mike Rigsby's *Entry Way*, *Undercolor* 1(5),
+February 20, 1985, scans columns, then the entries of the selected column.
+After the last entry, it returns to the column scan.
+Keyboard, audio and switch routines report a selection.
+Short delays reduce long-sound and contact-bounce problems.
+The SPEED option changes the dwell time but clears the message.
+[Printed 11, PDF 13][entry-way]
 
-Its input routines support keyboard, audio or switch activation.
-Short delays address long sounds and contact bounce.
-They do not establish release-before-reselection behavior.
-[Software explanation, printed 11, PDF 13][entry-way]
+**Our adaptation.** The menu consumes one accepted `SELECT` event.
+The input adapter sends one event for each press and needs a release before
+the next.
+The source delays do not show that release rule.
+A selection in the column scan opens the items.
+A selection in the items submits the command and returns to the columns.
+Each selection or dwell expiry starts a new dwell.
 
-Our menu adaptation consumes an already accepted `SELECT` event.
-The input adapter must emit only one event per press and require release before
-another.
-Keep its held/pressed and debounce algorithm outside this state machine.
-A held switch must not select a column and immediately select an item in it.
+When a selection and a dwell expiry come together, use the selection.
+Keep a partly composed command outside the menu display.
+Then a change of dwell speed does not erase it.
 
-```text
-on_menu_event(event):
-    if event == SELECT:
-        if phase == COLUMNS:
-            phase = ITEMS
-            highlight = first_item(selected_column)
-        else:
-            submit_highlighted_command_for_validation()
-            phase = COLUMNS
-        restart_dwell()
-        return                       # consume this event once
-    if event == DWELL_EXPIRED:
-        advance_highlight_or_return_to_columns()
-        restart_dwell()
-```
+## Decide which phases accept input
 
-When selection and dwell expiry coincide, process selection.
-Discard that expiry.
-Start a fresh dwell after the transition.
-Changing menu state does not reset the input adapter's release requirement.
+**Published explanation.** Scott Norman's *Field of Honor*, *Color Computer
+Magazine*, March 1983, builds pictures behind a text message.
+It waits for a charge command and plays the charge with no key polling.
+Only then does it calculate the outcome. [Printed 24–27, PDF 22–25][honor]
 
-Keep a composed command outside the menu display.
-Then changing dwell speed need not erase it.
-The historical SPEED option clears the message (printed 11, PDF 13).
+Richard Ramella's *The Sorcerer's Puzzles*, April 1983, has two useful parts.
+*Color Stones* redraws only after an accepted key.
+*Red Rover* blinks the cursor on idle passes, and only movement changes the
+move count. [Printed 33–34, PDF 35–36][puzzles]
+His June correction says that *Color Stones* and *Firecracker* need Extended
+Color BASIC. [June 1983, printed 12, PDF 14][correction]
 
-This is a proposal for accessible menus and turn-based commands, not evidence
-for simultaneous arcade controls.
+**Our adaptation.** Specify the input for each phase before you write the loop:
 
-## Check the behavior before relying on it
+| Phase | World changes | Input |
+| --- | --- | --- |
+| Prepare pictures | None | Cancel only. Discard play commands. |
+| Wait for a command | One commit | Check. A rejection changes nothing. |
+| Play the sequence | None | Cancel only. Discard play commands. |
+| Return to play | None | Reset the presentation. Wait for a new command. |
 
-Target acceptance must cover the chosen game's full contract.
-Only the smaller CoCo 3 subset below has assembly execution evidence.
-The host model checks bounded versions of these behaviors:
+A cutscene that reads no input is a valid choice.
+Write that choice down instead of promising controls that the loop cannot read.
 
-- Fill all `N` slots. Reject the next send with identical planet and journey
-  state. Then resolve a journey in the last slot. Reuse that slot.
+## Commit once, then present the result
 
-- Reject invalid ownership, count, destination and time without mutation.
-  Cancel a partially entered command with the same result.
+**Published explanation.** Norman's prose adds a check of the defensive choice
+and moves the bout count after it.
+The printed listing does not have that fix, and its lower bound is not
+readable. [Printed 25 and 27, PDF 23 and 25][honor-fix]
 
-- Resolve two arrivals on one turn in the declared order. Retire both once.
-  Apply production once. Check a captured planet and a fleet-only player.
+**Our adaptation.** Check a command, commit it once, then make a presentation
+for the result.
+Showing that presentation again must never apply the command again.
+A renderer or a sound routine must not own the move count.
+At a phase change, consume the event that caused it.
+Keep the held state of the controls across phases, as the
+[controls guide](controls-and-collision.md#sample-controls-before-choosing-actions)
+describes.
 
-- Redraw or animate repeatedly while awaiting commands. The turn and world
-  state must remain unchanged.
+**Published explanation.** William Barden Jr.'s *Color Animation*, May 1983,
+builds five poses once and captures each with its background.
+[Printed 26, 28–31, 34, PDF 24, 26–29, 32][barden-one]
+In Part II, June 1983, the prose gives 648 bytes for each picture.
+Our arithmetic for 76 rows of 9 bytes gives 684. [PDF 34–37][barden-two]
+Mark prepared pictures ready only when they are complete, and make them again
+when their artwork or background changes.
 
-- Hold selection across a column-to-item transition. It must cause only one
-  transition. Release the selection. Press again to select the item.
-  Exercise these cases:
+## Return to the outer loop after one piece of work
 
-  - no input
-  - the last item
-  - timeout
-  - coincident expiry and selection
-  - a speed change with a command partly composed
+**Our adaptation, not tested.** Each pass of the loop samples one event, then
+does one bounded piece of work in the current phase.
+Cancel comes first and makes no new commit.
+Start the dwell of each shown item after you show it, so slow work makes the
+sequence longer but never makes it catch up.
+A long blocking sound routine defeats this loop.
+Read [sound scheduling](sound.md) before you combine them.
 
-## Bounded CoCo 3 execution
+## What the example checks
 
-The [target report](validation/game-state-coco3.md) records 35 passing
-tests.
-It also records all 44 checkpoints matching on both 128 and 512 KiB CoCo 3
-profiles (NTSC, GIME 1986, 6809, slow MPU rate).
+**Measured result.** On the pinned XRoar, `coco.py check examples/turn-queue`
+matches all 44 records of 19 cases at 128 and 512 KiB.
+The records cover these items:
 
-The [reproduction guide](../../experiments/game-state-coco3/README.md) fixes the
-subset and commands.
-This original adaptation uses two friendly planets, two journey slots, byte
-ship counts and 16-bit turns.
-It checks these items:
+- rejection without a change, then a valid send
+- slot reuse, landing once, overdue landing and saturation at 255
+- phase guards and the turn limit at 65535
 
-- rejection without mutation
-- successful sends after rejection without resetting the world
-- slot reuse
-- once-only arrivals
-- saturation and phase/turn limits
+Five broken builds fail at their named steps on both sizes.
+The example ports a lab program that passed the same 44 checkpoints on
+XRoar 1.12.1.
+This is RAM state only, with interrupts masked.
 
-Five faulty builds fail their named expectations at both RAM sizes.
+**Earlier host result, not rerun.** A Python model passed 60 cases on the host
+with full coverage.
+It added enemy landings, ties, neutral capture, production, player order,
+25-slot queues and the menu rules above.
+It had controls for a 15-slot scan, an early deduction and a full-queue
+overwrite.
+No example used it, so we removed it.
+It gave no evidence of CoCo execution, memory or timing.
 
-This is a bounded adaptation of the host model, not all 60 host cases or either
-historical BASIC listing.
-Combat, production, ownership changes, victory, menus and input are absent.
+## Open questions
 
-IRQ/FIRQ stay masked.
-Rejection atomicity at routine boundaries does not establish interrupt-safe
-multi-field updates.
-The evidence is assembly execution and RAM state, without framebuffer, rendered
-display, audio, performance or physical-hardware claims.
+These proposals have no check yet:
 
-## Sources and provenance
+- A held switch across the column-to-item change makes only one change.
+- Cancel works within one pass during preparation and playback.
+- A held play key does not issue a command at a phase change.
+- A brief press between two samples, which polling alone can miss.
+- Changed artwork makes prepared pictures out of date.
+- An interrupt handler never sees a commit half done.
+- The same state routines on the CoCo 1 and CoCo 2.
 
-The [Undercolor research record](research/undercolor-game.md)
-contains archive hashes, full reading coverage, correction-search limits and
-configuration gaps.
-These sources have no manifest resource IDs.
-PDF pages are one-based positions in the archived files.
-
-We have not run any historical listing here.
-The host and CoCo 3 results above apply to our original adaptations.
-They supply no rendered-display, audio or physical-hardware evidence.
-
-- Byorick, Tony. "Conqueror!" *Undercolor*, volume 1, issue 6, March 8, 1985.
-  Passages used here: printed 10–12 and 16–17, PDF 12–14 and 18–19.
-  [Archive][conqueror]
-
-- Rigsby, Mike. "Entry Way." *Undercolor*, volume 1, issue 5, February 20, 1985.
-  Passages used here: printed 10–12, PDF 12–14.
-  [Archive][entry-way]
+PDF pages are positions in the archive files, and these sources have no
+resource IDs.
+The [Undercolor research](research/undercolor-game.md#source-identity-and-local-evidence)
+records the hashes of the *Undercolor* issues.
 
 [conqueror]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n06%20%281985%29%28ColorPlus%20Inc%29.pdf#page=12>
 [conqueror-slots]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n06%20%281985%29%28ColorPlus%20Inc%29.pdf#page=18>
-[conqueror-ending]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n06%20%281985%29%28ColorPlus%20Inc%29.pdf#page=19>
 [entry-way]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n05%20%281985%29%28ColorPlus%20Inc%29.pdf#page=13>
+[honor]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Color%20Computer%20Magazine/Color%20Computer%20Magazine%20-%208303%20-%20March%201983.pdf#page=22>
+[honor-fix]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Color%20Computer%20Magazine/Color%20Computer%20Magazine%20-%208303%20-%20March%201983.pdf#page=23>
+[puzzles]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Color%20Computer%20Magazine/Color%20Computer%20Magazine%20-%208304%20-%20April%201983.pdf#page=35>
+[correction]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Color%20Computer%20Magazine/Color%20Computer%20Magazine%20-%208306%20-%20June%201983.pdf#page=14>
+[barden-one]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Color%20Computer%20Magazine/Color%20Computer%20Magazine%20-%208305%20-%20May%201983.pdf#page=24>
+[barden-two]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Color%20Computer%20Magazine/Color%20Computer%20Magazine%20-%208306%20-%20June%201983.pdf#page=34>

@@ -90,19 +90,19 @@ class DescribeValidationCLI:
         assert validation.main(["run", "all", "--heavy"]) == 0
 
         saved = records(checkout)
-        assert len(saved) == 9 * 3
+        assert len(saved) == 7 * 3
         assert "root" not in {p.parent.name for p in saved}
         commands = [json.loads(p.read_text())["command"] for p in saved if p.name == "1.json"]
         assert all(len([a for a in c if a.startswith("experiments/")]) == 1 for c in commands)
-        coco3 = next(c for c in commands if "experiments/game-state-coco3" in c)
-        assert "--cov=validate" in coco3 and "--cov=vectors" in coco3
+        loading = next(c for c in commands if "experiments/asset-loading" in c)
+        assert "--cov=loading" in loading
 
     def should_preserve_failure_stop_and_keep_evidence_on_successful_retry(
         self, checkout, monkeypatch
     ):
         monkeypatch.setenv("CHILD_STATUS", "23")
 
-        assert validation.main(["run", "assets", "game-state"]) == 23
+        assert validation.main(["run", "assets", "sudo-policy"]) == 23
 
         failed = records(checkout)
         assert len(failed) == 1

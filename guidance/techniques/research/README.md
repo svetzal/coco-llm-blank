@@ -23,7 +23,7 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Keep map state separate from actors | [Tile-map guide](../tile-maps.md) and [tile-room result](../../../examples/tile-room/README.md#evidence-and-limits) | Original CoCo 1/2 implementation, 42 checkpoints per defined target; historical tile-ID source gap remains. |
 | Redraw only changed regions | [Animation guide](../animation.md#decide-what-to-redraw), [CoCo 3 source reading](coco3-game-source.md) | Gloom and Symmetry examined; one RAM-only lab result. |
 | Combine held controls and collision rules | [Controls and collision](../controls-and-collision.md), [Hot CoCo reading](hot-coco-game.md) | Examined articles and manuals; keyboard-controls example checked on CoCo 1/2. No general collision engine. |
-| Schedule turns and menu transitions | [Game state](../game-state.md), [Undercolor reading](undercolor-game.md) | Source-backed proposals; target adapters and runtime checks remain open. |
+| Schedule turns and menu transitions | [Game state](../game-state.md) | Examined articles; turn-queue example checked on CoCo 3. Menu and input adapters remain open. |
 | Accumulate a picture without storing every shape | [Animation guide](../animation.md#budget-the-storage-for-animation) | Undercolor source examined; adaptation untested. |
 | Find legacy bitmap composition sources | [Expanded legacy reading](legacy-tile.md#three-game-source-candidates) | Selected Droid War, Dunkey Munkey and Sea Quest paths examined; no historical program run or tile-ID map established. |
 | Decide whether OCR is usable | [Conversion-quality inspection](../../starter/conversion-quality.md) | Six selected pages and eleven exported images checked; no book-wide accuracy claim. |

@@ -97,7 +97,7 @@ are game choices, not Landwehr's rules.
 
 Edge detection does not debounce a switch or repair ghosting. The program
 cannot see a press and release between two samples. For phase changes, read
-the [game-loop guide](game-loop.md).
+the [game-state guide](game-state.md#decide-which-phases-accept-input).
 
 ## Give scenery and objects different collision questions
 

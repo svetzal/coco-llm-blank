@@ -45,9 +45,8 @@ For practical implementation advice, start with the [technique guides](technique
 - [Follow-up search for a legacy bitmap tile renderer](techniques/research/tile-source-followup.md).
 - [CoCo 3 demos: update less memory and separate colour from geometry](techniques/research/coco3-game-source.md).
 - [Later community sources for asset preparation](techniques/research/community-game.md).
-- [Color Computer Magazine game-loop research](techniques/research/color-computer-magazine.md).
 - [Hot CoCo game techniques](techniques/research/hot-coco-game.md).
-- [Undercolor techniques for game state, input and small updates](techniques/research/undercolor-game.md).
+- [Undercolor techniques for small updates](techniques/research/undercolor-game.md).
 
 ## Validation records
 
@@ -66,8 +65,6 @@ lists the reproduction code. Example-specific checks are also in the
 ### Controls, state and assets
 
 - [Collection-game keyboard, renderer and PCM journey](techniques/validation/collect-room-output.md).
-- [Host validation of scheduled journeys and menu transitions](techniques/validation/game-state.md).
-- [CoCo 3 bounded game-state validation](techniques/validation/game-state-coco3.md).
 - [Original host asset preparation validation](techniques/validation/assets.md).
 - [Prepared RG6 asset loading validation](techniques/validation/asset-loading.md).
 

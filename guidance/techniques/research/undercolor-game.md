@@ -1,8 +1,10 @@
-# Undercolor techniques for game state, input and small updates
+# Undercolor techniques for small updates
 
-Use this note when designing a turn-based game, a single-switch menu, or a
-small procedural animation. It complements the [technique index](../README.md)
-without changing the starter's renderer or input routines.
+Use this note when designing a small procedural animation. It complements the
+[technique index](../README.md) without changing the starter's renderer.
+The [game-state guide](../game-state.md) now holds the *Conqueror!* and
+*Entry Way* readings, which this note's source table and correction search
+also cover.
 
 Four articles were read from page images, including listings and continuations.
 The procedures below are original, untested adaptations. No historical program
@@ -13,136 +15,17 @@ audio or physical-hardware results from this research.
 
 | Task | Source article | Issue |
 | --- | --- | --- |
-| Schedule arrivals and turn phases | *Conqueror!* | 6 |
-| Select commands with one switch | *Entry Way* | 5 |
 | Animate part of a static picture | *Another Fine Mess* | 3 |
 | Grow a picture without a shape history | *Summer Frippery* | 11 |
 
-*Conqueror!* requires an external assembly screen expander; its RAM requirement
-is unstated. *Entry Way* uses BASIC with keyboard, audio or switch input.
-Its wiring and register reads need independent target verification.
 *Another Fine Mess* uses Extended Color BASIC. Its companion listings identify
 16K, but Winky's header does not independently specify RAM. *Flower Fantasy*
 is explicitly 16K Extended Color BASIC and includes an optional speed POKE.
 
 These are 1985 sources for the contemporary Color Computer environment.
-They do not establish CoCo 3 compatibility. The state and menu proposals can
-be implemented for CoCo 1, 2 or 3, but each machine still needs its own verified
-input/display adapter and runtime checks. No particular ROM revision, PAL/NTSC
+They do not establish CoCo 3 compatibility. No particular ROM revision, PAL/NTSC
 configuration, display path or stock-clock performance is established here.
 Do not transplant POKEs, PMODE changes or BASIC delays into an assembly driver.
-
-## Schedule events instead of simulating every journey
-
-Byorick divides play into arrival, command and production phases. Planet arrays
-hold coordinates, ownership, strength and production. Separate arrival arrays
-hold arrival turn, strength, destination and player. Commands check ownership
-and available strength before scheduling a journey. See *Conqueror!*, printed
-10–12, PDF 12–14, especially lines 570–610 and 980–1510. The external screen
-expander requirement is explicit on printed 11, PDF 13. [Issue 6][uc6]
-
-The listing has hazards worth preserving in the record. It allocates and searches
-25 arrival slots, but the arrival loop checks 15 (lines 590, 1000 and 3890–3930;
-PDF 13–14 and 18). When no empty slot is found, the search returns slot 1.
-The final page also repeats lines 5200–5270 after line 5320 (PDF 19).
-These are image-reading findings, not reproduced failures or published errata.
-
-### Original adaptation for scheduled journeys
-
-For a strategy game, retain journeys as future events. Choose a capacity and
-use that same capacity for allocation, resolution and player-elimination checks.
-Reject a command without changing state if there is no free slot.
-
-```text
-accept_send(player, source, destination, count):
-    require valid distinct planets
-    require source.owner == player
-    require 0 < count <= source.ships
-    slot = find_free_journey_slot()
-    if slot is absent: return QUEUE_FULL
-    event = journey(player, destination, count,
-                    turn + travel_turns(source, destination))
-    install(slot, event)
-    source.ships -= count
-    return ACCEPTED
-
-advance_turn():
-    turn += 1
-    due = active journeys whose arrival_turn <= turn
-    resolve due journeys in a documented stable order
-    retire each resolved journey exactly once
-    collect each player's commands
-    apply production and capacity limits
-    determine whether play continues
-```
-
-This deliberately changes the historical implementation. Specify whether
-simultaneous arrivals resolve in insertion order or as a combined battle.
-Specify whether production occurs before or after the final victory check.
-Those are game rules, not performance optimizations.
-
-The proposal trades a bounded event table for repeated movement calculations.
-It does not require drawing ships in transit. An animated route can derive its
-picture from departure and arrival state without changing the arrival rule.
-Capacity, field widths and clock wrap must be chosen for the new game; the
-article does not supply a reusable memory budget.
-
-Before implementation is accepted, check a full queue, its last slot, multiple
-arrivals on one turn, cancellation of invalid input, and a player who owns no
-planet but still has a fleet in transit. Independently assert that rejection
-preserves both ship counts and scheduled journeys. Advancing presentation alone
-must not advance a turn.
-
-## Make a single-switch menu a small state machine
-
-Rigsby's cursor scans columns, then scans the selected column's entries. If no
-entry is selected, it returns to the column scan. Separate input subroutines
-report activation from keyboard, audio or switch. The audio/switch routines add
-short delays to reduce long-sound/contact-bounce problems. The SPEED option
-changes dwell time but clears the message. Characters are arranged by expected
-frequency rather than alphabetically. See *Entry Way*, printed 10–14, PDF 12–16;
-software explanation on PDF 13–14, complete listing on PDF 15–16. [Issue 5][uc5]
-
-### Original adaptation for a single-switch menu
-
-A game menu can share one selection event across several devices. Keep the
-selection logic independent of how the device is sampled. Require release before
-a held switch can select again; the historical delay alone is not proof of
-that behavior.
-
-```text
-on_sample(raw_pressed, elapsed_ticks):
-    event = debounce_and_detect_new_press(raw_pressed)
-    if event:
-        if phase == COLUMNS:
-            phase = ITEMS
-            item = first_item(column)
-        else:
-            execute_command(item)
-            phase = COLUMNS
-        dwell_remaining = dwell_ticks
-    else:
-        dwell_remaining -= elapsed_ticks
-        if dwell_remaining <= 0:
-            advance_highlight_or_return_to_columns()
-            dwell_remaining = dwell_ticks
-```
-
-The adapter needs a stated debounce interval and release rule. The pseudocode
-assumes it produces one event per accepted press; it does not implement a
-hardware scanner. Define precedence when activation and dwell expiry coincide.
-Here activation wins. Start a fresh dwell interval after a selection so the
-newly highlighted item cannot expire immediately.
-
-Keep dwell settings and pending game commands separate from the menu display.
-Changing scan speed should preserve a partially composed command unless the
-new game's rules explicitly say otherwise. A small elapsed-time counter replaces
-the source's blocking delay loops, but its tick source remains target-specific.
-
-Test no input, a held switch across both phases, bounce, release/repress, the
-last item, timeout back to columns, and a speed change during a selection.
-This design suits turn-based commands and accessible menus. It is not evidence
-for responsive simultaneous movement and firing in an arcade game.
 
 ## Draw the scene once, then change the animated feature
 

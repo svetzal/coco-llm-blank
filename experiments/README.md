@@ -18,8 +18,6 @@ The links below describe existing work; they do not claim a new validation run.
 | Check a collection-game output journey | [collect-room-output](collect-room-output/README.md) | [Evidence and limits](../guidance/techniques/validation/collect-room-output.md) |
 | Pack original artwork | [assets](assets/README.md) | [Evidence and limits](../guidance/techniques/validation/assets.md) |
 | Consume prepared artwork on CoCo 1/2 | [asset-loading](asset-loading/README.md) | [Evidence and limits](../guidance/techniques/validation/asset-loading.md) |
-| Model turns and menu transitions on the host | [game-state](game-state/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state.md) |
-| Check a bounded CoCo 3 state subset | [game-state-coco3](game-state-coco3/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state-coco3.md) |
 | Check current-host macOS recovery | [macos-onboarding](macos-onboarding/) | [Evidence and limits](../guidance/starter/validation/macos-onboarding.md) |
 | Reproduce nonroot Ubuntu onboarding | [linux-onboarding](linux-onboarding/README.md) | [Evidence and limits](../guidance/starter/validation/linux-onboarding.md) |
 | Check sudo failure and recovery | [sudo-policy](sudo-policy/README.md) | [Evidence and limits](../guidance/starter/validation/sudo-policy.md) |
@@ -38,7 +36,7 @@ Prepare the [complete starter validation environment](../guidance/starter/python
 before that full run; selected-target setup alone is insufficient.
 
 Experiment suites require an explicit path, such as
-`uv run pytest experiments/game-state`. Use the package's documented command
+`uv run pytest experiments/assets`. Use the package's documented command
 for coverage, environment variables and preparation. Its scoped coverage
 configuration measures that package, not the entire starter or assembly code.
 Some suites need verified firmware, native tools, a private instrumented XRoar

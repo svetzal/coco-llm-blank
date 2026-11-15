@@ -26,8 +26,6 @@ SCOPES = {
         ("experiments/collect-room-output",),
         "cached COLLECT_ARCHIVE, C build, CoCo 1/2 ROMs",
     ),
-    "game-state": (("experiments/game-state",), ""),
-    "game-state-coco3": (("validate", "vectors"), "native tools, CoCo 3 ROM, headless execution"),
     "linux-onboarding": (None, ""),
     "macos-onboarding": (None, "installed lwasm; current-host boundary tests only"),
     "sudo-policy": (None, ""),
