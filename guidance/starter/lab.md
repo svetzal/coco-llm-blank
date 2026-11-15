@@ -31,7 +31,8 @@ between sessions until the lab is closed.
 
 - Read primary sources with the [reference lookup](references.md) procedure.
   Write each fact in `LAB.md` with its citation. That is the title and PDF
-  page, or the author, title, date, URL and Wayback Machine link.
+  page, or the author, title, date and URL. Add a Wayback Machine link when
+  one exists.
 - Test ideas as small experiments. An experiment is a folder in the lab with
   `main.asm`, `coco.toml` and, where it helps, `expected.py`. Run it with
   `scripts/coco.py`. Keep each experiment small enough to answer one

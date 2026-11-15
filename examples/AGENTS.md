@@ -85,8 +85,8 @@ When you know of other ways, name them in the README.
   [reference lookup](../guidance/starter/references.md). Model memory is not
   evidence.
 - Cite the source in `main.asm` and in the README, beside each fact. Give the
-  title and the PDF page, or the author, title, date, URL and Wayback Machine
-  link.
+  title and the PDF page, or the author, title, date and URL. Add a Wayback
+  Machine link when one exists.
 - When no source establishes a fact and the check shows it, say that the check
   is the evidence. Name the negative control that fails when the fact is false.
   [Reference lookup](../guidance/starter/references.md#cite-each-kind-of-evidence)
