@@ -18,6 +18,11 @@ CYCLES_PER_SAMPLE = 57
 FRAME_SECONDS = SAMPLES_PER_FRAME * CYCLES_PER_SAMPLE / CPU_HZ
 PITCH_TOLERANCE_HZ = 15
 MIN_AC_RMS = 0.01
+# The foreground budget: reading one button and moving one byte must fit between
+# two DAC writes. Longer foreground work delays samples even when memory is correct.
+MAX_INSTRUCTIONS_BETWEEN_WRITES = 40
+# CoCo 1 runs with 32 KiB, the CoCo 2 target with 64 KiB; the program uses only $0000-$7FFF.
+RAM_SIZES = (32768, 65536)
 
 
 def expected_button(frame: int, variant: str) -> int:
@@ -47,7 +52,7 @@ def verify_ram(data: bytes, symbols: dict[str, int], frame: int, variant: str) -
     def word(name: str) -> int:
         return int.from_bytes(data[symbols[name] : symbols[name] + 2], "big")
 
-    if len(data) != 32768 or data[0x03FF] != 0xA5 or data[0x1C00] != 0xA5:
+    if len(data) not in RAM_SIZES or data[0x03FF] != 0xA5 or data[0x1C00] != 0xA5:
         raise ValueError("Missing initialized RAM or damaged framebuffer guards.")
     button = expected_button(frame, variant)
     state = (word("frames"), word("samples"), word("pitch"), word("phase"))
@@ -74,6 +79,11 @@ def verify_trace(trace: str, symbols: dict[str, int], variant: str) -> dict[str,
     gaps = [right[0] - left[0] for left, right in itertools.pairwise(writes)]
     if max(gaps) <= min(gaps):
         raise ValueError("Trace did not exercise the extra input/graphics work.")
+    if max(gaps) > MAX_INSTRUCTIONS_BETWEEN_WRITES:
+        raise ValueError(
+            f"Foreground work took {max(gaps)} instructions between DAC writes; "
+            f"the budget is {MAX_INSTRUCTIONS_BETWEEN_WRITES}."
+        )
     return {
         "dac_writes": len(writes),
         "minimum_instructions_between_writes": min(gaps),

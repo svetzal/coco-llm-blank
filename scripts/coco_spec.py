@@ -1066,18 +1066,93 @@ class DescribeEquipmentInXRoar:
         with pytest.raises(ProjectError, match="Frame 16: .* screen bytes differ"):
             coco.check_variant(project, Host(), model, "coco1", "journey", equipment)
 
-    def should_reject_sound_from_a_muted_mux(self, tmp_path: Path, capsys) -> None:
-        if not instrumented_ready("coco1"):
-            pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
+    @pytest.fixture
+    def sound_slots(self, tmp_path: Path) -> Path:
+        if not instrumented_ready("coco1", "coco2"):
+            pytest.skip("Native tools, CoCo 1/2 firmware or instrumented build tools are missing")
         directory = tmp_path / "sound-slots-copy"
         shutil.copytree(ROOT / "examples/sound-slots", directory)
-        source = directory / "main.asm"
-        text = source.read_text()
-        source.write_text(text.replace("ora #8\n        sta $FF23", "anda #$F7\n        sta $FF23"))
+        settings = directory / "coco.toml"
+        settings.write_text(
+            settings.read_text().replace(
+                "frames = [1, 16, 17, 32, 33, 63, 64]", "frames = [1, 16, 64]"
+            )
+        )
+        return directory
 
-        assert coco.main(["check", str(directory)]) == 1
+    @pytest.mark.parametrize(
+        "silenced,replacement",
+        [
+            ("ora #8\n        sta $FF23", "anda #$F7\n        sta $FF23"),
+            ("sample  sta $FF20", "        lda #$80\nsample  sta $FF20"),
+        ],
+        ids=["muted mux", "constant DAC"],
+    )
+    def should_reject_silence_that_memory_accepts(
+        self, sound_slots: Path, silenced: str, replacement: str, capsys
+    ) -> None:
+        source = sound_slots / "main.asm"
+        source.write_text(source.read_text().replace(silenced, replacement))
+        settings = sound_slots / "coco.toml"
+        untraced = settings.read_text().replace('trace_from = "sample"', "")
+
+        settings.write_text(untraced.replace("audio = true", "audio = false"))
+        assert coco.main(["check", str(sound_slots)]) == 0
+        settings.write_text(untraced)
+        assert coco.main(["check", str(sound_slots)]) == 1
 
         assert "Frame 1: no tone in the mixer output" in capsys.readouterr().err
+
+    def should_reject_slow_foreground_work_on_coco2_that_memory_accepts(
+        self, sound_slots: Path, capsys
+    ) -> None:
+        source = sound_slots / "main.asm"
+        delay = "        bne tick\n        ldx #1000\ndelay   leax -1,x\n        bne delay\n"
+        source.write_text(source.read_text().replace("        bne tick\n", delay))
+        settings = sound_slots / "coco.toml"
+        silent = settings.read_text().replace("audio = true", "audio = false")
+        arguments = ["check", str(sound_slots), "--target", "coco2"]
+
+        settings.write_text(silent.replace('trace_from = "sample"', ""))
+        assert coco.main(arguments) == 0
+        settings.write_text(silent)
+        assert coco.main(arguments) == 1
+
+        assert "between DAC writes; the budget is 40" in capsys.readouterr().err
+
+    @pytest.fixture
+    def timer_sound(self, tmp_path: Path) -> Path:
+        if not instrumented_ready("coco3"):
+            pytest.skip("Native tools, CoCo 3 firmware or instrumented build tools are missing")
+        directory = tmp_path / "timer-sound-copy"
+        shutil.copytree(ROOT / "examples/timer-sound", directory)
+        return directory
+
+    def should_reject_a_timer_masked_during_the_clear(self, timer_sound: Path, capsys) -> None:
+        source = timer_sound / "main.asm"
+        text = source.read_text().replace("redraw  sta ,x+", "        orcc #$40\nredraw  sta ,x+")
+        source.write_text(text.replace("blo redraw\n", "blo redraw\n        andcc #$BF\n"))
+        settings = timer_sound / "coco.toml"
+        audible = settings.read_text()
+        arguments = ["check", str(timer_sound), "--target", "coco3-1986"]
+
+        settings.write_text(audible.replace("audio = true", "audio = false"))
+        assert coco.main(arguments) == 0
+        settings.write_text(audible)
+        assert coco.main(arguments) == 1
+
+        assert "Frame 1: no tone in the mixer output" in capsys.readouterr().err
+
+    def should_stop_the_foreground_without_an_acknowledgement(
+        self, timer_sound: Path, capsys
+    ) -> None:
+        settings = timer_sound / "coco.toml"
+        text = settings.read_text().replace('defines = ["TIMER"]', 'defines = ["TIMER", "NO_ACK"]')
+        settings.write_text(text.replace("emulated_seconds = 8", "emulated_seconds = 4"))
+
+        assert coco.main(["check", str(timer_sound), "--target", "coco3-1986"]) == 1
+
+        assert "coco3-1986 did not reach 'frame_ready' 1 times" in capsys.readouterr().err
 
 
 @pytest.mark.integration

@@ -88,6 +88,16 @@ class DescribeSoundSlots:
             "maximum_instructions_between_writes": 3,
         }
 
+    def should_reject_foreground_work_over_the_budget(self) -> None:
+        lines = trace("").splitlines()
+        lines.insert(3, "\n".join(["3070| LEAX -1,X a=00 b=00"] * 41))
+
+        with pytest.raises(ValueError, match="took 43 instructions .* budget is 40"):
+            model.verify_trace("\n".join(lines) + "\n", SYMBOLS, "")
+
+    def should_accept_the_coco2_targets_64_kib_snapshot(self) -> None:
+        model.verify_ram(snapshot(17, "") + bytes(32768), SYMBOLS, 17, "")
+
     @pytest.mark.parametrize("damage", ["truncated", "other variant", "even gaps", "no registers"])
     def should_reject_a_trace_that_differs(self, damage: str) -> None:
         text = {

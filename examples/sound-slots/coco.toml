@@ -11,6 +11,17 @@ ram_kib = 32
 basic = "bas11.rom"
 extended = "extbas10.rom"
 
+# The named CoCo 2 NTSC boards (26-3134/26-3136) with the 64 KiB upgrade, an
+# explicit non-T1 6847 and CoCo 2 firmware. The coco2bus profile selects a T1 VDG.
+[targets.coco2]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 64
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
 [memory]
 at = { start = 0x3000 }
 below = { state_end = 0x7E00 }   # the stack is reserved from $7E00

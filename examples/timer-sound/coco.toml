@@ -25,6 +25,10 @@ extended = "coco3.rom"
 at = { start = 0x3000 }
 below = { state_end = 0x7E00 }
 
+# Every check also records XRoar's mixer output; expected.py's verify_sound judges it.
+[capture]
+audio = true
+
 # The plain build is cooperative with a light redraw.
 [variants.heavy]
 defines = ["HEAVY"]
