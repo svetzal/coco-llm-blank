@@ -375,9 +375,9 @@ If firmware fails, run the recovery command that the tool prints.
 `run` always opens the installed XRoar. Only key scripts and captures use the
 instrumented one.
 
-Name a model spec after the folder (for example `my_demo_spec.py`). Load the
-model with `load_expected(Path(__file__).parent)` from `coco`.
-Several folders cannot each have an `expected_spec.py` in one pytest run.
+`expected.py` and `coco.py check` are the test of a project. Do not write a
+spec that tests `expected.py` or `coco.py`. If the check could pass a wrong
+result, break the program once in a copy and see the check fail.
 
 ## Learn from evidence
 

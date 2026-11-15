@@ -76,6 +76,9 @@ CI runs `uv run pytest --cov`, Ruff and Ruff's format check.
 Keep test evidence that must survive a rerun under ignored `local/` or
 `build/`. Do not keep it in a pytest temporary directory.
 
+Examples have no specs. `scripts/coco_spec.py` runs the real check of each
+example and its negative controls.
+
 ### Complete starter validation environment
 
 Setup for a selected target prepares the demo, not the whole test suite of the

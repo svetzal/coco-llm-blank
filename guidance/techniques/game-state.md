@@ -122,6 +122,11 @@ Color BASIC. [June 1983, printed 12, PDF 14][correction]
 A cutscene that reads no input is a valid choice.
 Write that choice down instead of promising controls that the loop cannot read.
 
+**Measured.** The [collect-room example](../../examples/collect-room/README.md)
+applies this table to a title, play and won phase on CoCo 1 and CoCo 2B. Its
+check plays 95 key steps through the emulated keyboard. A Space key that is
+held at startup or across a phase change does not start or restart the game.
+
 ## Commit once, then present the result
 
 **Published explanation.** Norman's prose adds a check of the defensive choice
@@ -159,26 +164,17 @@ Read [sound scheduling](sound.md) before you combine them.
 ## What the example checks
 
 **Measured result.** On the pinned XRoar, `coco.py check examples/turn-queue`
-matches all 44 records of 19 cases at 128 and 512 KiB.
+matches all 44 records of 19 cases on a 128 KiB CoCo 3.
 The records cover these items:
 
 - rejection without a change, then a valid send
 - slot reuse, landing once, overdue landing and saturation at 255
 - phase guards and the turn limit at 65535
 
-Five broken builds fail at their named steps on both sizes.
-The example ports a lab program that passed the same 44 checkpoints on
-XRoar 1.12.1.
-This is RAM state only, with interrupts masked.
-
-**Earlier host result, not rerun.** A Python model passed 60 cases on the host
-with full coverage.
-It added enemy landings, ties, neutral capture, production, player order,
-25-slot queues and the menu rules above.
-It had controls for a 15-slot scan, an early deduction and a full-queue
-overwrite.
-No example used it, so we removed it.
-It gave no evidence of CoCo execution, memory or timing.
+Five broken builds fail at their named steps.
+The program keeps the machine state that BASIC sets, with interrupts on.
+No interrupt handler reads the world.
+This is RAM state only.
 
 ## Open questions
 
@@ -186,7 +182,6 @@ These proposals have no check yet:
 
 - A held switch across the column-to-item change makes only one change.
 - Cancel works within one pass during preparation and playback.
-- A held play key does not issue a command at a phase change.
 - A brief press between two samples, which polling alone can miss.
 - Changed artwork makes prepared pictures out of date.
 - An interrupt handler never sees a commit half done.

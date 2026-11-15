@@ -18,19 +18,6 @@ trial without a new request.
 
 ## Open work
 
-- Remove the over-testing from the examples. Most examples have a
-  `*_spec.py` that tests the example's `expected.py` or `scripts/coco.py`, not
-  the program. The oracle in `expected.py` and `coco.py check` are the test of
-  an example. For each example:
-  1. Delete the spec, as for first-screen.
-  2. Move any test of the tool into `scripts/coco_spec.py`.
-  3. Keep a negative control only where the check would otherwise pass a
-     wrong result. Put it in `scripts/coco_spec.py`, as for the wrong-SAM
-     control. Palette-swatches' orientation controls are the first case to
-     decide.
-  4. Update the guidance that tells agents to write a model spec:
-     [development practice](guidance/starter/development.md) and the
-     [examples index](examples/README.md).
 - Clean Apple Silicon host and native Linux desktop onboarding, including
   x86-64 Linux. Current container and configured host results do not
   establish these journeys.
