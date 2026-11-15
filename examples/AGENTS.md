@@ -102,5 +102,8 @@ skill and run its checker. Use these sections, in this order:
 1. The practice, and what the example does not do.
 2. How to choose: the table of options.
 3. The steps, one for each block of code, and where the example is.
-4. How to see each variation and how to check it, in a few lines.
+4. How to see each variation and how to check it. Give one command for each
+   variation that the reader can copy and paste, with a comment that names
+   the variation. Say that the commands start in the starter folder. Give
+   the `check` command in its own block.
 5. The sources, with PDF pages.
