@@ -18,6 +18,7 @@ instructions for playing.
 | Draw transparent and opaque pixels | [Masked objects](masked-objects/README.md) | Software masks over patterned scenery. |
 | Read held keys and single presses | [Keyboard controls](keyboard-controls/README.md) | Keyboard matrix scan, movement plus action and edge rejection on CoCo 1/2. No display. |
 | Keep room state separate from drawing | [Tile room](tile-room/README.md) | Scripted movement and collection. No keyboard or victory rule. |
+| Queue turns and reject bad commands | [Turn queue](turn-queue/README.md) | Scheduled journeys, phases and a turn limit on CoCo 3. RAM only. |
 | Combine sound, drawing and input | [Sound slots](sound-slots/README.md) | Cooperative scheduling probe, not a music engine. |
 | Compare sound scheduling on CoCo 3 | [Timer sound](timer-sound/README.md) | Cooperative and GIME interrupt builds. |
 | Investigate CoCo 3 display addresses | [Text addressing](text-addressing/README.md) | Address probe, not a scrolling demo. |

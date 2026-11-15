@@ -1,0 +1,33 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+prepare = "prepare.py"   # writes script.inc from turns.txt into the build folder
+
+# NTSC CoCo 3, 6809 at the normal low rate, GIME 1986. The two tables differ
+# only in RAM size. The program sets no display mode.
+[targets.coco3-128]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"
+
+[targets.coco3-512]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 512
+extended = "coco3.rom"
+
+[memory]
+at = { start = 0x3000 }
+below = { code_end = 0x4000 }   # the fill that guards the world starts at $4000
+
+[check]
+checkpoint = "finished"   # reached once, after the last case
+frames = [1]
+unreachable = "script"    # a data label: executing it is a fault
+emulated_seconds = 10

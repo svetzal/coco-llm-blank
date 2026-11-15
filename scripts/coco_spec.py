@@ -890,6 +890,28 @@ class DescribeExamplesInXRoar:
         machine = re.search(r"^machine cocous\n((?:[ \t].*\n)*)", printed, re.MULTILINE)
         assert machine and "tv-type ntsc" in machine.group(1)
 
+    @pytest.mark.parametrize("target", ["coco3-128", "coco3-512"])
+    @pytest.mark.parametrize(
+        "control,step",
+        [
+            ("BAD_REJECT", 3),
+            ("BAD_FULL", 3),
+            ("BAD_REPEAT", 5),
+            ("BAD_LAST", 8),
+            ("BAD_WRAP", 12),
+        ],
+    )
+    def should_reject_each_broken_turn_queue(self, target: str, control: str, step: int) -> None:
+        if not native_ready("coco3"):
+            pytest.skip("Native tools or CoCo 3 firmware are not installed")
+        example = ROOT / "examples/turn-queue"
+        project = coco.load_project(example)
+        built = coco.build(project, Host(), extra_defines=(control,))
+        evidence = coco.capture(project, Host(), built, target, 1)
+
+        with pytest.raises(ValueError, match=f"First, queue-lifecycle step {step}:"):
+            coco.load_expected(example).verify_ram(evidence.ram, built.symbols, 1)
+
 
 class DescribeFirmwareBoundary:
     @pytest.mark.parametrize(
