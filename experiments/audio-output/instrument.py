@@ -1,7 +1,12 @@
-"""Original private output-callback instrumentation for pinned XRoar."""
+"""Original private output-callback instrumentation for pinned XRoar 1.12.1.
+
+The sound lab is closed: its evidence is in examples/sound-slots and examples/timer-sound
+(`scripts/coco.py check`, which records the mixer with the instrumented XRoar). This file
+remains only because experiments/collect-room-output imports it. Delete this folder when
+that experiment closes.
+"""
 
 import hashlib
-from pathlib import Path
 
 PRISTINE = "e9fa06289dab8a8d025c21d38c0cc2c6c2b44cd7248443197aad6af83ece124f"
 
@@ -51,24 +56,3 @@ static void *new(void *cfg);""",
         "\tsound_interface_free(aonull->public.sound_interface);",
     )
     return text.encode()
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path)
-    options = parser.parse_args()
-    options.source.write_bytes(instrument(options.source.read_bytes()))
-
-
-def instrument_traps(source: bytes) -> bytes:
-    """Log actual snapshot trap timing without changing trap actions."""
-    expected = "6898598f808f1afece007781ea05d89dd28081b1752887d09b5eee7a6f83e0f1"
-    if hashlib.sha256(source).hexdigest() != expected:
-        raise ValueError("Expected pristine XRoar 1.12.1 xroar.c")
-    return source.replace(
-        b"\t\twrite_snapshot(trap->snap);",
-        b'\t\tfprintf(stderr, "CHECKPOINT,%u,%s\\n", '
-        b"(unsigned)event_current_tick, trap->snap);\n\t\twrite_snapshot(trap->snap);",
-    )

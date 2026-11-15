@@ -252,8 +252,8 @@ Barden's complete article runs through PDF 239–242, 246, 248, 250–251 and
 254–255. Convert those pages when you adapt the player.
 Pages 246 and 251 alone are not its complete setup.
 
-The [sound research notes](../techniques/research/sound.md) record
-full source-reading coverage and the proposed adaptations.
+The [sound guide](../techniques/sound.md) records the source facts and the
+proposed adaptations.
 Selecting the cartridge manual downloads a reference only.
 It installs no cartridge driver and does not change the project's hardware
 contract.

@@ -116,7 +116,7 @@ an example. Read its cited primary passages; the example is not a substitute.
 - Writing CoCo code: read [development practice](guidance/starter/development.md).
 - Testing controls, sound or artwork: use the task-specific
   [evidence checks](guidance/starter/development.md#check-the-feature-you-claim), which
-  link existing keyboard, audio and artwork experiment methods.
+  link the existing keyboard, audio and artwork methods.
 - Building binaries, disks, or emulator tests: read [toolchain](guidance/starter/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read
   [Python tools](guidance/starter/python.md), including the co-located `*_spec.py` rules.

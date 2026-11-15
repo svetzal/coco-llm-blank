@@ -22,10 +22,6 @@ The links below describe existing work; they do not claim a new validation run.
 | Exercise the keyboard matrix path | [keyboard-controls](keyboard-controls/) | [Evidence and limits](../guidance/techniques/validation/keyboard-controls.md) |
 | Model turns and menu transitions on the host | [game-state](game-state/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state.md) |
 | Check a bounded CoCo 3 state subset | [game-state-coco3](game-state-coco3/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state-coco3.md) |
-| Measure modeled DAC write intervals | [audio-timing](audio-timing/) | [Evidence and limits](../guidance/techniques/validation/audio-timing.md) |
-| Measure sound throughput in one emulated second | [sound-throughput](sound-throughput/README.md) | [Timer-sound evidence](../examples/timer-sound/README.md) |
-| Check CoCo 2 sound scheduling | [sound-coco2](sound-coco2/README.md) | [Evidence and limits](../guidance/techniques/validation/sound-coco2.md) |
-| Capture XRoar mixer PCM | [audio-output](audio-output/README.md) | [Evidence and limits](../guidance/techniques/validation/audio-output.md) |
 | Check current-host macOS recovery | [macos-onboarding](macos-onboarding/) | [Evidence and limits](../guidance/starter/validation/macos-onboarding.md) |
 | Reproduce nonroot Ubuntu onboarding | [linux-onboarding](linux-onboarding/README.md) | [Evidence and limits](../guidance/starter/validation/linux-onboarding.md) |
 | Check sudo failure and recovery | [sudo-policy](sudo-policy/README.md) | [Evidence and limits](../guidance/starter/validation/sudo-policy.md) |

@@ -19,7 +19,7 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Banked assets with interrupts on CoCo 3 | Tepolt, `tepolt-coco3`, PDF 59–60 | Examined page images. Keep interrupt tables and handlers accessible. |
 | Match CoCo 2 artifact colours | [Colour guide](../colour.md#coco-2-artifact-colours); Tandy, `coco2-service`, PDF 31–33 | Examined hardware discussion. Specific NTSC models, not all CoCo 2 variants. |
 | Choose CoCo 3 colours for a display | Tandy, `coco3-service`, PDF 17 | Examined palette tables. RGB and composite encodings differ; PAL caveat applies. |
-| Sound alongside animation and controls | [Sound research](sound.md) | Examined hardware for all three models; CoCo 1 cooperative and CoCo 3 timer experiments. |
+| Sound alongside animation and controls | [Sound guide](../sound.md) | Examined hardware for all three models; sound-slots on CoCo 1/2 and timer-sound on CoCo 3 checked with mixer output. |
 | Keep map state separate from actors | [Tile-map guide](../tile-maps.md) and [tile-room result](../../../examples/tile-room/README.md#evidence-and-limits) | Original CoCo 1/2 implementation, 42 checkpoints per defined target; historical tile-ID source gap remains. |
 | Redraw only changed regions | [Animation guide](../animation.md#decide-what-to-redraw), [CoCo 3 source reading](coco3-game-source.md) | Gloom and Symmetry examined; one RAM-only lab result. |
 | Combine held controls and collision rules | [Controls and collision](../controls-and-collision.md), [Hot CoCo reading](hot-coco-game.md) | Examined articles; no tested keyboard driver or general collision engine. |
@@ -30,8 +30,9 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 | Find more magazine techniques | `rainbow-index` | Discovery only. Find the issue, then inspect the actual article and corrections. |
 
 These are source-backed reading recommendations. Historical programs remain
-examined, not reproduced. Original rendering and sound experiments now provide
-bounded evidence, summarized in the [validation follow-up](#implementation-and-validation-follow-up).
+examined, not reproduced. Original rendering and sound examples now provide
+bounded evidence. The technique guides and the
+[validation follow-up](#implementation-and-validation-follow-up) summarize it.
 
 ## CoCo 3 graphics and memory
 
@@ -74,10 +75,6 @@ These sources were downloaded and sampled but are not manifest additions:
   and GET/PUT explanation. Useful optional introduction; lower priority for an
   assembly starter. Its array-sizing explanation should be compared with Polsz's
   article before using it for memory budgets. [Archive book][clark-graphics].
-- **Live And In Concert On CoCo's Stage**, Brian P. Roden, The Rainbow,
-  April 1985, PDF/printed page 124: animation with cassette audio through the
-  television. It is not evidence for CPU-generated background music.
-  [Archive issue][rainbow-1985-04].
 - **Screen Scrolling Made Easy**, Bill Bernico, The Rainbow, October 1987:
   printed page 26 is PDF page 25 in this scan. The examined article describes
   scrolling a completed picture off-screen. Keep it for transitions, not as
@@ -286,14 +283,6 @@ NTSC and excludes user configuration. This is an original full-redraw
 implementation, not a historical reproduction or evidence for selective redraw,
 physical controls, visible appearance, timing or physical hardware.
 
-[DAC interval validation](../validation/audio-timing.md) measures eleven CoCo 1/3
-cases with calibration, deferred-interrupt and repeatability controls. The
-observed timer jitter is nonzero despite stable average throughput. It is a
-finite-window result, not a worst-case bound, listening test or physical timing
-measurement. The private experiment has tracked reproduction code and
-fresh-clone instructions. Audio's empty-output reproduction reused the existing
-checkout and environment; it did not establish fresh-host onboarding.
-
 The [plan](../../../PLAN.md) retains the remaining source survey and validation scope,
 including broader magazine and errata reading, CoCo 1/2 bitmap tile sources,
 selected original reproductions, and display/audio/hardware limits.
@@ -369,7 +358,6 @@ PDFs, extracted text, and images stay under ignored `local/`.
 [mc6847]: https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf
 [tepolt-coco3]: https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf
 [rainbow-1987-10]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf
-[rainbow-1985-04]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2004%20No.%2009%20-%20April%201985.pdf
 
 [assembly-graphics]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf>
 

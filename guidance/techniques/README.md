@@ -18,7 +18,7 @@ folder.
 | Smooth CoCo 3 text output | [Text scrolling and the 512K correction](scrolling.md#scroll-text-a-scan-line-at-a-time) | Hardware cross-check and instrumented display-address probe complete. Scrolling itself unverified. |
 | Scroll a CoCo 3 playfield | [Plan scrolling and memory](scrolling.md) | Examined book. No scrolling implementation reproduced. |
 | Get the intended colours | [Design for the display](colour.md) | Static CoCo 1/2 rendered geometry is checked by `coco.py check --video` on first-screen and palette-swatches, with a wrong-SAM control. Artifact colours and physical displays remain unverified. |
-| Play sound during drawing and input | [Schedule sound](sound.md) | CoCo 1/3 execution and eleven DAC interval cases measured. Separate [CoCo 2 validation](validation/sound-coco2.md) passes 19 tests with per-boundary delay checks and scripted logical input. [Reviewed mixer PCM capture](validation/audio-output.md) adds 33 tests and 95.44% scoped coverage on CoCo 1/2. No host playback, listening or physical-output claim. |
+| Play sound during drawing and input | [Keep sound playing while the game works](sound.md) | [Sound slots](../../examples/sound-slots/README.md) on CoCo 1 and non-T1 CoCo 2 and [timer sound](../../examples/timer-sound/README.md) on CoCo 3: DAC values, memory and the mixer's tone at every checkpoint, with muted, constant, slow-foreground and masked-timer controls. No host playback, listening or physical-output claim. |
 
 CoCo 1, 2, and 3 all belong in this collection. Evidence is uneven today.
 A shared hardware description does not establish that an example runs on
@@ -81,6 +81,5 @@ Treat each of these as separate evidence:
 - physical-machine behaviour
 
 For source selection, rejected matches, and open questions, read the
-[game research notes](research/README.md) or
-[sound research notes](research/sound.md).
+[game research notes](research/README.md).
 The [plan](../../PLAN.md#guide-contract) defines what each guide contains.

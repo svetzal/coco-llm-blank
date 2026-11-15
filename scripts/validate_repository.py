@@ -18,11 +18,6 @@ SCOPES = {
     ),
     "asset-loading": (("loading",), "native tools, CoCo 1/2 ROMs, headless execution"),
     "assets": (("prepare",), ""),
-    "audio-output": (("experiments/audio-output",), "AUDIO_ARCHIVE, AUDIO_XROAR, ROMs, C build"),
-    "audio-timing": (
-        None,
-        "fresh measurement evidence; see guidance/techniques/validation/audio-timing.md",
-    ),
     "collect-room-journey": (
         ("experiments/collect-room-journey",),
         "pinned XRoar download and C build, CoCo 1/2 ROMs",
@@ -37,8 +32,6 @@ SCOPES = {
     "keyboard-controls": (("keyboard_run",), "prepared private XRoar, CoCo 1/2 ROMs"),
     "linux-onboarding": (None, ""),
     "macos-onboarding": (None, "installed lwasm; current-host boundary tests only"),
-    "sound-coco2": (("experiments/sound-coco2",), "prepared private XRoar, CoCo 2 ROMs"),
-    "sound-throughput": (("experiments/sound-throughput",), "native tools, CoCo 1/3 ROMs"),
     "sudo-policy": (None, ""),
 }
 

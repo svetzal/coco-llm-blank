@@ -40,7 +40,6 @@ For practical implementation advice, start with the [technique guides](technique
 
 - [Research for games and demos](techniques/research/README.md).
 - [Rendering sources examined](techniques/research/rendering-sources.md).
-- [Sound while a game runs](techniques/research/sound.md).
 - [CoCo keyboard and shared input hardware](techniques/research/input-hardware.md).
 - [Tile-map rendering and collision research](techniques/research/tile-map.md).
 - [Legacy CoCo maze and tile research](techniques/research/legacy-tile.md).
@@ -74,12 +73,6 @@ lists the reproduction code. Example-specific checks are also in the
 - [CoCo 3 bounded game-state validation](techniques/validation/game-state-coco3.md).
 - [Original host asset preparation validation](techniques/validation/assets.md).
 - [Prepared RG6 asset loading validation](techniques/validation/asset-loading.md).
-
-### Sound
-
-- [Measure intervals between DAC writes](techniques/validation/audio-timing.md).
-- [CoCo 2 cooperative sound, input and drawing](techniques/validation/sound-coco2.md).
-- [Validate modeled audio output](techniques/validation/audio-output.md).
 
 Keep these kinds of evidence distinct:
 

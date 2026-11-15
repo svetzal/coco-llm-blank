@@ -168,8 +168,8 @@ documented module targets.
 The light experiment scopes are `assets`, `controls-collision`, `game-state`,
 `linux-onboarding`, and `sudo-policy`. The last two run host specifications with
 controlled process boundaries, not the Docker onboarding or sudo journeys.
-`linux-onboarding`, `macos-onboarding`, `sudo-policy`, and `audio-timing` have
-no scoped coverage gate. The runner does not invent one or borrow the root's
+`linux-onboarding`, `macos-onboarding`, and `sudo-policy` have no scoped
+coverage gate. The runner does not invent one or borrow the root's
 measured source scope.
 
 Other experiments need `--heavy`, even if their prerequisites are cached.
@@ -198,15 +198,10 @@ Some scopes have their own prerequisites:
   with fixture firmware and a recording launcher, not clean-host installation.
 - `collect-room-journey` downloads the pinned XRoar release and builds it with
   the example's keyboard and audio hooks. It needs CoCo 1/2 ROMs.
-- `sound-throughput` needs native tools and CoCo 1/3 ROMs.
 - `collect-room-output` builds a private emulator from `COLLECT_ARCHIVE`
   (default `local/research/audio-timing/xroar-1.12.1.tar.gz`). It needs
   CoCo 1/2 ROMs.
-- `keyboard-controls` and `sound-coco2` need their prepared private emulator.
-- `audio-output` needs `AUDIO_ARCHIVE` and `AUDIO_XROAR` to point to the
-  prepared archive and executable described in its README.
-- `audio-timing` needs fresh measurement evidence from its documented
-  reproduction command.
+- `keyboard-controls` needs its prepared private emulator.
 
 The runner does not prepare these inputs, launch experiment setup scripts, or
 start an interactive GUI. Missing prerequisites follow the behavior of the

@@ -46,7 +46,7 @@ class DescribeValidationCLI:
         actual = Path(validation.__file__).resolve().parents[1] / "experiments"
         names = {p.name for p in actual.iterdir() if list(p.glob("*_spec.py"))}
         assert {line.split(":")[0] for line in text.splitlines()[:-1]} == names | {"root"}
-        assert "audio-output: coverage 90%; AUDIO_ARCHIVE, AUDIO_XROAR" in text
+        assert "collect-room-output: coverage 90%; cached COLLECT_ARCHIVE" in text
         assert not (checkout / "build").exists()
 
     @pytest.mark.parametrize(
@@ -90,7 +90,7 @@ class DescribeValidationCLI:
         assert validation.main(["run", "all", "--heavy"]) == 0
 
         saved = records(checkout)
-        assert len(saved) == 15 * 3
+        assert len(saved) == 11 * 3
         assert "root" not in {p.parent.name for p in saved}
         commands = [json.loads(p.read_text())["command"] for p in saved if p.name == "1.json"]
         assert all(len([a for a in c if a.startswith("experiments/")]) == 1 for c in commands)

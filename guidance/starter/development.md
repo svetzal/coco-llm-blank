@@ -221,9 +221,7 @@ records how this injection boundary was first established.
 ### Sound
 
 A sound-call counter proves invocation, not DAC output, duration or audibility.
-For a waveform or duration claim, use actual DAC values and event timestamps.
-To do this, use the [DAC timing method](../techniques/validation/audio-timing.md) or its retained
-[CoCo 2 experiment](../../experiments/sound-coco2/README.md).
+For a waveform claim, check the actual DAC values or the mixer output.
 
 State whether a duration is measured or calculated. Give its basis.
 A call count supplies neither.
@@ -241,9 +239,9 @@ It may return a summary for the results file.
 Derive the expected pitch or level from the program's cycle counts and sources,
 not from a capture. Add a muted or wrong-routing control that must fail.
 
-[Sound slots](../../examples/sound-slots/README.md) checks its tone this way. The
-[audio-output experiment](../../experiments/audio-output/README.md) first
-established this capture.
+[Sound slots](../../examples/sound-slots/README.md) checks its tone this way.
+[Timer sound](../../examples/timer-sound/README.md) also checks that the tone
+does not pause, and that a costly redraw stops cooperative sound.
 
 The mixer output is the emulator's digital signal before any host audio driver.
 It is separate evidence from host playback, listening and physical output.
