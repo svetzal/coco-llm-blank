@@ -1,4 +1,4 @@
-* Keep a room's state in a tile map, and draw the room from the map (CoCo 1/2).
+* Keep a room's state in a tile map, and draw the room from the map (CoCo 1, 2 and 3).
 *
 * The map holds one tile number for each cell. Drawing and movement both read
 * the map: one table gives the picture of each tile number, a second table
@@ -22,6 +22,10 @@
 *     row and uses 6144 bytes. Bit 7 (L7) is the leftmost pixel.
 *   Tandy, Color Computer Technical Reference Manual, PDF 14-15 and 31:
 *     SAM offset and mode bits, $FF22 bits; RG6 is SAM V=110, $FF22 $F0.
+*   Tepolt, Assembly Language Programming for the CoCo3, PDF 46: on a CoCo 3
+*     the same SAM and $FF22 values select G6R. A 0 bit selects palette
+*     register 8, a 1 bit register 9. PDF 57 step 44: BASIC loads them at
+*     reset. The program does not write $FFB0-$FFBF, so it keeps them.
 
         org $3000
 * --- CONTEXT: show RG6 at $0400 with colour set 0, as in first-screen.

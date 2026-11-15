@@ -38,7 +38,7 @@ BRANCH = "coco-capture"
 # Checks whose captures must match the pinned build's, byte for byte.
 EQUIVALENCE = (
     ("examples/first-screen", ("--video",)),
-    ("examples/collect-room", ()),  # [capture] video and audio; main and journey, CoCo 1 and 2
+    ("examples/collect-room", ()),  # [capture] video and audio; main and journey, CoCo 1, 2 and 3
     ("examples/sound-slots", ()),  # [capture] audio = true; main and square variants
     ("examples/timer-sound", ("--video",)),  # CoCo 3, both GIME revisions
 )

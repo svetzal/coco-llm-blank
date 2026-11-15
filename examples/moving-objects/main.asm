@@ -1,4 +1,4 @@
-* Move objects over scenery without holes in it (CoCo 1/2, RG6).
+* Move objects over scenery without holes in it (CoCo 1, 2 and 3, RG6).
 *
 * Each frame first puts back the scenery where the objects were. Then it draws
 * the objects at their new places, the bottom layer first. The default method
@@ -26,6 +26,9 @@
 *   Motorola, MC6847 datasheet, PDF 19 Table 3: bit 7 is the leftmost pixel.
 *   Tandy, Color Computer Technical Reference Manual, PDF 14-15 and 31:
 *     SAM offset and mode bits, $FF22 bits; RG6 is SAM V=110, $FF22 $F0.
+*   Tepolt, Assembly Language Programming for the CoCo3, PDF 46: on a CoCo 3
+*     the same $FF22 and SAM values select G6R (RG6); each bit selects
+*     palette register 8 or 9 (colour set 0), which BASIC loads (PDF 57).
 
 SCREEN  equ $0400               the RG6 screen, 32 bytes x 192 rows
 SCENERY equ $4400               buffer method: the scenery, SCREEN + $4000

@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from graphics import MODES, XROAR, XROAR_COCO3, palette_rgb
 
 HERE = Path(__file__).resolve().parent
 MESSAGES = ("SPACE TO START", "COLLECT BOTH THEN EXIT", "YOU WIN SPACE RESTART")
@@ -20,9 +21,19 @@ ROOM = ("..#.....", ".*#..#..", "..#.....", "....##..", ".#...*..", "......E.")
 FIELDS = ("phase", "xpos", "ypos", "remaining", "accepted", "starts", "effects", "last_effect")
 # Title screen with nothing pressed: the state every idle frame must keep.
 TITLE = (0, 0, 0, 2, 0, 0, 0, 0, 0)
-# The pinned XRoar's RG6 colours for colour set 0 through coco.py's renderer settings,
-# measured by examples/palette-swatches. Emulator RGB values, not a monitor.
-BLACK, GREEN = (0, 31, 0), (46, 188, 36)
+# RG6 with colour set 0: code 0 is black, code 1 is green. The RGB values are
+# XRoar's renderer output, measured in examples/palette-swatches, not a monitor.
+# On the CoCo 3 each code selects a palette register that BASIC loads (Tepolt,
+# Assembly Language Programming for the CoCo3, PDF 46 and 57), and XRoar shows
+# other RGB values. Measured in XRoar: the CoCo 3 capture has the same size.
+COLOURS = {
+    target: palette_rgb(MODES["RG6"], 0, palette)
+    for target, palette in {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}.items()
+}
+RAM_SIZES = {"coco1": (32768, 65536), "coco2": (32768, 65536), "coco3": (131072,)}
+# The CoCo 3 snapshot is physical memory. Under BASIC's map, logical $xxxx is
+# at 0x10000 + $xxxx (Tepolt, Assembly Language Programming for the CoCo3, PDF 58).
+SNAPSHOT_OFFSET = {"coco1": 0, "coco2": 0, "coco3": 0x10000}
 # Each effect is 32 alternating DAC writes. The game's requirement: the pickup
 # tone is highest and the win tone lowest, each within its own band.
 EFFECT_WRITES = 32
@@ -77,11 +88,14 @@ def screen_for_state(state: tuple[int, ...]) -> bytes:
 
 
 def verify_journey_frame(
-    ram: bytes, labels: dict[str, int], keys: str, state: tuple[int, ...]
+    snapshot: bytes, labels: dict[str, int], keys: str, state: tuple[int, ...], target: str
 ) -> None:
     """Guards, game state, keyboard history, room, sound burst and the whole screen."""
-    if len(ram) not in (32768, 65536):
+    if len(snapshot) not in RAM_SIZES[target]:
         raise ValueError("Missing/truncated RAM")
+    # The 64 KiB that the CPU sees under BASIC's map, at logical addresses.
+    offset = SNAPSHOT_OFFSET[target]
+    ram = snapshot[offset : offset + 0x10000]
     guards = [0x3FF, 0x1C00] + [
         labels[n]
         for n in ("map_guard_before", "map_guard_after", "asset_guard_before", "asset_guard_after")
@@ -112,15 +126,15 @@ def expected_screen(frame: int, variant: str = "") -> bytes:
     return screen_for_state(step(frame, variant)[1])
 
 
-def expected_frame(frame: int, variant: str = "") -> np.ndarray:
+def expected_frame(frame: int, variant: str, target: str) -> np.ndarray:
     """The rendered picture: two samples per pixel, XRoar's RG6 green or black (CSS=0)."""
     lit = np.unpackbits(np.frombuffer(expected_screen(frame, variant), np.uint8)).reshape(192, 256)
-    wide = np.repeat(lit.astype(bool), 2, axis=1)
-    return np.where(wide[:, :, None], np.array(GREEN), np.array(BLACK)).astype(np.uint8)
+    wide = np.repeat(lit, 2, axis=1)
+    return COLOURS[target][wide]
 
 
-def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str = "") -> None:
-    verify_journey_frame(ram, symbols, *step(frame, variant))
+def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str, target: str) -> None:
+    verify_journey_frame(ram, symbols, *step(frame, variant), target)
 
 
 def expected_effects(frame: int, variant: str = "") -> list[int]:

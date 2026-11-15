@@ -6,6 +6,11 @@ keeps the scenery pixel. A mask bit of 0 replaces that pixel with the ink bit.
 
 Thus an object can have transparent pixels and opaque black pixels.
 
+The same program runs on a CoCo 1, a CoCo 2 and a CoCo 3. The screen bytes
+are the same on each machine. On a CoCo 3, the RGB values of black and green
+are different. [See and check each method](#see-and-check-each-method) tells
+what is different.
+
 The example does not erase or restore the scenery. It does not clip, place
 objects at a pixel position inside a byte, detect collisions or time the
 frames.
@@ -97,7 +102,17 @@ uv run python scripts/coco.py run examples/masked-objects --variant opaque  # op
 uv run python scripts/coco.py run examples/masked-objects --variant xor     # xor
 ```
 
-To check all three methods, paste this line:
+To see a method on the CoCo 3, add `--target coco3`:
+
+```sh
+uv run python scripts/coco.py run examples/masked-objects --target coco3                   # mask
+uv run python scripts/coco.py run examples/masked-objects --target coco3 --variant opaque  # opaque
+uv run python scripts/coco.py run examples/masked-objects --target coco3 --variant xor     # xor
+```
+
+Use `--target coco2` to see a method on the CoCo 2.
+
+To check all three methods on all three machines, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/masked-objects --video
@@ -121,9 +136,28 @@ The scenes include these cases:
 - Scenes with no objects, after scenes with objects.
 - Objects over the inverted background.
 
-The check uses the CoCo 1 target in [coco.toml](coco.toml): NTSC, 32 KiB,
-normal clock, the non-T1 MC6847 and Color BASIC 1.1. It does not prove the
-result on a television, a physical CoCo, PAL, the MC6847T1 or the CoCo 3.
+The check runs each method on three targets in [coco.toml](coco.toml). Each
+target has NTSC and a normal-clock 6809:
+
+- `coco1`: a CoCo 1 with Color BASIC 1.1, 32 KiB and the non-T1 MC6847.
+- `coco2`: a CoCo 2B (XRoar `coco2bus`) with Color BASIC 1.2, 32 KiB and the
+  MC6847T1 that this XRoar profile selects.
+- `coco3`: a CoCo 3 with Super Extended Color BASIC, 128 KiB and the 1986
+  GIME.
+
+These items are different on the CoCo 3. The program does not change:
+
+- The same `$FF22` and SAM values select G6R, the CoCo 3 name of RG6. Each bit
+  selects palette register 8 or 9, and BASIC loads these registers at reset
+  (Tepolt PDF 46 and 57). The program keeps them. The model uses the
+  `xroar-coco3` palette of `scripts/graphics.py`: black is 20, 20, 20 and
+  green is 71, 145, 5. These values are measured in XRoar.
+- The snapshot holds physical RAM. Under the BASIC map, the screen at `$0400`
+  is at snapshot offset `$10400` (Tepolt PDF 58). The `screen` line of the
+  `coco3` target sets this offset.
+- In XRoar, the captured frame has the same size and position (measured).
+
+The check does not prove the result on a television, a physical CoCo or PAL.
 
 The program draws into the screen that the VDG shows, with no vertical sync.
 A real game can show tearing or a half-drawn object. Read
@@ -145,6 +179,11 @@ Read these pages before you change the screen setup or the bit order. Use
 - Tandy, *Color Computer Technical Reference Manual*, PDF 14–15: the `$FF22`
   bits, and the SAM offset and mode bits. PDF 31: RG6 uses SAM V=`110` and
   `$FF22` bits 7 to 4 `1111`.
+
+- Laurence A. Tepolt, *Assembly Language Programming for the CoCo3*, PDF 46:
+  on a CoCo 3, the same `$FF22` and SAM values select G6R. Each bit selects
+  palette register 8 or 9 with colour set 0. PDF 57, step 44: the values that
+  BASIC loads into the palette registers. PDF 58: the CoCo 3 memory map.
 
 The mask format, the shapes and the scenes are our own design. We found no
 examined listing of a CoCo masked renderer to compare with.

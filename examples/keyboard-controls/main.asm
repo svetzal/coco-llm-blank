@@ -12,6 +12,7 @@ clear   clr ,x+
 * >>> EXAMPLE 1 of 5: Set rows as inputs and columns as outputs
 * Tandy, Color Computer Technical Reference Manual, PDF 13: control bit 2.
 * Motorola, MC6821 PIA datasheet, PDF 7-8: DDR 0=input, 1=output.
+* CoCo 3 Service Manual, PDF 9: the same PIA registers and control bit 2.
 * Keep the other control bits while selecting DDR, then data registers.
 * The control_*_before copies exist only for the check.
 * All conditional fault defines exist only for the negative controls.
@@ -70,6 +71,7 @@ finished bra finished
 * Tandy, Color Computer Technical Reference Manual, PDF 40: low selects.
 * The same manual, PDF 75, and CoCo 2 NTSC Service Manual, PDF 36:
 * Left, Right and Space are PA3 at PB5, PB6 and PB7.
+* CoCo 3 Service Manual, PDF 40, figure 5-9: the same positions.
 * Derived strobes: $DF, $BF, $7F. Test PA3 only; leave all columns high.
 * The raw row copies exist only for the check.
 * A key script takes effect at each sample entry.

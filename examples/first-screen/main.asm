@@ -1,4 +1,6 @@
 * Set up a VDG full-graphics screen on a CoCo 1/2 (MC6847 VDG, MC6883 SAM).
+* The same values select the same modes on a CoCo 3 (GIME), where each colour
+* code selects a palette register that BASIC loads. The program keeps them.
 *
 * Three steps select a screen. The order does not matter for a still picture.
 *   1. SAM display offset F6..F0: the screen start address / 512.
@@ -20,6 +22,10 @@
 *     PDF 31 Table 1: SAM V2..V0 and $FF22 bits for each mode.
 *       $FF22 bits 2..0 are "do not change".
 *   Motorola, MC6847 datasheet, PDF 18-21: sizes, colours, pixel order.
+*   Tepolt, Assembly Language Programming for the CoCo3:
+*     PDF 46 Table 5-5: the same $FF22 and SAM V values on a CoCo 3.
+*     PDF 46: each pixel code selects a palette register.
+*     PDF 57, step 44: the palette values that BASIC loads at reset.
 *
 * >>> EXAMPLE 1 of 3: the values for each mode.
 * Select the mode with one assembler define. coco.toml has a variant for each.

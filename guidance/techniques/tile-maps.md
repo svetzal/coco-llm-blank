@@ -4,8 +4,9 @@ Read this when a game has repeated scenery or items that change one cell of a
 room. Store the room as tile numbers. Let each number select a picture and,
 through a separate table, a movement rule.
 
-We measured the method on CoCo 1 in RG6, in the
-[tile-room example](../../examples/tile-room/README.md). The main historical
+We measured the method in RG6 on CoCo 1, CoCo 2 and CoCo 3, in the
+[tile-room example](../../examples/tile-room/README.md). The CoCo 3 shows RG6
+in its VDG-compatible mode. The main historical
 source, Brian O'Neill's *PacDude Monster Maze*, is a CoCo 3 program. We read
 it but did not run it. Its drawing path does not transfer to CoCo 1/2.
 
@@ -138,8 +139,11 @@ the path or use short substeps.
 ## What the tile-room example checks
 
 **Measured.** `uv run python scripts/coco.py check examples/tile-room --video`
-runs 41 scripted moves on CoCo 1: NTSC, 32 KiB, normal clock, non-T1, with
-the pinned instrumented XRoar. It runs both redraw methods.
+runs 41 scripted moves on three NTSC targets with the pinned instrumented
+XRoar: CoCo 1 (32 KiB, MC6847), CoCo 2 (32 KiB, MC6847T1) and CoCo 3
+(128 KiB, GIME 1986). It runs both redraw methods on each target. Only the
+rendered colours differ: on the CoCo 3, XRoar shows the colours of the
+palette registers that BASIC loads.
 
 At each of the 42
 frames, the check compares all 6,144 screen bytes and all 98,304 samples of
@@ -156,7 +160,7 @@ Integration tests in `scripts/coco_spec.py` change one pixel, remove the
 actor picture and convert 16×16 pictures. Each one must fail.
 
 The check does not show a television, a physical CoCo or keyboard input. It
-does not measure timing or cover PAL, T1 VDGs or the CoCo 3.
+does not measure timing or cover PAL or the CoCo 3 GIME graphics modes.
 
 ## What other sources show
 

@@ -2,7 +2,7 @@
 source = "main.asm"
 prepare = "assets.py"   # writes assets.inc into the build folder first
 
-# NTSC machines with explicit 6809, 6847 VDG, keyboard layout and firmware.
+# NTSC machines with explicit 6809, VDG, keyboard layout and firmware.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -20,6 +20,20 @@ tv = "ntsc"
 vdg = "6847"
 ram_kib = 32
 basic = "bas12.rom"
+
+# NTSC CoCo 3, 128 KiB, GIME 1986, in its VDG-compatible RG6 mode. The RAM
+# snapshot is physical memory: the screen at logical $0400 is at 0x10400.
+# expected.py adds the same offset to every address it reads.
+[targets.coco3]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+keyboard = "coco3"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+screen = 0x10400
 
 [memory]
 at = { start = 0x3000 }

@@ -14,8 +14,12 @@ inputs on the keyboard rows and need no conversion.
 [CoCo 1 manual, PDF 13–14 and 37–38][coco1]
 
 The named CoCo 2 NTSC boards combine the DAC and the mux in one IC. Selection
-`00` chooses the DAC. [CoCo 2 manual, PDF 37–38][coco2] CoCo 3 keeps the shared
-hardware too. [CoCo 3 manual, PDF 42–43][coco3dac]
+`00` chooses the DAC. [CoCo 2 manual, PDF 37–38][coco2]
+
+CoCo 3 also has one DAC and mux IC. Sel B 0 and Sel A 0 choose the DAC, and SNDEN must be high.
+[CoCo 3 manual, PDF 42–43][coco3dac] The PIA bits are the same as on CoCo 1.
+The DAC is `$FF20` bits 2–7. SEL 1 and SEL 2 are bit 3 of `$FF01` and `$FF03`.
+Sound enable is `$FF23` bit 3. [CoCo 3 manual, PDF 9–10][coco3pia]
 
 The one-bit output on CoCo 1 is `$FF22` bit 1, with direction and mux setup.
 Other bits of that port control video, so keep them when you change the sound
@@ -77,8 +81,12 @@ The [sound-slots example](../../examples/sound-slots/README.md) plays a tone
 from the main loop.
 After each block of 256 samples, a short slot moves a marker and changes the
 note.
-It runs on CoCo 1 and on a non-T1 CoCo 2 (26-3134/26-3136, 64 KiB), both NTSC
-and normal-clock.
+It runs on CoCo 1, on a non-T1 CoCo 2 (26-3134/26-3136, 64 KiB) and on CoCo 3
+(GIME 1986, 128 KiB), all NTSC with the 6809 at the slow rate.
+The pitch needs the slow rate. On CoCo 3, a write to `$FFD8` selects it, and
+the reset program clears all SAM registers, so BASIC starts at that rate.
+[Tepolt, PDF 56 and 62][tepoltrate]
+
 It masks interrupts.
 A sawtooth and a square wave are its two variants.
 
@@ -86,8 +94,8 @@ A sawtooth and a square wave are its two variants.
 uv run python scripts/coco.py check examples/sound-slots
 ```
 
-**Measured result.** On both targets, the check compares every DAC value with an
-independent model.
+**Measured result.** On all three targets, the check compares every DAC value
+with an independent model.
 The mixer output has the tone that 41 cycles for each sample predicts.
 The slot takes up to 24 instructions between two DAC writes, against a budget of
 40.
@@ -199,8 +207,8 @@ has listened to these examples, and no physical CoCo result exists.
   *Color Computer 3 Service Manual* (`coco3-service`) and *Color Computer
   Speech/Sound Cartridge* (`speech-sound-manual`). The text above gives the pages.
 - Laurence A. Tepolt, *Assembly Language Programming for the CoCo3* (1987),
-  PDF 47–53 (`tepolt-coco3`). Lance A. Leventhal, *6809 Assembly Language
-  Programming*, Appendices B and C, PDF 552–555 (`6809-programming`).
+  PDF 47–53, 56 and 62 (`tepolt-coco3`). Lance A. Leventhal, *6809 Assembly
+  Language Programming*, Appendices B and C, PDF 552–555 (`6809-programming`).
 - *The Rainbow*: Nee, "Machine Language Made BASIC, Part XII: And the Music
   Played On", June 1989 (`rainbow-1989-06`). Nee, "Part IX: Let There Be
   Music", March 1989 (`rainbow-1989-03`). Barden, "Listening to Your CoCo with
@@ -216,8 +224,10 @@ The examples are our original work. They do not reproduce the magazine programs.
 [coco1]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=13>
 [coco2]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf#page=37>
 [coco3dac]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf#page=42>
+[coco3pia]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf#page=9>
 [timer]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf#page=10>
 [interrupts]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=47>
+[tepoltrate]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=62>
 [leventhal]: <https://colorcomputerarchive.com/repo/Documents/Books/6809%20Assembly%20Language%20Programming%20%28Lance%20Leventhal%29.pdf#page=552>
 [nee]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2008%20No.%2011%20-%20June%201989.pdf#page=72>
 [notes]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2008%20No.%2008%20-%20March%201989.pdf#page=30>

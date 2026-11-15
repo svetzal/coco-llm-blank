@@ -10,27 +10,51 @@ vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
 
+[targets.coco2]
+machine = "coco2bus"
+cpu = "6809"
+tv = "ntsc"
+ram_kib = 32
+basic = "bas12.rom"
+
+# NTSC CoCo 3, 128 KiB, GIME 1986, in its VDG-compatible modes. Each code
+# selects a palette register that BASIC loads; the program keeps them.
+[targets.coco3]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+screen = 0x10400         # logical $0400 in the physical RAM snapshot
+
 [memory]
 at = { start = 0x3000 }
 
 # The plain build shows CG6 (PMODE 3). Each variant selects one other mode.
+# XRoar's CoCo 3 shows RG1, RG2 and RG3 differently (an open question in the
+# README), so those variants run only on the CoCo 1 and 2.
 [variants.rg6]
 defines = ["RG6"]
 
 [variants.rg3]
 defines = ["RG3"]
+targets = ["coco1", "coco2"]
 
 [variants.cg3]
 defines = ["CG3"]
 
 [variants.rg2]
 defines = ["RG2"]
+targets = ["coco1", "coco2"]
 
 [variants.cg2]
 defines = ["CG2"]
 
 [variants.rg1]
 defines = ["RG1"]
+targets = ["coco1", "coco2"]
 
 [variants.cg1]
 defines = ["CG1"]

@@ -5,6 +5,7 @@ assembly or its mask data.
 """
 
 import numpy as np
+from graphics import XROAR, XROAR_COCO3, VdgColour
 
 # Scene inputs in pixels: A origin, B origin, inverted background, draw order
 # (the last object wins).
@@ -24,10 +25,13 @@ SCENES = (
 )
 WIDTH, HEIGHT = 256, 192
 OBJECT_WIDTH, OBJECT_HEIGHT = 16, 10
-# RG6 with colour set 0: black and green. RGB values are the pinned XRoar's
-# renderer output, as in examples/first-screen, not a monitor.
-COLOURS = np.array([(0, 31, 0), (46, 188, 36)], dtype=np.uint8)
-# coco.py's capture: two samples per RG6 pixel, one row per scan line.
+# RG6 with colour set 0: a 0 bit is black and a 1 bit is green (Inman PDF 106-107).
+# On the CoCo 3 each bit selects palette register 8 or 9, which BASIC loads at reset
+# (Tepolt, Assembly Language Programming for the CoCo3, PDF 46 and 57). The RGB values
+# are scripts/graphics.py's palettes, measured in XRoar's renderer, not a monitor.
+PALETTES = {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}
+# coco.py's capture: two samples per RG6 pixel, one row per scan line. Measured in
+# XRoar: the CoCo 3 capture has the same size and position.
 SAMPLES_PER_PIXEL = 2
 
 
@@ -77,7 +81,15 @@ def expected_screen(frame: int, variant: str) -> bytes:
     return bytes(result)
 
 
-def expected_frame(frame: int, variant: str) -> np.ndarray:
+def expected_frame(frame: int, variant: str, target: str) -> np.ndarray:
     """The rendered 512x192 picture: each pixel spans two samples."""
     codes = np.array(pixels(frame, variant), dtype=np.uint8)
-    return COLOURS[np.repeat(codes, SAMPLES_PER_PIXEL, axis=1)]
+    return colours(target)[np.repeat(codes, SAMPLES_PER_PIXEL, axis=1)]
+
+
+def colours(target: str) -> np.ndarray:
+    """RGB of colour codes 0 (black) and 1 (green) with colour set 0 on the target."""
+    palette = PALETTES[target]
+    return np.array(
+        [palette.rgb(VdgColour.BLACK, 0), palette.rgb(VdgColour.GREEN, 0)], dtype=np.uint8
+    )

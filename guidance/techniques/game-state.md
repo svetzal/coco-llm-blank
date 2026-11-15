@@ -8,7 +8,7 @@ again.
 
 The design can inform the CoCo 1, 2 and 3.
 The [turn-queue example](../../examples/turn-queue/README.md) tests the state
-rules on the CoCo 3 only.
+rules on the CoCo 1, 2 and 3.
 The sources are BASIC programs from 1983 to 1985, which we did not run.
 Each target needs its own checks of input, clock and display.
 
@@ -124,8 +124,8 @@ A cutscene that reads no input is a valid choice.
 Write that choice down instead of promising controls that the loop cannot read.
 
 **Measured.** The [collect-room example](../../examples/collect-room/README.md)
-applies this table to a title, play and won phase on CoCo 1 and CoCo 2B. Its
-check plays 95 key steps through the emulated keyboard. A Space key that is
+applies this table to a title, play and won phase on CoCo 1, CoCo 2B and
+CoCo 3. Its check plays 95 key steps through the emulated keyboard. A Space key that is
 held at startup or across a phase change does not start or restart the game.
 
 ## Commit once, then present the result
@@ -165,7 +165,11 @@ Read [sound scheduling](sound.md) before you combine them.
 ## What the example checks
 
 **Measured result.** On the pinned XRoar, `coco.py check examples/turn-queue`
-matches all 44 records of 19 cases on a 128 KiB CoCo 3.
+matches all 44 records of 19 cases on each target.
+The targets are a 32 KiB CoCo 1 with Color BASIC 1.1, a 32 KiB CoCo 2 with
+Color BASIC 1.2 and a 128 KiB CoCo 3.
+The same program runs on each. Only the place of the records in the snapshot
+changes.
 The records cover these items:
 
 - rejection without a change, then a valid send
@@ -186,7 +190,6 @@ These proposals have no check yet:
 - A brief press between two samples, which polling alone can miss.
 - Changed artwork makes prepared pictures out of date.
 - An interrupt handler never sees a commit half done.
-- The same state routines on the CoCo 1 and CoCo 2.
 
 PDF pages are positions in the archive files, and these sources have no
 resource IDs. *Undercolor* 1(5) has SHA-256

@@ -1,9 +1,15 @@
 """Independent model of the display-setup picture in each VDG full-graphics mode.
 
 Written from the mode table and the picture rule, not from the assembly.
+
+On the CoCo 3 the same mode values select the same modes (Tepolt, Assembly Language
+Programming for the CoCo3, PDF 46 Table 5-5), and each colour code selects a palette
+register that BASIC loads at reset (Tepolt PDF 46 and 57). So the screen bytes are the
+same on each machine, and only the RGB values differ.
 """
 
 import numpy as np
+from graphics import XROAR, XROAR_COCO3, VdgColour
 
 # Variant: (width, height, bits per pixel, half-clocks per pixel, scan lines per pixel).
 # MC6847 datasheet PDF 18 Table 2 and PDF 20; Tandy Technical Reference PDF 30.
@@ -17,11 +23,14 @@ MODES = {
     "rg1": (128, 64, 1, 2, 3),
     "cg1": (64, 64, 2, 4, 3),
 }
-# Colour set 0. Codes 0-3 in four-colour modes; codes 0-1 in two-colour modes.
-# RGB values are the pinned XRoar's renderer output (the `xroar` palette in
-# scripts/graphics.py, measured by examples/palette-swatches), not a monitor.
-FOUR_COLOURS = [(46, 188, 36), (255, 255, 151), (44, 37, 129), (131, 26, 55)]
-TWO_COLOURS = [(0, 31, 0), (46, 188, 36)]
+# Colour set 0 (CSS=0). Codes 0-3 in four-colour modes; codes 0-1 in two-colour modes.
+# MC6847 datasheet PDF 21 Figure 22(c).
+CSS = 0
+FOUR_COLOURS = [VdgColour.GREEN, VdgColour.YELLOW, VdgColour.BLUE, VdgColour.RED]
+TWO_COLOURS = [VdgColour.BLACK, VdgColour.GREEN]
+# RGB values are measured in XRoar's renderer by examples/palette-swatches, not
+# sourced: `xroar` on the CoCo 1 and 2, `xroar-coco3` on the CoCo 3.
+PALETTES = {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}
 # coco.py's capture: two samples per VDG half-clock, one row per scan line.
 SAMPLES_PER_HALF_CLOCK = 2
 
@@ -50,10 +59,14 @@ def expected_screen(frame: int, variant: str) -> bytes:
     return bytes(result)
 
 
-def expected_frame(frame: int, variant: str) -> np.ndarray:
-    """The rendered 512x192 picture: each pixel spans its half-clocks and lines."""
+def expected_frame(frame: int, variant: str, target: str) -> np.ndarray:
+    """The rendered 512x192 picture: each pixel spans its half-clocks and lines.
+
+    Measured in XRoar: the CoCo 3 capture has the same size and position.
+    """
     width, height, bits, half_clocks, lines = MODES[variant]
-    colours = FOUR_COLOURS if bits == 2 else TWO_COLOURS
+    names = FOUR_COLOURS if bits == 2 else TWO_COLOURS
+    colours = [PALETTES[target].rgb(name, CSS) for name in names]
     across = half_clocks * SAMPLES_PER_HALF_CLOCK
     rows = [
         [colours[pixel(s // across, line // lines, variant)] for s in range(width * across)]

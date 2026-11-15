@@ -16,6 +16,10 @@ The context plays a fixed script of 41 moves. The
 [tile-map guide](../../guidance/techniques/tile-maps.md) gives the method and
 its sources.
 
+The same program runs on a CoCo 1, a CoCo 2 and a CoCo 3. The CoCo 3 shows
+RG6 in its VDG-compatible mode. [Machines](#machines) tells what is
+different.
+
 ## Choose how to redraw after a move
 
 Redraw only the changed cells. This is the default. It suits most games: the
@@ -102,6 +106,30 @@ The `--- CONTEXT` blocks are not part of the practice:
 The program keeps the interrupts, stack, direct page and CPU clock that BASIC
 sets. The `state` label is data. The check fails if the CPU runs it.
 
+## Machines
+
+The program, the map, the screen bytes and the picture are the same on each
+machine. Only the RGB values of the colours are different.
+
+- CoCo 1 and CoCo 2: the VDG gives each colour a fixed value. With colour
+  set 0, a 0 bit is black and a 1 bit is green.
+- CoCo 3: the same `$FF22` and SAM writes select RG6. A 0 bit selects palette
+  register 8 and a 1 bit selects register 9. BASIC loads these registers at
+  reset (Tepolt, *Assembly Language Programming for the CoCo3*, PDF 46 and
+  57). The program does not write `$FFB0` to `$FFBF`, so it keeps those
+  values.
+
+The CoCo 3 needs no other setup. The screen is at `$0400` on each machine.
+The CoCo 3 snapshot is physical memory, so the check reads the screen at
+`$10400` there. Tepolt PDF 58 puts BASIC's 32 KiB at physical `$70000`, and
+the 128 KiB starts at `$60000`. The offset `$10400` is our arithmetic from
+these values.
+
+In XRoar, black and green are (0, 31, 0) and (46, 188, 36) on the CoCo 1 and 2.
+On the CoCo 3 they are (20, 20, 20) and (71, 145, 5). These values are
+measured in XRoar, in [palette-swatches](../palette-swatches/README.md). They
+are not the colours of a monitor or a physical CoCo.
+
 ## See and check each method
 
 Open a terminal in the starter folder. Copy one line and paste it to see that
@@ -113,7 +141,15 @@ uv run python scripts/coco.py run examples/tile-room                 # changed c
 uv run python scripts/coco.py run examples/tile-room --variant full  # full
 ```
 
-To check both methods, paste this line:
+To see a method on another machine, add `--target coco2` or
+`--target coco3`:
+
+```sh
+uv run python scripts/coco.py run examples/tile-room --target coco3                 # changed cells
+uv run python scripts/coco.py run examples/tile-room --target coco3 --variant full  # full
+```
+
+To check both methods on all three machines, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/tile-room --video
@@ -137,9 +173,18 @@ The moves include these cases:
 - A move onto the collectible, away from it, and back onto its cell.
 - A move onto the exit, away from it, and back.
 
-The check uses the CoCo 1 target in [coco.toml](coco.toml): NTSC, 32 KiB,
-normal clock, the non-T1 MC6847 and Color BASIC 1.1. It does not prove the
-result on a television, a physical CoCo, PAL, the MC6847T1 or the CoCo 3.
+The check runs both methods on each target in [coco.toml](coco.toml). Each
+target has NTSC and a normal-clock 6809:
+
+| Target | Machine | RAM | Video | Firmware |
+| --- | --- | --- | --- | --- |
+| `coco1` | CoCo 1 | 32 KiB | MC6847 | Color BASIC 1.1 |
+| `coco2` | CoCo 2 | 32 KiB | MC6847T1 | Color BASIC 1.2 |
+| `coco3` | CoCo 3 | 128 KiB | GIME 1986 | Super Extended Color BASIC |
+
+The model uses the `xroar` palette for the CoCo 1 and 2, and the
+`xroar-coco3` palette for the CoCo 3. The check does not prove the result on
+a television, a physical CoCo or PAL.
 
 The program draws into the screen that the VDG shows, with no vertical sync.
 The check does not measure the time of a redraw.
@@ -162,6 +207,12 @@ screen address of a cell. Use
 - Tandy, *Color Computer Technical Reference Manual*, PDF 14–15: the `$FF22`
   bits, and the SAM offset and mode bits. PDF 31: RG6 uses SAM V=`110` and
   `$FF22` bits 7 to 4 `1111`.
+
+- Laurence A. Tepolt, *Assembly Language Programming for the CoCo3*, PDF 46:
+  on a CoCo 3, the same `$FF22` and SAM values select G6R. With colour set 0,
+  a 0 bit selects palette register 8 and a 1 bit selects register 9. PDF 57,
+  step 44: BASIC loads the palette registers at reset. PDF 58: the CoCo 3
+  memory map. BASIC's 32 KiB is at physical `$70000`.
 
 The cell address is our arithmetic from these values. The map, the tables,
 the pictures and the moves are our own design.

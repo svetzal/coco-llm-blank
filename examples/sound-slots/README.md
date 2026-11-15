@@ -1,6 +1,6 @@
 # Play a tone from the main loop
 
-This example plays a tone on the 6-bit DAC of the CoCo 1/2. The main loop
+This example plays a tone on the 6-bit DAC of the CoCo 1, 2 and 3. The main loop
 writes each sample. After each block of 256 samples, the loop has one short
 slot for frame work. The slot also changes the note.
 
@@ -18,7 +18,11 @@ work of a game.
 ## Choose a waveform and a note
 
 The sample loop takes 41 cycles. At 894,886.25 Hz, that is 21,826 samples
-each second. A 16-bit phase adds the step on each sample. This formula gives
+each second. This is the slow CPU rate. The pitch is correct only at that
+rate. On the CoCo 3, a write to `$FFD9` doubles the rate, and the tone goes
+up by one octave.
+
+A 16-bit phase adds the step on each sample. This formula gives
 the tone:
 
 ```text
@@ -77,15 +81,26 @@ After each block, they move the marker one byte along row 96.
 The check takes its snapshot at `frame_ready`.
 [expected.py](expected.py) is only check context.
 
-The example runs on two NTSC targets with a normal-clock 6809:
+The example runs on three NTSC targets with a 6809 at the slow rate:
 
 | Target | XRoar machine | RAM | Firmware |
 | --- | --- | --- | --- |
 | `coco1` | `cocous` | 32 KiB | Color BASIC 1.1 |
 | `coco2` | `cocous`, CoCo 2 boards 26-3134/26-3136 | 64 KiB | Color BASIC 1.2 |
+| `coco3` | `coco3`, GIME 1986 | 128 KiB | CoCo 3 ROM |
 
-The CoCo 2 boards put the DAC and the audio mux in one IC. The register
-addresses and bits are the same.
+The program and the check model are the same on the three targets:
+
+- The CoCo 2 boards and the CoCo 3 put the DAC and the audio mux in one IC.
+  The register addresses and bits are the same as on the CoCo 1.
+- The CoCo 3 manual gives the slow CPU rate as 0.89 MHz, a rounded value.
+  The model uses 894,886.25 Hz. The 15 Hz pitch tolerance covers the
+  difference.
+- The context writes `$FFD8`, which selects the slow rate. At reset, the
+  CoCo 3 ROM also clears all SAM registers, so BASIC starts at the slow rate.
+- On the CoCo 3, the check reads the screen at offset `$10400` of the RAM
+  snapshot. The `screen` setting of the `coco3` target in
+  [coco.toml](coco.toml) gives this offset.
 
 ## Hear and check each variation
 
@@ -101,9 +116,14 @@ uv run python scripts/coco.py run examples/sound-slots --target coco2
 # Square, CoCo 2
 uv run python scripts/coco.py run examples/sound-slots --target coco2 \
   --variant square
+# Sawtooth, CoCo 3
+uv run python scripts/coco.py run examples/sound-slots --target coco3
+# Square, CoCo 3
+uv run python scripts/coco.py run examples/sound-slots --target coco3 \
+  --variant square
 ```
 
-To check both variations on both targets, use this command:
+To check both variations on the three targets, use this command:
 
 ```sh
 uv run python scripts/coco.py check examples/sound-slots
@@ -156,5 +176,17 @@ Read these pages before you change a register value. Use
   - PDF 38, Table 4: SNDEN 1 with SEL 1 and SEL 2 at 0 selects the DAC.
 - Tandy, *Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)*,
   PDF 37–38: select inputs `00` choose the DAC, and SNDEN must be high.
+- Tandy, *Color Computer 3 Service Manual*:
+  - PDF 9: `$FF01` bit 3 is SEL 1 and `$FF03` bit 3 is SEL 2.
+  - PDF 10: `$FF20` bits 2 to 7 are the 6-bit DAC, and bit 1 is the RS-232
+    output. `$FF21` bit 2 selects the direction register. `$FF23` bit 3
+    enables sound.
+  - PDF 31: the CPU clock is 0.89 MHz or 1.78 MHz.
+  - PDF 42–43: Sel B 0 and Sel A 0 select the DAC, and SNDEN must be high.
+- Tepolt, *Assembly Language Programming for the CoCo3*:
+  - PDF 56, step 14: the reset program clears all SAM registers.
+  - PDF 58: BASIC's memory map, for the screen offset.
+  - PDF 62: a write to `$FFD8` selects the slow CPU rate, and a write to
+    `$FFD9` selects the fast rate.
 - Leventhal, *6809 Assembly Language Programming*, Appendix C, PDF 553–555:
   the cycle count of each instruction in the sample loop.

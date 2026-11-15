@@ -1,4 +1,5 @@
-* Play a tone on the DAC from the main loop (CoCo 1/2, cooperative sound).
+* Play a tone on the DAC from the main loop (CoCo 1, 2 and 3, cooperative
+* sound).
 *
 * The main loop writes every sample. After each block of 256 samples it
 * has one slot for frame work, then it starts the next block.
@@ -18,6 +19,16 @@
 *     PDF 38, Table 4: SNDEN 1, SEL 1 = 0, SEL 2 = 0 select the DAC.
 *   Tandy, Color Computer 2 NTSC Service Manual, PDF 37-38: Sel A and
 *     Sel B 00 select the DAC; SNDEN must be high.
+*   Tandy, Color Computer 3 Service Manual:
+*     PDF 9: $FF01 bit 3 = SEL 1 (LSB), $FF03 bit 3 = SEL 2 (MSB).
+*     PDF 10: $FF20 bits 2..7 = the 6-bit DAC, bit 1 = RS-232 out.
+*       $FF21 bit 2 = 0 selects the direction register. $FF23 bit 3 =
+*       sound enable.
+*     PDF 31: the slow CPU clock is 0.89 MHz.
+*     PDF 42-43: Sel B 0 and Sel A 0 select the DAC; SNDEN must be high.
+*   Tepolt, Assembly Language Programming for the CoCo3:
+*     PDF 56, step 14: reset clears all SAM registers.
+*     PDF 62: a write to $FFD8 selects the slow CPU rate.
 *   Leventhal, 6809 Assembly Language Programming, Appendix C,
 *     PDF 553-555: the cycle count of each instruction in the sample loop.
 
@@ -52,7 +63,7 @@ reset   sta ,x+
         sta $FFD2
         sta $FFD4
         sta $FFD6
-        sta $FFD8
+        sta $FFD8          slow CPU rate; the pitch needs it (Tepolt PDF 62)
         sta $FFC0
         sta $FFC3
         sta $FFC5

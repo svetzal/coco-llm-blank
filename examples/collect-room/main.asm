@@ -1,4 +1,4 @@
-* Let each game phase accept only its own input (CoCo 1/2).
+* Let each game phase accept only its own input (CoCo 1, 2 and 3).
 *
 * The game has three phases: title (0), play (1) and won (2).
 *   Title  Space starts play.         Arrows do nothing.
@@ -24,6 +24,14 @@
 *     PDF 38 Table 4: SNDEN 1, SEL 1 = 0 and SEL 2 = 0 select the DAC.
 *   Tandy, Color Computer 2 NTSC Service Manual, PDF 36 figure 4-10:
 *     Up, Down, Left, Right and Space are row PA3, columns PB3 to PB7.
+*   The CoCo 3 needs no other setup:
+*   Tandy, Color Computer 3 Service Manual:
+*     PDF 9-10: the same $FF00-$FF03 and $FF20-$FF23 bits as above.
+*     PDF 40 figure 5-9: the same row PA3 and columns PB3 to PB7.
+*     PDF 43: Sel B 0 and Sel A 0 select the DAC; SNDEN high enables it.
+*   Tepolt, Assembly Language Programming for the CoCo3, PDF 46: in the
+*     VDG modes each colour code selects a GIME palette register. PDF 57
+*     step 44: BASIC loads them. This program keeps them.
 *
 * All conditional fault defines exist only for the negative controls.
 

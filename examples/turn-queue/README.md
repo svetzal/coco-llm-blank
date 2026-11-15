@@ -112,13 +112,13 @@ The `BAD_*` defines are faults for the negative controls in
 
 The program shows nothing on the screen. It writes only RAM. Open a terminal
 in the starter folder. Copy this line to save the RAM after the last case and
-print the path of the file:
+print the path of the file. It uses the first target, the CoCo 1:
 
 ```sh
 uv run python scripts/coco.py snapshot examples/turn-queue   # default design
 ```
 
-To check the state, paste this line:
+To check the state on the CoCo 1, the CoCo 2 and the CoCo 3, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/turn-queue
@@ -140,8 +140,8 @@ The cases include these steps:
 - Reject each bad command, including a 16-bit overflow. Then send again.
 - Reject each routine in the wrong phase. Stop at turn 65535 without a wrap.
 
-Five negative controls in `scripts/coco_spec.py` assemble a faulty program.
-Each must fail first at the named step:
+Five negative controls in `scripts/coco_spec.py` assemble a faulty program
+and run it on the CoCo 1 target. Each must fail first at the named step:
 
 | Define | Fault | First failed step |
 | --- | --- | --- |
@@ -151,12 +151,42 @@ Each must fail first at the named step:
 | `BAD_LAST` | Scans only slot 0 | queue-lifecycle 8 |
 | `BAD_WRAP` | Does not check the phase and the limit | queue-lifecycle 12 |
 
-The check reads the records in the top 64 KiB of the 128 KiB snapshot. At
-reset, BASIC maps the CPU addresses `$0000-$FFFF` to physical pages `$38-$3F`
-(Tepolt, PDF 56 and 57, Fig. 7-2 on PDF 58).
+## Machines
 
-The check uses the CoCo 3 target in [coco.toml](coco.toml): NTSC, 128 KiB,
-GIME 1986 and the CoCo 3 ROM. The routines use no CoCo 3 feature.
+The example runs on the CoCo 1, the CoCo 2 and the CoCo 3. The routines use
+only 6809 instructions and RAM. The program is the same on each machine.
+[coco.toml](coco.toml) declares these targets:
+
+| Target | Machine | RAM | Firmware |
+| --- | --- | --- | --- |
+| `coco1` | `cocous`, NTSC | 32 KiB | Color BASIC 1.1 |
+| `coco2` | `coco2bus`, NTSC | 32 KiB | Color BASIC 1.2 |
+| `coco3` | `coco3`, NTSC, GIME 1986 | 128 KiB | CoCo 3 ROM |
+
+The memory layout fits a 32 KiB machine:
+
+- A 32K machine has RAM at `$0000-$7FFF`. (Color Computer Technical
+  Reference Manual, PDF 12)
+- The code and script are at `$3000` and end below `$4100`. The world is at
+  `$4100`, the command at `$4200` and the records at `$5000-$5343`.
+- At a cold start, Color BASIC puts its stack 200 bytes below the top of RAM.
+  This is above the records. (Color Basic Unravelled II, PDF 27, a listing of
+  Color BASIC 1.2)
+
+Only the place of the records in the RAM snapshot is different:
+
+- On the CoCo 1 and the CoCo 2, the 32 KiB snapshot holds the CPU addresses
+  `$0000-$7FFF`.
+- On the CoCo 3, the snapshot is the 128 KiB of physical RAM. At reset, BASIC
+  maps the CPU addresses `$0000-$FFFF` to physical pages `$38-$3F`, the top
+  64 KiB. (Tepolt, PDF 56 and 57, Fig. 7-2 on PDF 58)
+
+[expected.py](expected.py) selects the snapshot size and offset from the
+target. To check one machine, add `--target`:
+
+```sh
+uv run python scripts/coco.py check examples/turn-queue --target coco2
+```
 
 The check proves the RAM state at one checkpoint, after all cases. It does not
 prove these items:
@@ -164,7 +194,7 @@ prove these items:
 - That no routine writes a byte outside the world and the records.
 - A display, input or speed.
 - An interrupt handler that reads the world during an update.
-- The CoCo 1, the CoCo 2 or a physical CoCo.
+- A physical CoCo.
 
 ## Sources
 
@@ -176,6 +206,13 @@ Use [reference lookup](../../guidance/starter/references.md) to get them.
 
 - The same book, PDF 543: `BHI` branches when C and Z are both 0, and `BHS`
   branches when C is 0.
+
+- Tandy, *Color Computer Technical Reference Manual*, PDF 12: the memory
+  map shows 32K of RAM at `$0000-$7FFF`.
+
+- Spectral Associates, *Color Basic Unravelled II*, PDF 27: the cold start
+  finds the top of RAM and keeps 200 bytes of string space. The stack starts
+  below it.
 
 - Tepolt, *Assembly Language Programming for the CoCo3*, PDF 55–58: the reset
   initialization loads the executive map `$38-$3F`. Fig. 7-2 shows these pages

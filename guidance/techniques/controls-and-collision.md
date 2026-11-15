@@ -3,8 +3,8 @@
 Read this when held movement must work together with single-press actions.
 Read it also when a change to a picture must not change what blocks the player. The
 keyboard facts apply to CoCo 1 and the named CoCo 2 NTSC boards. The CoCo 3
-manual describes the same scan. The checked examples run on CoCo 1 and CoCo 2
-only. The policies are original adaptations for all three machines.
+manual describes the same scan. The keyboard-controls check runs on all three
+machines. The policies are original adaptations for all three machines.
 
 ## Read the keyboard matrix
 
@@ -166,10 +166,12 @@ advice above:
 
 `uv run python scripts/coco.py check examples/keyboard-controls` plays a key
 script through the pinned instrumented XRoar's keyboard matrix and PIA to the
-6809 scanner, on CoCo 1 (`cocous`) and CoCo 2 (`coco2bus`). It compares 16
-update records with the model. The build without keys must stay idle.
-Integration tests in `scripts/coco_spec.py` break the scanner four ways: a
-wrong column, a DDR left selected, a held-fire count and a stale history.
+6809 scanner, on CoCo 1 (`cocous`), CoCo 2 (`coco2bus`) and CoCo 3
+(`coco3`). It compares 16 update records with the model. The build without
+keys must stay idle. Integration tests in `scripts/coco_spec.py` break the
+scanner four ways: a wrong column, a DDR left selected, a held-fire count and
+a stale history. On CoCo 3 the DDR fault stops the program instead, because
+BASIC leaves the field-sync interrupt on there (measured in XRoar).
 
 Collect-room's `journey` variant plays 95 scans with arrows, walls, a locked
 exit and restarts. Its check compares memory, the rendered frame and the
@@ -177,7 +179,8 @@ mixer output at each scan. Integration tests break its scanner three ways: a
 wrong column, a stale history and a held Space at startup.
 
 Both examples deliver keys through XRoar's API. They are not evidence for host
-key events, physical keys, switch bounce, joystick buttons or CoCo 3. The
+key events, physical keys, switch bounce or joystick buttons. Both examples
+play their scripts on CoCo 1, 2 and 3. The
 A+B+I probe and most chords are not tested.
 
 ## Unresolved source conflicts

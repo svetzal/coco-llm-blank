@@ -6,8 +6,8 @@ makes them. The [graphics guide](graphics.md) covers modes, pixel packing and
 the converter, `scripts/graphics.py`. Use [moving objects](moving-objects.md)
 for drawing over scenery and [animation](animation.md) for frame storage.
 
-We measured the method on CoCo 1 and CoCo 2 in RG6, in the tile-room and
-collect-room examples. The two magazine sources are CoCo 3 articles. We read
+We measured the method in RG6, in the tile-room and collect-room examples.
+Tile-room runs on CoCo 1, CoCo 2 and CoCo 3. The two magazine sources are CoCo 3 articles. We read
 them but did not run them.
 
 ## Keep art, pictures and scene state apart
@@ -160,8 +160,9 @@ results from the articles.
 ## What the examples check
 
 `uv run python scripts/coco.py check examples/tile-room --video` converts
-`tiles.png`, assembles, and runs 41 moves on CoCo 1 with the pinned
-instrumented XRoar. At the start and after each move, it compares all 6,144
+`tiles.png`, assembles, and runs 41 moves on CoCo 1, CoCo 2 and CoCo 3 with
+the pinned instrumented XRoar. The same picture bytes show on each machine.
+Only the rendered colours differ on the CoCo 3. At the start and after each move, it compares all 6,144
 screen bytes and the rendered frame with the model in `expected.py`.
 Integration tests in `scripts/coco_spec.py` cause a changed pixel, a missing
 cell and 16×16 pictures. Each one must fail.
@@ -185,7 +186,7 @@ and the consumer.
 
 Nothing checks text and palette sections in one file, banked storage, mapping
 restore after an error, disk or tape loading, or compression. Nothing checks
-CoCo 3 pictures, PAL, T1 VDGs or physical hardware.
+pictures for the CoCo 3 GIME graphics modes, PAL or physical hardware.
 
 ## Sources
 

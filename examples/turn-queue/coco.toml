@@ -2,8 +2,25 @@
 source = "main.asm"
 prepare = "prepare.py"   # writes script.inc from turns.txt into the build folder
 
-# NTSC CoCo 3, 128 KiB, 6809, GIME 1986. The program sets no display mode and
-# writes no hardware register.
+# NTSC machines. The program sets no display mode and writes no hardware
+# register, so the VDG choice does not matter here. The first target is the
+# default.
+[targets.coco1]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+ram_kib = 32
+basic = "bas11.rom"
+
+[targets.coco2]
+machine = "coco2bus"
+cpu = "6809"
+tv = "ntsc"
+ram_kib = 32
+basic = "bas12.rom"
+
+# CoCo 3, 128 KiB, GIME 1986. The snapshot is physical RAM: expected.py adds
+# the offset of BASIC's map.
 [targets.coco3]
 firmware = "coco3"
 machine = "coco3"

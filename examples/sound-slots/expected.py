@@ -12,10 +12,14 @@ import numpy as np
 SAMPLES_PER_BLOCK = 256
 BLOCKS_PER_NOTE = 16
 LOW_STEP, HIGH_STEP = 0x0800, 0x1000
-# The DAC is $FF20 bits 7..2 (Tandy, Technical Reference Manual, PDF 14).
+# The DAC is $FF20 bits 7..2 (Tandy, Technical Reference Manual, PDF 14; CoCo 3
+# Service Manual, PDF 10).
 # Sawtooth: phase bits 15..10. Square: phase bit 15 only.
 WAVE_MASK = {"": 0xFC, "square": 0x80}
 # The CPU clock is 14.31818 MHz / 16 (Tandy, Technical Reference Manual, PDF 26).
+# The CoCo 3 gives the slow rate as 0.89 MHz, rounded (CoCo 3 Service Manual,
+# PDF 31), and BASIC leaves it at that rate (Tepolt, PDF 56 step 14 and PDF 62).
+# The same model applies to every target; the tolerance covers the rounding.
 CPU_HZ = 14_318_180 / 16
 # The sample loop takes 41 cycles (Leventhal, Appendix C, PDF 553-555):
 # LDD 6, ADDD 7, STD 6, ANDA # 2, ORA 5, STA 5, DEC 7, BNE 3, all extended.

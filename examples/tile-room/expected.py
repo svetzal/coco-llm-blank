@@ -2,10 +2,12 @@
 
 Written from the room drawing, the movement rules, the move script and text
 drawings of the pictures, not from the assembly, tiles.png or the converted
-bytes. Both redraw methods must show the same picture at every frame.
+bytes. Both redraw methods must show the same picture at every frame, on every
+target. Only the rendered colours differ between the CoCo 1 and 2 and the CoCo 3.
 """
 
 import numpy as np
+from graphics import MODES, XROAR, XROAR_COCO3, palette_rgb
 
 # The room: floor ".", wall "#", collectible "*", exit "E". The actor starts
 # at column 0, row 0. Walls and the room edge refuse a move.
@@ -58,10 +60,17 @@ ART = {
     ),
 }
 WIDTH, HEIGHT, CELL = 256, 192, 8
-# RG6 with colour set 0: black and green. RGB values are the pinned XRoar's
-# renderer output, as in examples/first-screen, not a monitor.
-COLOURS = np.array([(0, 31, 0), (46, 188, 36)], dtype=np.uint8)
+# RG6 with colour set 0: code 0 is black and code 1 is green (Inman PDF 106-107).
+# RGB values are XRoar's renderer output, measured in examples/palette-swatches, not
+# a monitor. On the CoCo 3 each code selects a palette register that BASIC loads
+# (Tepolt, Assembly Language Programming for the CoCo3, PDF 46 and 57), and XRoar
+# shows other RGB values.
+COLOURS = {
+    target: palette_rgb(MODES["RG6"], 0, palette)
+    for target, palette in {"coco1": XROAR, "coco2": XROAR, "coco3": XROAR_COCO3}.items()
+}
 # coco.py's capture: two samples per RG6 pixel, one row per scan line.
+# Measured in XRoar: the CoCo 3 capture has the same size and position.
 SAMPLES_PER_PIXEL = 2
 
 
@@ -102,7 +111,7 @@ def expected_screen(frame: int, variant: str) -> bytes:
     return bytes(result)
 
 
-def expected_frame(frame: int, variant: str) -> np.ndarray:
-    """The rendered 512x192 picture: each pixel spans two samples."""
+def expected_frame(frame: int, variant: str, target: str) -> np.ndarray:
+    """The rendered 512x192 picture in the target's colours: each pixel spans two samples."""
     codes = np.array(pixels(frame), dtype=np.uint8)
-    return COLOURS[np.repeat(codes, SAMPLES_PER_PIXEL, axis=1)]
+    return COLOURS[target][np.repeat(codes, SAMPLES_PER_PIXEL, axis=1)]

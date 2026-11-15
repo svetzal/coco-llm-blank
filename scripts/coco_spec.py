@@ -993,8 +993,8 @@ class DescribeExamplesInXRoar:
 
     @pytest.fixture
     def copy(self, tmp_path: Path) -> Path:
-        if not native_ready("coco1"):
-            pytest.skip("Native tools or CoCo 1 firmware are not installed")
+        if not native_ready(*firmware_profiles(ROOT / "examples/first-screen")):
+            pytest.skip("Native tools or first-screen firmware are not installed")
         directory = tmp_path / "first-screen-copy"
         shutil.copytree(ROOT / "examples/first-screen", directory)
         return directory
@@ -1043,7 +1043,7 @@ class DescribeExamplesInXRoar:
         machine = re.search(r"^machine cocous\n((?:[ \t].*\n)*)", printed, re.MULTILINE)
         assert machine and "tv-type ntsc" in machine.group(1)
 
-    @pytest.mark.parametrize("target", ["coco3"])
+    @pytest.mark.parametrize("target", ["coco1"])
     @pytest.mark.parametrize(
         "control,step",
         [
@@ -1055,15 +1055,15 @@ class DescribeExamplesInXRoar:
         ],
     )
     def should_reject_each_broken_turn_queue(self, target: str, control: str, step: int) -> None:
-        if not native_ready("coco3"):
-            pytest.skip("Native tools or CoCo 3 firmware are not installed")
+        if not native_ready(target):
+            pytest.skip(f"Native tools or {target} firmware are not installed")
         example = ROOT / "examples/turn-queue"
         project = coco.load_project(example)
         built = coco.build(project, Host(), extra_defines=(control,))
         evidence = coco.capture(project, Host(), built, target, 1)
 
         with pytest.raises(ValueError, match=f"First, queue-lifecycle step {step}:"):
-            coco.load_expected(example).verify_ram(evidence.ram, built.symbols, 1)
+            coco.load_expected(example).verify_ram(evidence.ram, built.symbols, 1, target)
 
 
 class DescribeFirmwareBoundary:
@@ -1133,8 +1133,8 @@ class DescribeFirmwareBoundary:
 class DescribeEquipmentInXRoar:
     @pytest.fixture
     def first_screen(self, tmp_path: Path) -> Path:
-        if not instrumented_ready("coco1"):
-            pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
+        if not instrumented_ready(*firmware_profiles(ROOT / "examples/first-screen")):
+            pytest.skip("Native tools, first-screen firmware or instrumented tools are missing")
         directory = tmp_path / "first-screen-copy"
         shutil.copytree(ROOT / "examples/first-screen", directory)
         return directory
@@ -1271,7 +1271,7 @@ class DescribeEquipmentInXRoar:
         with pytest.raises(ProjectError, match="Frame 15: .* screen bytes differ"):
             coco.check_variant(project, Host(), model, "coco1", "journey", equipment)
 
-    @pytest.mark.parametrize("target", ["coco1", "coco2"])
+    @pytest.mark.parametrize("target", ["coco1", "coco2", "coco3"])
     @pytest.mark.parametrize(
         "control,message",
         [
@@ -1284,8 +1284,8 @@ class DescribeEquipmentInXRoar:
     def should_reject_each_broken_collect_room_build(
         self, target: str, control: str, message: str
     ) -> None:
-        if not instrumented_ready("coco1", "coco2"):
-            pytest.skip("Native tools, CoCo 1/2 firmware or instrumented build tools are missing")
+        if not instrumented_ready("coco1", "coco2", "coco3"):
+            pytest.skip("Native tools, CoCo 1/2/3 firmware or instrumented build tools are missing")
         example = ROOT / "examples/collect-room"
         project = coco.load_project(example)
         variants = {"journey": coco.Variant(defines=(control,), keys="journey.txt")}
@@ -1321,11 +1321,11 @@ class DescribeEquipmentInXRoar:
 
     @pytest.fixture
     def keyboard_controls(self) -> Path:
-        if not instrumented_ready("coco1", "coco2"):
-            pytest.skip("Native tools, CoCo 1/2 firmware or instrumented build tools are missing")
+        if not instrumented_ready("coco1", "coco2", "coco3"):
+            pytest.skip("Native tools, CoCo 1/2/3 firmware or instrumented build tools are missing")
         return ROOT / "examples/keyboard-controls"
 
-    @pytest.mark.parametrize("target", ["coco1", "coco2"])
+    @pytest.mark.parametrize("target", ["coco1", "coco2", "coco3"])
     @pytest.mark.parametrize(
         "control,update",
         [("WRONG_COLUMN", 4), ("WRONG_SELECT", 1), ("HELD_FIRE", 1), ("STALE_HISTORY", 6)],
@@ -1340,14 +1340,18 @@ class DescribeEquipmentInXRoar:
         )
         equipment = coco.equipment_for(broken, "keys")
         model = coco.load_expected(keyboard_controls)
+        # CoCo 3 BASIC leaves the field-sync IRQ on; with the DDR selected the
+        # handler cannot clear the flag, so the program never finishes.
+        hangs = (target, control) == ("coco3", "WRONG_SELECT")
+        failure = "did not reach 'finished'" if hangs else f"Update {update} "
 
-        with pytest.raises(ValueError, match=f"Update {update} "):
+        with pytest.raises(ValueError, match=failure):
             coco.check_variant(broken, Host(), model, target, "keys", equipment)
 
     @pytest.fixture
     def sound_slots(self, tmp_path: Path) -> Path:
-        if not instrumented_ready("coco1", "coco2"):
-            pytest.skip("Native tools, CoCo 1/2 firmware or instrumented build tools are missing")
+        if not instrumented_ready("coco1", "coco2", "coco3"):
+            pytest.skip("Native tools, CoCo firmware or instrumented build tools are missing")
         directory = tmp_path / "sound-slots-copy"
         shutil.copytree(ROOT / "examples/sound-slots", directory)
         settings = directory / "coco.toml"

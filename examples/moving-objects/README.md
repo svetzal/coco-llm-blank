@@ -13,6 +13,11 @@ tearing. The [page flip](../page-flip/README.md) example draws this scene into
 a hidden screen. The example does not draw transparent pixels, clip at an
 edge, place objects inside a byte, detect collisions or time the frames.
 
+The same program runs on a CoCo 1, a CoCo 2 and a CoCo 3. The screen bytes
+and the restore are the same on each machine. On a CoCo 3, the RGB values of
+black and green are different. [See and check each method](#see-and-check-each-method)
+tells what is different.
+
 ## Choose a restore method
 
 The scenery buffer is the default. Use it when the scenery has a pattern and
@@ -123,8 +128,18 @@ uv run python scripts/coco.py run examples/moving-objects --variant save     # s
 uv run python scripts/coco.py run examples/moving-objects --variant redraw   # redraw
 ```
 
-All three methods show the same picture. To check all three methods, paste
-this line:
+To see a method on the CoCo 3, add `--target coco3`:
+
+```sh
+uv run python scripts/coco.py run examples/moving-objects --target coco3                    # scenery buffer
+uv run python scripts/coco.py run examples/moving-objects --target coco3 --variant save     # save under
+uv run python scripts/coco.py run examples/moving-objects --target coco3 --variant redraw   # redraw
+```
+
+Use `--target coco2` to see a method on the CoCo 2.
+
+All three methods show the same picture. To check all three methods on all
+three machines, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/moving-objects --video
@@ -156,10 +171,30 @@ The frames include these cases:
 A save under restore in the wrong order fails at frame 17. A scenery buffer
 restore of only one object fails at frame 2.
 
-The check uses the CoCo 1 target in [coco.toml](coco.toml): NTSC, 32 KiB,
-normal clock, the non-T1 MC6847 and Color BASIC 1.1. It does not prove the
-result on a television, a physical CoCo, PAL, the MC6847T1 or the CoCo 3. It
-does not measure the time of each method.
+The check runs each method on three targets in [coco.toml](coco.toml). Each
+target has NTSC and a normal-clock 6809:
+
+- `coco1`: a CoCo 1 with Color BASIC 1.1, 32 KiB and the non-T1 MC6847.
+- `coco2`: a CoCo 2B (XRoar `coco2bus`) with Color BASIC 1.2, 32 KiB and the
+  MC6847T1 that this XRoar profile selects.
+- `coco3`: a CoCo 3 with Super Extended Color BASIC, 128 KiB and the 1986
+  GIME.
+
+These items are different on the CoCo 3. The program does not change:
+
+- The same `$FF22` and SAM values select G6R, the CoCo 3 name of RG6. Each bit
+  selects palette register 8 or 9, and BASIC loads these registers at reset
+  (Tepolt PDF 46 and 57). The program keeps them. The model uses the
+  `xroar-coco3` palette of `scripts/graphics.py`: black is 20, 20, 20 and
+  green is 71, 145, 5. These values are measured in XRoar.
+- The snapshot holds physical RAM. Under the BASIC map, the screen at `$0400`
+  is at snapshot offset `$10400` (Tepolt PDF 58). The `screen` line of the
+  `coco3` target sets this offset. The scenery buffer at `$4400` is at
+  `$14400`.
+- In XRoar, the captured frame has the same size and position (measured).
+
+The check does not prove the result on a television, a physical CoCo or PAL.
+It does not measure the time of each method.
 
 ## Sources
 
@@ -180,5 +215,10 @@ Read these pages before you change the screen setup or the bit order. Use
 - Tandy, *Color Computer Technical Reference Manual*, PDF 14–15: the `$FF22`
   bits, and the SAM offset and mode bits. PDF 31: RG6 uses SAM V=`110` and
   `$FF22` bits 7 to 4 `1111`.
+
+- Laurence A. Tepolt, *Assembly Language Programming for the CoCo3*, PDF 46:
+  on a CoCo 3, the same `$FF22` and SAM values select G6R. Each bit selects
+  palette register 8 or 9 with colour set 0. PDF 57, step 44: the values that
+  BASIC loads into the palette registers. PDF 58: the CoCo 3 memory map.
 
 The restore methods, the scene and the bounce rule are our own design.

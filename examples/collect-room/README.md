@@ -10,8 +10,34 @@ The example does not show the keyboard scan, the room drawing or the sound.
 Those are context. It does not show pause, menus, a time limit, interrupt
 input or key repeat.
 
-The context is a whole small game for CoCo 1 and CoCo 2B. It has an 8×6 room
-in RG6, two stars to collect, an exit, phase messages and short DAC effects.
+The context is a whole small game for CoCo 1, CoCo 2B and CoCo 3. It has an
+8×6 room in RG6, two stars to collect, an exit, phase messages and short DAC
+effects.
+
+## Machines
+
+The same program runs on the three targets, with no extra setup:
+
+| Target | Machine | What is different |
+| --- | --- | --- |
+| `coco1` | CoCo 1, 32 KiB, Color BASIC 1.1 | Nothing |
+| `coco2` | CoCo 2B, 32 KiB, Color BASIC 1.2 | Nothing |
+| `coco3` | CoCo 3, 128 KiB, GIME 1986 | The colours on the screen and the place of RAM in the snapshot |
+
+On the CoCo 3, these items are the same as on the CoCo 1:
+
+- The keyboard position of each arrow and Space.
+- The PIA bits for the keyboard, the DAC and the sound selection.
+- The RG6 mode setup.
+
+The [Sources](#sources) give the pages.
+
+On the CoCo 3, each colour code selects a palette register. The program
+keeps the values that BASIC loads into them. XRoar shows other green and
+black values than on the CoCo 1 (measured in XRoar, not a monitor).
+
+The CoCo 3 RAM snapshot holds the physical memory. Logical address `$xxxx`
+is at offset `0x10000 + $xxxx` in it. `expected.py` adds this offset.
 
 ## Choose what each phase accepts
 
@@ -92,7 +118,7 @@ sets. The `room` label is data. The check fails if the CPU runs it.
 ## Play and check the game
 
 Open a terminal in the starter folder. Copy one line and paste it to play on
-that target. Press and release Space, then use the arrows. Close the window
+that machine. Press and release Space, then use the arrows. Close the window
 to stop.
 
 ```sh
@@ -100,12 +126,15 @@ to stop.
 uv run python scripts/coco.py run examples/collect-room --target coco1
 # CoCo 2B
 uv run python scripts/coco.py run examples/collect-room --target coco2
+# CoCo 3
+uv run python scripts/coco.py run examples/collect-room --target coco3
 ```
 
-The CoCo 2B target needs its own firmware. If it is missing, run
-`uv run python scripts/setup.py --roms-only --target coco2`.
+The CoCo 2B and CoCo 3 targets need their own firmware. If it is missing,
+run `uv run python scripts/setup.py --roms-only --target coco2`, or the same
+line with `--target coco3`.
 
-To check both builds on both targets, paste this line:
+To check both builds on all three targets, paste this line:
 
 ```sh
 uv run python scripts/coco.py check examples/collect-room
@@ -143,7 +172,7 @@ The journey includes these cases:
 The model in `expected.py` draws each pixel from the art rows and the letters.
 It does not read the tables in `main.asm`.
 
-Negative controls in `scripts/coco_spec.py` must fail on both targets:
+Negative controls in `scripts/coco_spec.py` must fail on all three targets:
 
 | Define | Fault |
 | --- | --- |
@@ -179,5 +208,22 @@ you change the context.
 - Tandy, *Color Computer 2 NTSC Service Manual (26-3134 & 26-3136)*, PDF 36,
   figure 4-10: Up, Down, Left, Right and Space are row PA3 at columns PB3 to
   PB7.
+
+- Tandy, *Color Computer 3 Service Manual*:
+  - PDF 9 and 10: the same bits at `$FF00` to `$FF03` and `$FF20` to `$FF23`
+    as on the CoCo 1.
+  - PDF 40, figure 5-9: Up, Down, Left, Right and Space are row PA3 at
+    columns PB3 to PB7.
+  - PDF 43: Sel B 0 and Sel A 0 select the DAC. SNDEN must be high.
+
+- Tepolt, *Assembly Language Programming for the CoCo3*:
+  - PDF 46: in the VDG modes, each colour code selects a palette register.
+  - PDF 56, step 14: the reset clears all SAM registers. PDF 62: the
+    cleared rate is the low CPU speed. So the effects play in the same pitch
+    bands as on the CoCo 1. In XRoar, each pitch is within 2% of the CoCo 1
+    pitch (measured).
+  - PDF 57, step 44: BASIC loads the palette registers.
+  - PDF 58: the memory map. Under BASIC's map, logical `$0000` is physical
+    `$10000` on a 128 KiB machine.
 
 The phase rules, the game, the art and the effects are our own design.

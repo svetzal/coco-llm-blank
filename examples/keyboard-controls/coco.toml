@@ -3,6 +3,7 @@ source = "main.asm"
 
 # NTSC machines with explicit 6809, keyboard layout and firmware. The program
 # does not set a display mode, so the VDG choice does not matter here.
+# Each target uses the keyboard layout of its own machine.
 [targets.coco1]
 machine = "cocous"
 cpu = "6809"
@@ -18,6 +19,17 @@ keyboard = "coco"
 tv = "ntsc"
 ram_kib = 32
 basic = "bas12.rom"
+
+# The CoCo 3 RAM snapshot is physical memory; expected.py adds the offset.
+[targets.coco3]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+keyboard = "coco3"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
 
 [memory]
 at = { start = 0x3000 }

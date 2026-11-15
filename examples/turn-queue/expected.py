@@ -14,11 +14,16 @@ PHASES = ("complete", "commands", "finished")
 STATUSES = ("accepted", "rejected")
 WORLD_BYTES = 17
 RECORD_BYTES = WORLD_BYTES + 2
-RAM_SIZE = 128 * 1024
-# BASIC's reset sets the executive map to physical pages $38-$3F, the top
-# 64 KiB of a 128 KiB CoCo 3 (Tepolt, Assembly Language Programming for the
-# CoCo3, PDF 56 step 6, PDF 57 step 31, PDF 58 Fig. 7-2).
-EXECUTIVE = 0x10000
+# Where CPU address $0000 is in each target's snapshot, and the snapshot size.
+# CoCo 1 and CoCo 2: 32 KiB of RAM at $0000-$7FFF (Color Computer Technical
+# Reference Manual, PDF 12). CoCo 3: BASIC's reset sets the executive map to
+# physical pages $38-$3F, the top 64 KiB of 128 KiB (Tepolt, Assembly Language
+# Programming for the CoCo3, PDF 56 step 6, PDF 57 step 31, PDF 58 Fig. 7-2).
+LAYOUTS = {
+    "coco1": (32 * 1024, 0),
+    "coco2": (32 * 1024, 0),
+    "coco3": (128 * 1024, 0x10000),
+}
 
 
 class Step(NamedTuple):
@@ -96,11 +101,12 @@ def checkpoints(script: list[Case]) -> list[tuple[str, bytes]]:
     ]
 
 
-def verify_ram(ram: bytes, symbols: dict[str, int], frame: int) -> None:
+def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, target: str) -> None:
     """Every record, in order, against the hand-written outcome."""
-    if len(ram) != RAM_SIZE:
-        raise ValueError("Missing or truncated RAM snapshot.")
-    memory = ram[-EXECUTIVE:]
+    size, offset = LAYOUTS[target]
+    if len(ram) != size:
+        raise ValueError(f"Missing or truncated RAM snapshot: {len(ram)} bytes, not {size}.")
+    memory = ram[offset:]
     expected = checkpoints(cases())
     start = symbols["results"]
     differ = []

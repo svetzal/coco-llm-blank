@@ -20,6 +20,19 @@ vdg = "6847"
 ram_kib = 64
 basic = "bas12.rom"
 
+# NTSC CoCo 3, 128 KiB, GIME 1986. The same PIA bits select the DAC
+# (Color Computer 3 Service Manual, PDF 9-10 and 42-43). BASIC leaves the
+# 6809 at the slow rate (Tepolt, PDF 56 step 14 and PDF 62).
+[targets.coco3]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+screen = 0x10400         # logical $0400 under BASIC's map (Tepolt PDF 58)
+
 [memory]
 at = { start = 0x3000 }
 

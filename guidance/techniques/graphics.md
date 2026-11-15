@@ -63,7 +63,9 @@ To set the mode, write the SAM display bits and the PIA bits at `$FF22`.
 - `$FF22` bit 3: the colour-set select (CSS).
 
 [First-screen](../../examples/first-screen/README.md) sets up each of the eight
-modes and gives the values for each mode. Copy the setup steps from it.
+modes and gives the values for each mode. Copy the setup steps from it. The
+same steps work on the CoCo 1, CoCo 2 and CoCo 3. On the CoCo 3, its README
+records an open question about RG1, RG2 and RG3.
 
 ## Know the colours
 

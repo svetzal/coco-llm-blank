@@ -1,4 +1,4 @@
-* Keep turn-based game state in a journey queue (CoCo 3, RAM only).
+* Keep turn-based game state in a journey queue (CoCo 1, 2 and 3; RAM only).
 *
 * A command changes the world only after every check passes. A turn lands
 * each due journey once, in slot order. A phase byte and a turn limit decide
@@ -23,6 +23,11 @@
 *     sets C.
 *   The same book, PDF 543: BHI branches when C and Z are both 0, BHS when
 *     C is 0.
+*   Color Computer Technical Reference Manual, PDF 12: a 32K machine has RAM
+*     at $0000-$7FFF. Code at $3000, the world at $4100 and the records at
+*     $5000-$5343 fit in it.
+*   Color Basic Unravelled II, PDF 27 (Color BASIC 1.2): at a cold start
+*     BASIC puts its stack 200 bytes below the top of RAM, above the records.
 
         org $3000
 * --- CONTEXT: run each case of the script and record each step.

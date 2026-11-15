@@ -1,4 +1,4 @@
-* Draw a byte-aligned object over scenery with a software mask (CoCo 1/2).
+* Draw a byte-aligned object over scenery with a software mask (CoCo 1-3).
 *
 * Each screen byte under the object becomes (screen AND mask) OR ink.
 * A mask bit of 1 keeps the scenery pixel. A mask bit of 0 replaces it with
@@ -22,6 +22,9 @@
 *   Motorola, MC6847 datasheet, PDF 19 Table 3: bit 7 is the leftmost pixel.
 *   Tandy, Color Computer Technical Reference Manual, PDF 14-15 and 31:
 *     SAM offset and mode bits, $FF22 bits; RG6 is SAM V=110, $FF22 $F0.
+*   Tepolt, Assembly Language Programming for the CoCo3, PDF 46: on a CoCo 3
+*     the same $FF22 and SAM values select G6R (RG6); each bit selects
+*     palette register 8 or 9 (colour set 0), which BASIC loads (PDF 57).
 
         org $3000
 * --- CONTEXT: show RG6 at $0400 with colour set 0, as in first-screen.
