@@ -10,6 +10,7 @@ frames at $0400. At the checkpoint for frame N the shown screen holds frame N an
 other screen still holds frame N - 1 (or only the arena, at frame 1).
 """
 
+import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -34,7 +35,17 @@ MOVE = {"E": (0, -1), "C": (0, 1), "S": (-1, 0), "F": (1, 0)}
 SHOOT = {"I": (0, -1), ",": (0, 1), "J": (-1, 0), "L": (1, 0)}
 # The scanner's labels in RAM that the check compares.
 STATE_FIELDS = ("px", "py", "delay")
-SLOT_SIZE = 9  # on, x, y, vx, vy, sprite (2), maxx, maxy
+SLOT_SIZE = 11  # on, x, y, vx, vy, sprite (2), maxx, maxy, w, h
+# Enemies (README.md "Levels and enemies").
+ENEMY_SLOTS, ENEMY_SIZE = 24, 4  # type, x, y, tick
+ENEMY_W, ENEMY_H = 6, 10
+GRUNT, HUNTER = 1, 2
+PERIOD = {GRUNT: 4, HUNTER: 2}
+SPRITE = {GRUNT: "grunt", HUNTER: "hunter"}
+SEED = 0xACE1
+START_LEVEL = {"": 1, "journey": 1, "hunters": 10}
+SCRIPTS = {"journey": "journey.txt", "hunters": "hunters.txt"}
+SAFE_X, SAFE_Y = 28, 45
 
 
 def sprites() -> dict[str, list[str]]:
@@ -65,11 +76,121 @@ class Shot:
 
 
 @dataclass
+class Enemy:
+    kind: int
+    x: int
+    y: int
+    tick: int
+
+
+@dataclass
 class Game:
     x: int = START[0]
     y: int = START[1]
     delay: int = 0
     slots: list[Shot | None] = field(default_factory=lambda: [None] * SHOT_SLOTS)
+    level: int = 1
+    seed: int = SEED
+    hunter_wait: int = 0
+    hunter_timer: int = 0
+    enemies: list[Enemy | None] = field(default_factory=lambda: [None] * ENEMY_SLOTS)
+
+    def rand_step(self) -> None:
+        """16-bit shift right; a 1 bit out gives exclusive-or with $B400."""
+        out = self.seed & 1
+        self.seed >>= 1
+        if out:
+            self.seed ^= 0xB400
+
+    def rand(self) -> int:
+        for _ in range(8):
+            self.rand_step()
+        return self.seed & 0xFF
+
+    def random_x(self) -> int:
+        while (r := self.rand() & 127) > END_X - ENEMY_W - MIN_X:
+            pass
+        return MIN_X + r
+
+    def random_y(self) -> int:
+        while (r := self.rand()) > END_Y - ENEMY_H - MIN_Y:
+            pass
+        return MIN_Y + r
+
+
+def start_level(game: Game) -> None:
+    game.x, game.y = START
+    game.delay = 0
+    game.slots = [None] * SHOT_SLOTS
+    game.enemies = [None] * ENEMY_SLOTS
+    game.hunter_wait = game.hunter_timer = max(90, 660 - 60 * game.level)
+    for slot in range(min(20, 4 + 2 * game.level)):
+        while True:
+            x = game.random_x()
+            y = game.random_y()
+            if not (abs(x - START[0]) <= SAFE_X and abs(y - START[1]) <= SAFE_Y):
+                break
+        game.enemies[slot] = Enemy(GRUNT, x, y, slot % 4 + 1)
+
+
+def new_game(variant: str) -> Game:
+    game = Game(level=START_LEVEL[variant])
+    start_level(game)
+    return game
+
+
+def toward(value: int, target: int, most: int) -> int:
+    return value + max(-most, min(most, target - value))
+
+
+def move_enemies(game: Game) -> None:
+    for enemy in game.enemies:
+        if enemy:
+            enemy.tick -= 1
+            if enemy.tick == 0:
+                enemy.tick = PERIOD[enemy.kind]
+                enemy.x = toward(enemy.x, game.x, 1)
+                enemy.y = toward(enemy.y, game.y, 2)
+
+
+def spawn_hunter(game: Game) -> None:
+    if game.hunter_timer > 0:
+        game.hunter_timer -= 1
+    if game.hunter_timer > 0 or None not in game.enemies:
+        return
+    side = game.rand() & 3
+    if side < 2:
+        x, y = game.random_x(), (MIN_Y, END_Y - ENEMY_H)[side]
+    else:
+        y = game.random_y()
+        x = (MIN_X, END_X - ENEMY_W)[side - 2]
+    if abs(x - game.x) < 20 and abs(y - game.y) < 30:
+        return
+    game.enemies[game.enemies.index(None)] = Enemy(HUNTER, x, y, PERIOD[HUNTER])
+    game.hunter_timer = game.hunter_wait
+
+
+def overlap(ax: int, ay: int, aw: int, ah: int, bx: int, by: int, bw: int, bh: int) -> bool:
+    return ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
+
+
+def hit_enemies(game: Game) -> None:
+    for i, shot in enumerate(game.slots):
+        if not shot:
+            continue
+        w, h = size(shot.name)
+        for j, enemy in enumerate(game.enemies):
+            if enemy and overlap(shot.x, shot.y, w, h, enemy.x, enemy.y, ENEMY_W, ENEMY_H):
+                game.enemies[j] = None
+                game.slots[i] = None
+                break
+
+
+def touched(game: Game) -> bool:
+    return any(
+        e and overlap(e.x, e.y, ENEMY_W, ENEMY_H, game.x, game.y, PLAYER_W, PLAYER_H)
+        for e in game.enemies
+    )
 
 
 def direction(keys: str, table: dict[str, tuple[int, int]]) -> tuple[int, int]:
@@ -98,6 +219,7 @@ def inside(x: int, y: int, name: str) -> bool:
 
 def step(game: Game, keys: str) -> None:
     """One frame of the rules in README.md."""
+    game.rand_step()
     dx, dy = direction(keys, MOVE)
     game.x = min(max(game.x + dx, MIN_X), END_X - PLAYER_W)
     game.y = min(max(game.y + 2 * dy, MIN_Y), END_Y - PLAYER_H)
@@ -107,6 +229,18 @@ def step(game: Game, keys: str) -> None:
             shot.y += shot.vy
             if not inside(shot.x, shot.y, shot.name):
                 game.slots[i] = None
+    fire(game, keys)
+    move_enemies(game)
+    spawn_hunter(game)
+    hit_enemies(game)
+    if touched(game):
+        start_level(game)
+    elif not any(game.enemies):
+        game.level += 1
+        start_level(game)
+
+
+def fire(game: Game, keys: str) -> None:
     if game.delay > 0:
         game.delay -= 1
         return
@@ -120,10 +254,10 @@ def step(game: Game, keys: str) -> None:
     game.delay = SHOT_DELAY
 
 
-def journey() -> list[tuple[str, tuple[int, int] | None]]:
+def journey(name: str = "journey.txt") -> list[tuple[str, tuple[int, int] | None]]:
     """Held keys for each frame, and the player position where the script gives one."""
     steps = []
-    for line in (HERE / "journey.txt").read_text().splitlines():
+    for line in (HERE / name).read_text().splitlines():
         parts = line.split("#")[0].split()
         if parts:
             keys = "" if parts[0] == "-" else parts[0]
@@ -133,9 +267,9 @@ def journey() -> list[tuple[str, tuple[int, int] | None]]:
 
 def games(frames: int, variant: str) -> list[Game]:
     """The state after each frame 0..frames. Frame 0 is the start."""
-    script = journey() if variant == "journey" else []
-    game = Game()
-    result = [Game(game.x, game.y)]
+    script = journey(SCRIPTS[variant]) if variant in SCRIPTS else []
+    game = new_game(variant)
+    result = [copy.deepcopy(game)]
     for n in range(frames):
         keys, position = script[n] if n < len(script) else ("", None)
         step(game, keys)
@@ -144,9 +278,7 @@ def games(frames: int, variant: str) -> list[Game]:
                 f"journey.txt line for frame {n + 1} gives {position}, the rules give "
                 f"{(game.x, game.y)}: correct the script or the rules."
             )
-        result.append(
-            Game(game.x, game.y, game.delay, [Shot(**vars(s)) if s else None for s in game.slots])
-        )
+        result.append(copy.deepcopy(game))
     return result
 
 
@@ -165,12 +297,15 @@ def stamp(codes: np.ndarray, name: str, left: int, top: int) -> None:
 
 
 def picture(game: Game | None) -> np.ndarray:
-    """Pixel codes: the arena, then the shots in slot order, then the player."""
+    """Pixel codes: the arena, then the shots and the enemies in slot order, then the player."""
     codes = arena()
     if game is not None:
         for shot in game.slots:
             if shot:
                 stamp(codes, shot.name, shot.x, shot.y)
+        for enemy in game.enemies:
+            if enemy:
+                stamp(codes, SPRITE[enemy.kind], enemy.x, enemy.y)
         stamp(codes, "player", game.x, game.y)
     return codes
 
@@ -206,6 +341,14 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
             want = (shot.x, shot.y, shot.vx & 0xFF, shot.vy & 0xFF)
             if got != want:
                 raise ValueError(f"Frame {frame}: shot slot {i} is {got}, expected {want}.")
+    if ram[symbols["level"]] != game.level:
+        raise ValueError(f"Frame {frame}: level {ram[symbols['level']]}, expected {game.level}.")
+    for i, enemy in enumerate(game.enemies):
+        base = symbols["enemies"] + i * ENEMY_SIZE
+        got = tuple(ram[base : base + 4]) if ram[base] else None
+        want = (enemy.kind, enemy.x, enemy.y, enemy.tick) if enemy else None
+        if got != want:
+            raise ValueError(f"Frame {frame}: enemy slot {i} is {got}, expected {want}.")
 
 
 def expected_frame(frame: int, variant: str) -> np.ndarray:

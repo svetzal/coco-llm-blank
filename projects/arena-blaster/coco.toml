@@ -33,9 +33,15 @@ video = true
 [variants.journey]
 keys = "journey.txt"
 
+# Starts at level 10, where a hunter comes every 90 frames, and plays
+# hunters.txt. It tests the hunter rules and a full arena of 20 grunts.
+[variants.hunters]
+defines = ["FIRST_LEVEL=10"]
+keys = "hunters.txt"
+
 [check]
 checkpoint = "published"   # reached once for each frame, after the flip
-frames = ["1-170"]       # one checkpoint for each journey.txt line
+frames = ["1-300"]       # covers journey.txt and hunters.txt
 unreachable = "state"      # a data label: executing it is a fault
 screen = 0x0400
 emulated_seconds = 20

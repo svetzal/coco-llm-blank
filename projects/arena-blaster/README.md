@@ -39,10 +39,23 @@ uv run python scripts/coco.py check projects/arena-blaster
 
 The `run` command opens XRoar. Close the window to stop it.
 
+The check runs three builds for 300 frames each. It compares both screens,
+the game state and the rendered picture with `expected.py` at each frame:
+
+- `main`: no keys. The grunts reach the player, and the level starts again.
+- `journey`: the keys in `journey.txt`. They clear levels 1 and 2.
+- `hunters`: starts at level 10 and plays `hunters.txt`. Hunters come at
+  frames 90 and 251, and level 10 is clear at frame 161.
+
 ## Status
 
-Increment 1: the arena, the player, movement and shots. There are no enemies,
-no sound and no score yet.
+Increment 2: levels of enemies. There is no sound, no score and no game over
+yet. When an enemy touches you, the level starts again.
+
+Measured speed in XRoar: on levels 1 and 2, most frames take one field of
+the picture (60 frames each second). With 20 grunts on level 10, most frames
+take two or three fields (30 or 20 frames each second). The game slows down
+when the arena is full, because each step is one frame.
 
 ## Contract
 
@@ -59,7 +72,7 @@ no sound and no score yet.
 - Controls: S, F, E and C move. J, L, I and comma shoot (owner request). Two
   keys give a diagonal, opposite keys cancel, and a held shoot key repeats
   (agent choice).
-- Sound: the six-bit DAC (owner request for audio). Not in increment 1.
+- Sound: the six-bit DAC (owner request for audio). Not yet in the game.
 - Loader: XRoar runs the DECB binary directly (starter default). There is no
   disk image yet.
 
@@ -83,11 +96,43 @@ The CoCo 1 defaults come from
 - Rows 0-11 and 188-191 are blue. They are for the score in a later increment.
 - A red wall is on rows 12 and 187, and on pixel columns 3 and 124.
 - Objects stay inside pixel columns 4-123 and rows 13-186. These are byte
-  columns 1-30, so an erase never touches the wall.
+  columns 1-30. Each shifted copy of a sprite is only as wide as the bytes
+  that its pixels touch, so an erase never touches the wall.
+
+### Levels and enemies
+
+The owner asked for slow enemies that increase in number on each level, and
+for hunters that come more often on higher levels. The numbers are agent
+choices:
+
+| Item | Rule |
+| --- | --- |
+| Grunts (green) | 4 + 2 x level, not more than 20. One step each 4 frames. |
+| Hunters (red) | One step each 2 frames. One comes each 660 - 60 x level frames, not less than 90. |
+| Level 1 | 6 grunts, a hunter each 600 frames |
+| Level 5 | 14 grunts, a hunter each 360 frames |
+| Level 10 | 20 grunts, a hunter each 90 frames |
+
+- An enemy step is 1 pixel across and up to 2 rows down or up, toward the
+  player. Enemies are 6x10 pixels, the same size as the player.
+- There are 24 enemy slots. A hunter needs a free slot.
+- Grunt number N (from 0) makes its first step after (N AND 3) + 1 frames, so
+  the grunts do not all step together.
+- At the start of a level, each grunt goes to a random place. A place with x
+  33-89 and y 50-140 is near the player's start, so the grunt tries again.
+- A hunter goes to a random place on a random side of the arena. If the place
+  is less than 20 pixels across and 30 rows from the player, or no slot is
+  free, it tries again in the next frame.
+- Random numbers: a 16-bit shift register starts at `$ACE1`. One step
+  shifts it right. If a 1 bit falls out, the step does an exclusive OR with
+  `$B400`. The game does one step each frame. A random byte is the low byte
+  after eight more steps. A random x is 4 + (byte AND 127), and tries again
+  above 114. A random y is 13 + byte, and tries again above 164. A random
+  side is byte AND 3: top, bottom, left, right.
 
 ### Rules for each frame
 
-1. Read the keys.
+1. Do one step of the random numbers. Read the keys.
 2. Move the player 1 pixel across and 2 rows down or up. Stop the player at
    the arena edge. The player is 6 pixels wide and 10 rows high. It starts at
    pixel 61, row 95.
@@ -96,9 +141,16 @@ The CoCo 1 defaults come from
 4. If the shoot delay is more than 0, decrease it by 1. If not, and a shoot
    key is held, and a shot slot is free, start a shot from the player. Then
    set the delay to 5.
-5. Erase what this screen showed two frames before. Draw the shots, then the
-   player.
-6. Wait for the end of the picture, then show the new screen.
+5. Move each enemy whose step count reaches 0.
+6. Count down the hunter wait. At 0, try to start a hunter.
+7. A shot that overlaps an enemy removes the shot and the enemy. Each shot
+   removes only the first enemy in slot order.
+8. If an enemy overlaps the player, start the level again. If not, and no
+   enemy is left, start the next level. A new level puts the player back at
+   the start and removes all shots.
+9. Erase what this screen showed two frames before. Draw the shots, the
+   enemies. Draw the player last.
+10. Wait for the end of the picture, then show the new screen.
 
 ### Sources for the hardware facts
 

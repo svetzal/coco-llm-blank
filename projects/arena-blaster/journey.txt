@@ -1,174 +1,185 @@
-# Held keys for each frame, then the player position where it is written by
-# hand from the rules in README.md. Line N is held during the Nth key scan.
+# Held keys for each frame. Line N is held during the Nth key scan.
 # E up, C down, S left, F right; I, comma, J and L shoot; D is not a game key.
-# The player starts at 61 95. It moves 1 pixel across and 2 rows a frame.
+# A number pair after the keys is the player position, written by hand from
+# the rules in README.md. expected.py stops if the rules give another one.
+# Lines 1-6 are written by hand. The other lines are the keys of a simple
+# aim-and-shoot player. In the model it clears level 1 at frame 85 and
+# level 2 at frame 177. The keys are only input: expected.py computes every
+# expected value from the rules.
 -      61 95  idle
 -      61 95
--      61 95
-F      62 95  right
+SF     61 95  opposite keys cancel
+EC     61 95
+D      61 95  wrong key: no move
+D      61 95
+I
+I
+I
+I
+I
+I
+I
+I
+I
+I
+I
+S
+S
+S
+S
+S
+S
+S
+S
+S
+S
+S
+I
+I
+I
+I
+I
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
 F
 F
 F
-F      66 95
-E      66 93  up
+F
+F
+F
+F
+F
+F
+F
+F
+,
+,
+,
+,
+,
+,
+,
+,
+C
+C
+C
+C
+C
+C
+C
+C
+C
+C
+C
+C
+C
+C
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+S
+,
+,
+,
+,
+,
+,
+,
+,
+F
+F
+F
+F
+F
+F
+F
+I
+I
+I
+I
+I
+I
+I
+I
+I
+C
+C
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
+LF
 E
 E
-E      66 87
-SF     66 87  opposite keys cancel
-EC     66 87
-D      66 87  wrong key: no move
-L      66 87  shoot right: first shot at 67 91
-L
-L
-L
-L
-L
-L
-L
-L
-L
-L
-L
-EFIL   67 85  up-right, shoot up-right
-EFIL
-EFIL
-EFIL
-EFIL
-EFIL
-EFIL
-EFIL
-EFIL
-EFIL
-EFIL
-EFIL   78 63
-C,
-C,
-C,
-C,
-C,
-C,
-C,
-C,
-C,
-C,
-C,
-C,     78 87  down, shoot down
-SJ
-SJ
-SJ
-SJ
-SJ
-SJ
-SJ
-SJ
-SJ
-SJ
-SJ
-SJ     66 87  left, shoot left
-CS,J
-CS,J
-CS,J
-CS,J
-CS,J
-CS,J
-CS,J
-CS,J
-CS,J
-CS,J
-CS,J
-CS,J   54 111 down-left, shoot down-left
-ESIJ
-ESIJ
-ESIJ
-ESIJ
-ESIJ
-ESIJ
-ESIJ
-ESIJ
-ESIJ
-ESIJ
-ESIJ
-ESIJ   42 87  up-left, shoot up-left
-CF,L
-CF,L
-CF,L
-CF,L
-CF,L
-CF,L
-CF,L
-CF,L
-CF,L
-CF,L
-CF,L
-CF,L   54 111 down-right, shoot down-right
--      54 111 release
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES     5 13   top wall reached
-ES     4 13   left wall reached
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES
-ES     4 13   held against the corner
-J
-J
-J
-J
-J
--      4 13   a shot at the left wall is removed at once
-
-
-
-
+E
+E
+E
+LF
+LSC
+E
+LSC
+E
+E
+E
+E
+E
+E
+E
+E
+E
+E
+E
+E
+E
+E
+E
+E
+JS
+JS
+JS
+JS
+JS
+JS
+C
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS
+JS

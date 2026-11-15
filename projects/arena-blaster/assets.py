@@ -5,16 +5,18 @@ this file.
 
 CG6 packs four pixels in a byte, leftmost pixel in bits 7 and 6 (MC6847 PDF 19
 Table 3). A sprite at pixel x starts in byte x // 4 at pixel x % 4 of that byte.
-So each sprite gets four copies, one for each shift 0-3. All four copies have the
-same width in bytes: ceil((width + 3) / 4).
+So each sprite gets four copies, one for each shift 0-3. Each copy is as wide as
+the bytes that its pixels touch: ceil((shift + width) / 4). The erase fills the same
+bytes, so it never touches a byte that the sprite does not use, such as the wall.
 
 Each copy is rows x bytes pairs of (mask, picture). The draw keeps the screen bits
 where the mask is 1 and adds the picture: screen = (screen AND mask) OR picture.
 
 Output for a sprite NAME:
 
-    NAME     fcb rows,bytes
-             fdb NAME_0,NAME_1,NAME_2,NAME_3
+    NAME     fcb rows
+             fcb bytes_0
+             fdb NAME_0      (and the same for shifts 1, 2 and 3)
     NAME_0   fcb mask,picture,...
 """
 
@@ -66,10 +68,12 @@ def shifted(rows: list[str], shift: int, nbytes: int) -> bytes:
 def assembly(sprites: dict[str, list[str]]) -> str:
     lines = []
     for name, rows in sprites.items():
-        nbytes = (len(rows[0]) + 3 + 3) // 4
-        lines.append(f"{name} fcb {len(rows)},{nbytes}")
-        lines.append("        fdb " + ",".join(f"{name}_{s}" for s in range(4)))
+        lines.append(f"{name} fcb {len(rows)}")
         for shift in range(4):
+            lines.append(f"        fcb {(shift + len(rows[0]) + 3) // 4}")
+            lines.append(f"        fdb {name}_{shift}")
+        for shift in range(4):
+            nbytes = (shift + len(rows[0]) + 3) // 4
             data = shifted(rows, shift, nbytes)
             lines.append(f"{name}_{shift}")
             lines.extend(
