@@ -16,8 +16,6 @@ SCOPES = {
         ("scripts", "examples"),
         "full integrations, Docling models, native tools/all ROM profiles",
     ),
-    "asset-loading": (("loading",), "native tools, CoCo 1/2 ROMs, headless execution"),
-    "assets": (("prepare",), ""),
     "collect-room-journey": (
         ("experiments/collect-room-journey",),
         "pinned XRoar download and C build, CoCo 1/2 ROMs",

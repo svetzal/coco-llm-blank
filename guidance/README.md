@@ -44,7 +44,6 @@ For practical implementation advice, start with the [technique guides](technique
 - [Legacy CoCo maze and tile research](techniques/research/legacy-tile.md).
 - [Follow-up search for a legacy bitmap tile renderer](techniques/research/tile-source-followup.md).
 - [CoCo 3 demos: update less memory and separate colour from geometry](techniques/research/coco3-game-source.md).
-- [Later community sources for asset preparation](techniques/research/community-game.md).
 - [Hot CoCo game techniques](techniques/research/hot-coco-game.md).
 - [Undercolor techniques for small updates](techniques/research/undercolor-game.md).
 
@@ -62,11 +61,9 @@ lists the reproduction code. Example-specific checks are also in the
 - [Ubuntu onboarding validation](starter/validation/linux-onboarding.md).
 - [Sudo policy validation](starter/validation/sudo-policy.md).
 
-### Controls, state and assets
+### Controls and state
 
 - [Collection-game keyboard, renderer and PCM journey](techniques/validation/collect-room-output.md).
-- [Original host asset preparation validation](techniques/validation/assets.md).
-- [Prepared RG6 asset loading validation](techniques/validation/asset-loading.md).
 
 Keep these kinds of evidence distinct:
 

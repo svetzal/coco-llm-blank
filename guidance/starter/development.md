@@ -255,10 +255,11 @@ emulator RAM that you check.
 Copying those bytes into an oracle can check placement while accepting corrupted
 art.
 
-The [asset-loading experiment](../../experiments/asset-loading/README.md#what-the-target-checks-establish)
-compares literal artwork and the full framebuffer, with complemented-picture
-and swapped-assignment controls. Adapt that method to the intended artwork.
-Do not make captured output the new expected picture.
+[Tile room](../../examples/tile-room/README.md) converts its pictures from a
+drawing but keeps text drawings in `expected.py`. Its check compares the full
+framebuffer and the rendered frame, and a changed pixel in the drawing must
+fail. Adapt that method to the intended artwork. Do not make captured output
+the new expected picture.
 
 Screen memory cannot show a wrong display mode or bit order. For a
 rendered-display claim, add `--video` to `check`, or set `video = true` in

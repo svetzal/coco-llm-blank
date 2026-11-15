@@ -21,7 +21,7 @@ trial without a new request.
   `guidance/techniques/research/` and both `validation/` folders are leftover
   lab material from before [the lab workflow](guidance/starter/lab.md). Close
   them as that workflow describes, in order:
-  1. One topic at a time (assets, tiles, setup):
+  1. One topic at a time (tiles, setup):
      codify what its experiments, research notes and
      validation reports established into the technique guide and examples,
      moving useful assembly programs into `examples/`. Then delete that
@@ -36,7 +36,9 @@ trial without a new request.
      the [controls guide](guidance/techniques/controls-and-collision.md) and
      the keyboard-controls example. We closed the game-state topic. Its
      evidence is in the [game-state guide](guidance/techniques/game-state.md)
-     and the turn-queue example. `experiments/display-validation/` and
+     and the turn-queue example. We closed the assets topic. Its evidence is
+     in the [assets guide](guidance/techniques/assets.md) and the tile-room
+     example. `experiments/display-validation/` and
      `experiments/audio-output/` keep only `instrument.py`, which
      `collect-room-output` uses. Delete them with that experiment.
   2. Add a size check to CI so growth is a deliberate decision.

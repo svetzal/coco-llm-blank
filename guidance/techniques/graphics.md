@@ -18,7 +18,8 @@ Other guides cover the next steps:
 
 - [Colour](colour.md): how colours look on a given display, and artifact
   colours.
-- [Assets](assets.md): how prepared pictures get into a game.
+- [Assets](assets.md): picture IDs, descriptors, where the bytes live, and
+  conversion at each build.
 - [Moving objects](moving-objects.md): how to draw pictures over scenery.
 
 CoCo 3 GIME modes are not in this guide, and the tool rejects them.
@@ -158,10 +159,15 @@ The outputs are:
   [masked objects](../../examples/masked-objects/README.md).
 
 Look at the preview before you use the bytes. Then show the result in XRoar.
+To convert the art at each build, read
+[assets](assets.md#convert-the-pictures-at-each-build).
 
 ### Get good results
 
 - Use `--resample nearest` for pixel art. Use `lanczos` for illustrations.
+- For pixel art with one source pixel for each mode pixel, also use
+  `--fit stretch`. The default `--fit crop` corrects for pixel shape, so it
+  removes columns and changes the bytes.
 - Do not dither flat art. Dithering scatters noise across a background that is
   near, but not equal to, a palette colour.
 - Use `--auto-css` to let the tool select the colour set with less error.
@@ -202,6 +208,9 @@ supply its account and key.
   reversed bit order, a mirrored or shifted picture and a wrong SAM mode.
 - The [display test](colour.md#make-a-display-test-before-making-the-art)
   lists those controls and their limits.
+- [Tile-room](../../examples/tile-room/README.md) converts its pictures with
+  `sheet` at each build. Its check compares 42 rendered frames on CoCo 1 and
+  CoCo 2 with text drawings.
 - We did not measure the border colour, other modes, a T1 VDG or other XRoar
   video paths in a capture.
 - The `ntsc` pixel shape is a deduction. Nobody has tuned the dither settings.

@@ -50,7 +50,7 @@ class DescribeValidationCLI:
         assert not (checkout / "build").exists()
 
     @pytest.mark.parametrize(
-        "args", [[], ["run", "typo"], ["run", "assets", "all"], ["run", "root"]]
+        "args", [[], ["run", "typo"], ["run", "sudo-policy", "all"], ["run", "root"]]
     )
     def should_reject_invalid_or_unapproved_work_before_running(self, checkout, args):
         with pytest.raises(SystemExit) as error:
@@ -60,21 +60,22 @@ class DescribeValidationCLI:
         assert not (checkout / "build").exists()
 
     def should_select_deduplicate_and_keep_separate_scope_logs(self, checkout):
-        config = checkout / "experiments/assets/coverage.ini"
+        config = checkout / "experiments/collect-room-journey/coverage.ini"
         config.parent.mkdir(parents=True)
         config.write_text("[report]\nfail_under = 90\n")
+        journey = "collect-room-journey"
 
-        assert validation.main(["run", "assets", "sudo-policy", "assets"]) == 0
+        assert validation.main(["run", journey, "sudo-policy", journey, "--heavy"]) == 0
 
         saved = records(checkout)
         assert len(saved) == 6
-        asset = json.loads(next(p for p in saved if p.parent.name == "assets").read_text())
-        assert "--cov=prepare" in asset["command"]
-        assert f"--cov-config={config}" in asset["command"]
+        covered = json.loads(next(p for p in saved if p.parent.name == journey).read_text())
+        assert f"--cov=experiments/{journey}" in covered["command"]
+        assert f"--cov-config={config}" in covered["command"]
         policy = json.loads(next(p for p in saved if p.parent.name == "sudo-policy").read_text())
         assert not any(arg.startswith("--cov") for arg in policy["command"])
-        assert "child stderr sentinel" in Path(asset["log"]).read_text()
-        assert asset["returncode"] == 0
+        assert "child stderr sentinel" in Path(covered["log"]).read_text()
+        assert covered["returncode"] == 0
 
     def should_run_complete_root_integrations_with_opt_in(self, checkout):
         assert validation.main(["run", "root", "--heavy"]) == 0
@@ -90,19 +91,19 @@ class DescribeValidationCLI:
         assert validation.main(["run", "all", "--heavy"]) == 0
 
         saved = records(checkout)
-        assert len(saved) == 7 * 3
+        assert len(saved) == 5 * 3
         assert "root" not in {p.parent.name for p in saved}
         commands = [json.loads(p.read_text())["command"] for p in saved if p.name == "1.json"]
         assert all(len([a for a in c if a.startswith("experiments/")]) == 1 for c in commands)
-        loading = next(c for c in commands if "experiments/asset-loading" in c)
-        assert "--cov=loading" in loading
+        output = next(c for c in commands if "experiments/collect-room-output" in c)
+        assert "--cov=experiments/collect-room-output" in output
 
     def should_preserve_failure_stop_and_keep_evidence_on_successful_retry(
         self, checkout, monkeypatch
     ):
         monkeypatch.setenv("CHILD_STATUS", "23")
 
-        assert validation.main(["run", "assets", "sudo-policy"]) == 23
+        assert validation.main(["run", "linux-onboarding", "sudo-policy"]) == 23
 
         failed = records(checkout)
         assert len(failed) == 1
@@ -110,17 +111,17 @@ class DescribeValidationCLI:
         assert result["returncode"] == 23
         original = Path(result["log"]).read_text()
         assert "child stderr sentinel" in original
-        assert "experiments/assets" in original
+        assert "experiments/linux-onboarding" in original
         monkeypatch.setenv("CHILD_STATUS", "0")
 
-        assert validation.main(["run", "assets"]) == 0
+        assert validation.main(["run", "linux-onboarding"]) == 0
         assert len(records(checkout)) == 4
         assert Path(result["log"]).read_text() == original
 
     def should_retain_signal_status_and_return_shell_exit_code(self, checkout, monkeypatch):
         monkeypatch.setenv("CHILD_SIGNAL", str(signal.SIGTERM))
 
-        assert validation.main(["run", "assets"]) == 128 + signal.SIGTERM
+        assert validation.main(["run", "sudo-policy"]) == 128 + signal.SIGTERM
 
         result = json.loads(records(checkout)[0].read_text())
         assert result["returncode"] == -signal.SIGTERM
@@ -142,7 +143,7 @@ class DescribeValidationCLI:
         monkeypatch.setenv("CHILD_STATUS", "19")
 
         result = subprocess.run(
-            [sys.executable, str(script), "run", "assets"],
+            [sys.executable, str(script), "run", "sudo-policy"],
             cwd=checkout,
             env=os.environ.copy(),
             capture_output=True,
@@ -151,5 +152,5 @@ class DescribeValidationCLI:
         )
 
         assert result.returncode == 19
-        assert "assets: exit 19" in result.stdout
+        assert "sudo-policy: exit 19" in result.stdout
         assert json.loads(records(checkout)[0].read_text())["returncode"] == 19
