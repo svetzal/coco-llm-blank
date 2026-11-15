@@ -982,6 +982,21 @@ class DescribeEquipmentInXRoar:
 
         assert "Frame 1: rendered display:" in capsys.readouterr().err
 
+    def should_reject_a_wrong_coco2_display_mode_that_memory_accepts(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        if not instrumented_ready("coco2"):
+            pytest.skip("Native tools, CoCo 2 firmware or instrumented build tools are missing")
+        directory = tmp_path / "palette-swatches-copy"
+        shutil.copytree(ROOT / "examples/palette-swatches", directory)
+        source = directory / "main.asm"
+        source.write_text(source.read_text().replace("sta $FFC5", "sta $FFC4"))
+
+        assert coco.main(["check", str(directory), "--target", "coco2"]) == 0
+        assert coco.main(["check", str(directory), "--target", "coco2", "--video"]) == 1
+
+        assert "Frame 1: rendered display:" in capsys.readouterr().err
+
     def should_reject_an_expected_frame_with_reversed_bit_order(
         self, first_screen: Path, capsys
     ) -> None:

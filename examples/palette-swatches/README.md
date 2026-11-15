@@ -8,6 +8,7 @@ Ask your agent to run these steps. Commands start in the project folder:
 
 ```sh
 sh scripts/bootstrap.sh coco1
+uv run python scripts/setup.py --target coco2 --roms-only
 uv run python scripts/coco.py check examples/palette-swatches --video
 uv run python scripts/coco.py run examples/palette-swatches
 uv run python scripts/coco.py run examples/palette-swatches --variant css1
@@ -34,8 +35,9 @@ from the left. This band shows the order of pixels inside a byte.
 
 ## What the check proves
 
-`check --video` assembles all four builds and runs them in XRoar. For each build
-it compares:
+`check --video` assembles all four builds and runs them in XRoar on each target.
+Add `--target coco1` or `--target coco2` to check one target. For each build it
+compares:
 
 - All 6144 screen bytes with `expected_screen` in [expected.py](expected.py).
 - All 512x192 samples of XRoar's rendered frame with `expected_frame`.
@@ -51,6 +53,15 @@ controls. Each of these frames must fail the rendered comparison:
 - A frame for the other colour set.
 - A frame for the other mode.
 - A frame with yellow and blue swapped.
+- A mirrored, upside-down, or one-row-down frame, for each build.
+
+The expected picture is not symmetric. The bars and the order band are in a
+different sequence from left to right, and from top to bottom. So a wrong
+orientation or a wrong row position fails the check.
+
+An integration test in `scripts/coco_spec.py` runs a real negative control on
+the CoCo 2 target. It writes `$FFC4` in place of `$FFC5`, which clears SAM bit
+V2. The memory check passes, and the rendered check fails.
 
 A manual test made each of these changes to `expected.py`:
 
@@ -63,10 +74,13 @@ automated.
 
 ## Palette values and their limits
 
-The values were measured from these captures. XRoar 1.12.1 was built with this
-starter's instrumented patch series. `scripts/coco.py` captures with S-video
-colours, cross-colour off, and the active area only (`-tv-input svideo -ccr none`).
-The machine is `cocous`, NTSC, with a 6847 VDG.
+We measured the values from these captures. The capture uses the
+[instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar),
+release 1.13. `scripts/coco.py` captures with S-video colours, cross-colour
+off, and the active area only (`-tv-input svideo -ccr none`).
+
+The machine is `cocous`, NTSC, with a 6847 VDG. Both targets give the same
+values.
 
 | Colour | RGB |
 | --- | --- |
@@ -93,8 +107,14 @@ Use the `run` window to look at the border.
 
 ## Target and memory
 
-The target is a CoCo 1 with 32 KiB RAM, NTSC video and a stock-clock 6809. It
-uses the same memory layout as [first-screen](../first-screen/README.md).
+There are two targets. Each has 32 KiB RAM, NTSC video, a stock-clock 6809 and
+a non-T1 MC6847:
+
+- `coco1`: a CoCo 1 with BASIC 1.1 and Extended BASIC 1.0.
+- `coco2`: a CoCo 2 with BASIC 1.2 and Extended BASIC 1.1. XRoar's `coco2bus`
+  profile has a T1 VDG, so the target uses `cocous` with an explicit `6847`.
+
+Both use the same memory layout as [first-screen](../first-screen/README.md).
 
 | Purpose | Address range |
 | --- | --- |
@@ -117,8 +137,9 @@ The program is original code. Its hardware facts were checked against:
   and RG6 use SAM V2..V0 = 110.
   `$FF22` bits 7 to 4 are 1110 for CG6 and 1111 for RG6. Bit 3 is CSS.
   The program keeps bits 2 to 0.
-  PDF pages 14 and 15: the PIA data register and the SAM display offset, as in
-  first-screen.
+
+- The same manual, PDF pages 14 and 15: the PIA data register, the SAM display offset and the
+  SAM mode bits, as in first-screen. `$FFC5` sets V2, and `$FFC4` clears V2.
 
 Use [reference lookup](../../guidance/starter/references.md) to get those pages.
 No book pages, converted text or firmware are in this folder. Build outputs and

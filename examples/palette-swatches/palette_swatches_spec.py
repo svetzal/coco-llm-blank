@@ -70,6 +70,18 @@ class DescribePaletteSwatches:
         with pytest.raises(ProjectError, match="rendered samples differ"):
             verify_picture(load_project(HERE), model, wrong, 1, variant)
 
+    @pytest.mark.parametrize("variant", VARIANTS)
+    @pytest.mark.parametrize(
+        "error",
+        [np.fliplr, np.flipud, lambda frame: np.roll(frame, 1, axis=0)],
+        ids=["mirrored", "upside-down", "one-row-down"],
+    )
+    def should_reject_a_mirrored_flipped_or_shifted_picture(self, variant: str, error) -> None:
+        wrong = Picture(path=HERE, pixels=error(model.expected_frame(1, variant)))
+
+        with pytest.raises(ProjectError, match="rendered samples differ"):
+            verify_picture(load_project(HERE), model, wrong, 1, variant)
+
     def should_reject_swapped_yellow_and_blue(self) -> None:
         frame = model.expected_frame(1, "").copy()
         yellow, blue = frame[0, 128].copy(), frame[0, 256].copy()
