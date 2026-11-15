@@ -22,10 +22,6 @@ The links below describe existing work; they do not claim a new validation run.
 | Exercise the keyboard matrix path | [keyboard-controls](keyboard-controls/) | [Evidence and limits](../guidance/techniques/validation/keyboard-controls.md) |
 | Model turns and menu transitions on the host | [game-state](game-state/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state.md) |
 | Check a bounded CoCo 3 state subset | [game-state-coco3](game-state-coco3/README.md) | [Evidence and limits](../guidance/techniques/validation/game-state-coco3.md) |
-| Compare selective and full redraw RAM | [selective-redraw](selective-redraw/README.md) | [Evidence and limits](../guidance/techniques/validation/selective-redraw.md) |
-| Measure consecutive animation frames | [animation-cadence](animation-cadence/README.md) | [Evidence and limits](../guidance/techniques/validation/animation-cadence.md) |
-| Check CoCo 1/2 hidden-buffer publication | [clean-animation](clean-animation/README.md) | [Evidence and limits](../guidance/techniques/validation/clean-animation.md) |
-| Check native CoCo 3 hidden-buffer publication | [clean-animation-coco3](clean-animation-coco3/README.md) | [Evidence and limits](../guidance/techniques/validation/clean-animation-coco3.md) |
 | Measure modeled DAC write intervals | [audio-timing](audio-timing/) | [Evidence and limits](../guidance/techniques/validation/audio-timing.md) |
 | Measure sound throughput in one emulated second | [sound-throughput](sound-throughput/README.md) | [Timer-sound evidence](../examples/timer-sound/README.md) |
 | Check CoCo 2 sound scheduling | [sound-coco2](sound-coco2/README.md) | [Evidence and limits](../guidance/techniques/validation/sound-coco2.md) |

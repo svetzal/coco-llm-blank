@@ -14,18 +14,17 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 
 | Need | Start with | Evidence and limits |
 | --- | --- | --- |
-| Small animated objects | Polsz, `rainbow-1986-10`, PDF 118–119 | Examined text and figure. Compact GET/PUT storage; BASIC-specific. |
-| Alternate prepared frames | Matthews, `rainbow-1987-10`, PDF 44 and 46–47 | Examined explanation and listing. Hidden drawing screen versus visible screen. |
+| Animate objects or alternate prepared frames | [Animation guide](../animation.md) | Polsz and Matthews examined; original page-flip examples checked on CoCo 1/2 and CoCo 3. |
 | Smooth horizontal scrolling on CoCo 3 | Tepolt, `tepolt-coco3`, PDF 59 | Examined page image. Pre-shifted buffers trade memory for motion granularity. |
 | Banked assets with interrupts on CoCo 3 | Tepolt, `tepolt-coco3`, PDF 59–60 | Examined page images. Keep interrupt tables and handlers accessible. |
 | Match CoCo 2 artifact colours | [Colour guide](../colour.md#coco-2-artifact-colours); Tandy, `coco2-service`, PDF 31–33 | Examined hardware discussion. Specific NTSC models, not all CoCo 2 variants. |
 | Choose CoCo 3 colours for a display | Tandy, `coco3-service`, PDF 17 | Examined palette tables. RGB and composite encodings differ; PAL caveat applies. |
 | Sound alongside animation and controls | [Sound research](sound.md) | Examined hardware for all three models; CoCo 1 cooperative and CoCo 3 timer experiments. |
 | Keep map state separate from actors | [Tile-map guide](../tile-maps.md) and [tile-room result](../../../examples/tile-room/README.md#evidence-and-limits) | Original CoCo 1/2 implementation, 42 checkpoints per defined target; historical tile-ID source gap remains. |
-| Redraw only changed regions | [Selective redraw](../selective-redraw.md), [CoCo 3 source reading](coco3-game-source.md) | Gloom and Symmetry examined; original adaptations untested. |
+| Redraw only changed regions | [Animation guide](../animation.md#decide-what-to-redraw), [CoCo 3 source reading](coco3-game-source.md) | Gloom and Symmetry examined; one RAM-only lab result. |
 | Combine held controls and collision rules | [Controls and collision](../controls-and-collision.md), [Hot CoCo reading](hot-coco-game.md) | Examined articles; no tested keyboard driver or general collision engine. |
 | Schedule turns and menu transitions | [Game state](../game-state.md), [Undercolor reading](undercolor-game.md) | Source-backed proposals; target adapters and runtime checks remain open. |
-| Accumulate a picture without storing every shape | [Animation guide](../animation.md#let-an-accumulating-picture-retain-its-history) | Undercolor source examined; adaptation untested. |
+| Accumulate a picture without storing every shape | [Animation guide](../animation.md#budget-the-storage-for-animation) | Undercolor source examined; adaptation untested. |
 | Find legacy bitmap composition sources | [Expanded legacy reading](legacy-tile.md#three-game-source-candidates) | Selected Droid War, Dunkey Munkey and Sea Quest paths examined; no historical program run or tile-ID map established. |
 | Decide whether OCR is usable | [Conversion-quality inspection](../../starter/conversion-quality.md) | Six selected pages and eleven exported images checked; no book-wide accuracy claim. |
 | Find more magazine techniques | `rainbow-index` | Discovery only. Find the issue, then inspect the actual article and corrections. |
@@ -33,45 +32,6 @@ Their ROM calls, storage formats, and performance do not transfer automatically.
 These are source-backed reading recommendations. Historical programs remain
 examined, not reproduced. Original rendering and sound experiments now provide
 bounded evidence, summarized in the [validation follow-up](#implementation-and-validation-follow-up).
-
-## CoCo 1 and CoCo 2 animation
-
-### Compact object storage
-
-Steven R. Polsz's **Optimum Animation**, The Rainbow, October 1986,
-printed pages 116–117 (PDF 118–119), compares oversized BASIC arrays with
-compact storage for an example object. It includes a pixel diagram and an
-experiment that compares the stored values. [Archive issue][rainbow-1986-10].
-
-Use it to investigate asset memory budgets and how pixel packing differs from
-language-level array storage. It is particularly useful beside beginner books
-that size arrays by picture dimensions. Do not treat its percentage saving as
-a general compression result. Do not adopt the sizing rule without checking
-rounding, mode, dimensions, and the actual GET/PUT implementation.
-
-Scope: legacy PMODE and Extended Color BASIC. CoCo 1/2 are the first targets
-for reproduction. CoCo 3 compatibility mode needs its own check. This is not
-a native CoCo 3 graphics or hardware-sprite technique.
-
-### Prepared frames and hidden drawing
-
-Becky F. Matthews's **Electrifying Graphics Using PMODE Power**, The Rainbow,
-October 1987, printed/PDF pages 44 and 46–47, explains two prepared pictures
-and alternating displays. The explanation and complete listing on pages 44
-and 46–47 were examined.
-Page 47 completes the hydroelectric and solar sequences.
-[Archive issue][rainbow-1987-10].
-
-The hydroelectric listing copies common mountains and sky to its second
-picture before changing the moving parts. The useful distinction is between
-the screen being drawn and the screen being shown. Apply that idea to short animation
-cycles, title screens, and scene
-transitions. This article shows fixed prepared frames. It does not
-establish a general real-time renderer, vertical-sync discipline, or collision
-system. Its BASIC delays are not an assembly timing contract.
-
-Scope: the article labels its example 16K ECB. Recheck memory budgets for other
-modes, larger assets, or more frames.
 
 ## CoCo 3 graphics and memory
 
@@ -166,14 +126,7 @@ Confirm the issue date on the scan. Confirm each PDF page against its printed
 page. The October 1987 scan already shows why a single offset is unsafe.
 Check corrections and continuation pages before relying on an article.
 
-## Animation and VDG source follow-up
-
-Matthews's **Electrifying Graphics Using PMODE Power**, October 1987 Rainbow,
-printed/PDF 44 and 46–47, is now read through the final listing page.
-The three examples alternate two prepared PMODE 1 pictures. The hydroelectric
-example shares its static background through page copies. The listing's BASIC
-delay loops do not establish a stable frame rate or synchronized display change.
-No listing was run. [Archive issue][rainbow-1987-10].
+## VDG source follow-up
 
 Motorola's **MC6847/MC6847Y Video Display Generator**, 1984 DS9823-R1,
 printed/PDF 1–23, was examined as page images. The archive filename omits the
@@ -218,17 +171,11 @@ The April issue conversion covers PDF 14. Its exported full-page image was
 checked; the correction's line numbers and replacement values match the OCR.
 This is a targeted check, not a claim that the whole page's OCR is accurate.
 
-The October issue's active conversion covers PDF 47. Its full-page PNG was
-checked. OCR reorders several BASIC lines and misreads zeros and NEXT tokens.
-Earlier PDF 44 and 46 checkpoints belong to another converter profile and
-remain on disk, but are not in the active Markdown. Convert those pages again
-when needed. Their source images were examined for the article findings above.
-
 ## Rendering and collision pass
 
 The [moving-object guide](../moving-objects.md) turns this pass into
-practical advice. [Animation
-storage](../animation.md#precompute-geometry-when-pictures-cost-too-much-memory)
+practical advice. The [animation
+guide](../animation.md#budget-the-storage-for-animation)
 now also covers precomputed coordinates. These are examined sources with
 proposed adaptations, not newly reproduced programs.
 
@@ -271,18 +218,6 @@ The article labels CoCo 3/32K Extended and supplies CoCo 1/2 changes.
 It distinguishes RGB and composite settings and explicitly uses the faster clock.
 These author-provided options remain untested here. A normal-clock assembly
 port needs its own budget and machine contract.
-
-### Prepared geometry for animation
-
-Joseph Pendell, **Zippy Animation in BASIC?**, the same issue, printed/PDF 3,
-precalculates rotated endpoints before the display loop. We examined the whole
-article and listing image. It offers a useful alternative to complete stored
-pictures. The assembly table format and size formula in our guide are original
-proposals, not the article's BASIC array layout. [Archive issue][rainbow-1992-10].
-
-The listing is labelled CoCo 3. The prose discusses speed changes for CoCo 1/2,
-but that is not evidence of a tested port. We did not run the program or copy
-its listing into the repository.
 
 ### Other leads and correction limits
 
@@ -435,7 +370,6 @@ PDFs, extracted text, and images stay under ignored `local/`.
 [tepolt-coco3]: https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf
 [rainbow-1987-10]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf
 [rainbow-1985-04]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2004%20No.%2009%20-%20April%201985.pdf
-[rainbow-1986-10]: https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2006%20No.%2003%20-%20October%201986.pdf
 
 [assembly-graphics]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf>
 

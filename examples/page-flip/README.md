@@ -24,7 +24,7 @@ controls and no return to BASIC.
 
 The two screens are at `$0400` and `$2400`. Their start addresses differ only
 in SAM display offset bit F4. So one write to `$FFCE` (clear F4) or `$FFCF`
-(set F4) changes the screen that is shown. [Tandy, PDF 15][sam]
+(set F4) changes the screen that the display shows. [Tandy, PDF 15][sam]
 
 For each frame, the program does these steps:
 
@@ -63,7 +63,7 @@ while the program draws the next frame.
 
 An integration test in `scripts/coco_spec.py` is the negative control. It
 changes `eora #$20` to `eora #0`, so that the program draws into the screen
-that is shown. The memory check still passes.
+that the display shows. The memory check still passes.
 
 The rendered check fails at frame 1. The next background has erased the top
 rows of the object before the captured frame.

@@ -40,7 +40,6 @@ For practical implementation advice, start with the [technique guides](technique
 
 - [Research for games and demos](techniques/research/README.md).
 - [Rendering sources examined](techniques/research/rendering-sources.md).
-- [Publish a completed hidden frame](techniques/research/frame-publication.md).
 - [Sound while a game runs](techniques/research/sound.md).
 - [CoCo keyboard and shared input hardware](techniques/research/input-hardware.md).
 - [Tile-map rendering and collision research](techniques/research/tile-map.md).
@@ -65,13 +64,6 @@ lists the reproduction code. Example-specific checks are also in the
 - [Apple Silicon current-host onboarding audit](starter/validation/macos-onboarding.md).
 - [Ubuntu onboarding validation](starter/validation/linux-onboarding.md).
 - [Sudo policy validation](starter/validation/sudo-policy.md).
-
-### Display and animation
-
-- [Measure continuous animation](techniques/validation/animation-cadence.md).
-- [Hidden drawing and field-boundary publication](techniques/validation/clean-animation.md).
-- [Native CoCo 3 hidden-buffer publication](techniques/validation/clean-animation-coco3.md).
-- [Selective-redraw RAM validation](techniques/validation/selective-redraw.md).
 
 ### Controls, state and assets
 

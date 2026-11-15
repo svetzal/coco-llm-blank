@@ -221,7 +221,8 @@ These checks are proposed acceptance cases for an original implementation:
 Use expected world state that is independent of the rendering code. Then inspect
 the display for flicker. Measure the work at the chosen clock.
 
-A byte-correct frame alone does not establish smooth animation.
+A byte-correct frame alone does not show what the display shows. Read
+[show only finished frames](animation.md#show-only-finished-frames).
 
 ## Try the original full-redraw example
 
@@ -248,6 +249,10 @@ Read the example's complete machine contract before reuse.
 The example does not implement collision, masks, partial-byte placement, or
 independent vertical motion for the two objects. Visual appearance, frame rate,
 PAL, T1, and physical hardware remain unverified.
+
+The example draws into the screen that the display shows. The
+[page flip](../../examples/page-flip/README.md) example draws the same scene
+into a hidden screen, and its rendered check passes at every flip.
 
 ## Try masked objects
 

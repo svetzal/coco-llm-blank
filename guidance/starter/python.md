@@ -180,7 +180,7 @@ check. These commands explicitly opt into expensive work:
 ```sh
 uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
 uv run --locked --no-sync python scripts/validate_repository.py run \
-  animation-cadence --heavy
+  collect-room-output --heavy
 uv run --locked --no-sync python scripts/validate_repository.py run all --heavy
 ```
 

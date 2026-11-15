@@ -1,4 +1,10 @@
-"""Original null-UI capture generator, guarded against source drift and reapplication."""
+"""Original null-UI capture generator, guarded against source drift and reapplication.
+
+The display and animation labs are closed: their evidence is in examples/first-screen,
+examples/palette-swatches, examples/page-flip and examples/page-flip-coco3
+(`scripts/coco.py check --video`). This file remains only because
+experiments/collect-room-output imports it. Delete this folder when that experiment closes.
+"""
 
 import hashlib
 
