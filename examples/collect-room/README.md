@@ -18,7 +18,7 @@ MC6847, no cartridge and direct DECB loading. These are implementation choices.
 
 - Restart restores both stars and the starting position (0, 0).
 
-The 8-by-6 room uses prepared original art from `experiments/assets/art.json`,
+The 8-by-6 room uses original terrain art from [terrain.png](terrain.png),
 enlarged twofold to 16-by-16 tiles, plus an original actor and lettering.
 
 The renderer redraws the room after accepted movement or a phase change.
@@ -122,6 +122,9 @@ The game does not return to BASIC.
 Before it assembles, the tool runs [assets.py](assets.py), named in
 [coco.toml](coco.toml), to write the art include. The output is
 `build/collect-room/main.bin`, a DECB binary with entry `$3000`.
+
+`assets.py` converts `terrain.png` with `scripts/graphics.py`. It stops if the
+bytes differ from the drawings in `expected.py`.
 
 It is not a disk image. Do not infer a tested disk-loading path from it.
 

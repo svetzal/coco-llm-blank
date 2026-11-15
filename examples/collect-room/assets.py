@@ -1,8 +1,9 @@
 """Prepare assets.inc for main.asm: converted terrain art, the actor and header lettering.
 
 scripts/coco.py calls prepare(output) before assembling, because coco.toml names
-this file. The art is converted by experiments/assets/prepare.py and must match
-the independent drawings in expected.py before anything is published.
+this file. scripts/graphics.py converts terrain.png (floor, wall, collectible and
+exit, left to right), and the result must match the independent drawings in
+expected.py before anything is published.
 """
 
 import json
@@ -11,7 +12,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[1]
+SOURCE = HERE / "terrain.png"
 
 
 def model():
@@ -41,25 +42,20 @@ def expand(picture: bytes) -> bytes:
 
 
 def prepare(output: Path) -> None:
-    """Use the validated asset preparer; map terrain IDs explicitly."""
-    bundle = output / "prepared.json"
+    """Convert the terrain drawing; terrain ID N is cell N of the sheet."""
+    from native import ROOT
+
+    terrain = output / "terrain"
     include = output / "assets.inc"
-    for path in (bundle, include):
+    for path in (terrain.with_suffix(".bin"), include):
         path.unlink(missing_ok=True)
-    subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "experiments/assets/prepare.py"),
-            "build",
-            "--output",
-            str(bundle),
-        ],
-        check=True,
-        timeout=30,
-    )
-    data = json.loads(bundle.read_text())
-    pictures = {a["asset_id"]: bytes.fromhex(a["hex"]) for a in data["assets"]}
-    packed = [pictures[i] for i in data["terrain_to_asset"]]
+    # One source pixel is one RG6 pixel: keep every column and copy each pixel.
+    convert = [sys.executable, ROOT / "scripts/graphics.py", "sheet", SOURCE, "--mode", "RG6"]
+    convert += ["--cell", "8x8", "--size", "8x8", "--fit", "stretch", "--resample", "nearest"]
+    convert += ["--out", terrain]
+    subprocess.run(convert, check=True, stdout=subprocess.DEVNULL, timeout=60)
+    data = terrain.with_suffix(".bin").read_bytes()
+    packed = [data[i : i + 8] for i in range(0, len(data), 8)]
     art = model().ART
     if tuple(packed) != art[:4]:
         raise ValueError("Terrain art changed: review the independent expected pixels first")

@@ -91,8 +91,8 @@ def execute(xroar: Path, output: Path, target: str, control: str) -> dict:
         "examples/collect-room/main.asm",
         "examples/collect-room/journey.txt",
         "examples/collect-room/letters.json",
-        "experiments/assets/art.json",
-        "experiments/assets/prepare.py",
+        "examples/collect-room/terrain.png",
+        "scripts/graphics.py",
         "roms.json",
     ]
     inputs += [str(p.relative_to(ROOT)) for p in Path(__file__).parent.glob("*.py")]
