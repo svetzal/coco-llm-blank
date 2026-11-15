@@ -148,55 +148,36 @@ There is no time limit. One route from the start is this sequence:
 ```sh
 uv run python scripts/coco.py check examples/collect-room
 uv run python scripts/coco.py check examples/collect-room --target coco2
-uv run python experiments/collect-room-journey/journey.py prepare
-uv run python experiments/collect-room-journey/journey.py check --target coco1
-uv run python experiments/collect-room-journey/journey.py check --target coco2
-uv run --locked --no-sync python scripts/validate_repository.py run \
-  collect-room-journey --heavy
 markdownlint --fix examples/collect-room/README.md
 markdownlint examples/collect-room/README.md
 ```
 
-The first two commands check two builds against [expected.py](expected.py).
-The main build gets no keys and must stay on its title screen: every screen
-byte, the state, the room and the guards.
+The first two commands check two builds against [expected.py](expected.py) at
+95 checkpoints on each target. A checkpoint is one hit of `frame_ready`.
+
+The main build gets no keys. It must stay on its title screen at each
+checkpoint, and the mixer output must have no effect.
 
 The `journey` variant plays [journey.txt](journey.txt) through XRoar's
-emulated keyboard, one line per scanner entry. It checks the screen, state,
-room and guards at frames 1–3, 16, 48 and 95. It compares them against the
-outcomes written beside each line.
+emulated keyboard, one line for each scanner entry. At each checkpoint, the
+check compares these items with the outcome written beside that line:
 
-Pressing keys needs the
+- the state
+- the complete room
+- the 6,144 framebuffer bytes
+- the input history
+- the completed sound bursts
+- the seven guards
+- XRoar's rendered 512-by-192 frame, after the checkpoint
+- each effect in XRoar's mixer output since boot
+
+Each effect must have 32 large DAC steps. Its pitch must be in the band for
+its kind: start 900–1,100 Hz, pickup 1,550–1,950 Hz, win 600–800 Hz.
+
+Keys, rendered frames and mixer sound need the
 [instrumented XRoar](../../guidance/starter/toolchain.md#instrumented-xroar).
-`check` builds it once with the build tools listed there. A wrong key in
-the script fails at frame 16.
-
-The journey experiment below checks every one of the 95 checkpoints, the
-DAC output and the mutation controls. It still uses its own hooks and
-instrumented build:
-[the journey experiment](../../experiments/collect-room-journey/README.md).
-
-`prepare` downloads the XRoar 1.12.1 release, which is pinned by SHA-256.
-It builds an isolated headless executable under
-`build/collect-room-journey/instrumented`.
-
-A C compiler and `make` are needed. This command installs nothing globally.
-
-The archive digest is
-`ba525225fbd732c4dbf2cbb571dc9d2810fd9dcedf0482133cf637e2eef61f88`.
-The [upstream release archive][xroar] is the emulator source.
-
-Rerunning preparation starts with that archive, not previously patched source.
-Checks reject an executable whose recorded digest or instrumentation changed.
-The normal `run` command uses the installed XRoar, without the test hooks.
-
-The original `key_hook.c` injects named keys through XRoar's keyboard API at
-the scanner entry. It snapshots RAM at the completed-frame checkpoint.
-It does not write CPU, PIA or game state.
-
-`audio_hook.c` records actual PIA output values and routing at XRoar's
-existing output callback. The game needs neither hook. There is no dependency
-on the animation experiment.
+`check` builds it once with the build tools listed there. The normal `run`
+command uses the installed XRoar.
 
 `journey.txt` contains hand-authored input and expected outcomes for 95
 checkpoints. The checkpoints include these cases:
@@ -214,34 +195,32 @@ The fixture records collected locations explicitly, independently of the
 remaining count. The third game collects the lower-right star first. It checks
 the still-locked exit. It then returns for the upper-left star and wins.
 
-Every checkpoint checks these items:
-
-- the state
-- the complete room
-- 6,144 framebuffer bytes
-- input history
-- completed sound bursts
-- seven guards
-
 A separate pixel oracle uses literal source-art rows, not the assembler's
 packed tables. The lettering oracle shares the original font specification,
 but uses a separate algorithm for per-pixel placement.
 
-The no-input control must leave the game at its title. The
-unreachable-checkpoint control must produce no false checkpoint.
+The frame oracle uses the RG6 colours that
+[palette-swatches](../palette-swatches/README.md) measured. The effect list
+comes from the effect counts in `journey.txt`.
 
-Mutations deliberately break the Up column, blocked-move history, Space edge
-detection and DAC output. Each mutation must fail the corresponding outcome
-check. A build/tool error does not count as detecting a mutation.
+### Failure controls
 
-Host checks also damage RAM evidence, firmware, asset expectations and cached
-emulator provenance. A failed rerun replaces its result status and removes the
-snapshots of the previous case first.
+Integration tests in `scripts/coco_spec.py` break the game. Each broken build
+must fail the check on CoCo 1 and CoCo 2:
 
-Generated commands, binaries, symbols, logs, RAM and result JSON files stay
-under ignored `build/collect-room` and `build/collect-room-journey`. Game
-source, artwork specifications, instrumentation, expectations and reproduction
-commands remain tracked. No downloads or generated evidence belong in Git.
+- `WRONG_COLUMN` strobes the wrong column for Up.
+- `STALE_HISTORY` does not update the history after a rejected move.
+- `HELD_SPACE` starts on a Space held from startup.
+- `SILENT` writes only the zero DAC level. Memory is correct, but the sound
+  check fails.
+
+A wrong SAM display bit leaves memory correct, but the rendered frame fails. A
+wrong key in the script fails at frame 15. Host specifications damage RAM
+evidence, art and mixer output, and each must fail.
+
+Generated binaries, symbols, logs, RAM, PNG and WAV captures and result JSON
+files stay under ignored `build/collect-room`. Game source, art, expectations
+and commands stay tracked.
 
 ## Memory and scheduling
 
@@ -275,25 +254,19 @@ addition to a BASIC interrupt/audio routine.
 
 ## Evidence and limits
 
-Result JSON records these items:
+The result JSON records the binary hash, the emulator, the target, the key
+delivery, the rendered frames, the sound recordings and the pitch of each
+effect.
 
-- exact binary/emulator/ROM hashes
-- configured target
-- checkpoint count
-- DAC writes
-- scan intervals
-- within-burst intervals
+On the pinned XRoar 1.12.1, the journey played 12 effects on each target. The
+measured pitches were 978–979 Hz (start), 1,739–1,744 Hz (pickup) and
+681–682 Hz (win). These are emulator mixer values, not a listening result.
 
-Intervals are XRoar ticks (14,318,180 per second in XRoar 1.12.1
-`src/events.h`), not wall-clock measurements or physical timing.
-`-no-ratelimit` removes host pacing without changing the selected normal rate
-of the emulated CPU.
+The rendered frame is XRoar's software renderer output, one frame after each
+checkpoint. Nobody inspected a window or listened to the sound. Nobody tested
+a physical CoCo. Keys go through XRoar's keyboard API, not host key events.
 
-RAM and DAC callback evidence are distinct from the renderer and speaker.
-No GUI was launched or inspected during implementation. No renderer frames
-were captured, no audio was listened to, and no physical CoCo was tested.
-
-The completed-frame RAM checks do not rule out these items:
+The checks do not rule out these items:
 
 - tearing between checkpoints
 - composite colour differences
@@ -301,36 +274,6 @@ The completed-frame RAM checks do not rule out these items:
 - audible clicks
 
 The emulator result for CoCo 2B does not establish every CoCo 2 board revision.
-
-[xroar]: https://www.6809.org.uk/xroar/dl/xroar-1.12.1.tar.gz
-
-Code and state end at `$36C0` (exclusive), below the reserved stack.
-The measurements below describe emulator scheduling, not perceived sound
-quality or physical responsiveness.
-
-They are not worst-case bounds for other code. The checks replace current
-reports when they run again.
-
-### Review corrections
-
-The checker now takes explicit collected-location bits from the hand-authored
-fixture. It no longer guesses the missing star from the remaining count.
-
-The added third game collects (5, 4) first. It checks the locked exit. It then
-returns for (1, 1) and wins.
-
-A regression deliberately supplies the wrong location of the missing star with
-the same remaining count. Both machine runs reject it.
-
-The revised macOS run passed 33 tests with 94.17% combined statement/branch
-coverage. Both targets passed all 95 checkpoints, three wins, and the original
-four mutation controls. Each positive journey produced 384 DAC writes in 12
-effects.
-
-Exact measurements are in `build/collect-room-journey/coco1-check.json`
-and `coco2-check.json`. This still establishes RAM and DAC callback behavior,
-not renderer output, listening quality or physical hardware.
-
-The documented provisioning commands for two profiles ran successfully.
-`local/PROJECT.md` remained byte-identical. Scoped Ruff check/format and
-Markdown fix/check passed.
+The [sound guide](../../guidance/techniques/sound.md#measurements-the-examples-do-not-rerun)
+records a longer measurement of continuous frames and mixer timing that this
+check does not rerun.

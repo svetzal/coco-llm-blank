@@ -1086,8 +1086,56 @@ class DescribeEquipmentInXRoar:
         equipment = coco.equipment_for(project, "journey", script=script)
         model = coco.load_expected(example)
 
-        with pytest.raises(ProjectError, match="Frame 16: .* screen bytes differ"):
+        with pytest.raises(ProjectError, match="Frame 15: .* screen bytes differ"):
             coco.check_variant(project, Host(), model, "coco1", "journey", equipment)
+
+    @pytest.mark.parametrize("target", ["coco1", "coco2"])
+    @pytest.mark.parametrize(
+        "control,message",
+        [
+            ("WRONG_COLUMN", "Keyboard/history differs"),
+            ("STALE_HISTORY", "Keyboard/history differs"),
+            ("HELD_SPACE", "Frame 2: .* screen bytes differ"),
+            ("SILENT", "Frame 5: the mixer output has 0 effects, expected 1"),
+        ],
+    )
+    def should_reject_each_broken_collect_room_build(
+        self, target: str, control: str, message: str
+    ) -> None:
+        if not instrumented_ready("coco1", "coco2"):
+            pytest.skip("Native tools, CoCo 1/2 firmware or instrumented build tools are missing")
+        example = ROOT / "examples/collect-room"
+        project = coco.load_project(example)
+        variants = {"journey": coco.Variant(defines=(control,), keys="journey.txt")}
+        broken = project.model_copy(
+            update={"settings": project.settings.model_copy(update={"variants": variants})}
+        )
+        equipment = coco.equipment_for(broken, "journey")
+
+        with pytest.raises(ValueError, match=message):
+            coco.check_variant(
+                broken, Host(), coco.load_expected(example), target, "journey", equipment
+            )
+
+    def should_reject_a_wrong_collect_room_display_mode_that_memory_accepts(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        if not instrumented_ready("coco1"):
+            pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
+        directory = tmp_path / "collect-room-copy"
+        shutil.copytree(ROOT / "examples/collect-room", directory)
+        source = directory / "main.asm"
+        source.write_text(source.read_text().replace("sta $ffc5", "sta $ffc4"))
+        settings = directory / "coco.toml"
+        single = settings.read_text().replace('frames = ["1-95"]', "frames = [1]")
+        arguments = ["check", str(directory), "--target", "coco1"]
+
+        settings.write_text(single.replace("video = true", "video = false"))
+        assert coco.main(arguments) == 0
+        settings.write_text(single)
+        assert coco.main(arguments) == 1
+
+        assert "Frame 1: rendered display:" in capsys.readouterr().err
 
     @pytest.fixture
     def keyboard_controls(self) -> Path:

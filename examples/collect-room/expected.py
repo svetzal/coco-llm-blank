@@ -6,6 +6,8 @@ Nothing here is derived from the assembly, the asset converter or captured RAM.
 import json
 from pathlib import Path
 
+import numpy as np
+
 HERE = Path(__file__).resolve().parent
 MESSAGES = ("SPACE TO START", "COLLECT BOTH THEN EXIT", "YOU WIN SPACE RESTART")
 ACTOR = bytes.fromhex("183c7edbff242466")
@@ -18,6 +20,18 @@ ROOM = ("..#.....", ".*#..#..", "..#.....", "....##..", ".#...*..", "......E.")
 FIELDS = ("phase", "xpos", "ypos", "remaining", "accepted", "starts", "effects", "last_effect")
 # Title screen with nothing pressed: the state every idle frame must keep.
 TITLE = (0, 0, 0, 2, 0, 0, 0, 0, 0)
+# The pinned XRoar's RG6 colours for colour set 0 through coco.py's renderer settings,
+# measured by examples/palette-swatches. Emulator RGB values, not a monitor.
+BLACK, GREEN = (0, 31, 0), (46, 188, 36)
+# Each effect is 32 alternating DAC writes. The delays 80, 40 and 120 make the
+# pickup tone highest and the win tone lowest. These pitch bands were set before
+# the closed collect-room output lab measured 978, 1,739 and 680 Hz in XRoar 1.12.1.
+EFFECT_WRITES = 32
+EFFECT_HZ = {1: (900, 1100), 2: (1550, 1950), 3: (600, 800)}
+# A DAC step larger than this is an effect write; idle output changes much less.
+STEP_THRESHOLD = 8192
+# Writes in one effect are under 1 ms apart; effects are a whole update apart.
+EFFECT_GAP_SECONDS = 0.005
 
 
 def journey() -> list[tuple[str, tuple[int, ...]]]:
@@ -99,5 +113,57 @@ def expected_screen(frame: int, variant: str = "") -> bytes:
     return screen_for_state(step(frame, variant)[1])
 
 
+def expected_frame(frame: int, variant: str = "") -> np.ndarray:
+    """The rendered picture: two samples per pixel, XRoar's RG6 green or black (CSS=0)."""
+    lit = np.unpackbits(np.frombuffer(expected_screen(frame, variant), np.uint8)).reshape(192, 256)
+    wide = np.repeat(lit.astype(bool), 2, axis=1)
+    return np.where(wide[:, :, None], np.array(GREEN), np.array(BLACK)).astype(np.uint8)
+
+
 def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str = "") -> None:
     verify_journey_frame(ram, symbols, *step(frame, variant))
+
+
+def expected_effects(frame: int, variant: str = "") -> list[int]:
+    """Effect kinds (1 start, 2 pickup, 3 win) played up to a checkpoint, from journey.txt."""
+    if variant != "journey":
+        return []
+    kinds, played = [], 0
+    for _, state in journey()[:frame]:
+        if state[6] != played:
+            if state[6] != played + 1:
+                raise ValueError("journey.txt adds more than one effect in one step")
+            kinds.append(state[7])
+            played = state[6]
+    return kinds
+
+
+def effect_bursts(samples: np.ndarray, rate: int) -> list[tuple[int, float]]:
+    """(writes, Hz) of each group of large DAC steps in XRoar's mixer output."""
+    steps = np.nonzero(np.abs(np.diff(samples.astype(np.int32))) > STEP_THRESHOLD)[0]
+    if not len(steps):
+        return []
+    breaks = np.nonzero(np.diff(steps) > EFFECT_GAP_SECONDS * rate)[0] + 1
+    bursts = []
+    for group in np.split(steps, breaks):
+        span = (group[-1] - group[0]) / rate
+        bursts.append((len(group), (len(group) - 1) / (2 * span) if span else 0.0))
+    return bursts
+
+
+def verify_sound(sound, frame: int, variant: str = "") -> dict[str, object]:
+    """Every effect so far is in the mixer output: 32 writes each, in its pitch band."""
+    expected = expected_effects(frame, variant)
+    bursts = effect_bursts(sound.samples, sound.rate)
+    if len(bursts) != len(expected):
+        raise ValueError(
+            f"Frame {frame}: the mixer output has {len(bursts)} effects, expected {len(expected)}."
+        )
+    for number, (kind, (writes, hz)) in enumerate(zip(expected, bursts, strict=True), 1):
+        low, high = EFFECT_HZ[kind]
+        if writes != EFFECT_WRITES or not low <= hz <= high:
+            raise ValueError(
+                f"Frame {frame}: effect {number} has {writes} steps at {hz:.0f} Hz, "
+                f"expected {EFFECT_WRITES} at {low}-{high} Hz."
+            )
+    return {"frame": frame, "effects": len(bursts), "hz": [round(hz, 1) for _, hz in bursts]}

@@ -152,7 +152,7 @@ build again as a control, and on the trial build.
 | Check | What it covers |
 | --- | --- |
 | `examples/first-screen --video` | CoCo 1 rendered frame |
-| `examples/collect-room --video` | CoCo 1 and 2, main and key-journey variants |
+| `examples/collect-room` | CoCo 1 and 2 frames and mixer sound, main and key-journey variants |
 | `examples/sound-slots` | CoCo 1 mixer sound, main and scripted variants |
 | `examples/timer-sound --video` | CoCo 3, both GIME revisions, four variants |
 

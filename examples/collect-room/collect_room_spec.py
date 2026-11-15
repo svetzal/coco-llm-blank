@@ -1,7 +1,9 @@
 """The Collect room model and asset step: independent art, rooms and journey rules."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from coco import load_expected, load_module
 
@@ -91,6 +93,63 @@ class DescribeCollectRoomModel:
     def should_reject_truncated_ram(self) -> None:
         with pytest.raises(ValueError, match="truncated"):
             model.verify_ram(b"", LABELS, 1)
+
+
+def mixer(*tones_hz: float, rate: int = 44100) -> SimpleNamespace:
+    """Synthetic mixer output: 32 alternating writes per tone, with idle gaps between."""
+    samples = [np.full(rate // 10, 500, np.int16)]
+    for hz in tones_hz:
+        half = rate / (2 * hz)
+        edges = np.round(np.arange(33) * half).astype(int)
+        burst = np.zeros(edges[-1], np.int16)
+        for write in range(0, 32, 2):
+            burst[edges[write] : edges[write + 1]] = 23000
+        samples += [burst, np.full(rate // 10, 500, np.int16)]
+    return SimpleNamespace(samples=np.concatenate(samples), rate=rate)
+
+
+class DescribeRenderedFrame:
+    def should_render_lit_pixels_green_two_samples_wide(self) -> None:
+        frame = model.expected_frame(1)
+        lit = next(
+            x for x in range(256) if model.expected_screen(1)[16 * 32 + x // 8] & 128 >> x % 8
+        )
+
+        assert frame.shape == (192, 512, 3)
+        assert frame[16, 2 * lit].tolist() == frame[16, 2 * lit + 1].tolist() == [46, 188, 36]
+        assert frame[0, 0].tolist() == [0, 31, 0]
+
+
+class DescribeMixerEffects:
+    def should_list_every_effect_of_the_journey_in_order(self) -> None:
+        assert model.expected_effects(4, "journey") == []
+        assert model.expected_effects(5, "journey") == [1]
+        assert model.expected_effects(95, "journey") == [1, 2, 2, 3] * 3
+        assert model.expected_effects(95, "") == []
+
+    def should_accept_each_effect_in_its_pitch_band(self) -> None:
+        result = model.verify_sound(mixer(980, 1740, 1740, 680), 38, "journey")
+
+        assert result["effects"] == 4
+        assert [round(hz, -1) for hz in result["hz"]] == [980, 1740, 1740, 680]
+
+    def should_accept_a_quiet_title(self) -> None:
+        assert model.verify_sound(mixer(), 95, "")["effects"] == 0
+
+    @pytest.mark.parametrize(
+        "tones,message",
+        [((), "has 0 effects, expected 1"), ((1740,), r"effect 1 has 32 steps at 17\d\d Hz")],
+    )
+    def should_reject_a_missing_or_wrong_effect(self, tones, message: str) -> None:
+        with pytest.raises(ValueError, match=message):
+            model.verify_sound(mixer(*tones), 5, "journey")
+
+    def should_reject_an_effect_with_missing_writes(self) -> None:
+        sound = mixer(980)
+        sound.samples[sound.samples.argmax() : sound.samples.argmax() + 30] = 500
+
+        with pytest.raises(ValueError, match="effect 1 has 30 steps"):
+            model.verify_sound(sound, 5, "journey")
 
 
 class DescribeAssets:
