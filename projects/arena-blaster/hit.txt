@@ -1,28 +1,20 @@
 # Held keys for each frame of the hit variant: two still grunts, at x 100,
 # y 90 and at x 100, y 40. The player starts at 61 95. Written by hand:
-# a right shot starts at x 62, row y + 4, and moves 3 pixels a frame. It
-# overlaps a grunt at x 100 when x + 4 > 100, 12 frames after it starts.
+# a right shot starts at x 62, row y + 4, and moves 6 pixels a frame. It
+# overlaps a grunt at x 100 when x + 4 > 100, 6 frames after it starts.
 -      61 95
 -      61 95
-;      61 95  shot 1 at frame 3 (shot sound); hits the y 90 grunt at frame 15
+;      61 95  shot 1 at frame 3 (shot sound); hits the y 90 grunt at frame 9
 ;
 ;
 ;
 ;
 ;
+;      61 95  frame 9: shot 1 hits (explosion sound)
 ;
 ;
 ;
-;
-;
-;
-;      61 95  frame 15: shot 1 hits (explosion sound)
-;
-;
-;
-;
-;
-W      61 93  up toward the y 40 grunt
+W      61 91  up toward the y 40 grunt
 W
 W
 W
@@ -34,33 +26,14 @@ W
 W
 W
 W
-W
-W
-W
-W
-W
-W
-W
-W
-W
-W
-W
-W
-W      61 45  row 49 is inside the grunt (rows 40-49)
-;      61 45  frame 46: a shot at row 49; hits at frame 58
+W      61 43  row 47 is inside the grunt (rows 40-49)
+;      61 43  frame 26: a shot at row 47; hits at frame 32
 ;
 ;
 ;
 ;
 ;
-;
-;
-;
-;
-;
-;
-;      61 95  frame 58: the last grunt is hit: level 2 starts (level sound)
-;
+;      61 95  frame 32: the last grunt is hit: level 2 starts (level sound)
 ;
 ;
 ;

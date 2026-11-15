@@ -30,7 +30,7 @@ WALL_TOP, WALL_BOTTOM, WALL_LEFT, WALL_RIGHT = 12, 187, 3, 124
 MIN_X, END_X, MIN_Y, END_Y = 4, 124, 13, 187
 PLAYER_W, PLAYER_H = 6, 10
 START = (61, 95)
-SHOT_SLOTS, SHOT_DELAY = 6, 5
+SHOT_SLOTS, SHOT_DELAY = 6, 2
 # Movement keys and shoot keys: (dx, dy) for each key letter in the key script.
 MOVE = {"W": (0, -1), "S": (0, 1), "A": (-1, 0), "D": (1, 0)}
 SHOOT = {"O": (0, -1), "L": (0, 1), "K": (-1, 0), ";": (1, 0)}
@@ -45,7 +45,7 @@ SLOT_SIZE = 11  # on, x, y, vx, vy, sprite (2), maxx, maxy, w, h
 ENEMY_SLOTS, ENEMY_SIZE = 24, 4  # type, x, y, tick
 ENEMY_W, ENEMY_H = 6, 10
 GRUNT, HUNTER = 1, 2
-PERIOD = {GRUNT: 4, HUNTER: 2}
+PERIOD = {GRUNT: 2, HUNTER: 1}
 SPRITE = {GRUNT: "grunt", HUNTER: "hunter"}
 SEED = 0xACE1
 # Test-harness controls of each variant (coco.toml), and its first level.
@@ -59,7 +59,8 @@ CONTROLS = {
 }
 START_LEVEL = {"level10": 10}
 SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt"}
-# Sound effects from README.md "Sound": one (mode, period, volume) record a frame.
+# Sound effects from README.md "Sound": one (mode, period, volume) record a field,
+# so two records a frame.
 SQUARE, NOISE = 0, 0x80
 EFFECTS = {
     "shot": (1, [(SQUARE, p, v) for p, v in ((8, 24), (10, 22), (13, 18), (17, 14), (22, 10))]),
@@ -126,7 +127,7 @@ class Game:
     effect: str = ""
     record: int = 0
     priority: int = 0
-    sound: tuple[int, int, int] | None = None  # the record of this frame
+    sound: tuple[int, int, int] | None = None  # the record of the second field
 
     def start_sound(self, name: str) -> None:
         if EFFECTS[name][0] >= self.priority:
@@ -171,9 +172,9 @@ def start_level(game: Game) -> None:
     game.delay = 0
     game.slots = [None] * SHOT_SLOTS
     game.enemies = [None] * ENEMY_SLOTS
-    game.hunter_wait = game.hunter_timer = max(90, 660 - 60 * game.level)
+    game.hunter_wait = game.hunter_timer = max(45, 330 - 30 * game.level)
     if "HUNTER_SOON" in game.controls:
-        game.hunter_wait = game.hunter_timer = 30
+        game.hunter_wait = game.hunter_timer = 15
     if "FIXED_GRUNTS" in game.controls:
         game.hunter_wait = game.hunter_timer = 0
         game.enemies[0] = Enemy(GRUNT, 100, 90, 1)
@@ -187,7 +188,7 @@ def start_level(game: Game) -> None:
             y = game.random_y()
             if not (abs(x - START[0]) <= SAFE_X and abs(y - START[1]) <= SAFE_Y):
                 break
-        game.enemies[slot] = Enemy(GRUNT, x, y, slot % 4 + 1)
+        game.enemies[slot] = Enemy(GRUNT, x, y, slot % 2 + 1)
 
 
 def new_game(variant: str) -> Game:
@@ -292,8 +293,8 @@ def step(game: Game, keys: str) -> None:
     else:
         game.last_vertical = tuple(k for k in "WS" if k in keys)
     dx, dy = direction(keys, MOVE)
-    game.x = min(max(game.x + dx, MIN_X), END_X - PLAYER_W)
-    game.y = min(max(game.y + 2 * dy, MIN_Y), END_Y - PLAYER_H)
+    game.x = min(max(game.x + 2 * dx, MIN_X), END_X - PLAYER_W)
+    game.y = min(max(game.y + 4 * dy, MIN_Y), END_Y - PLAYER_H)
     for i, shot in enumerate(game.slots):
         if shot:
             shot.x += shot.vx
@@ -311,7 +312,8 @@ def step(game: Game, keys: str) -> None:
         game.start_sound("level")
         game.level += 1
         start_level(game)
-    game.sound_frame()
+    game.sound_frame()  # the first field of the frame
+    game.sound_frame()  # the second field: this record plays at the checkpoint
 
 
 def read_keys(held: str) -> str:
@@ -344,7 +346,7 @@ def fire(game: Game, keys: str) -> None:
         return
     name = shot_sprite(fx, fy)
     w, h = size(name)
-    shot = Shot(game.x + (PLAYER_W - w) // 2, game.y + (PLAYER_H - h) // 2, 3 * fx, 6 * fy, name)
+    shot = Shot(game.x + (PLAYER_W - w) // 2, game.y + (PLAYER_H - h) // 2, 6 * fx, 12 * fy, name)
     game.slots[game.slots.index(None)] = shot
     game.delay = SHOT_DELAY
     game.start_sound("shot")
@@ -467,11 +469,8 @@ CPU_HZ = 14_318_180 / 16  # Tandy PDF 26
 # Measured in this project's captures, not sourced: one DAC unit is about 352.5 in
 # XRoar's 16-bit mixer output.
 MIXER_PER_DAC = 352.5
-# Variants with a light load, and the last frame of the light load: the wait at the
-# end of each frame is longer than 4 ms (measured, about 7 ms), so the last 4 ms hold
-# only the record of the frame. In the hunter build a hunter comes each 30 frames and
-# none dies; at frame 180, with six hunters, the wait was shorter (measured).
-LIGHT = {"moves": MAX_FRAMES, "hit": MAX_FRAMES, "touch": MAX_FRAMES, "hunter": 150}
+# Each frame lasts two fields. The second field's record plays in the wait at the end
+# of the second field. The check judges the last 4 ms of that wait in every build.
 WINDOW_S = 0.004
 
 
@@ -498,10 +497,6 @@ def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
         return {"frame": frame, "sound": "silent"}
     mode, period, volume = record
     want = volume * MIXER_PER_DAC
-    if frame > LIGHT.get(variant, 0):
-        # Measured: on a heavy frame the wait at the end can be close to 0, so the
-        # record of the frame can be silent. The heavy builds judge only silence.
-        return {"frame": frame, "sound": f"{game.effect}: not judged (heavy frame)"}
     if len(where) < 3 or not np.all(np.abs(sizes - want) < 0.1 * want):
         raise ValueError(
             f"Frame {frame}: {len(where)} steps of {sizes.tolist()[:4]}, expected volume "

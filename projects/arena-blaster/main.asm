@@ -1,7 +1,7 @@
 * Arena Blaster: an original arena shooter for the CoCo 1.
-* Increment 4: compiled sprites from assets.py. Increment 3 added sound and
-* the A/D/W/S and K/;/O/L keys. README.md has the contract, the rules
-* for each frame and the memory map.
+* Increment 4: compiled sprites from assets.py and a fixed speed of 30
+* frames each second. README.md has the contract, the rules for each frame
+* and the memory map.
 *
 * Sources (all read as page images):
 *   Tandy, Color Computer Technical Reference Manual:
@@ -26,8 +26,9 @@
 *   Motorola MC6847 datasheet, PDF 19-21 (through the graphics guide):
 *     CG6 = 2 bits for each pixel, leftmost pixel in bits 7-6, 32 bytes for
 *     each row. Colour set 0: 0 green, 1 yellow, 2 blue, 3 red.
-*   Motorola MC6821 datasheet, PDF 10: a read of the data register clears
-*     the interrupt flag (through the animation guide).
+*   Motorola MC6821 datasheet, PDF 10, Figure 18: the flag sets on the
+*     selected edge of CB1 and stays set until a read of the data register
+*     (read as a page image).
 *   The Rainbow, October 1986, PDF 119: PMODE 3 is graphics mode 6C.
 
 SCREEN_A equ $0400
@@ -56,7 +57,7 @@ START_X equ 61
 START_Y equ 95
 
 SHOTS   equ 6                   ; shot slots
-SHOT_DELAY equ 5                ; frames between two shots is SHOT_DELAY+1
+SHOT_DELAY equ 2                ; frames between two shots is SHOT_DELAY+1
 
 * Enemies. All are 6x10 pixels, the same size as the player.
 ENEMIES equ 24                  ; enemy slots
@@ -64,10 +65,10 @@ ENEMY_W equ 6
 ENEMY_H equ 10
 GRUNT   equ 1                   ; enemy types; 0 = free slot
 HUNTER  equ 2
-GRUNT_PERIOD equ 4              ; frames between two grunt steps
-HUNTER_PERIOD equ 2             ; frames between two hunter steps
+GRUNT_PERIOD equ 2              ; frames between two grunt steps
+HUNTER_PERIOD equ 1             ; frames between two hunter steps
 MAX_GRUNTS equ 20               ; 4 + 2 * level, up to this number
-MIN_HUNTER_WAIT equ 90          ; 660 - 60 * level, down to this number
+MIN_HUNTER_WAIT equ 45          ; 330 - 30 * level, down to this number
 SAFE_X  equ 28                  ; no grunt starts this near the player
 SAFE_Y  equ 45
 SEED    equ $ACE1               ; start value of the random sequence
@@ -555,10 +556,20 @@ draw_sprite
         sty <next
         jmp [,u]
 
-* --- Show the finished screen at the end of the picture, as in the
-* page-flip example. Then select the other screen for drawing.
-show    lda $FF02               ; clear an old flag
-        jsr play_until_fs       ; wait for the falling edge of FS
+* --- Show the finished screen after exactly two fields: 30 frames each
+* second. The last show cleared the flag at the start of the first field.
+* The flag sets at the end of a field and stays set until a read of
+* $FF02 (MC6821 PDF 10, Figure 18). So a set flag here tells that the
+* work took more than one field. The sound takes its next record at the
+* end of the first field, so an effect still has one record a field.
+* If the work takes more than two fields, the frame takes three or more.
+show    lda $FF03
+        bmi show_late           ; the first field ended during the work
+        jsr play_until_fs       ; wait for the end of the first field
+show_late
+        lda $FF02               ; clear the flag
+        jsr sound_frame         ; the record of the second field
+        jsr play_until_fs       ; wait for the end of the second field
         lda <drawing
         cmpa #SCREEN_B/256
         bne show_a
@@ -575,6 +586,7 @@ published
         lda $FF03
         anda #%11111101         ; falling edge again
         sta $FF03
+        lda $FF02               ; clear the flag: the first field starts
         lda <drawing
         eora #(SCREEN_A^SCREEN_B)/256
         sta <drawing
@@ -637,20 +649,20 @@ sl_enemy
         leax E_SIZE,x
         cmpx #enemies_end
         blo sl_enemy
-* Hunter wait: 660 - 60 * level frames, but not less than 90.
+* Hunter wait: 330 - 30 * level frames, but not less than 45.
         lda <level
         cmpa #10
         blo sl_calc
         ldd #MIN_HUNTER_WAIT
         bra sl_wait
-sl_calc ldb #60
+sl_calc ldb #30
         mul
         std <temp
-        ldd #660
+        ldd #330
         subd <temp
 sl_wait
-        ifdef HUNTER_SOON       ; check only: a hunter each 30 frames
-        ldd #30
+        ifdef HUNTER_SOON       ; check only: a hunter each 15 frames
+        ldd #15
         endc
         ifdef FIXED_GRUNTS      ; check only: no hunter
         ldd #0
@@ -705,13 +717,13 @@ sl_grunt
 sl_place
         lda #GRUNT
         sta E_TYPE,u
-* First step after 1-4 frames (slot number AND 3, plus 1), so that the
+* First step after 1-2 frames (slot number AND 1, plus 1), so that the
 * grunts do not all step in the same frame.
         tfr u,d
         subd #enemies
         lsrb
         lsrb                    ; slot number (E_SIZE = 4)
-        andb #3
+        andb #1
         incb
         stb E_TICK,u
         leau E_SIZE,u
@@ -1052,31 +1064,31 @@ directions
 * The largest position is END - size: x <= 124 - w, y <= 187 - h.
 * Fields: MDX MDY VX VY, sprite, OX OY MAXX MAXY W H.
 dir_table
-        fcb -1,-2,-3,-6
+        fcb -2,-4,-6,-12
         fdb shot_back
         fcb 1,2,121,181,3,6  ; 0: up and left   (3x6)
-        fcb 0,-2,0,-6
+        fcb 0,-4,0,-12
         fdb shot_vertical
         fcb 2,2,123,181,1,6  ; 1: up            (1x6)
-        fcb 1,-2,3,-6
+        fcb 2,-4,6,-12
         fdb shot_forward
         fcb 1,2,121,181,3,6  ; 2: up and right  (3x6)
-        fcb -1,0,-3,0
+        fcb -2,0,-6,0
         fdb shot_horizontal
         fcb 1,4,120,186,4,1  ; 3: left          (4x1)
         fcb 0,0,0,0
         fdb 0
         fcb 0,0,0,0,0,0  ; 4: none
-        fcb 1,0,3,0
+        fcb 2,0,6,0
         fdb shot_horizontal
         fcb 1,4,120,186,4,1  ; 5: right         (4x1)
-        fcb -1,2,-3,6
+        fcb -2,4,-6,12
         fdb shot_forward
         fcb 1,2,121,181,3,6  ; 6: down and left (3x6)
-        fcb 0,2,0,6
+        fcb 0,4,0,12
         fdb shot_vertical
         fcb 2,2,123,181,1,6  ; 7: down          (1x6)
-        fcb 1,2,3,6
+        fcb 2,4,6,12
         fdb shot_back
         fcb 1,2,121,181,3,6  ; 8: down and right (3x6)
 

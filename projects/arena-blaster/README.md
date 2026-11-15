@@ -57,22 +57,28 @@ both screens, the game state, the rendered picture and the mixer output with
 
 ## Status
 
-Increment 4, in progress: faster drawing. Increment 3 added sound effects and
-the A, D, W, S and K, semicolon, O, L keys. There is no score and no game over
-yet. When an enemy touches you, the level starts again.
+Increment 4: faster drawing and a fixed speed of 30 frames each second.
+Increment 3 added sound effects and the A, D, W, S and K, semicolon, O, L keys.
+There is no score and no game over yet. When an enemy touches you, the level
+starts again.
 
-Measured speed in XRoar, in fields of the picture for each frame (one field is
-1/60 second):
+The owner chose the fixed speed of 30 frames each second. Each frame lasts two
+fields of the picture (one field is 1/60 second). Measured speed in XRoar, in
+fields for each frame:
 
-| Build | Before increment 4 | Now |
-| --- | --- | --- |
-| `main` (level 1, 6 grunts) | 1.71 | 1.01 |
-| `level10` (20 grunts) | 3.02 | 2.01 |
+| Build | Increment 3 | Faster drawing | Now (fixed speed) |
+| --- | --- | --- | --- |
+| `main` (level 1, 6 grunts) | 1.71 | 1.01 | 2.00 |
+| `level10` (20 grunts) | 3.02 | 2.01 | 2.00, but 3 or 4 when the player dies |
 
-The game still slows down when the arena is full, because each step is one
-frame. See [Drawing](#drawing).
+When the player dies on level 10, the restart places 20 grunts and draws them
+all, so that frame takes one or two more fields. All the other frames in the
+six check builds take two fields. See [Drawing](#drawing).
 
-Measured sound in XRoar (increment 3): the sound plays only while the program waits for the
+Each step is twice the step of increment 3, so the game plays at the same
+speed as before on a light load.
+
+Measured sound in XRoar (increment 3, before the fixed speed): the sound plays only while the program waits for the
 end of the picture. During an effect, the sound is present in 56% of each
 millisecond slice with a light load, and in 23% with 20 grunts. So the sound
 has gaps 60 times each second, and it gets weaker when the arena is full.
@@ -154,16 +160,17 @@ choices:
 
 | Item | Rule |
 | --- | --- |
-| Grunts (green) | 4 + 2 x level, not more than 20. One step each 4 frames. |
-| Hunters (red) | One step each 2 frames. One comes each 660 - 60 x level frames, not less than 90. |
-| Level 1 | 6 grunts, a hunter each 600 frames |
-| Level 5 | 14 grunts, a hunter each 360 frames |
-| Level 10 | 20 grunts, a hunter each 90 frames |
+| Grunts (green) | 4 + 2 x level, not more than 20. One step each 2 frames. |
+| Hunters (red) | One step each frame. One comes each 330 - 30 x level frames, not less than 45. |
+| Level 1 | 6 grunts, a hunter each 300 frames (10 seconds) |
+| Level 5 | 14 grunts, a hunter each 180 frames (6 seconds) |
+| Level 10 | 20 grunts, a hunter each 45 frames (1.5 seconds) |
 
+- All counts in frames are at 30 frames each second.
 - An enemy step is 1 pixel across and up to 2 rows down or up, toward the
   player. Enemies are 6x10 pixels, the same size as the player.
 - There are 24 enemy slots. A hunter needs a free slot.
-- Grunt number N (from 0) makes its first step after (N AND 3) + 1 frames, so
+- Grunt number N (from 0) makes its first step after (N AND 1) + 1 frames, so
   the grunts do not all step together.
 - At the start of a level, each grunt goes to a random place. A place with x
   33-89 and y 50-140 is near the player's start, so the grunt tries again.
@@ -180,19 +187,20 @@ choices:
 ### Sound
 
 One effect plays at a time. A new effect replaces the current one only if its
-priority is the same or higher. Each effect is a list of records, one record
-for each frame: a mode (square wave or noise), a period and a volume (0-63).
+priority is the same or higher. Each effect is a list of records. A record
+has a mode (square wave or noise), a period and a volume (0-63). Each field
+plays one record, so each frame plays two.
 
 | Effect | Priority | When | Sound |
 | --- | --- | --- | --- |
 | Shot | 1 | A shot starts | Square, periods 8, 10, 13, 17, 22; volume 24 down to 10 |
 | Explosion | 2 | A shot removes an enemy | Noise, periods 2-6; volume 44 down to 6 |
-| Hunter | 3 | A hunter comes | Square, periods 10 and 14 in turn, 8 frames; volume 26 |
-| Level | 4 | The arena is clear | Square, periods 30, 22, 16, 11, 3 frames each; volume 28 |
-| Death | 5 | An enemy touches the player | Noise, periods 1-10, 14 frames; volume 60 down to 8 |
+| Hunter | 3 | A hunter comes | Square, periods 10 and 14 in turn, 8 fields; volume 26 |
+| Level | 4 | The arena is clear | Square, periods 30, 22, 16, 11, 3 fields each; volume 28 |
+| Death | 5 | An enemy touches the player | Noise, periods 1-10, 14 fields; volume 60 down to 8 |
 
 - The sound plays only while the program waits for the falling edge and
-  the rising edge of field sync. Each frame starts at DAC 0.
+  the rising edge of field sync. Each record starts at DAC 0.
 - A square wave changes the output after `period` passes of the wait loop.
   A pass takes 17 cycles, and a pass with a change takes 52 cycles. So the
   pitch is 894,886 / (2 x (17 x period + 35)) Hz: period 8 is 2617 Hz and
@@ -204,14 +212,14 @@ for each frame: a mode (square wave or noise), a period and a volume (0-63).
 
 1. Do one step of the random numbers. Read the keys. If O and K are held
    and both W and S read as held, use the vertical keys of the last frame.
-2. Move the player 1 pixel across and 2 rows down or up. Stop the player at
+2. Move the player 2 pixels across and 4 rows down or up. Stop the player at
    the arena edge. The player is 6 pixels wide and 10 rows high. It starts at
    pixel 61, row 95.
-3. Move each shot 3 pixels across and 6 rows down or up. Remove a shot that
+3. Move each shot 6 pixels across and 12 rows down or up. Remove a shot that
    leaves the arena.
 4. If the shoot delay is more than 0, decrease it by 1. If not, and a shoot
    key is held, and a shot slot is free, start a shot from the player. Then
-   set the delay to 5.
+   set the delay to 2.
 5. Move each enemy whose step count reaches 0.
 6. Count down the hunter wait. At 0, try to start a hunter.
 7. A shot that overlaps an enemy removes the shot and the enemy. Each shot
@@ -221,7 +229,11 @@ for each frame: a mode (square wave or noise), a period and a volume (0-63).
    the start and removes all shots.
 9. Take the next sound record. Erase what this screen showed two frames
    before. Draw the shots and the enemies. Draw the player last.
-10. Wait for the end of the picture, then show the new screen.
+10. Wait for the end of the first field, unless it ended during the work.
+    The field-sync flag stays set until a read of `$FF02` (MC6821 PDF 10,
+    Figure 18), so a set flag tells that the first field ended. Take the next
+    sound record. Wait for the end of the second field, then show the new
+    screen.
 
 ### Sources for the hardware facts
 
@@ -251,6 +263,8 @@ for each frame: a mode (square wave or noise), a period and a volume (0-63).
   and sound enable (`$FF23` bit 3) = 1 select the DAC. Tandy manual, PDF
   13-14 and PDF 38, Table 4.
 - The CPU clock is 14.31818 MHz / 16. Tandy manual, PDF 26.
+- The field-sync flag (`$FF03` bit 7) goes high on the selected edge and
+  stays high until a read of `$FF02`. Motorola, *MC6821*, PDF 10, Figure 18.
 - Cycle counts of the sound loop: Leventhal, *6809 Assembly Language
   Programming*, Appendix C, PDF 553-555.
 
@@ -262,11 +276,11 @@ remove one part of the game. The key scripts are short and written by hand.
 
 | Build | Controls | Keys | What it checks |
 | --- | --- | --- | --- |
-| `main` | none | none | The real start. The grunts reach the player at frame 77: death sound, level again. |
+| `main` | none | none | The real start. The grunts reach the player at frame 39: death sound, level again. |
 | `moves` | `NO_ENEMIES` | `moves.txt` | Movement, walls, shots, the wrong key C, the K/O/S/W rectangle rule, shot sounds |
-| `hit` | `FIXED_GRUNTS` `STILL` | `hit.txt` | Shot hits (frames 15 and 58), explosion and level sounds, level 2 |
-| `touch` | `FIXED_GRUNTS` | none | A grunt reaches the player at frame 133: death sound |
-| `hunter` | `NO_ENEMIES` `HUNTER_SOON` `NO_DEATH` | none | A hunter each 30 frames, its place and the hunter sound |
+| `hit` | `FIXED_GRUNTS` `STILL` | `hit.txt` | Shot hits (frames 9 and 32), explosion and level sounds, level 2 |
+| `touch` | `FIXED_GRUNTS` | none | A grunt reaches the player at frame 67: death sound |
+| `hunter` | `NO_ENEMIES` `HUNTER_SOON` `NO_DEATH` | none | A hunter each 15 frames, its place and the hunter sound |
 | `level10` | `FIRST_LEVEL=10` | none | 20 grunts and the level-10 hunter wait |
 
 The controls:
@@ -274,19 +288,20 @@ The controls:
 - `NO_ENEMIES`: no grunts, and an empty arena does not end the level.
 - `FIXED_GRUNTS`: two grunts, at x 100, y 90 and at x 100, y 40. No hunters.
 - `STILL`: enemies do not move.
-- `HUNTER_SOON`: the hunter wait is 30 frames.
+- `HUNTER_SOON`: the hunter wait is 15 frames.
 - `NO_DEATH`: a touch does not start the level again.
 - `FIRST_LEVEL=N`: the game starts at level N.
 
 The sound check looks at the last 4 ms of the mixer output at each frame.
-That is the end of the wait, where the record of the frame plays. It checks
-the volume of each step, the pitch of a square wave (within 5%) and that
-noise is not regular. On a heavy frame the wait can be shorter than 4 ms
-(measured), so `main`, `level10` and `hunter` after frame 150 check only the
-silence between effects. The mixer scale, 352.5 for each DAC step, is
+That is the end of the wait for the second field, where the second record of
+the frame plays. It checks the volume of each step, the pitch of a square
+wave (within 5%) and that noise is not regular. With the fixed speed, it
+checks every frame of every build. The mixer scale, 352.5 for each DAC step, is
 measured in these captures.
 
-Negative controls, run on copies: no DAC write in the square wave fails at
-frame 16 (`moves`). No rectangle rule fails at frame 77 (`moves`). A copy
+Negative controls, run on copies: a `show` without the record of the second
+field fails at frame 40 (`main`). The death sound plays its records too
+slowly. Before the fixed speed: no DAC write in the square wave failed at
+frame 16 (`moves`). No rectangle rule failed at frame 77 (`moves`). A copy
 with no hunters failed at frame 90 (increment 2). Erase routines without
-their last store fail at frame 3 (`main`): the screen keeps a trail.
+their last store failed at frame 3 (`main`): the screen keeps a trail.

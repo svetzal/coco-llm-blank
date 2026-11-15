@@ -1,109 +1,64 @@
 # Held keys for each frame of the moves variant (no enemies). Line N is
 # held during the Nth key scan. W up, S down, A left, D right; O, L, K and
 # ; shoot up, down, left and right. C is not a game key.
-# A number pair after the keys is the player position, written by hand from
-# the rules in README.md. The player starts at 61 95. It moves 1 pixel
-# across and 2 rows a frame.
+# A number pair after the keys is the player position after that frame,
+# computed with expected.py to help a reader follow the script. The player
+# starts at 61 95. It moves 2 pixels across and 4 rows a frame.
 -      61 95  idle
 -      61 95
--      61 95
-D      62 95  right
+D      63 95  right
 D
-D
-D
-D      66 95
-W      66 93  up
-W
-W
-W      66 87
-AD     66 87  opposite keys cancel
-WS     66 87
-C      66 87  wrong key (C): no move
-;      66 87  shoot right: first shot at 67 91
+D      67 95
+W      67 91  up
+W      67 87
+AD     67 87  opposite keys cancel
+WS     67 87
+C      67 87  wrong key (C): no move
+;      67 87  shoot right: first shot at 68 91
 ;
 ;
 ;
 ;
-;
-;
-;
-;
-;
-;
-;
-WDO;   67 85  up-right, shoot up-right
+;      67 87
+WDO;   69 83  up-right, shoot up-right
 WDO;
 WDO;
 WDO;
 WDO;
-WDO;
-WDO;
-WDO;
-WDO;
-WDO;
-WDO;
-WDO;   78 63
+WDO;   79 63
+SL     79 67
 SL
 SL
 SL
 SL
-SL
-SL
-SL
-SL
-SL
-SL
-SL
-SL     78 87  down, shoot down
+SL     79 87  down, shoot down
+AK     77 87
 AK
 AK
 AK
 AK
-AK
-AK
-AK
-AK
-AK
-AK
-AK
-AK     66 87  left, shoot left
+AK     67 87  left, shoot left
+SALK   65 91
 SALK
 SALK
 SALK
 SALK
-SALK
-SALK
-SALK
-SALK
-SALK
-SALK
-SALK
-SALK   54 111 down-left, shoot down-left
-W      54 109 up first: O and K with W cannot show a change from down
+SALK   55 111 down-left, shoot down-left
+W      55 107 up first: O and K with W cannot show a change from down
+WAOK   53 103
 WAOK
 WAOK
 WAOK
 WAOK
-WAOK
-WAOK
-WAOK
-WAOK
-WAOK
-WAOK
-WAOK   43 87  up-left, shoot up-left (keeps moving up)
+WAOK   43 83  up-left, shoot up-left (keeps moving up)
+SDL;   45 87
 SDL;
 SDL;
 SDL;
 SDL;
-SDL;
-SDL;
-SDL;
-SDL;
-SDL;
-SDL;
-SDL;
-SDL;   55 111 down-right, shoot down-right
--      55 111 release
+SDL;   55 107 down-right, shoot down-right
+-      55 107 release
+WA     53 103
 WA
 WA
 WA
@@ -126,72 +81,29 @@ WA
 WA
 WA
 WA
+WA     7 13   top wall reached
 WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA
-WA     6 13   top wall reached
-WA     5 13
-WA
-WA
-WA
-WA
-WA
-WA
+WA     4 13   left wall reached: the corner
 WA
 WA
 WA
 WA     4 13   held against the corner
+K      4 13
 K
-K
-K
-K
-K
+K      4 13
 -      4 13   a shot at the left wall is removed at once
-S      4 15   down from the corner
+S      4 17   down from the corner
 S
-S
-S
-S      4 23
-SOK    4 25   down, shoot up-left: W reads as held (matrix), keep moving down
+S      4 25
+SOK    4 29   down, shoot up-left: W reads as held (matrix), keep moving down
 SOK
-SOK
-SOK
-SOK    4 33
--      4 33   release
+SOK    4 37
+-      4 37   release
 -
--
--
--      4 33
-WOK    4 33   up and shoot up-left from rest: S reads as held, no move
+-      4 37
+WOK    4 37   up and shoot up-left from rest: S reads as held, no move
 WOK
-WOK
-WOK
-WOK    4 33
-W      4 31   up alone
+WOK    4 37
+W      4 33   up alone
 WOK    4 29   then shoot up-left too: keep moving up
-WOK
-WOK
-WOK    4 23
+WOK    4 25
