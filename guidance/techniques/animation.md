@@ -96,8 +96,14 @@ a column or cell.
 **Published explanation.** John Kowalski's *Gloom 3-D V1.2* (1996, CoCo 3)
 compares colour and distance records for each column with the previous frame.
 It updates only the changed columns. See `ENGINE`/`OUTRAN` 00360-01700 and
-`CLOSAM`/`CLODIF` 01860-02300 in [the source][gloom]. Its README, lines 94-98,
-describes one screen and proposes two. [Readme][gloom-readme]
+`CLOSAM`/`CLODIF` 01860-02300 in [the source][gloom]. `DRAW` (01720-01840)
+exchanges the pointers of two 256-byte tables (`BAR1`/`BAR2`, 08080-08100).
+Its README, lines 94-98, describes one screen and proposes two. [Readme][gloom-readme]
+
+**Derived.** The tables hold 128 two-byte column records, not two screens, so
+the exchange is not a page flip. A wall can change colour at the same height
+(`CLODIF` 02160-02300). A farther wall exposes floor and ceiling, which
+`FURSAM`/`FURDIF` (02720-03160) repaint. Geometry alone is not a full record.
 
 **Our adaptation** is this procedure:
 
@@ -125,9 +131,14 @@ A shared record set left 64 wrong bytes. A missing invalidation left one wrong
 byte. The lab had no display and no timing, so it makes no speed claim.
 
 Selective redraw adds record storage, comparisons and invalidation rules.
-Measure both methods before you choose it. For packed pixels and palettes, read
-the [CoCo 3 source reading](research/coco3-game-source.md#original-packed-pixel-adaptation),
-which also records source hashes and reuse limits.
+Measure both methods. Test growth, shrinkage and colour-only changes.
+
+Do not port Gloom unchanged. `SETUP` (03320-03860) changes the clock, vectors
+and machine state, detects a 6309 and contains `LDMD`. `GOON` (02540-02620)
+changes its own operand. The README names EDTASM (line 21) and puts data at
+`$00000-$2FFFF` and `$60000-$63FFF` (lines 45-48, 60-66). `gloom.txt` lines
+15-26 describe strictly 6809 code, unlike this listing. Its frame rate is the
+author's report. For packed CoCo 3 pixels, read the [colour guide](colour.md#keep-the-neighbour-pixel-and-the-palette-separate).
 
 ## Budget the storage for animation
 
@@ -155,9 +166,18 @@ Two one-byte coordinates need `2 * point_count * frame_count` bytes. Line
 drawing still happens in each frame. We did not run his CoCo 3 listing.
 
 An accumulating picture can keep its history in the screen. Richard Ramella's
-*Flower Fantasy* adds circle segments without a clear and rejects the centre
-pixel's colour. [Ramella, PDF 18][ramella] This removes a shape list, but also
-undo. The [Undercolor research](research/undercolor-game.md) records its limits.
+*Flower Fantasy* (16K Extended Color BASIC) adds circle segments without a
+clear and rejects the centre pixel's colour. [Ramella, PDF 18][ramella] This
+removes a shape list, but also undo. The centre test does not test the area of
+the new shape, so it is not collision detection. Our adaptation chooses from
+the remaining colours instead of a retry loop, and clips each shape.
+
+Ramella's *Winky* draws a face once, then loops over the arcs of the eye (lines
+670-760, PDF 6). Its prose line references do not always match the listing.
+[Ramella, PDF 4-6][winky] Our adaptation restores a fixed rectangle before each
+new state of the eye. That erases any object over the rectangle. These 1985
+BASIC sources do not establish CoCo 3 support. Do not copy their POKEs, PMODE
+changes or delays into assembly.
 
 ## Sources
 
@@ -170,10 +190,20 @@ undo. The [Undercolor research](research/undercolor-game.md) records its limits.
 - Tandy, *Color Computer 3 Service Manual*, PDF 11-18. Resource `coco3-service`.
 - Laurence A. Tepolt, *Assembly Language Programming for the CoCo3* (1987),
   PDF 50. Resource `tepolt-coco3`.
-- John Kowalski, *Gloom 3-D V1.2* (1996), embedded source line numbers.
+- John Kowalski, *Gloom 3-D V1.2* (1996), read in full, cited routines
+  analysed. Its README (lines 10-16) calls it "Openware", not a licence.
+  SHA-256: `gloom.asm`
+  `dfbd0810d00b83952c3bd494a0425c79e7280e55c16f65ef0fa806b051375acb`,
+  `readme.txt` `bd3fe192c8b3cff482b6fe23c96abb1d192940236ab8f532672469b41868e91e`,
+  `gloom.txt` `5996cc6705c0e70bd5e4f44c0ee5c1473e1640059d733f42b850f3da76be6a47`.
 - *The Rainbow*: Polsz, October 1986 (`rainbow-1986-10`). Matthews, October
   1987 (`rainbow-1987-10`). Pendell, October 1992 (`rainbow-1992-10`).
-- Ramella, "Summer Frippery", *Undercolor* 1:11, June 30, 1985, printed 16.
+- Richard Ramella, *Undercolor* (ColorPlus Inc.), page images, no resource
+  ID: "Another Fine Mess", 1:3, January 11, 1985, printed 2-4, 6, 23 / PDF 4-6,
+  8, 25, SHA-256 `86b30ed5b747eac47ad21b9b28d5a241cee8807f7a06d6d14dfa436eb6c6ca96`.
+  "Summer Frippery", 1:11, June 30, 1985, printed 16 / PDF 18, SHA-256
+  `3120b8fa4fa96baba7a6337541ad93428d4b77c3dbdd7fde441f66b50b8edbb4`. See the
+  [game-state guide](game-state.md#open-questions) for the correction search.
 
 The procedures, allocations and pseudocode are our original guidance. We did
 not reproduce the historical listings.
@@ -193,3 +223,4 @@ not reproduce the historical listings.
 [matthews]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf#page=44>
 [pendell]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2012%20No.%2003%20-%20October%201992.pdf#page=3>
 [ramella]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n11%20%281985%29%28ColorPlus%20Inc%29.pdf#page=18>
+[winky]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n03%20%281985%29%28ColorPlus%20Inc%29.pdf#page=4>

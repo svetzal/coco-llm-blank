@@ -109,7 +109,8 @@ an example. Read its cited primary passages; the example is not a substitute.
   then only the relevant guide. Separate published facts, our adaptations, and
   measured results. Use its cited pages before hardware-dependent
   implementation.
-  [Research notes](guidance/techniques/research/README.md) retain source selection and open questions.
+  Each guide's sources and open questions record what we read, what we
+  rejected and what is still open.
 - Writing CoCo code: read [development practice](guidance/starter/development.md).
 - Testing controls, sound or artwork: use the task-specific
   [evidence checks](guidance/starter/development.md#check-the-feature-you-claim), which
@@ -175,5 +176,5 @@ return to BUILD on the project that raised it. If a project's README has an
 `Open lab` line, ask whether to resume that lab or continue building.
 
 Never add research notes, validation reports or experiment packages to tracked
-folders. The existing `experiments/` and `guidance/techniques/research/`
-folders hold labs that were never closed. Do not add to them.
+folders. The existing `experiments/` folder holds labs that were never closed.
+Do not add to it.

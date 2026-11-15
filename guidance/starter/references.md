@@ -5,7 +5,8 @@ For available local sources and page coverage, read [the index](../../local/INDE
 after setup. A missing index means setup has not run.
 
 For game and demo techniques, start with [the technique guides](../techniques/README.md).
-[Research notes](../techniques/research/README.md) retain source selection and open questions.
+The sources and open questions in each guide record what we read, what we
+rejected, and what is still open.
 
 ## Choose a source before making a hardware claim
 
@@ -17,9 +18,17 @@ sounding answer from model memory does not count as verification. Start here:
 | Graphics | `local/references/assembly-graphics/text.md` |
 | CoCo 1 hardware | `local/references/coco1-technical/text.md` |
 | 6809 CPU | `local/references/6809-programming/text.md` |
+| Color BASIC ROM routines | `local/references/color-basic-unravelled/text.md` |
 
 These are starting sources, not guarantees that every target or peripheral is
 covered. Check the book's machine and mode context.
+
+*Color Basic Unravelled II* is a commented disassembly of Color BASIC 1.2. PDF
+27 has the jump table at `$A000`, such as `CHROUT` at `$A002`. PDF 30 and 31
+have the character output routine. The conversion merges the listing columns.
+Read the page image, or the text layer of the PDF, for an address or an
+operand. Do a check of a ROM call on the target firmware before you rely on it.
+
 
 A CPU book alone cannot establish a CoCo peripheral's register layout.
 Where the books do not establish the fact, obtain the relevant technical manual
@@ -111,6 +120,9 @@ uv run python scripts/setup.py --resource rainbow-1992-10 --pages 10:10
 The magazine's dense listings need image checks. Its cover contains an unrelated
 random-number article as well as the game introduction.
 A search hit on the cover does not identify which article supplies a claim.
+The checked conversion garbles the PDF 3 listing and merges listing lines on
+PDF 10. The graphics-book conversion of PDF 159–164 corrupts assembly operands.
+Use the page images for code.
 
 ### Background restoration and separate collision shapes
 
@@ -147,12 +159,13 @@ PDF 27 also damages part of the sync explanation, though its restoration
 sequence remains readable. The full-page PNGs retain those details.
 Use the images for command syntax and damaged passages.
 
-The [rendering source notes](../techniques/research/rendering-sources.md) also cite *Dunkey Munkey* source
-files and routines for persistent-background restoration.
-That ZIP is a direct source citation, not a PDF manifest resource.
-Its code was read but not ported or run.
+The [moving-object guide](../techniques/moving-objects.md#restore-from-a-persistent-background)
+also cites *Dunkey Munkey* source files and routines for persistent-background
+restoration. That ZIP is a direct source citation, not a PDF manifest resource.
+Do not put it through the PDF conversion. We read its code but did not port or
+run it.
 
-Keep downloads local. Use the file/routine citations in the note.
+Keep downloads local. Use the file and routine citations in that guide.
 
 ## Pixel order, timing, and prepared-frame animation
 
@@ -185,8 +198,8 @@ Treat these two resources as a pair:
 
 Convert pages 80 and 82 separately to skip the intervening advertisement.
 The correction changes constants in the listing on PDF 82.
-The [research notes](../techniques/research/README.md#magazine-discovery-and-corrections)
-record the exact changes and the limits of this reading.
+The [scrolling guide](../techniques/scrolling.md#understand-the-512k-correction)
+records the exact changes and the limits of this reading.
 Neither source establishes a bitmap scrolling engine.
 
 PDF 80 also contains an unrelated colour-blending article. Its converted
@@ -257,6 +270,21 @@ proposed adaptations.
 Selecting the cartridge manual downloads a reference only.
 It installs no cartridge driver and does not change the project's hardware
 contract.
+
+## Find a magazine article
+
+`rainbow-index` is a locator, not a hardware reference. Use it to find the
+issue and page, then read the article itself. For example, its PDF 56 locates
+SMOOTHY and its correction, and its PDF 87 locates the October 1992 articles.
+
+- Search for titles, authors and synonyms. A search for `sprite` alone misses
+  articles about `GET`, `PUT`, animation and graphics storage.
+- Tell product reviews and advertisements apart from technical explanations
+  and listings.
+- Confirm the issue date and each PDF page against its printed page. In the
+  October 1987 scan, printed 26 is PDF 25, so one offset is not safe.
+- Read the continuation pages and look for later corrections before you rely
+  on an article.
 
 ## Find the relevant passage
 

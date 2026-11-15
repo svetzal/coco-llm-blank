@@ -9,10 +9,10 @@ Agents enter through [AGENTS.md](../AGENTS.md), which says when to read each par
 | --- | --- | --- |
 | [starter/](#using-the-starter) | How to use this repository: setup, tools, references and development practice | Setting up, building, testing, or looking up a source |
 | [techniques/](techniques/README.md) | Game and demo domain guidance: how to animate, draw, control, store and play sound | Choosing or applying a technique for the owner's project |
-| `techniques/research/` | Source research behind the techniques | Tracing a claim, or extending a technique with new sources |
 
-Read the guide for the task at hand. Research and validation records are the
-evidence trail. Open them when a guide's claim matters to the work.
+Read the guide for the task at hand. Each technique guide cites its sources
+and lists its open questions. Open the cited pages when a claim matters to the
+work.
 
 ## Using the starter
 
@@ -29,18 +29,6 @@ evidence trail. Open them when a guide's claim matters to the work.
 
 Start with the [technique index](techniques/README.md). It maps the effect the
 owner wants to a guide and states the current evidence for each.
-
-## Technique research
-
-Use these records to trace examined sources, adaptations, rejected matches and
-unresolved questions. A source description is not a runtime validation.
-For practical implementation advice, start with the [technique guides](techniques/README.md).
-
-- [Research for games and demos](techniques/research/README.md).
-- [Rendering sources examined](techniques/research/rendering-sources.md).
-- [CoCo 3 demos: update less memory and separate colour from geometry](techniques/research/coco3-game-source.md).
-- [Hot CoCo game techniques](techniques/research/hot-coco-game.md).
-- [Undercolor techniques for small updates](techniques/research/undercolor-game.md).
 
 ## Validation records
 

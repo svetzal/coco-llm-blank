@@ -35,6 +35,41 @@ Treat the resulting appearance as display-dependent.
 Do not count it as extra independently addressable palette entries.
 [Tepolt, PDF 59][tepolt]
 
+## Keep the neighbour pixel and the palette separate
+
+**Published explanation.** Robert Gault's *Symmetry* (1993, CoCo 3) has a BASIC
+host and an assembly plotter. `SYMMETRY.BAS` lines 70–110 and 130–140 ask for
+RGB or composite, choose one of two 16-entry tables, enter `HSCREEN2` and set
+the palette.
+
+In `SYM.ASM`, `COLOR` (00940–00980) stores an index 1–15 at the
+foreground-colour location `$FE0A` (`HFCOLR`, 00180). It writes no palette
+register. `HPOINT`/`HSET` (01140–01380) use a 160-byte row stride. They keep
+the other nibble of the byte and insert the colour. [Symmetry ZIP][symmetry]
+
+So a new drawing index changes only new points. This is not palette cycling.
+The two tables are the author's display choices, not proof of equal colour on
+every RGB or composite display.
+
+**Our adaptation.** Define art in colour indices. Choose the mapping for the
+display path at setup. To change one pixel, keep its neighbour:
+
+```text
+address = framebuffer_start + y * row_stride + floor(x / 2)
+shift = 4 if x is even else 0
+mask = 15 << shift
+memory[address] = (memory[address] AND (255 XOR mask)) OR (colour_index << shift)
+```
+
+This assumes the packing that `HPOINT` uses: the even pixel in the high nibble.
+Check the selected mode in the hardware reference first. Test both parities
+with different neighbours, every edge, and rejected input next to guard bytes.
+
+The plotter is not self-contained. `START` and `EXIT` call ROM entry points
+through `TASK1`/`TASK0` (00190–00200, 00290, 00800–00810), as the source
+comments name them. `RAND` uses the BASIC random state. BASIC line 20 loads
+`SYM6809`, but the ZIP holds `Sym.bin`. We did not assemble or run it.
+
 ## Check pixel order before interpreting colour
 
 Motorola's **MC6847/MC6847Y Video Display Generator** datasheet gives direct
@@ -46,6 +81,11 @@ Figure 22 on printed/PDF 21 identifies the corresponding byte positions as
 `D7` through `D0`.
 Thus the chip's RG6 format places the most significant bit at the left.
 [Motorola][mc6847-pixels]
+
+PDF 12 gives the address order: left to right, then
+top to bottom. PDF 11 separates the 192 active lines from borders and retrace.
+The RG6 paragraph on PDF 20 says 256×193, but its heading and the tables on PDF
+14, 18 and 19 say 256×192. We use 256×192.
 
 This is chip-level evidence for MC6847/MC6847Y, not a complete CoCo setup.
 Check the board's data wiring and selected mode before applying it.
@@ -161,24 +201,24 @@ A RAM snapshot shows the stored values, not their visible colour.
   PDF 59. Resource `tepolt-coco3`. [Archive][tepolt]
 
 - Motorola, *MC6847/MC6847Y Video Display Generator*, 1984, DS9823-R1,
-  printed/PDF 8, 13, 19, 21–22. Technical pages 1–23 examined as images.
+  printed/PDF 8, 11–14, 18–22. Technical pages 1–23 examined as images.
   Resource `mc6847`. Archive filename: *MC6847 MOS Video Display Generator
-  (Motorola)*. [Archive][mc6847-pixels]
+  (Motorola)*. It is not the separate MC6847T1 datasheet. [Archive][mc6847-pixels]
+
+- Robert Gault, *Symmetry* (1993). We read all of `SYM.ASM` and `SYMMETRY.BAS`
+  and analysed the cited routines. `SYM.ASM` cites use the embedded source
+  numbers. ZIP SHA-256
+  `dafe532a230b2595fc40b67bdc34aa263e22f372620167abc7ac9f523786131f`. No
+  member gives reuse terms. [Archive][symmetry]
 
 We examined these source pages as images.
 We have not compared colours across physical displays.
-The [research notes](research/README.md) record the source selection.
 
 [coco2]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf#page=31>
-
 [coco3]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf#page=17>
-
 [tepolt]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=59>
-
 [mc6847-pixels]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=19>
-
 [mc6847-sync]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=8>
-
 [mc6847-system]: <https://colorcomputerarchive.com/repo/Documents/Datasheets/MC6847%20MOS%20Video%20Display%20Generator%20(Motorola).pdf#page=22>
-
 [technical]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf#page=15>
+[symmetry]: <https://colorcomputerarchive.com/repo/Programming/Source/Symmetry/Symmetry.zip>

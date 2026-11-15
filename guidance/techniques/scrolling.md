@@ -27,8 +27,8 @@ For a design with `N` complete prepared buffers of `B` bytes each, storage is
 `N * B` bytes. This is our accounting rule, not a speed measurement. Include any
 borders or off-screen rows in `B`.
 
-More buffers may reduce work during display updates, but this research has not
-measured that tradeoff.
+More buffers may reduce work during display updates, but we have not measured
+that tradeoff.
 
 Do not infer register values or alignment from this guide. Read the complete
 register description of the selected mode before you set its offsets. The
@@ -195,23 +195,19 @@ The text-scrolling cross-check also uses:
   `rainbow-1988-04`. [Archive][smoothy-fix]
 
 The budget procedure, map review, and proposed checks above are original
-guidance. This research reproduced no scrolling program and no interrupt program
-with a changing map.
-[Research notes](research/README.md#coco-3-graphics-and-memory) retain the
-source selection and limits.
+guidance. We reproduced no scrolling program and no interrupt program with a
+changing map.
+
+The Rainbow index (`rainbow-index`), PDF 56, locates SMOOTHY and its
+correction. Bill Bernico's "Screen Scrolling Made Easy", *The Rainbow*,
+October 1987 (`rainbow-1987-10`), printed 26 / PDF 25, scrolls a completed
+picture off the screen. Use it for transitions, not for a scrolling game.
 
 [scroll]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=59>
-
 [mapping]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=60>
-
 [registers]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf#page=13>
-
 [text-scroll]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=33>
-
 [aliasing]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=29>
-
 [basic-map]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Programming%20for%20the%20CoCo3%20(1987)%20(Laurence%20A%20Tepolt).pdf#page=58>
-
 [smoothy]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2006%20-%20January%201988.pdf#page=80>
-
 [smoothy-fix]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2009%20-%20April%201988.pdf#page=14>

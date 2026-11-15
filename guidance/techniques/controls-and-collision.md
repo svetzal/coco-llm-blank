@@ -183,6 +183,8 @@ A+B+I probe and most chords are not tested.
 - Landwehr's M-key prose gives 233, but his table puts M under 223 (PDF 106).
   His text gives eight rows, but the table has seven (PDF 106 and 108). The
   manuals give seven rows.
+- *Attacker* says "right" twice in its horizontal-control prose (PDF 82).
+  Lines 100–110 (PDF 86) give the exact threshold behaviour.
 - The CoCo 1 schematic labels the lower PIA port PA0–PA7 (PDF 75). The prose
   and the block diagram (PDF 36) call it port B. The register roles settle
   this for software.
@@ -196,10 +198,15 @@ A+B+I probe and most chords are not tested.
   *Service Manual* (`coco3-service`).
 - Motorola, *MC6821 PIA* datasheet, outside the manifest, SHA-256
   `1fa14d31bb39172610d63fd05ee6624cca50c7adb8ec3114579e7018222c3872`.
-- *Hot CoCo*, Vol. 1 No. 5, October 1983: Landwehr, "Read the Keyboard in
-  Assembly", and Togliatti, "Attacker". PDF pages equal printed pages. The
-  [Hot CoCo reading](research/hot-coco-game.md#sources-and-reading-coverage)
-  records the hash, the reading coverage and a search for errata.
+- *Hot CoCo*, Vol. 1 No. 5, October 1983, archive OCR edition, SHA-256
+  `76218e4e0bc98ca0545ef3db34ce89bfb080998d7e89370f3ced483a2909e7a4`. PDF
+  pages equal printed pages. We read as page images Landwehr, "Read the
+  Keyboard in Assembly", 106 and 108, and Togliatti, "Attacker", 82, 84, 86,
+  88 and 89, with their complete listings.
+- Errata search, 2026-11-14: the November 1983 Feedback section (printed 8 and
+  10, PDF 10 and 12, read as images), a text search of that issue, and web
+  searches for the titles and authors. We found no correction to these
+  articles. That does not prove that none exists.
 
 The examples are our original work. They copy no magazine listing.
 

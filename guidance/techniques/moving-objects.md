@@ -1,324 +1,228 @@
 # Move objects without losing the world
 
-Read this when a moving character leaves holes in the scenery, or when drawing
-changes which objects collide. Rendering and collision need separate decisions.
-
-The sources below explain useful starting points. An original full-redraw
-example now checks a bounded implementation on two emulator configurations.
+Read this when a moving object leaves holes in the scenery, when a foreground
+layer must hide an object, or when drawing changes which objects collide.
+Rendering and collision need separate decisions. The sources are listings and
+manuals that we read but did not run. The checked examples run on defined
+CoCo 1 and CoCo 2 configurations only.
 
 ## Start with what the drawing routine overwrites
 
-Don Inman, Kurt Inman, and Dymax describe a small shape table and
-joystick-driven movement in *Assembly Language Graphics for the TRS-80 Color
-Computer*. The example uses mode 6C.
+**Published explanation.** Don Inman, Kurt Inman and Dymax, *Assembly Language
+Graphics for the TRS-80 Color Computer*, chapter 7, move a small shape with the
+joystick in mode 6C. The drawing routine copies two bytes on each of six rows.
+The erase routine clears that same rectangle before it draws elsewhere. The
+address calculation clamps the placement before the copy (printed 153–155,
+PDF 161–163). [Printed 151–156, PDF 159–164][graphics]
 
-Its drawing routine copies two bytes on each of six rows. Its erase routine
-clears that same rectangle before it draws elsewhere.
-[Printed 151–156, PDF 159–164][graphics]
+**Our adaptation.** A cleared rectangle cannot restore arbitrary scenery. It
+replaces every byte, also where the shape has background-colour pixels. This is
+a property of the listing, not an observed failure. The later two-saucer
+exercise asks readers to investigate overlap. It gives no overlap-safe
+renderer. [Printed 168–169, PDF 176–177][saucers]
 
-Our conclusion from those instructions is that clearing the rectangle cannot
-restore arbitrary scenery. It replaces every byte in the rectangle. This
-includes positions where the object shape has background-colour pixels.
-
-This is a property of the examined listing, not an observed runtime failure.
-
-The book's later two-saucer exercise asks readers to investigate overlap. It
-does not provide a finished overlap-safe renderer or collision system.
-[Printed 168–169, PDF 176–177][saucers]
-
-## Choose how to restore the background
-
-The full-redraw example below has emulator checks. Historical sources also
-describe two methods to restore the background. The use of those methods in a
-new starter renderer remains untested.
-
-The original masked example below uses full-background redraw instead. Choose a
-restoration strategy deliberately before you add scenery.
-
-For a uniform background, it may be enough to repaint the old rectangle. Check
-that no other object or trail occupies that rectangle.
-
-For one object over an unchanged background, a saved rectangle is a possible
-starting design:
-
-1. Save the background bytes that the new object covers.
-2. Draw the object.
-3. Restore those saved bytes before you move the object.
-4. Repeat at the new position.
-
-This simple sequence needs more work when objects overlap or scenery changes.
-Restoring an old snapshot can erase a newer object or show removed scenery
-again. Do not claim that saving a rectangle alone solves overlap.
-
-For several objects, consider a redraw of the affected regions from
-authoritative world state. Restore the scenery first. Then draw all intersecting
-objects in a defined order.
-
-A full redraw is easier to reason about, but it can cost more time. The
-[sound guide](sound.md) explains why that cost also matters to audio.
-
-A transparency mask answers a different question: which destination pixels
-should this draw preserve? It does not remember what was there before the draw.
-A masked drawing routine still needs an erase or redraw strategy.
-This distinction is our design guidance.
-
-This pass found no examined listing of a CoCo masked renderer to promote as an
-implementation reference.
-
-## Restore from a persistent background
-
-Harvey Brofman's *Dunkey Munkey* source keeps separate display and background
-buffers. Its `ERASE` routine copies a rectangular region from the background
-into the display.
-
-The source shows this in `KONG.TXT`, lines 98–99, and `GRAPH2.TXT`, lines
-314–345. [Source ZIP][dunkey]
-
-This background represents the scenery that should remain after an object moves.
-It is not a snapshot that the game captured immediately before it drew the
-object.
-
-When a rivet disappears, the game changes its state, erases it from the
-background, then restores the display region. Read `SCREN2.TXT`, lines 308–316.
-The later scenery update at lines 334–355 also changes the background before it
-copies the background.
-
-Our proposed adaptation is to keep scenery authoritative in a separate buffer.
-Update that buffer when a door opens, a pickup disappears, or terrain changes.
-Restore old object regions from that buffer. Then redraw intersecting objects in
-their layer order.
-
-That last redraw rule is our design recommendation. The examined routines do not
-prove safe handling of arbitrary overlapping objects.
-
-The two historical buffers alone occupy 12,288 bytes. Budget that cost before
-you choose this method.
-
-Its renderer uses two-bit pixels and has no transparent-colour skip in the
-examined shape loop. It is not a ready-made two-colour masked renderer. This
-starter has not ported or validated it.
-
-## Save background regions separately for each screen
-
-*GrafExpress 2.0* describes another method for objects that leave no trail. Its
-manual calls them nonsticky sprites. The engine does these steps in this
-sequence:
-
-- It saves all regions that the next frame needs, before it draws sprites.
-- It draws all sprites.
-- It displays that screen.
-- It restores the previously displayed screen.
-
-The restoration uses a separate set of saved regions that belong to that
-previous screen. [Printed 22, PDF 27][graf-restoration]
-
-For an original two-screen renderer, our adaptation would associate each saved
-region with the screen buffer and frame from which it came. Save regions before
-you draw any objects into that frame. Do not reuse the newest saved pixels to
-repair the previous screen.
-
-Test changes to scenery as well as overlapping objects. These rules are derived
-design guidance, not a tested starter renderer.
-
-GrafExpress explains that the saving and restoration of regions cost time and
-memory. Its two sets of restoration buffers do not establish that it is safe to
-add a third display buffer. Read the complete discussion before you change the
-buffering scheme.
-
-Its own pixel-alignment rules and composite-only GE256 display method also do
-not define portable graphics behavior for CoCo 1/2.
-
-## Keep the whole object inside the screen
-
-The book's calculation of the screen address clamps placement before the copy of
-the shape. The relevant calculation and listing are on printed 153–155, PDF
-161–163. Read the dimensions and storage units with the code.
-[Inman and Inman with Dymax][bounds]
-
-For a new renderer, our proposed contract for pixel coordinates is:
+Keep a fully visible object inside the screen, in matching units:
 
 ```text
 0 <= x <= screen_width - object_width
 0 <= y <= screen_height - object_height
 ```
 
-This assumes a fully visible object and matching units. A different routine is
-necessary to clip an object at the edge.
+Clipping at an edge needs a different routine. Convert pixels to byte offsets
+only after you define packing and alignment. Test every horizontal alignment
+that the renderer supports, including partial bytes at the right edge.
 
-Convert pixel coordinates to byte offsets only after you define packing and
-alignment. Check every horizontal alignment that the renderer supports,
-including partial bytes at the right edge.
+## Choose how to restore the background
+
+**Our adaptation.** Choose a restoration method before you add scenery:
+
+| Method | Use it when | Hazard |
+| --- | --- | --- |
+| Repaint the old rectangle | The background is one colour | It erases another object or a trail in the rectangle |
+| Save and restore a rectangle | One object moves over unchanged scenery | An old snapshot can erase a newer object or show removed scenery again |
+| Restore from a persistent background | Scenery changes during play | The buffer costs memory and must change with the scenery |
+| Redraw affected regions from world state | Several objects overlap | It costs more drawing time, which also matters to [sound](sound.md) |
+
+A transparency mask answers a different question: which destination pixels
+does this draw keep? It does not remember what was there before the draw. A
+masked draw still needs an erase or redraw method. We found no examined
+listing of a CoCo masked renderer to use as a reference.
+
+## Restore from a persistent background
+
+**Published explanation.** Harvey Brofman's *Dunkey Munkey* source keeps the
+scenery in a separate buffer. Line numbers count every line from one in the
+`DunkeyMunkey_Source` files of the [source ZIP][dunkey]:
+
+- `KONG.TXT` 98–99, `SCRSTA` and `BACGRN`: display and background buffers,
+  6,144 bytes apart. The two buffers alone cost 12,288 bytes.
+- `GRAPH2.TXT` 50–59, `COPYBF`, copies the background to the display. Lines
+  314–345, `ERASE`, copy a rectangle of it, not a flat colour. Lines 194–282,
+  `MOVE`, use `ERASE` and `SHAPE`. Some paths restore only the exposed strip.
+- `SCREN2.TXT` 308–316: a rivet leaves the game state, `ERASEB` removes it
+  from the background, and `ERASE` restores the display. Lines 334–355 change
+  the background with `ERASEB` and `BSHAPE`, then copy it to the display.
+
+This background is the scenery that stays after an object moves. It is not a
+snapshot taken just before the draw. `SHAPE` and `BSHAPE` (`GRAPH2.TXT`
+139–174) insert every shape pixel. Their loop has no transparent-colour skip.
+`SETX` (83–106) masks one packed pixel in a byte, which is not an object mask.
+The source uses 32-byte rows, two-bit pixels and a syntax that is not LWTOOLS.
+
+**Our adaptation.** Keep the scenery authoritative in a separate buffer.
+Change that buffer when a door opens, a pickup goes or terrain changes. Restore
+old object regions from it. Then redraw the intersecting objects in layer
+order. That redraw rule is ours. The routines do not prove safe handling of
+arbitrary overlap. We made no RAM, ROM, mode or CoCo 2/3 assessment.
+
+## Save background regions separately for each screen
+
+**Published explanation.** Sundog Systems' *GrafExpress 2.0* manual describes
+nonsticky sprites. The engine saves the regions that the next sprites cover. It
+draws all sprites and shows the completed screen. Then it restores the
+previously shown screen from that screen's own saved regions. It keeps two sets
+of restoration buffers and states their time and memory cost.
+[Printed 22, PDF 27][graf-restoration]
+
+**Our adaptation.** Tie each saved region to the screen and frame that it came
+from. Save before you draw any object into that frame. Do not repair the
+previous screen with the newest saved pixels. Two buffer sets do not show that
+a third screen is safe. This is our derivation, not a tested renderer. The
+manual is not engine source. GE16 and GE256 have their own packing, and GE256
+shows only on composite displays (printed 2, PDF 7). Neither sets up CoCo 1/2.
+
+## Draw foreground layers last
+
+**Published explanation.** LeRoy W. Gross's *Knight Rider* (16K Extended
+Color BASIC) draws the scenery, then the rider, then the foreground scenery.
+Lines 210 and 400 select and clear alternate screens. On page 76 he explains a
+failure: a green fill of the foliage can find green at its start point and skip
+the repaint, so the rider shows through. His listing fills with an intermediate
+colour first, then with green. This is a flood-fill workaround, not a mask.
+[*Hot CoCo*, October 1983, printed/PDF 72–73 and 76][knight]
+
+**Our adaptation.** In assembly, overwrite the covered pixels of each foreground
+layer from stored coverage or opaque spans. Do not rely on the seed colour of a
+fill. Draw rear scenery, then actors, then foreground layers into the hidden
+screen. Coverage data costs asset memory. A full rebuild costs drawing time. A
+hidden screen alone does not prove a display without tearing.
 
 ## Decide whether the picture is also the collision map
 
-Kenneth Reighard Jr.'s "The Universal Pick-Up" presents the BASIC game
-*Interplanetary Trash Collector*. Its listing does these operations:
+**Published explanation.** Kenneth Reighard Jr.'s "The Universal Pick-Up"
+presents the BASIC game *Interplanetary Trash Collector*. The contents calls it
+"Inter-Planetary Trash". Lines 145–220 of the `IPTRASH` listing draw the old
+point, read input, advance the position, check bounds and dispatch on `PPOINT`
+at the destination. Pixel values tell empty space, obstacles, trail and pickups
+apart. [*The Rainbow*, October 1992, cover/PDF 1 and printed/PDF 10][trash]
 
-- It draws a trail.
-- It moves the current point.
-- It checks screen bounds.
-- It dispatches on `PPOINT` at the destination.
+The article targets CoCo 3 with the faster clock and gives changes for CoCo 1/2
+and composite output. These are the author's configurations, not tested support
+claims. Do not copy its clock writes into a normal-speed project.
 
-Different pixel values distinguish empty space, obstacles, trail, and pickups.
-[The Rainbow, October 1992, cover/PDF 1 and printed/PDF 10][trash]
+**Our adaptation.** Screen-based collision makes drawing part of game state. A
+decorative pixel, an erase or a new trail colour can change a result. That is a
+constraint when art and rules must change separately.
 
-The article targets CoCo 3 and gives changes for CoCo 1/2 and composite output.
-It also uses a faster clock. Those are the author's configurations, not tested
-support claims for this starter.
-
-Do not copy its clock writes into a normal-speed project without a change to the
-project's contract.
-
-Our inference is that screen-based collision makes drawing part of game state. A
-decorative pixel, an erase operation, or a new trail colour can change a
-collision result.
-
-That can be a useful compact design for a trail game. It becomes a constraint
-when art and collision rules need to vary independently.
-
-For a new game, write down what each collision value means before you choose
-colours. If decoration must not affect movement, consider a separate occupancy
-map or object bounds. These are proposed alternatives, not techniques reproduced
-from this article.
-
-Tile maps and general masked collision still need source research. The next
-section adds a published example that separates visible shapes from collision
-shapes.
+Write down what each collision value means before you choose colours. If
+decoration must not affect movement, use a separate occupancy map or object
+bounds. The [controls guide](controls-and-collision.md) develops them.
 
 ### Separate appearance from collision shape
 
-GrafExpress distinguishes transparency from solidity. A transparent-colour
-picture makes those pixels both invisible and nonsolid, but a rectangle picture
-can be invisible and still solid.
+**Published explanation.** *GrafExpress* keeps these contracts apart:
 
-The manual suggests such rectangles for collision against separately drawn
-scenery.
-[Printed 3 and 15–16, PDF 8 and 20–21][graf-shapes]
+| Contract | Printed / PDF | Consequence |
+| --- | --- | --- |
+| Transparent pixels and solid pixels are different properties. | 3 / 8 | A visible silhouette need not be the collision shape. |
+| A transparency colour makes matching pixels transparent and nonsolid. | 15 / 20 | This one picture operation ties the two properties together. |
+| A rectangle picture is transparent but solid. The manual suggests it for collision with separately drawn scenery. | 16 / 21 | Walls can collide without a visible sprite. |
+| Sprite changes affect collision checks at once, but reach the display only at `SHOW` or the switch command. | 17 / 22 | Say if collision tests the next state or the shown frame. |
+| Disabled sprites and nonsolid pixels do not take part in `HIT`. | 17 / 22 | Visibility and collision need explicit rules. |
+| GE16 sprite x positions round down to an even pixel. | 18 / 23 | Single-pixel horizontal steps are not promised. |
 
-Its sprite changes affect collision checks immediately but do not reach the
-screen until the display command. [Printed 17, PDF 22][graf-state]
+Printed 15 / PDF 20 also warns that the first picture definitions empty the
+sprite buffers. Its doubled storage for transparent pictures is a fact of that
+engine, not a budget for a new mask format. These pages give no mask operation,
+pixel-perfect collision or blend loop. [Manual, PDF 20][graf-shapes]
 
-For a new game, decide whether collision uses the proposed next positions or the
-currently displayed frame. Invisible walls and independently sized collision
-bounds are possible design adaptations.
+## What the examples check
 
-We have validated neither a tile collision map nor a pixel-perfect collision
-implementation here.
+**Measured result.** Both examples run on CoCo 1 and CoCo 2 with NTSC, 32 KiB,
+a normal-clock 6809 and the non-T1 MC6847, not on all CoCo 2 revisions. Read
+each machine contract before reuse.
 
-## Test the awkward cases first
+- The [moving-objects example](../../examples/moving-objects/README.md) draws
+  the patterned background, then two opaque byte-aligned rectangles. Its check
+  compares the full framebuffer, positions, the frame counter and guards in 13
+  frames: overlap in both orders, separation, changed scenery and reversals.
+- The [masked-object example](../../examples/masked-objects/README.md) restores
+  the complete background, then draws hollow objects with
+  `(destination AND preserve_mask) OR ink`. Twelve scenes check every byte,
+  guards, corners, overlap order, removal and changed scenery against an
+  independent pixel oracle. Origins are byte-aligned, and objects fit on screen.
 
-These checks are proposed acceptance cases for an original implementation:
+Neither example has collision, clipping or partial-byte placement, or
+reproduces a historical renderer. Frame rate, PAL, T1 and physical hardware
+remain untested. The moving-objects example draws into the shown screen. The
+[page flip](../../examples/page-flip/README.md) draws the same scene into a
+hidden screen. Read [show only finished frames](animation.md#show-only-finished-frames).
 
-- Move over a patterned background. Compare the restored region exactly.
-- Cross two objects. Separate them. Check both drawing orders.
-- Change scenery beneath an object before you restore its old location.
-- Visit all four edges with the largest supported object.
-- Check guards around screen and saved-background storage.
-- Test empty space, obstacle, trail, and pickup outcomes independently.
-- Test movement that could cross an obstacle between sampled positions.
-- Change decorative colours. Check whether collision changes as intended.
+## Open questions
 
-Use expected world state that is independent of the rendering code. Then inspect
-the display for flicker. Measure the work at the chosen clock.
+**Proposal.** No check covers the historical methods or collision. Test these
+cases first:
 
-A byte-correct frame alone does not show what the display shows. Read
-[show only finished frames](animation.md#show-only-finished-frames).
+- an exact restore of a patterned background from a saved or persistent
+  buffer, also after the scenery changes beneath an object
+- two objects that cross in both drawing orders, then separate
+- the largest object at all four edges, with guards around saved storage
+- a foreground layer whose final colour equals the background, with a
+  differently coloured actor behind it. Without the foreground pass it fails.
+- empty, obstacle, trail and pickup outcomes, and a move that could cross an
+  obstacle between sampled positions
+- a decorative colour change that must, or must not, change collision
 
-## Try the original full-redraw example
+Use expected world state that does not come from the rendering code. Then look
+at the display for flicker and measure the work at the chosen clock.
 
-The [moving-objects example](../../examples/moving-objects/README.md) draws the
-current patterned background before two opaque, byte-aligned rectangles. Their
-overlap order changes, and the scenery changes while they move.
-
-This implements one restoration strategy that does not store old background
-pixels.
-
-Its XRoar checks cover 13 completed frames for each defined CoCo 1 and CoCo 2
-configuration. They compare the entire framebuffer, positions, frame counter,
-and memory guards against independent expectations.
-
-The cases include overlap in both layer orders, separation, changed scenery, and
-boundary reversals.
-
-Both configurations use NTSC, 32 KiB, a normal-clock 6809, and the non-T1
-MC6847. The CoCo 2 run selects its own firmware explicitly. This is not evidence
-for all CoCo 2 revisions.
-
-Read the example's complete machine contract before reuse.
-
-The example does not implement collision, masks, partial-byte placement, or
-independent vertical motion for the two objects. Visual appearance, frame rate,
-PAL, T1, and physical hardware remain unverified.
-
-The example draws into the screen that the display shows. The
-[page flip](../../examples/page-flip/README.md) example draws the same scene
-into a hidden screen, and its rendered check passes at every flip.
-
-## Try masked objects
-
-The [masked-object example](../../examples/masked-objects/README.md) draws
-hollow objects with transparent holes and opaque black and green pixels. Each
-scene restores the complete background. Then it combines objects in the chosen
-order with `(destination AND preserve_mask) OR ink`.
-
-Twelve scenes on each defined CoCo 1/2 configuration check these items:
-
-- every framebuffer byte
-- guards
-- corners
-- overlap order
-- removal
-- changed scenery
-
-The oracle uses independent pixel geometry. Origins must be byte-aligned and the
-entire object must fit on screen. This example adds no clipping or collision
-system.
-
-Emulator display appearance, timing and physical hardware remain untested.
-
-## Sources and limits
+## Sources
 
 - Don Inman, Kurt Inman with Dymax, *Assembly Language Graphics for the TRS-80
-  Color Computer*, chapter 7. Examined printed 151–158, 163, 168–169, PDF
-  159–166, 171, 176–177. Resource `assembly-graphics`. The claims above use the
-  specific subsets linked beside them. [Archive][graphics]
-
+  Color Computer*, chapter 7, printed 151–158, 163, 168–169, PDF 159–166, 171,
+  176–177. Resource `assembly-graphics`. Its ROM joystick calls depend on the
+  ROM version.
 - Kenneth Reighard Jr., "The Universal Pick-Up," *The Rainbow*, October 1992,
-  cover/PDF 1 and printed/PDF 10. The contents calls it "Inter-Planetary Trash".
-  The listing is `IPTRASH`. Resource `rainbow-1992-10`. [Archive][trash]
+  cover/PDF 1 and printed/PDF 10. Resource `rainbow-1992-10`. The Rainbow index
+  (`rainbow-index`), PDF 87, locates it. A title and author search found no
+  correction, but we did not read all later issues.
+- Harvey Brofman, *Dunkey Munkey*, source dated June 24, 1982. The source
+  header credits Intellectronics. The archive filename credits Cercomp. ZIP
+  SHA-256 `f2dd97ac73813e9191e5f396eb24474fa95ec1c3d5cfd6230b77002aea2f06ac`.
+  We read the `GRAPH2.TXT` rendering routines, the `KONG.TXT` memory
+  definitions and the cited `SCREN2.TXT` callers, not every routine. We found
+  no errata and no reuse licence.
+- Sundog Systems, *GrafExpress 2.0*, 1991, printed 2–3, 15–18 and 21–22, PDF
+  7–8, 20–23 and 26–27, read as page images. Resource `grafexpress`. The front
+  addendum has no correction to these contracts. PDF 4 has its copyright and
+  distribution terms. They do not permit free redistribution of the engine.
+- LeRoy W. Gross, "Knight Rider," *Hot CoCo*, Vol. 1 No. 5, October 1983,
+  printed/PDF 72, 73 and 76, with the complete "Riding Knight" listing through
+  line 620. The [controls guide](controls-and-collision.md#sources) records the
+  hash of the issue and the search for errata.
 
-- Harvey Brofman, *Dunkey Munkey*, source dated June 24, 1982. The source header
-  credits Intellectronics. The archive filename credits Cercomp. File/routine
-  citations above refer to the downloaded ZIP. [Archive][dunkey]
+Leads that gave no rendering evidence: *Hot CoCo* Graphic Master adverts, a
+*Dragon User* sprite article (not read), IBM and Atari COMPUTE! matches, Ron
+Clark's BASIC GET/PUT pages (PDF 86–93), *Undercolor* 1:1 contents, and the
+first pages of three *Hot CoCo* animation articles of 1983 and 1986.
 
-- Sundog Systems, *GrafExpress 2.0*, 1991. Printed 2–3, 15–18 and 21–22. PDF
-  7–8, 20–23 and 26–27. Resource `grafexpress`. [Archive][graf-restoration]
-
-We examined the relevant page images and listing. We did not assemble the book
-example or run the BASIC game. No physical-machine, timing, or compatibility
-result follows from this guide.
-
-The adaptation designs and test cases are our original guidance. The cited
-historical methods remain untested here. Only the bounded full-redraw and
-masked-object examples above have runtime evidence.
-
-See [research notes](research/README.md#rendering-and-collision-pass) for
-earlier rejected leads and the limited correction search.
-[Rendering source notes](research/rendering-sources.md) record the later source
-reading, hashes, rejected leads and implementation limits.
+We examined the cited page images and listings and ran none of them. The
+adaptations and test cases are our original guidance.
 
 [graphics]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf#page=159>
-
 [saucers]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf#page=176>
-
-[bounds]: <https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf#page=161>
-
 [trash]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2012%20No.%2003%20-%20October%201992.pdf#page=10>
-
 [dunkey]: <https://colorcomputerarchive.com/repo/Programming/Source/Dunkey%20Monkey/Dunkey%20Munkey%20Source%20(Harvey%20Brofman)%20(Cercomp).zip>
-
 [graf-restoration]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Programming/GrafExpress%202.0%20(Sundog%20Systems).pdf#page=27>
-
 [graf-shapes]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Programming/GrafExpress%202.0%20(Sundog%20Systems).pdf#page=20>
-
-[graf-state]: <https://colorcomputerarchive.com/repo/Documents/Manuals/Programming/GrafExpress%202.0%20(Sundog%20Systems).pdf#page=22>
+[knight]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Hot%20Coco%20%28OCR%29/HotCoCo-1983-10.pdf#page=72>

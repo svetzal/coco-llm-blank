@@ -2,8 +2,8 @@
 
 Start with the effect you want. Each guide explains a practical approach,
 credits its sources, and states what has been tested.
-Read one guide at a time. The research and validation records are below this
-folder.
+Read one guide at a time. Each guide ends with its sources and open
+questions.
 
 | I want to… | Read | Current evidence |
 | --- | --- | --- |
@@ -31,9 +31,8 @@ reproduction checks and the limits of its evidence. For smaller building blocks,
 use the [example index](../../examples/README.md).
 
 To reproduce a measurement or inspect its failure controls, use the
-[experiment index](../../experiments/README.md). For setup instructions, source
-research and validation reports, use the separate sections of the
-[guidance index](../README.md).
+[experiment index](../../experiments/README.md). For setup instructions, use
+the [guidance index](../README.md).
 See [PLAN.md](../../PLAN.md) for outstanding work.
 
 ## Read the evidence correctly
@@ -79,6 +78,7 @@ Treat each of these as separate evidence:
 - audible output
 - physical-machine behaviour
 
-For source selection, rejected matches, and open questions, read the
-[game research notes](research/README.md).
+BASIC articles can explain useful ideas. Their ROM calls, storage formats and
+performance do not transfer to assembly. The sources and open questions in
+each guide record what we read, what we rejected and what is still open.
 The [plan](../../PLAN.md#guide-contract) defines what each guide contains.

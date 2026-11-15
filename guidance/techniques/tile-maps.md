@@ -97,7 +97,7 @@ or that an actor covered. Restore them from the map before you draw actors.
 For a scroller, key each screen cell with its world cell and a revision of its
 content. Then a camera move and a door change each cause a redraw. Gloom's
 column records suggested this key
-([CoCo 3 source reading](research/coco3-game-source.md)).
+([animation guide](animation.md#decide-what-to-redraw)).
 
 ## Decide which positions permit movement
 

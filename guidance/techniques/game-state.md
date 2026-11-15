@@ -193,9 +193,17 @@ These proposals have no check yet:
 - The same state routines on the CoCo 1 and CoCo 2.
 
 PDF pages are positions in the archive files, and these sources have no
-resource IDs.
-The [Undercolor research](research/undercolor-game.md#source-identity-and-local-evidence)
-records the hashes of the *Undercolor* issues.
+resource IDs. *Undercolor* 1(5) has SHA-256
+`147a2fe3791911ab677a0c16d691d303991f88f71682455735957b255a08de48`.
+*Undercolor* 1(6) has SHA-256
+`ece378326dbb9445862baf54633e68f98196e4cc17745c7d3781546d083e2a78`. Its
+contents footer repeats February 20, but its article pages say March 8.
+
+We read the contents pages of all eleven *Undercolor* issues and the indexed
+corrections. Issue 8, printed 18 / PDF 20, is a speech-processor test. Issue 9,
+printed 22 / PDF 24, adds a missing figure to an earlier clock project. Neither corrects *Conqueror!*, *Entry
+Way* or *Winky*, and web searches found no correction. That does not prove
+that none exists.
 
 [conqueror]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n06%20%281985%29%28ColorPlus%20Inc%29.pdf#page=12>
 [conqueror-slots]: <https://colorcomputerarchive.com/repo/Documents/Magazines/Undercolor/Undercolor%20v01n06%20%281985%29%28ColorPlus%20Inc%29.pdf#page=18>
