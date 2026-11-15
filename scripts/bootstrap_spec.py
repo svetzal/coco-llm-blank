@@ -370,3 +370,54 @@ class DescribeAptPrerequisites:
             assert "apt " not in log.read_text()
             assert "sync --locked" in log.read_text()
         assert not (commands / "curl").exists()
+
+
+class DescribeSudoRecovery:
+    """A refused sudo stops bootstrap; a corrected policy lets the rerun finish."""
+
+    OWNER_NOTE = b"# Demo\n\nTarget: CoCo 2\nOwner note, kept byte for byte.  \n"
+
+    @pytest.mark.parametrize(
+        "refusal",
+        [
+            "sudo: a password is required",
+            "Sorry, user learner is not allowed to execute '/usr/bin/apt-get update' as root.",
+        ],
+        ids=["password-required", "command-denied"],
+    )
+    def should_finish_after_sudo_is_corrected_and_keep_project_notes(
+        self, apt_workspace: tuple[Path, dict[str, str]], refusal: str
+    ) -> None:
+        project, env = apt_workspace
+        env["TEST_UID"] = "1000"
+        notes = project / "projects/demo/README.md"
+        notes.parent.mkdir(parents=True)
+        notes.write_bytes(self.OWNER_NOTE)
+        sudo = Path(env["PATH"]) / "sudo"
+        sudo.write_text(f'#!/bin/sh\necho "{refusal}" >&2\nexit 1\n')
+        sudo.chmod(0o755)
+
+        refused = run_bootstrap(project, env, "coco2")
+
+        assert refused.returncode == 1
+        assert refusal in refused.stderr
+        assert "non-interactive sudo" in refused.stderr
+        assert "rerun bootstrap" in refused.stderr
+        assert "Installing uv" not in refused.stdout
+        assert "Tools and firmware are ready" not in refused.stdout
+        assert not Path(env["BOOTSTRAP_LOG"]).exists()
+        assert notes.read_bytes() == self.OWNER_NOTE
+
+        sudo.write_text('#!/bin/sh\n[ "$1" = "-n" ] || exit 9\nshift\nexec "$@"\n')
+        recovered = run_bootstrap(project, env, "coco2")
+        rerun = run_bootstrap(project, env, "coco2")
+
+        for result in (recovered, rerun):
+            assert result.returncode == 0, result.stderr
+            assert "Tools and firmware are ready" in result.stdout
+        assert "Installing uv" not in rerun.stdout
+        calls = Path(env["BOOTSTRAP_LOG"]).read_text()
+        assert calls.count("apt install -y curl ca-certificates") == 1
+        assert calls.count("sync --locked") == 2
+        assert calls.count("scripts/doctor.py --profile demo --target coco2") == 2
+        assert notes.read_bytes() == self.OWNER_NOTE

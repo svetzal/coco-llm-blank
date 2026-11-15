@@ -75,6 +75,33 @@ class DescribeFirmwareSetup:
             provision(project, "coco1", gateway)
         assert path.read_bytes() == b"owner firmware"
 
+    def should_restore_a_missing_rom_from_the_verified_cache_offline(self, project: Path) -> None:
+        gateway = fixture_archive(project)
+        provision(project, "coco1", gateway)
+        rom = project / "local/roms/coco1/basic.rom"
+        rom.unlink()
+        gateway.fetch.side_effect = AssertionError("the verified cache must be enough")
+
+        provision(project, "coco1", gateway)
+
+        assert rom.read_bytes() == b"test ROM"
+
+    def should_keep_a_damaged_cache_until_it_is_removed(self, project: Path) -> None:
+        gateway = fixture_archive(project)
+        cache = project / "local/roms/coco1/source.zip"
+        cache.parent.mkdir(parents=True)
+        cache.write_bytes(b"interrupted download")
+
+        with pytest.raises(ValueError, match="checksum mismatch; inspect the source or damaged"):
+            provision(project, "coco1", gateway)
+
+        assert cache.read_bytes() == b"interrupted download"
+        assert list(cache.parent.iterdir()) == [cache]
+        gateway.fetch.assert_not_called()
+        cache.unlink()
+        provision(project, "coco1", gateway)
+        assert (project / "local/roms/coco1/basic.rom").read_bytes() == b"test ROM"
+
     @pytest.mark.parametrize("name", ["../escape.rom", "/absolute.rom", "dir/nested.rom"])
     def should_reject_unsafe_member_names(self, project: Path, name: str) -> None:
         gateway = fixture_archive(project, name=name)
