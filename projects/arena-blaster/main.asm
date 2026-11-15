@@ -77,8 +77,8 @@ SHOOTER_PERIOD equ 3            ; frames between two shooter steps
 MAX_SHOOTERS equ 4              ; level - 3, up to this number
 MIN_FIRE_WAIT equ 24            ; 84 - 8 * level, down to this number
 BULLETS equ 4                   ; enemy bullet slots
-BULLET_W equ 4
-BULLET_H equ 6
+BULLET_W equ 3
+BULLET_H equ 4
 BULLET_VX equ 3                 ; pixels across each frame
 BULLET_VY equ 6                 ; rows down or up each frame
 GRUNT_PERIOD equ 2              ; frames between two grunt steps

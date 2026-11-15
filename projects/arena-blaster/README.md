@@ -30,6 +30,8 @@ other hand, in eight directions. The game uses four-colour graphics.
 > Make the bullets a bit bigger: they are hard to see. Make sure that the
 > game runs on Disk BASIC, from a disk.
 
+> The bullets are too big now. Make them 2 pixels high, not 1.
+
 The plan for these requests:
 
 | Increment | Contents |
@@ -272,8 +274,9 @@ The numbers are agent choices. The owner can change them.
 - A level has one fire wait. When it ends, the next shooter in slot order,
   after the one that fired last, fires one bullet. Then the wait starts
   again. If no bullet slot is free, that shooter does not fire.
-- There are 4 bullet slots. A bullet is 4x6 pixels: a yellow ring with a
-  red middle. The owner asked for a bigger bullet than the first 3x3 one. It moves 3 pixels
+- There are 4 bullet slots. A bullet is 3x4 pixels, with a yellow middle
+  2 rows high. The first bullet was 3x3, with a yellow middle 1 row high,
+  and it was hard to see. A 4x6 bullet was too big (owner choice). It moves 3 pixels
   across and 6 rows down or up each frame, about the speed of the player.
 - The bullet starts in the middle of the shooter and goes toward the
   player in one of 8 directions. AX is the number of pixels across to the

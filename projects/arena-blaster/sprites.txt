@@ -81,11 +81,9 @@ G.YY.G
 .Y..Y.
 YY..YY
 
-# An enemy bullet: yellow with a red middle, 4x6 pixels.
+# An enemy bullet, 3x4 pixels: a yellow middle 2 rows high.
 [bullet]
-.YY.
-YRRY
-YRRY
-YRRY
-YRRY
-.YY.
+.R.
+RYR
+RYR
+.R.
