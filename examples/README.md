@@ -16,6 +16,7 @@ instructions for playing.
 | Show only finished frames | [Page flip](page-flip/README.md) | The moving-objects scene, drawn into a hidden screen on CoCo 1/2. Rendered check at every flip. |
 | Show only finished frames on CoCo 3 | [Page flip on CoCo 3](page-flip-coco3/README.md) | Native GIME buffers at 128 and 512 KiB. Rendered check at every flip. |
 | Draw transparent and opaque pixels | [Masked objects](masked-objects/README.md) | Software masks over patterned scenery. |
+| Read held keys and single presses | [Keyboard controls](keyboard-controls/README.md) | Keyboard matrix scan, movement plus action and edge rejection on CoCo 1/2. No display. |
 | Keep room state separate from drawing | [Tile room](tile-room/README.md) | Scripted movement and collection. No keyboard or victory rule. |
 | Combine sound, drawing and input | [Sound slots](sound-slots/README.md) | Cooperative scheduling probe, not a music engine. |
 | Compare sound scheduling on CoCo 3 | [Timer sound](timer-sound/README.md) | Cooperative and GIME interrupt builds. |

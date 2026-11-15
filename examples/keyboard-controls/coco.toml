@@ -1,0 +1,42 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# NTSC machines with explicit 6809, keyboard layout and firmware. The program
+# does not set a display mode, so the VDG choice does not matter here.
+[targets.coco1]
+machine = "cocous"
+cpu = "6809"
+keyboard = "coco"
+tv = "ntsc"
+ram_kib = 32
+basic = "bas11.rom"
+extended = "extbas10.rom"
+
+[targets.coco2]
+machine = "coco2bus"
+cpu = "6809"
+keyboard = "coco"
+tv = "ntsc"
+ram_kib = 32
+basic = "bas12.rom"
+extended = "extbas11.rom"
+
+[memory]
+at = { start = 0x3000 }
+below = { program_end = 0x4000 }   # the update records start at $4000
+
+# Scripted keys take effect at the scanner entry: one keys.txt line per scan.
+[keys]
+at = "sample"
+letters = { L = "left", R = "right", F = "space", M = "m" }
+
+# The main build gets no keys: all 16 updates must stay idle at position 2.
+# The keys build plays keys.txt through the emulated keyboard (instrumented XRoar).
+[variants.keys]
+keys = "keys.txt"
+
+[check]
+checkpoint = "finished"   # reached after the 16th update record
+frames = [1]
+unreachable = "state"     # a data label: executing it is a fault
+emulated_seconds = 10

@@ -1,0 +1,20 @@
+# Keys position actions purpose. Line 1 is the startup sample; lines 2-17
+# are updates 1-16. L/R = left/right arrow, F = Space, M = M, - = none.
+# Position and actions are written by hand from the policy in README.md.
+F    2 0  startup sample seeds the history
+F    2 0  startup-held Space is not a press
+-    2 0  release
+RF   3 1  movement and action together
+RFM  4 1  M shares the left column on another row: not left
+RF   4 1  blocked at the right edge, Space held
+R    4 1  release Space while blocked
+RF   4 2  press Space again while blocked
+RF   4 2  a held Space does not repeat
+LF   3 2  move back with Space held
+L    2 2  release Space while moving
+LF   1 3  press Space again while moving
+LRF  1 3  opposite arrows cancel
+-    1 3  release all
+L    0 3  left
+L    0 3  blocked at the left edge
+R    1 3  move back from the left edge

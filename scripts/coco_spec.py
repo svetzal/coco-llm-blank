@@ -1067,6 +1067,31 @@ class DescribeEquipmentInXRoar:
             coco.check_variant(project, Host(), model, "coco1", "journey", equipment)
 
     @pytest.fixture
+    def keyboard_controls(self) -> Path:
+        if not instrumented_ready("coco1", "coco2"):
+            pytest.skip("Native tools, CoCo 1/2 firmware or instrumented build tools are missing")
+        return ROOT / "examples/keyboard-controls"
+
+    @pytest.mark.parametrize("target", ["coco1", "coco2"])
+    @pytest.mark.parametrize(
+        "control,update",
+        [("WRONG_COLUMN", 4), ("WRONG_SELECT", 1), ("HELD_FIRE", 1), ("STALE_HISTORY", 6)],
+    )
+    def should_reject_each_broken_scanner_through_the_keyboard(
+        self, keyboard_controls: Path, target: str, control: str, update: int
+    ) -> None:
+        project = coco.load_project(keyboard_controls)
+        variants = {"keys": coco.Variant(defines=(control,), keys="keys.txt")}
+        broken = project.model_copy(
+            update={"settings": project.settings.model_copy(update={"variants": variants})}
+        )
+        equipment = coco.equipment_for(broken, "keys")
+        model = coco.load_expected(keyboard_controls)
+
+        with pytest.raises(ValueError, match=f"Update {update} "):
+            coco.check_variant(broken, Host(), model, target, "keys", equipment)
+
+    @pytest.fixture
     def sound_slots(self, tmp_path: Path) -> Path:
         if not instrumented_ready("coco1", "coco2"):
             pytest.skip("Native tools, CoCo 1/2 firmware or instrumented build tools are missing")
