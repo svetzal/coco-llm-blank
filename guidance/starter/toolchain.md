@@ -167,14 +167,19 @@ Custom firmware needs an explicit, reviewed configuration and independent boot
 validation.
 Renaming different bytes to a manifest filename does not validate them.
 
-| Target | Firmware directory | BASIC | Extended BASIC | Disk BASIC |
-| --- | --- | --- | --- | --- |
-| CoCo 1 | `local/roms/coco1/` | `bas11.rom` | `extbas10.rom` | `disk11.rom` |
-| CoCo 2 | `local/roms/coco2/` | `bas12.rom` | `extbas11.rom` | `disk11.rom` |
-| CoCo 3 | `local/roms/coco3/` | Combined | `coco3.rom` | `disk11.rom` |
+| Target | Firmware directory | BASIC | Disk BASIC |
+| --- | --- | --- | --- |
+| CoCo 1 | `local/roms/coco1/` | `bas11.rom` | `disk11.rom` |
+| CoCo 2 | `local/roms/coco2/` | `bas12.rom` | `disk11.rom` |
+| CoCo 3 | `local/roms/coco3/` | `coco3.rom` | `disk11.rom` |
 
-The CoCo 3 profile supplies NTSC firmware. Pass its combined BASIC image with
-`-extbas`. Select appropriate user-provided firmware for a PAL CoCo 3.
+The starter does not use Extended Color BASIC on the CoCo 1 or CoCo 2. XRoar's
+machine profiles load it by default, so `scripts/coco.py` passes `-no-extbas`.
+Add an Extended BASIC ROM only when a project has a specific need for it.
+
+The CoCo 3 profile supplies NTSC firmware. The CoCo 3 has one combined BASIC
+image. XRoar loads it with `-extbas`.
+Select appropriate user-provided firmware for a PAL CoCo 3.
 The manifest does not yet include that variant.
 
 For reference, `scripts/coco.py run` launches a CoCo 1 NTSC, 32 KiB project
@@ -183,7 +188,7 @@ with options equivalent to:
 ```sh
 xroar -machine cocous -ram 32 \
   -bas local/roms/coco1/bas11.rom \
-  -extbas local/roms/coco1/extbas10.rom \
+  -no-extbas \
   -no-cart -ratelimit -run build/demo.bin
 ```
 
@@ -316,7 +321,7 @@ For a bounded headless check:
 ```sh
 xroar -ui null -machine cocous -ram 32 \
   -bas local/roms/coco1/bas11.rom \
-  -extbas local/roms/coco1/extbas10.rom \
+  -no-extbas \
   -no-cart -no-ratelimit -timeout 10 \
   -trap "pc=$READY_ADDRESS" -trap-snap build/ready.ram \
   -trap-timeout 0.01 -run build/demo.bin

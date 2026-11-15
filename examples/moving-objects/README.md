@@ -43,8 +43,8 @@ The assembly explicitly selects the slow SAM clock. It masks IRQ and FIRQ.
 
 | Target | XRoar architecture | VDG | Explicit firmware |
 | --- | --- | --- | --- |
-| CoCo 1 | `cocous` | `6847` | `bas11.rom`, `extbas10.rom` |
-| CoCo 2 | `cocous` | `6847` | `bas12.rom`, `extbas11.rom` |
+| CoCo 1 | `cocous` | `6847` | `bas11.rom` |
+| CoCo 2 | `cocous` | `6847` | `bas12.rom` |
 
 The CoCo 2 test uses the shared NTSC CoCo architecture with the CoCo 2 ROMs
 and an explicit non-T1 VDG. It does not use the `coco2bus` profile's T1 default.

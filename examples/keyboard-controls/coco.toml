@@ -10,7 +10,6 @@ keyboard = "coco"
 tv = "ntsc"
 ram_kib = 32
 basic = "bas11.rom"
-extended = "extbas10.rom"
 
 [targets.coco2]
 machine = "coco2bus"
@@ -19,7 +18,6 @@ keyboard = "coco"
 tv = "ntsc"
 ram_kib = 32
 basic = "bas12.rom"
-extended = "extbas11.rom"
 
 [memory]
 at = { start = 0x3000 }

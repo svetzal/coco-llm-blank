@@ -23,9 +23,9 @@ Add `--target coco2` to run it on the CoCo 2 target.
 The program runs on two targets, both NTSC with a normal-clock 6809 and direct
 DECB loading:
 
-- `coco1` (the default): 32 KiB, Color BASIC 1.1 and Extended Color BASIC 1.0.
+- `coco1` (the default): 32 KiB, Color BASIC 1.1.
 - `coco2`: the named 26-3134/26-3136 boards with the 64 KiB upgrade, an
-  explicit non-T1 MC6847, Color BASIC 1.2 and Extended Color BASIC 1.1.
+  explicit non-T1 MC6847, Color BASIC 1.2.
 
 It does not return to BASIC or provide a disk loader.
 

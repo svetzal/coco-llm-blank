@@ -87,8 +87,7 @@ are not part of this example.
 
 The targets are the same as [moving objects](../moving-objects/README.md):
 `cocous`, NTSC, 32 KiB, a stock-clock 6809, and a non-T1 MC6847. The `coco1`
-target uses BASIC 1.1 and Extended BASIC 1.0. The `coco2` target uses BASIC 1.2
-and Extended BASIC 1.1.
+target uses Color BASIC 1.1. The `coco2` target uses Color BASIC 1.2.
 
 | Purpose | Address range |
 | --- | --- |

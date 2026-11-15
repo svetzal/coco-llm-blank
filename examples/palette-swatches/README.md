@@ -110,8 +110,8 @@ Use the `run` window to look at the border.
 There are two targets. Each has 32 KiB RAM, NTSC video, a stock-clock 6809 and
 a non-T1 MC6847:
 
-- `coco1`: a CoCo 1 with BASIC 1.1 and Extended BASIC 1.0.
-- `coco2`: a CoCo 2 with BASIC 1.2 and Extended BASIC 1.1. XRoar's `coco2bus`
+- `coco1`: a CoCo 1 with Color BASIC 1.1.
+- `coco2`: a CoCo 2 with Color BASIC 1.2. XRoar's `coco2bus`
   profile has a T1 VDG, so the target uses `cocous` with an explicit `6847`.
 
 Both use the same memory layout as [first-screen](../first-screen/README.md).

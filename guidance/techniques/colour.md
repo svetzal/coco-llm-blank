@@ -107,7 +107,7 @@ reach. A fired trap or a missing checkpoint fails the check. A plausible
 image alone is not evidence that the program ran.
 
 The CoCo 2 target is an explicit configuration: XRoar `cocous`, NTSC, 32 KiB,
-a normal-clock 6809, a non-T1 MC6847, and BASIC 1.2 with Extended BASIC 1.1.
+a normal-clock 6809, a non-T1 MC6847, and Color BASIC 1.2.
 XRoar's `coco2bus` profile selects a T1 VDG instead. The palette-swatches
 results do not apply to it.
 

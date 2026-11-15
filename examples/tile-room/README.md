@@ -54,8 +54,8 @@ and a non-T1 MC6847. Both checks use XRoar's `cocous` architecture with explicit
 `-vdg-type 6847`, `-machine-cpu 6809`, `-tv-type ntsc`, and `-ram 32`.
 `scripts/coco.py` passes `-no-c` to exclude user configuration.
 
-CoCo 1 uses verified `bas11.rom` and `extbas10.rom`. CoCo 2 uses verified
-`bas12.rom` and `extbas11.rom`. These are defined emulator configurations, not
+CoCo 1 uses verified `bas11.rom`. CoCo 2 uses verified `bas12.rom`. Neither
+target loads Extended BASIC. These are defined emulator configurations, not
 evidence for every board revision.
 
 The display is RG6, 256×192, one bit per pixel, with 32 bytes per row and

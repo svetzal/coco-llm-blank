@@ -370,9 +370,14 @@ def xroar_command(xroar: str, machine: Machine, roms: dict[str, Path]) -> list[s
         if value:
             command += [option, value]
     command += ["-ram", str(machine.ram_kib)]
-    for option, name in (("-bas", machine.basic), ("-extbas", machine.extended)):
-        if name:
-            command += [option, str(roms[name])]
+    if machine.basic:
+        command += ["-bas", str(roms[machine.basic])]
+    # XRoar's built-in profiles name an Extended BASIC ROM. Disable it unless the
+    # target names one: the CoCo 3 loads its single ROM image this way.
+    if machine.extended:
+        command += ["-extbas", str(roms[machine.extended])]
+    else:
+        command += ["-no-extbas"]
     return command + ["-no-cart", *machine.options]
 
 

@@ -9,11 +9,6 @@
         "sha256": "f772ee5ec3ce3bfc455098c0c9aca2b5c42b6aa1f998bb5113ca2250bfbf2c27"
       },
       {
-        "name": "extbas10.rom",
-        "size": 8192,
-        "sha256": "36ce538d261fa727152c41f66fe6b310268efe19f3ef7365e0bbc6d84a5a957e"
-      },
-      {
         "name": "disk11.rom",
         "size": 8192,
         "sha256": "1c40c5a74e72edaeecc2511fee1aab347eae2c3d5fc6778cb622e3df14d63157"
@@ -28,11 +23,6 @@
         "name": "bas12.rom",
         "size": 8192,
         "sha256": "40413d0f8bc1bb345ffe49404b3bf645a5417b02f32266536f6566dbf9ca70fb"
-      },
-      {
-        "name": "extbas11.rom",
-        "size": 8192,
-        "sha256": "a18f270d3495d82b9f515de049f46253a623a2d9b1bb226c9ad338508344c5ee"
       },
       {
         "name": "disk11.rom",

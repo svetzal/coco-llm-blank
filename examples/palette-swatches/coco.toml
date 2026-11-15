@@ -9,7 +9,6 @@ tv = "ntsc"
 vdg = "6847"
 ram_kib = 32
 basic = "bas11.rom"
-extended = "extbas10.rom"
 
 # CoCo 2 on the same NTSC architecture, with an explicit non-T1 6847 VDG and
 # CoCo 2 firmware. The coco2bus profile would select a T1 VDG instead.
@@ -20,7 +19,6 @@ tv = "ntsc"
 vdg = "6847"
 ram_kib = 32
 basic = "bas12.rom"
-extended = "extbas11.rom"
 
 [memory]
 at = { start = 0x3000 }

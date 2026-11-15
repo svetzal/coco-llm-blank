@@ -30,8 +30,8 @@ repeat delay, debounce or display. IRQ and FIRQ stay masked.
 The program runs on two targets, both NTSC, 32 KiB, normal-clock 6809 and
 direct DECB loading:
 
-- `coco1`: `cocous`, Color BASIC 1.1 and Extended Color BASIC 1.0.
-- `coco2`: `coco2bus`, Color BASIC 1.2 and Extended Color BASIC 1.1.
+- `coco1`: `cocous`, Color BASIC 1.1.
+- `coco2`: `coco2bus`, Color BASIC 1.2.
 
 | Region | Use |
 | --- | --- |

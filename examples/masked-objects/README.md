@@ -20,7 +20,7 @@ objects again in the requested order. It needs no saved-background storage.
 
 This is a bounded full-redraw design. It is not an implementation of
 GrafExpress's restoration buffers or Dunkey Munkey's renderer. The
-[source review](../../guidance/techniques/research/rendering-sources.md)
+[moving-object guide](../../guidance/techniques/moving-objects.md)
 explains what those historical sources actually establish.
 
 ## Run and check
@@ -59,8 +59,8 @@ bits of `$FF22` when it sets graphics fields.
 
 | Target | XRoar architecture | VDG / CPU | Firmware |
 | --- | --- | --- | --- |
-| CoCo 1 | `cocous`, 32 KiB | `6847` / `6809` | `bas11.rom`, `extbas10.rom` |
-| CoCo 2 | `cocous`, 32 KiB | `6847` / `6809` | `bas12.rom`, `extbas11.rom` |
+| CoCo 1 | `cocous`, 32 KiB | `6847` / `6809` | `bas11.rom` |
+| CoCo 2 | `cocous`, 32 KiB | `6847` / `6809` | `bas12.rom` |
 
 The CoCo 2 configuration deliberately selects the shared NTSC architecture and
 CoCo 2 firmware with a non-T1 VDG. It does not prove all CoCo 2 board revisions.

@@ -10,7 +10,7 @@ cpu = "6809"
 tv = "ntsc"
 vdg = "gime1986"
 ram_kib = 128
-extended = "coco3.rom"
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
 
 [targets.coco3-1987]
 firmware = "coco3"
@@ -19,7 +19,7 @@ cpu = "6809"
 tv = "ntsc"
 vdg = "gime1987"
 ram_kib = 128
-extended = "coco3.rom"
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
 
 [memory]
 at = { start = 0x3000 }

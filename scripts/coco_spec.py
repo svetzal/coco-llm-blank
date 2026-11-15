@@ -25,13 +25,11 @@ cpu = "6809"
 tv = "ntsc"
 ram_kib = 32
 basic = "bas11.rom"
-extended = "extbas10.rom"
 
 [targets.coco2]
 machine = "coco2bus"
 ram_kib = 32
 basic = "bas12.rom"
-extended = "extbas11.rom"
 options = ["-machine-arch", "coco"]
 
 [memory]
@@ -253,7 +251,7 @@ class DescribeSymbolsAndLayout:
 class DescribeCommands:
     def should_translate_a_target_into_explicit_xroar_options(self, project: coco.Project) -> None:
         machine = project.settings.targets["coco2"]
-        roms = {"bas12.rom": Path("/r/b"), "extbas11.rom": Path("/r/e")}
+        roms = {"bas12.rom": Path("/r/b")}
 
         command = coco.xroar_command("xroar", machine, roms)
 
@@ -266,8 +264,7 @@ class DescribeCommands:
             "32",
             "-bas",
             "/r/b",
-            "-extbas",
-            "/r/e",
+            "-no-extbas",
             "-no-cart",
             "-machine-arch",
             "coco",
