@@ -73,21 +73,24 @@ starter has no cartridge driver or latency test.
 
 ## Schedule samples cooperatively
 
-The [sound-slots example](../../examples/sound-slots/README.md) interleaves
-samples with marker movement and fire-button reads. It runs on CoCo 1 and on a
-non-T1 CoCo 2 (26-3134/26-3136, 64 KiB), both NTSC and normal-clock. It masks
-interrupts and avoids analog axes.
+The [sound-slots example](../../examples/sound-slots/README.md) plays a tone
+from the main loop.
+After each block of 256 samples, a short slot moves a marker and changes the
+note.
+It runs on CoCo 1 and on a non-T1 CoCo 2 (26-3134/26-3136, 64 KiB), both NTSC
+and normal-clock.
+It masks interrupts.
+A sawtooth and a square wave are its two variants.
 
 ```sh
 uv run python scripts/coco.py check examples/sound-slots
 ```
 
-**Measured result.** On both targets, the check compares every DAC value,
-screen byte and scripted button state with an independent model. The mixer
-output has the tone that 57 cycles per sample predicts. The frame work takes
-up to 30 instructions between two DAC writes, against a budget of 40.
-Scripted input substitutes a value after the real PIA read. It is not evidence
-of a physical button.
+**Measured result.** On both targets, the check compares every DAC value with an
+independent model.
+The mixer output has the tone that 41 cycles for each sample predicts.
+The slot takes up to 24 instructions between two DAC writes, against a budget of
+40.
 
 The budget is the lesson. A delay loop after each sample block keeps every
 sample and every screen byte correct, but fails the budget. Correct memory does
@@ -101,20 +104,24 @@ explains FIRQ handling, acknowledgement, and initialization. FIRQ saves less
 state than IRQ, so the handler must keep the registers that it changes.
 [Tepolt, PDF 47–53][interrupts]
 
-The [timer-sound example](../../examples/timer-sound/README.md) compares
-cooperative and timer scheduling on one CoCo 3: NTSC, 128 KiB, slow-clock 6809,
-fixed mapping, both GIME revisions. It does not test interrupts during bank
-changes. For banked memory, read
+The [timer-sound example](../../examples/timer-sound/README.md) writes the
+samples from the GIME timer FIRQ.
+Its `cooperative` variants write them from the main loop for comparison.
+It runs on one CoCo 3 with BASIC's fixed mapping, on both GIME revisions.
+The CoCo 3 is NTSC, 128 KiB, with a slow-clock 6809.
+It does not test interrupts during bank changes.
+For banked memory, read
 [scrolling and memory](scrolling.md#keep-interrupt-code-reachable).
 
 ```sh
 uv run python scripts/coco.py check examples/timer-sound
 ```
 
-**Measured result.** The heavy build clears all 6,144 screen bytes before each
-redraw, 79,872 cycles. [Leventhal, PDF 552–555][leventhal] The cooperative build
-stops its tone for all of that clear: 89.4 ms on the pinned XRoar. The timer
-builds keep a 218.5 Hz tone with no pause longer than 0.16 ms.
+**Measured result.** The heavy builds clear all 6,144 screen bytes before each
+redraw, 79,872 cycles. [Leventhal, PDF 552–555][leventhal]
+The `cooperative-heavy` build stops its tone for all of that clear: 89.3 ms on
+the pinned XRoar.
+The timer builds keep a 218.5 Hz tone with no pause longer than 0.16 ms.
 
 Interrupt-driven sound uses CPU time. It does not make drawing free: the clear
 still takes the same cycles, and fewer redraws complete. Two failure controls
@@ -136,8 +143,10 @@ the emulator, not a physical GIME. Record which account your timing uses.
 
 ## Measurements the examples do not rerun
 
-A private XRoar 1.12.1 build logged the emulated time of each DAC write. The
-gaps, in slow-clock cycles, were:
+A private XRoar 1.12.1 build logged the emulated time of each DAC write.
+It ran earlier versions of the examples: sound-slots then had a 57-cycle loop
+and read a fire button.
+The gaps, in slow-clock cycles, were:
 
 - Sound-slots: 57–138 on CoCo 1 and on the 64 KiB non-T1 CoCo 2, and 57–158
   with the input fixture.

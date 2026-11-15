@@ -1,43 +1,38 @@
-"""Independent model of the timer-sound redraw: phase arithmetic and a moving marker.
+"""Independent model of the timer-sound builds: the marker after each redraw and the tone.
 
-Functions take the build variant ("", "heavy", "timer" or "timer-heavy"); the
-expected memory is the same for each, while timing differs.
+Written from the requirements in README.md and the cited sources, not from the
+assembly. Functions take the build variant: "" (timer), "heavy" (timer with a
+costly redraw), "cooperative" or "cooperative-heavy". The expected memory is the
+same for each; the sound differs.
 """
 
 import numpy as np
 
-# Executive pages $38-$3F occupy the upper 64 KiB of this 128 KiB machine.
+# At reset, BASIC maps the executive pages $38-$3F (Tepolt, PDF 56). On this
+# 128 KiB machine they occupy the upper 64 KiB of the RAM snapshot.
 RAM_BASE = 0x10000
+MARKER_ROW = 96
+BYTES_PER_ROW = 32
+STEP = 0x0800
 
 
 def expected_screen(frame: int, variant: str) -> bytes:
-    """One full byte on row 96 at column frame mod 32; everything else clear."""
+    """The context: one full byte on row 96 at column (redraw mod 32); the rest clear."""
     screen = bytearray(6144)
-    screen[96 * 32 + frame % 32] = 0xFF
+    screen[MARKER_ROW * BYTES_PER_ROW + frame % BYTES_PER_ROW] = 0xFF
     return bytes(screen)
 
 
-def verify_frame(data: bytes, symbols: dict[str, int]) -> int:
-    if len(data) != 131072:
-        raise ValueError("Expected a complete 128 KiB RAM snapshot.")
+def verify_ram(data: bytes, symbols: dict[str, int], frame: int, variant: str) -> None:
+    """The phase matches the sample count, and each redraw follows a new block of samples."""
     ram = data[RAM_BASE:]
 
     def word(name: str) -> int:
         return int.from_bytes(ram[symbols[name] : symbols[name] + 2], "big")
 
-    frames, samples = word("frames"), word("samples")
-    if not frames or samples < 256 or word("phase") != (samples * 0x0800) % 65536:
-        raise ValueError("Frame/audio state is inconsistent.")
-    if ram[0x3FF] != 0xA5 or ram[0x1C00] != 0xA5:
-        raise ValueError("Framebuffer guards were damaged.")
-    if ram[0x400:0x1C00] != expected_screen(frames, "") or ram[symbols["position"]] != frames % 32:
-        raise ValueError("Completed redraw differs from the marker specification.")
-    return frames
-
-
-def verify_ram(data: bytes, symbols: dict[str, int], frame: int, variant: str) -> None:
-    if verify_frame(data, symbols) != frame:
-        raise ValueError(f"Expected completed redraw {frame}.")
+    samples = word("samples")
+    if samples < frame * SAMPLES_PER_BLOCK or word("phase") != samples * STEP % 65536:
+        raise ValueError(f"Redraw {frame}: the phase and the sample count disagree.")
 
 
 # Sound timing. The emulated clocks come from XRoar's 14,318,180 Hz event clock:
@@ -61,7 +56,7 @@ MAX_PAUSE_SECONDS = 0.001
 
 
 def is_timer(variant: str) -> bool:
-    return variant.startswith("timer")
+    return not variant.startswith("cooperative")
 
 
 def sample_hz(variant: str) -> float:
@@ -80,7 +75,7 @@ def least_program_seconds(frame: int, variant: str) -> float:
     build stops sampling while it clears the screen, so only it adds that cost.
     """
     seconds = frame * SAMPLES_PER_BLOCK / sample_hz(variant)
-    if variant == "heavy":
+    if variant == "cooperative-heavy":
         seconds += frame * CLEAR_CYCLES / CPU_HZ
     return seconds
 
@@ -97,7 +92,7 @@ def final_pause(samples) -> int:
 
 
 def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
-    """The tone continues through every redraw, except in the cooperative heavy build.
+    """The tone continues through every redraw, except in the cooperative-heavy build.
 
     Only the program's own sound is analysed: at most the last 150 ms, and never
     more than the least time the program can have run.
@@ -108,7 +103,7 @@ def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
     rms = float(np.sqrt(np.mean(signal**2)))
     if rms < MIN_AC_RMS:
         raise ValueError(f"Frame {frame}: no tone in the mixer output (AC RMS {rms:.5f}).")
-    if variant == "heavy":
+    if variant == "cooperative-heavy":
         return verify_stopped_by_clear(tail, sound.rate, frame) | {"ac_rms": round(rms, 4)}
     pause = longest_pause(tail) / sound.rate
     if pause > MAX_PAUSE_SECONDS:

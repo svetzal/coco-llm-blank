@@ -1,31 +1,48 @@
-* Original CoCo 3 timer/cooperative comparison, NTSC, 128 KiB, slow 6809.
-* Read README.md for sources, timer revision, and measurement limits.
-* Screen $0400-$1BFF, code/state $3000+, stack $7E00-$7EFF.
+* Write DAC samples from the CoCo 3 GIME timer interrupt (FIRQ).
+*
+* The timer interrupts the main loop at a fixed rate. The handler writes
+* one sample. The main loop is free to draw, and the sound continues.
+*
+* The example is in three parts, each between ">>> EXAMPLE" and
+* "<<< END EXAMPLE". The context shows a 256x192 screen, sets up the DAC,
+* and moves a marker after each block of 256 samples. The HEAVY build
+* also clears the full screen before each move. The COOPERATIVE builds
+* write the samples from the main loop instead, for comparison.
+*
+* Sources:
+*   Tepolt, Assembly Language Programming for the CoCo3:
+*     PDF 47: FIRQ pushes only CC and PC.
+*     PDF 48: the FIRQ vector leads to the jump table entry at $FEF4.
+*     PDF 49-51: Init0 bit 4 enables GIME FIRQ. Init1 bit 5 selects the
+*       fast timer input. FIRQEN bit 5 is the timer. A read of FIRQEN
+*       releases the request. The timer reloads itself.
+*     PDF 52-53: mask interrupts, turn off the PIA sources, bleed off the
+*       flags, set the jump table, then unmask. The handler reads the
+*       enable register to release the request.
+*     PDF 55: BASIC runs with the executive task registers.
+*     PDF 57: at reset, BASIC puts the jump table in RAM at
+*       $FEEE-$FEFF, selects all-RAM mode and sets Init0 to $CE.
+*   Leventhal, 6809 Assembly Language Programming, PDF 554: JMP
+*     extended is $7E.
+*   Tandy, Color Computer 3 Service Manual:
+*     PDF 10: $FF21 bit 0 and $FF23 bit 0 enable the PIA FIRQ sources.
+*     PDF 11: $FF90 bits (COCO, M/P, IEN, FEN, MC3, MC2, MC1, MC0),
+*       $FF91 bit 5 = TINS, $FF93 bit 5 = timer FIRQ.
+*     PDF 12: a write to $FF94 starts the 12-bit timer. It reloads
+*       when it passes zero.
+*   Kowalski, GIME register reference, $FF91 and $FF94-$FF95: with the
+*     fast input, one count is 279.365 ns. A period is the reload value
+*     plus 2 counts (1986 GIME) or plus 1 (1987 GIME). Read the timer
+*     clock conflict in guidance/techniques/sound.md.
+
         org $3000
+* >>> EXAMPLE 1 of 3: Mask interrupts while you set them up.
+* ORCC #$50 sets both I (IRQ) and F (FIRQ). IRQ stays masked.
 start   orcc #$50
-        lds #$7F00
-        clra
-        tfr a,dp
-* Keep executive mapping, compatibility display, and fixed FExx vector RAM.
-* Tepolt PDF 48-52, 56-57,60; service manual PDF 11-12,18.
-        lda #$CE
-        sta $FF90
-        clr $FF91
-        sta $FFDF
-        clr $FF92
-        clr $FF93
-        clr $FF95
-        clr $FF94
-* Establish known PIA controls with all interrupt sources disabled.
-        lda #$34
-        sta $FF01
-        sta $FF03
-        sta $FF21
-        sta $FF23
-        lda $FF00
-        lda $FF02
-        lda $FF20
-        lda $FF22
+* <<< END EXAMPLE
+
+* --- CONTEXT: clear the screen and the state, then show the screen.
+* The screen setup is the RG6 setup of examples/first-screen.
         clra
         ldx #$0400
 clear   sta ,x+
@@ -35,12 +52,8 @@ clear   sta ,x+
 reset   sta ,x+
         cmpx #state_end
         blo reset
-        lda #$A5
-        sta $03FF
-        sta $1C00
         lda #$FF
         sta $1000
-* Same sourced 256x192 display setup as first-screen.
         sta $FFC6
         sta $FFC9
         sta $FFCA
@@ -54,14 +67,14 @@ reset   sta ,x+
         sta $FFC0
         sta $FFC3
         sta $FFC5
-        lda $FF23
-        ora #4
-        sta $FF23
         lda $FF22
         anda #7
         ora #$F0
         sta $FF22
-* DAC output bits, preserving the serial/cassette bits and PIA control fields.
+
+* --- CONTEXT: set up the DAC as in examples/sound-slots.
+* $FF20 bits 7..2 are outputs. Keep bits 1..0. Select the DAC in the
+* audio mux and enable sound.
         lda $FF21
         anda #$FB
         sta $FF21
@@ -74,7 +87,6 @@ reset   sta ,x+
         lda $FF20
         anda #3
         sta low_bits
-* Select DAC in the shared audio/joystick mux.
         lda $FF01
         anda #$F7
         sta $FF01
@@ -84,35 +96,54 @@ reset   sta ,x+
         lda $FF23
         ora #8
         sta $FF23
-* Fixed-step oscillator is shared by both scheduling builds.
-        ifdef TIMER
+
+        ifndef COOPERATIVE
+* >>> EXAMPLE 2 of 3: Start the timer interrupt.
+* Turn off the PIA FIRQ sources: CD ($FF21 bit 0) and the cartridge
+* ($FF23 bit 0). Read the data registers to clear their flags.
+        lda $FF21
+        anda #$FE
+        sta $FF21
+        lda $FF23
+        anda #$FE
+        sta $FF23
+        lda $FF20
+        lda $FF22
+* Put JMP handler ($7E is JMP extended) in the jump table at $FEF4.
         lda #$7E
         sta $FEF4
         ldd #handler
         std $FEF5
+* $FF90: BASIC's $CE with FEN (bit 4) set. $FF91: fast timer input,
+* executive task. $FF93: the timer is the only FIRQ source. Then read
+* $FF93 to release a request that waits.
         lda #$DE
         sta $FF90
         lda #$20
         sta $FF91
         sta $FF93
-        lda $FF92
         lda $FF93
-* Low byte first. MSB write starts the 12-bit timer; 510 is intentional.
+* Reload value 510: low byte first. The high-byte write starts the timer.
         lda #$FE
         sta $FF95
         lda #1
         sta $FF94
+* Unmask FIRQ only.
         andcc #$BF
+* <<< END EXAMPLE
         endc
+
+* --- CONTEXT: the main loop. Redraw after each block of 256 samples.
+* The COOPERATIVE builds write one sample on each pass instead.
 main_loop
-        ifndef TIMER
+        ifdef COOPERATIVE
         jsr emit
         endc
         lda samples
         cmpa last_block
         beq main_loop
         sta last_block
-* The heavy build clears the framebuffer, representing a costly redraw.
+* The HEAVY builds clear the full screen first: a costly redraw.
         ifdef HEAVY
         ldx #$0400
         clra
@@ -128,24 +159,26 @@ redraw  sta ,x+
         stb position
         lda #$FF
         sta b,x
-        ldd frames
-        addd #1
-        std frames
+* The check takes its snapshot here, after each redraw.
 frame_ready
         bra main_loop
-        ifdef TIMER
+
+        ifndef COOPERATIVE
+* >>> EXAMPLE 3 of 3: The FIRQ handler.
+* FIRQ saves only CC and PC, so save A and B. Read $FF93 to release the
+* request. Write a sample only for the timer flag. RTI restores CC and PC.
 handler pshs a,b
-        ifdef NO_ACK
-        lda #$20
-        else
         lda $FF93
-        endc
         bita #$20
         beq restore
         jsr emit
 restore puls a,b
         rti
+* <<< END EXAMPLE
         endc
+
+* --- CONTEXT: write one sample. A 16-bit phase advances by $0800.
+* Its high byte, bits 7..2, goes to the DAC with the saved low bits.
 emit    ldd phase
         addd #$0800
         std phase
@@ -156,10 +189,11 @@ sample  sta $FF20
         addd #1
         std samples
         rts
+
+* --- CONTEXT: the state. The context above clears it.
 state
 phase   rmb 2
 samples rmb 2
-frames  rmb 2
 position rmb 1
 last_block rmb 1
 low_bits rmb 1

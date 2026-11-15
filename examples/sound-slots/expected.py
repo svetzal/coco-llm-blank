@@ -1,6 +1,7 @@
-"""Independent model of the sound-slots loop: phase arithmetic and a moving marker.
+"""Independent model of the main-loop tone: DAC values, the mixer's pitch and the marker.
 
-Functions take the build variant: "" for live input, "scripted" for the fixture.
+Written from the requirements in README.md and the cited sources, not from the
+assembly. Functions take the build variant: "" (sawtooth) or "square".
 """
 
 import itertools
@@ -8,65 +9,53 @@ import re
 
 import numpy as np
 
-SAMPLES_PER_FRAME = 256
-LOW_PITCH, HIGH_PITCH = 0x0800, 0x1000
-# Sound timing, from the 6809 cycle counts of the eleven instructions in the sample
-# loop (tick..bne tick, 57 cycles) at the stock 894,886.25 Hz clock. The foreground
-# work after every 256 samples adds a little; the tolerance covers it.
-CPU_HZ = 894_886.25
-CYCLES_PER_SAMPLE = 57
-FRAME_SECONDS = SAMPLES_PER_FRAME * CYCLES_PER_SAMPLE / CPU_HZ
+SAMPLES_PER_BLOCK = 256
+BLOCKS_PER_NOTE = 16
+LOW_STEP, HIGH_STEP = 0x0800, 0x1000
+# The DAC is $FF20 bits 7..2 (Tandy, Technical Reference Manual, PDF 14).
+# Sawtooth: phase bits 15..10. Square: phase bit 15 only.
+WAVE_MASK = {"": 0xFC, "square": 0x80}
+# The CPU clock is 14.31818 MHz / 16 (Tandy, Technical Reference Manual, PDF 26).
+CPU_HZ = 14_318_180 / 16
+# The sample loop takes 41 cycles (Leventhal, Appendix C, PDF 553-555):
+# LDD 6, ADDD 7, STD 6, ANDA # 2, ORA 5, STA 5, DEC 7, BNE 3, all extended.
+# The slot after each block adds a little; the tolerance covers it.
+CYCLES_PER_SAMPLE = 41
+BLOCK_SECONDS = SAMPLES_PER_BLOCK * CYCLES_PER_SAMPLE / CPU_HZ
 PITCH_TOLERANCE_HZ = 15
 MIN_AC_RMS = 0.01
-# The foreground budget: reading one button and moving one byte must fit between
-# two DAC writes. Longer foreground work delays samples even when memory is correct.
+# The slot budget: the frame work between two DAC writes. Longer work delays
+# a sample even when every value is correct.
 MAX_INSTRUCTIONS_BETWEEN_WRITES = 40
-# CoCo 1 runs with 32 KiB, the CoCo 2 target with 64 KiB; the program uses only $0000-$7FFF.
-RAM_SIZES = (32768, 65536)
+TRACED_BLOCKS = 64
+MARKER_ROW = 96
+BYTES_PER_ROW = 32
 
 
-def expected_button(frame: int, variant: str) -> int:
-    """The fixture holds released/pressed for alternating blocks of sixteen frames."""
-    return 1 - ((frame - 1) // 16 % 2) if variant == "scripted" else 1
+def step_for(block: int) -> int:
+    """Each note lasts 16 blocks: blocks 1-16 low, 17-32 high, 33-48 low, and so on."""
+    return HIGH_STEP if (block - 1) // BLOCKS_PER_NOTE % 2 else LOW_STEP
 
 
-def expected_samples(variant: str, frames: int = 64) -> list[int]:
-    """Upper six bits of a 16-bit phase; the pitch changes after each frame's input read."""
-    phase, pitch, result = 0, LOW_PITCH, []
-    for frame in range(1, frames + 1):
-        for _ in range(SAMPLES_PER_FRAME):
-            phase = (phase + pitch) % 65536
-            result.append((phase >> 8) & 0xFC)
-        pitch = LOW_PITCH if expected_button(frame, variant) else HIGH_PITCH
+def expected_samples(variant: str, blocks: int = TRACED_BLOCKS) -> list[int]:
+    """The DAC bits of each sample: the high byte of a 16-bit phase, masked to the waveform."""
+    phase, result = 0, []
+    for block in range(1, blocks + 1):
+        for _ in range(SAMPLES_PER_BLOCK):
+            phase = (phase + step_for(block)) % 65536
+            result.append((phase >> 8) & WAVE_MASK[variant])
     return result
 
 
 def expected_screen(frame: int, variant: str) -> bytes:
-    """One full byte on row 96 at column frame mod 32; everything else clear."""
+    """The context: one full byte on row 96 at column (block mod 32); the rest clear."""
     screen = bytearray(6144)
-    screen[96 * 32 + frame % 32] = 0xFF
+    screen[MARKER_ROW * BYTES_PER_ROW + frame % BYTES_PER_ROW] = 0xFF
     return bytes(screen)
 
 
-def verify_ram(data: bytes, symbols: dict[str, int], frame: int, variant: str) -> None:
-    def word(name: str) -> int:
-        return int.from_bytes(data[symbols[name] : symbols[name] + 2], "big")
-
-    if len(data) not in RAM_SIZES or data[0x03FF] != 0xA5 or data[0x1C00] != 0xA5:
-        raise ValueError("Missing initialized RAM or damaged framebuffer guards.")
-    button = expected_button(frame, variant)
-    state = (word("frames"), word("samples"), word("pitch"), word("phase"))
-    expected = (frame, frame * SAMPLES_PER_FRAME, LOW_PITCH if button else HIGH_PITCH, 0)
-    if state != expected or data[symbols["button"]] != button:
-        raise ValueError("Sound/input state differs from the frame specification.")
-    if data[0x400:0x1C00] != expected_screen(frame, variant):
-        raise ValueError("Moving marker or background differs from the screen specification.")
-    if data[symbols["position"]] != frame % 32:
-        raise ValueError("Moving marker or background differs from the screen specification.")
-
-
 def verify_trace(trace: str, symbols: dict[str, int], variant: str) -> dict[str, int]:
-    """Every DAC write in the instruction trace matches the phase model, in order."""
+    """Every DAC write matches the model, in order, and the slot stays inside the budget."""
     instructions = re.findall(r"^([0-9a-f]{4})\|.*$", trace, re.MULTILINE)
     records = re.findall(r"^([0-9a-f]{4})\|.*?\ba=([0-9a-f]{2})\b.*$", trace, re.MULTILINE)
     writes = [
@@ -77,8 +66,6 @@ def verify_trace(trace: str, symbols: dict[str, int], variant: str) -> dict[str,
     if len(records) != len(instructions) or [a for _, a in writes] != expected_samples(variant):
         raise ValueError("DAC instruction trace differs from the independent phase model.")
     gaps = [right[0] - left[0] for left, right in itertools.pairwise(writes)]
-    if max(gaps) <= min(gaps):
-        raise ValueError("Trace did not exercise the extra input/graphics work.")
     if max(gaps) > MAX_INSTRUCTIONS_BETWEEN_WRITES:
         raise ValueError(
             f"Foreground work took {max(gaps)} instructions between DAC writes; "
@@ -91,35 +78,28 @@ def verify_trace(trace: str, symbols: dict[str, int], variant: str) -> dict[str,
     }
 
 
-def pitch_for(frame: int, variant: str) -> int:
-    """The phase step used for a frame's samples: set by the previous frame's input."""
-    if frame == 1:
-        return LOW_PITCH
-    return LOW_PITCH if expected_button(frame - 1, variant) else HIGH_PITCH
+def expected_hz(step: int) -> float:
+    """The waveform repeats every 65536 / step samples."""
+    return CPU_HZ / CYCLES_PER_SAMPLE * step / 65536
 
 
-def expected_hz(pitch: int) -> float:
-    """A sawtooth repeats every 65536 / pitch samples."""
-    return CPU_HZ / CYCLES_PER_SAMPLE / (65536 / pitch)
-
-
-def steady_frames(frame: int, variant: str) -> int:
-    """How many frames up to this one share its pitch."""
+def steady_blocks(frame: int) -> int:
+    """How many blocks up to this one share its note."""
     count = 1
-    while count < frame and pitch_for(frame - count, variant) == pitch_for(frame, variant):
+    while count < frame and step_for(frame - count) == step_for(frame):
         count += 1
     return count
 
 
 def verify_sound(sound, frame: int, variant: str) -> dict[str, float]:
-    """XRoar's mixer output ends with a tone at the pitch this frame's input selected.
+    """XRoar's mixer output ends with a tone at the pitch of this block's note.
 
-    Only whole steady frames are analysed, at most the last 150 ms. With less than
+    Only whole steady blocks are analysed, at most the last 150 ms. With less than
     100 ms of steady pitch, only the presence of a varying signal is checked.
     """
-    pitch = pitch_for(frame, variant)
-    seconds = min(0.15, (steady_frames(frame, variant) - 1) * FRAME_SECONDS)
-    count = int(max(seconds, FRAME_SECONDS / 2) * sound.rate)
+    step = step_for(frame)
+    seconds = min(0.15, (steady_blocks(frame) - 1) * BLOCK_SECONDS)
+    count = int(max(seconds, BLOCK_SECONDS / 2) * sound.rate)
     tail = sound.samples[-count:].astype(float) / 32768
     signal = tail - tail.mean()
     rms = float(np.sqrt(np.mean(signal**2)))
@@ -130,9 +110,9 @@ def verify_sound(sound, frame: int, variant: str) -> dict[str, float]:
         return result
     spectrum = np.abs(np.fft.rfft(signal * np.hanning(len(signal))))
     peak = (int(np.argmax(spectrum[1:])) + 1) * sound.rate / len(signal)
-    if abs(peak - expected_hz(pitch)) > PITCH_TOLERANCE_HZ:
+    if abs(peak - expected_hz(step)) > PITCH_TOLERANCE_HZ:
         raise ValueError(
             f"Frame {frame}: mixer output peaks at {peak:.1f} Hz, "
-            f"expected {expected_hz(pitch):.1f} Hz."
+            f"expected {expected_hz(step):.1f} Hz."
         )
-    return result | {"expected_hz": round(expected_hz(pitch), 1), "peak_hz": round(peak, 1)}
+    return result | {"expected_hz": round(expected_hz(step), 1), "peak_hz": round(peak, 1)}

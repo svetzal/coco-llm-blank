@@ -23,22 +23,24 @@ extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
 
 [memory]
 at = { start = 0x3000 }
-below = { state_end = 0x7E00 }
+
+# The plain build writes the samples from the timer interrupt, with a light
+# redraw. The variants add a costly redraw, or write the samples from the
+# main loop for comparison.
+[variants.heavy]
+defines = ["HEAVY"]
+
+[variants.cooperative]
+defines = ["COOPERATIVE"]
+
+[variants.cooperative-heavy]
+defines = ["COOPERATIVE", "HEAVY"]
 
 # Every check also records XRoar's mixer output; expected.py's verify_sound judges it.
 [capture]
 audio = true
 
-# The plain build is cooperative with a light redraw.
-[variants.heavy]
-defines = ["HEAVY"]
-
-[variants.timer]
-defines = ["TIMER"]
-
-[variants.timer-heavy]
-defines = ["TIMER", "HEAVY"]
-
+# For the check only: where to take the snapshots and what to compare.
 [check]
 checkpoint = "frame_ready"   # reached after each completed redraw
 frames = [1, 2, 3]

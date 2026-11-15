@@ -153,7 +153,7 @@ build again as a control, and on the trial build.
 | --- | --- |
 | `examples/first-screen --video` | CoCo 1 rendered frame |
 | `examples/collect-room` | CoCo 1 and 2 frames and mixer sound, main and key-journey variants |
-| `examples/sound-slots` | CoCo 1 mixer sound, main and scripted variants |
+| `examples/sound-slots` | CoCo 1 mixer sound, main and square variants |
 | `examples/timer-sound --video` | CoCo 3, both GIME revisions, four variants |
 
 It compares every file that each run wrote in `build/<example>/`, byte for

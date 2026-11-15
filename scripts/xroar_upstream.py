@@ -39,7 +39,7 @@ BRANCH = "coco-capture"
 EQUIVALENCE = (
     ("examples/first-screen", ("--video",)),
     ("examples/collect-room", ()),  # [capture] video and audio; main and journey, CoCo 1 and 2
-    ("examples/sound-slots", ()),  # [capture] audio = true; main and scripted variants
+    ("examples/sound-slots", ()),  # [capture] audio = true; main and square variants
     ("examples/timer-sound", ("--video",)),  # CoCo 3, both GIME revisions
 )
 PINNED, AGAIN = "pinned", "pinned-again"

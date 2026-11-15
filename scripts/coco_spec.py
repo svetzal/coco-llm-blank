@@ -1265,8 +1265,13 @@ class DescribeEquipmentInXRoar:
     def should_stop_the_foreground_without_an_acknowledgement(
         self, timer_sound: Path, capsys
     ) -> None:
+        source = timer_sound / "main.asm"
+        acknowledge = "handler pshs a,b\n        lda $FF93"
+        source.write_text(
+            source.read_text().replace(acknowledge, "handler pshs a,b\n        lda #$20")
+        )
         settings = timer_sound / "coco.toml"
-        text = settings.read_text().replace('defines = ["TIMER"]', 'defines = ["TIMER", "NO_ACK"]')
+        text = settings.read_text()
         settings.write_text(text.replace("emulated_seconds = 8", "emulated_seconds = 4"))
 
         assert coco.main(["check", str(timer_sound), "--target", "coco3-1986"]) == 1

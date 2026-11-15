@@ -11,7 +11,7 @@ ram_kib = 32
 basic = "bas11.rom"
 
 # The named CoCo 2 NTSC boards (26-3134/26-3136) with the 64 KiB upgrade, an
-# explicit non-T1 6847 and CoCo 2 firmware. The coco2bus profile selects a T1 VDG.
+# explicit non-T1 6847 and CoCo 2 firmware. Their DAC and audio mux are one IC.
 [targets.coco2]
 machine = "cocous"
 cpu = "6809"
@@ -22,18 +22,18 @@ basic = "bas12.rom"
 
 [memory]
 at = { start = 0x3000 }
-below = { state_end = 0x7E00 }   # the stack is reserved from $7E00
+
+# The plain build plays a sawtooth wave. This variant plays a square wave.
+[variants.square]
+defines = ["SQUARE"]
 
 # Every check also records XRoar's mixer output; expected.py's verify_sound judges it.
 [capture]
 audio = true
 
-# A test-only input fixture: released/pressed for alternating 16-frame blocks.
-[variants.scripted]
-defines = ["SCRIPTED"]
-
+# For the check only: where to take the snapshots and what to compare.
 [check]
-checkpoint = "frame_ready"   # reached after each 256-sample frame
+checkpoint = "frame_ready"   # reached after each block of 256 samples
 frames = [1, 16, 17, 32, 33, 63, 64]
 unreachable = "state"        # a data label: executing it is a fault
 screen = 0x0400
