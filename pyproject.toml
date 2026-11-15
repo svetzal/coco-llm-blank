@@ -24,6 +24,8 @@ markers = ["integration: real Docling pipeline; downloads model weights on first
 
 [tool.ruff]
 line-length = 100
+# Skills are copied verbatim from their source repository; keep them byte-identical.
+extend-exclude = [".agents"]
 
 [tool.ruff.lint]
 extend-select = ["C90"]

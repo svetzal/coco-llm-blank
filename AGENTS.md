@@ -1,8 +1,14 @@
 # CoCo project guidance
 
-This file is the agent entry point. No agent skills or vendor-specific loader
-are required. Follow the links for the current task instead of loading every
-reference. Paths in commands are relative to the repository root.
+This file is the agent entry point. Follow the links for the current task
+instead of loading every reference. Paths in commands are relative to the
+repository root.
+
+Task skills live in `.agents/skills/<name>/SKILL.md`. Each starts with a
+`description` of when to use it. When a task matches, read that `SKILL.md` and
+follow it; its `references/` and `scripts/` paths are relative to its folder.
+Use `simplified-technical-english` for anything an owner or agent follows step
+by step: project READMEs, setup and lab procedures, and troubleshooting.
 
 ## Take responsibility for the first run
 
