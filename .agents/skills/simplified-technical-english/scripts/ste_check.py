@@ -113,6 +113,8 @@ WORD = re.compile(r"[A-Za-z][A-Za-z'-]*")
 ABBREVIATIONS = {"e.g.", "i.e.", "vs.", "cf.", "Dr.", "Mr.", "Mrs.", "Ms."}
 # A full stop after one of these does not end a sentence before a number.
 NUMBER_ABBREVIATIONS = {"No.", "Vol.", "Fig.", "p.", "pp."}
+# A person's initial, as in "LeRoy W. Gross".
+INITIAL = re.compile(r"^[A-Z]\.$")
 SENTENCE_END = re.compile(r"[.!?]+[\"')\]*_]*\s+")
 # A link that follows the end of a sentence is a citation for that sentence.
 TRAILING_CITATION = re.compile(r"(?<=[.!?])\s+\[[^\]]*\](?=\s|$)")
@@ -145,7 +147,10 @@ def ends_sentence(text, match):
     following = text[match.end():match.end() + 1]
     if following.islower():
         return False
-    preceding = text[:match.start() + 1].split()[-1].lstrip("\"'([*_")
+    before = text[:match.start() + 1].split()
+    preceding = before[-1].lstrip("\"'([*_")
+    if INITIAL.match(preceding) and len(before) > 1 and before[-2][:1].isupper():
+        return False
     if preceding in ABBREVIATIONS:
         return False
     if preceding in NUMBER_ABBREVIATIONS and following.isdigit():

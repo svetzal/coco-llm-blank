@@ -10,4 +10,4 @@ here. Ruff skips this folder so the copies stay byte-identical.
 
 | Skill | Version | Use it for |
 | --- | --- | --- |
-| [simplified-technical-english](simplified-technical-english/SKILL.md) | 2.0.0 | Procedures, project READMEs and troubleshooting steps people follow |
+| [simplified-technical-english](simplified-technical-english/SKILL.md) | 2.0.1 | Procedures, project READMEs and troubleshooting steps people follow |
