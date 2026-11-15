@@ -23,13 +23,13 @@ This is test equipment for the CoCo starter's scripts/coco.py.
  src/Makefile.am |   1 +
  src/coco_trap.c | 116 ++++++++++++++++++++++++++++++++++++++++++++++++
  src/coco_trap.h |  17 +++++++
- src/xroar.c     |   3 ++
+ src/trap.c      |   3 ++
  4 files changed, 137 insertions(+)
  create mode 100644 src/coco_trap.c
  create mode 100644 src/coco_trap.h
 
 diff --git a/src/Makefile.am b/src/Makefile.am
-index afdc9c31370d87ae8d4f7eeb784f4d1cb3fe6d4c..be64c13d7743a2f58d2a7f492e04d2f4fde40f7a 100644
+index bcf7c4f4d833bca567fb3c3fef4111ed14305724..8387857b07920789a45aebb626496ca01aaf5b7a 100644
 --- a/src/Makefile.am
 +++ b/src/Makefile.am
 @@ -25,6 +25,7 @@ xroar_SOURCES = \
@@ -185,19 +185,19 @@ index 0000000000000000000000000000000000000000..b7c6fe7d10a9905214b4f6292dafd1d9
 +void coco_snapshot_written(const char *path);
 +
 +#endif
-diff --git a/src/xroar.c b/src/xroar.c
-index be51f94d2f7872145a35af5bbc6d8961d7bb63b1..d556ece0cfe6bb159bcd326149da0c0cdc634fcf 100644
---- a/src/xroar.c
-+++ b/src/xroar.c
-@@ -55,6 +55,7 @@
- #include "auto_kbd.h"
- #include "becker.h"
- #include "cart.h"
+diff --git a/src/trap.c b/src/trap.c
+index 2d193e195d1c9e45c5f84e1dc17b48eda8069aea..2c9d0de3c378ac4be54a60262b0694f5babf129a 100644
+--- a/src/trap.c
++++ b/src/trap.c
+@@ -27,6 +27,7 @@
+ #include "slist.h"
+ #include "xalloc.h"
+ 
 +#include "coco_trap.h"
- #include "crclist.h"
- #include "dkbd.h"
  #include "events.h"
-@@ -3040,6 +3041,7 @@ static void handle_trap_new(void *sptr, bool RnW, uint32_t A) {
+ #include "logging.h"
+ #include "machine.h"
+@@ -238,6 +239,7 @@ static void trap_handle_new(void *sptr, bool RnW, uint32_t A) {
  
  static void handle_trap(void *sptr) {
  	struct trap_def *trap = sptr;
@@ -205,7 +205,7 @@ index be51f94d2f7872145a35af5bbc6d8961d7bb63b1..d556ece0cfe6bb159bcd326149da0c0c
  	struct trap_count_range *range = trap->count ? trap->count->data : NULL;
  	++trap->counter;
  	if (range && trap->counter < range->first) {
-@@ -3050,6 +3052,7 @@ static void handle_trap(void *sptr) {
+@@ -248,6 +250,7 @@ static void handle_trap(void *sptr) {
  	if (trap->snap) {
  		LOG_MOD_DEBUG(2, "trap", "write snapshot: %s\n", trap->snap);
  		write_snapshot(trap->snap);

@@ -15,10 +15,10 @@ This is test equipment for the CoCo starter's scripts/coco.py.
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/src/coco3.c b/src/coco3.c
-index 1e7c45f5c9cb8af9d005d686b61301db76a8d75d..410d2837d0f8baee54b96f70ca0907b78f532ca6 100644
+index 02fec83a8f47e7d02b8640ecb240049c61bcbbb2..45ee3372be42ed7b5fecf098818ed33c2cfeee77 100644
 --- a/src/coco3.c
 +++ b/src/coco3.c
-@@ -1080,7 +1080,7 @@ static void coco3_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
+@@ -1076,7 +1076,7 @@ static void coco3_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
  	if (uimsg->value) {
  		mp->frameskip = mp->configured_frameskip;
  	} else {
@@ -28,10 +28,10 @@ index 1e7c45f5c9cb8af9d005d686b61301db76a8d75d..410d2837d0f8baee54b96f70ca0907b7
  }
  
 diff --git a/src/dragon/dragon.c b/src/dragon/dragon.c
-index 170b376e62eb13ee5b60f62454dfee2f41942241..3879fee6039c99397c9b26dc0f5539fc6aaad043 100644
+index 98375cd2c219739ff732ce3ed393b64afa83bfd5..0c04f7a1de854ff01d2f9f6f2d5d51e12b72b4ce 100644
 --- a/src/dragon/dragon.c
 +++ b/src/dragon/dragon.c
-@@ -1020,7 +1020,7 @@ static void dragon_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
+@@ -1013,7 +1013,7 @@ static void dragon_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
  	if (uimsg->value) {
  		md->frameskip = md->configured_frameskip;
  	} else {

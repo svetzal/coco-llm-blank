@@ -27,10 +27,10 @@ This is test equipment for the CoCo starter's scripts/coco.py.
  create mode 100644 src/null/coco_video.h
 
 diff --git a/src/Makefile.am b/src/Makefile.am
-index 094044eb5499012730e6338df80aa61f6f9f75b9..afdc9c31370d87ae8d4f7eeb784f4d1cb3fe6d4c 100644
+index 17bd044103c2eab4250414b0f9131166bda75f04..bcf7c4f4d833bca567fb3c3fef4111ed14305724 100644
 --- a/src/Makefile.am
 +++ b/src/Makefile.am
-@@ -46,6 +46,7 @@ xroar_SOURCES = \
+@@ -45,6 +45,7 @@ xroar_SOURCES = \
  	module.c module.h \
  	mos6551.c mos6551.h \
  	ntsc.c ntsc.h \
@@ -163,10 +163,10 @@ index 0000000000000000000000000000000000000000..e05a952b56d68373db77ea8da1343fb2
 +
 +#endif
 diff --git a/src/null/ui_null.c b/src/null/ui_null.c
-index e668e686d9d7843f0de83703c176ff491cd63d32..0b44b855f68c6bb87b7c47b5ff5fa13be1e332ff 100644
+index 9de6108b1ad2daaf3c7caa4905f2d19270f0aea9..2c93644a7dbcddcec218d3dacd78005213e8c85b 100644
 --- a/src/null/ui_null.c
 +++ b/src/null/ui_null.c
-@@ -26,6 +26,8 @@
+@@ -22,6 +22,8 @@
  #include "ui.h"
  #include "vo.h"
  
@@ -175,7 +175,7 @@ index e668e686d9d7843f0de83703c176ff491cd63d32..0b44b855f68c6bb87b7c47b5ff5fa13b
  static void *filereq_null_new(void *cfg);
  static void filereq_null_free(void *sptr);
  
-@@ -54,7 +56,6 @@ static char *filereq_noop(void *sptr, char const *extensions) {
+@@ -50,7 +52,6 @@ static char *filereq_noop(void *sptr, char const *extensions) {
  }
  
  static void null_free(void *sptr);
@@ -183,7 +183,7 @@ index e668e686d9d7843f0de83703c176ff491cd63d32..0b44b855f68c6bb87b7c47b5ff5fa13b
  
  static void *new(void *cfg) {
  	(void)cfg;
-@@ -63,11 +64,9 @@ static void *new(void *cfg) {
+@@ -59,11 +60,9 @@ static void *new(void *cfg) {
  
  	uinull->free = DELEGATE_AS0(void, null_free, uinull);
  
@@ -197,7 +197,7 @@ index e668e686d9d7843f0de83703c176ff491cd63d32..0b44b855f68c6bb87b7c47b5ff5fa13b
  
  	return uinull;
  }
-@@ -92,10 +91,3 @@ static void filereq_null_free(void *sptr) {
+@@ -88,10 +87,3 @@ static void filereq_null_free(void *sptr) {
  	struct filereq_interface *frnull = sptr;
  	free(frnull);
  }

@@ -27,10 +27,10 @@ This is test equipment for the CoCo starter's scripts/coco.py.
  create mode 100644 src/null/coco_audio.h
 
 diff --git a/src/Makefile.am b/src/Makefile.am
-index be64c13d7743a2f58d2a7f492e04d2f4fde40f7a..58feebf8aa2b3bc9b8e753056e0216651d7298cf 100644
+index 8387857b07920789a45aebb626496ca01aaf5b7a..f082cdd46cb801ab61936965d752ad88dc467438 100644
 --- a/src/Makefile.am
 +++ b/src/Makefile.am
-@@ -483,7 +483,8 @@ endif
+@@ -509,7 +509,8 @@ endif
  # Null audio driver
  if AO_NULL
  xroar_SOURCES += \
@@ -41,10 +41,10 @@ index be64c13d7743a2f58d2a7f492e04d2f4fde40f7a..58feebf8aa2b3bc9b8e753056e021665
  
  # libsndfile support
 diff --git a/src/null/ao_null.c b/src/null/ao_null.c
-index 1055d34f0498c70963e3b5021ad498be8e2c00ed..62ab2ad8470bbce6058b7535a9c05b08968a4abe 100644
+index 5cfe32a6b9cf4f7c2ca48eef48fe4e905e581fea..c7326d1d5c87d315d4b0e3e7fe910b8bee96a5a2 100644
 --- a/src/null/ao_null.c
 +++ b/src/null/ao_null.c
-@@ -45,6 +45,8 @@
+@@ -41,6 +41,8 @@
  #include "sound.h"
  #include "xroar.h"
  
@@ -53,7 +53,7 @@ index 1055d34f0498c70963e3b5021ad498be8e2c00ed..62ab2ad8470bbce6058b7535a9c05b08
  static void *new(void *cfg);
  
  struct module ao_null_module = {
-@@ -73,7 +75,7 @@ static void *new(void *cfg) {
+@@ -69,7 +71,7 @@ static void *new(void *cfg) {
  
  	ao->free = DELEGATE_AS0(void, ao_null_free, ao);
  
@@ -62,7 +62,7 @@ index 1055d34f0498c70963e3b5021ad498be8e2c00ed..62ab2ad8470bbce6058b7535a9c05b08
  	if (!ao->sound_interface) {
  		free(aonull);
  		return NULL;
-@@ -81,6 +83,7 @@ static void *new(void *cfg) {
+@@ -77,6 +79,7 @@ static void *new(void *cfg) {
  	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_null_write_buffer, ao);
  	aonull->last_pause_cycle = event_current_tick;
  	aonull->last_pause_ms = current_time();
@@ -70,7 +70,7 @@ index 1055d34f0498c70963e3b5021ad498be8e2c00ed..62ab2ad8470bbce6058b7535a9c05b08
  	return aonull;
  }
  
-@@ -111,11 +114,13 @@ static void sleep_ms(unsigned int ms) {
+@@ -107,11 +110,13 @@ static void sleep_ms(unsigned int ms) {
  
  static void ao_null_free(void *sptr) {
  	struct ao_null_interface *aonull = sptr;
