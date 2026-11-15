@@ -10,6 +10,7 @@ limits separately from its instructions for playing.
 | Task | Example | Scope |
 | --- | --- | --- |
 | Check a first CoCo 1 screen | [First screen](first-screen/README.md) | Border and square; a setup checkpoint, not a game. |
+| See every VDG graphics colour | [Palette swatches](palette-swatches/README.md) | CG6 and RG6 bars for both colour sets; the evidence for the `xroar` palette in `scripts/graphics.py`. |
 | Redraw objects over scenery | [Moving objects](moving-objects/README.md) | Ordered opaque rectangles over a changing background. |
 | Draw transparent and opaque pixels | [Masked objects](masked-objects/README.md) | Software masks over patterned scenery. |
 | Keep room state separate from drawing | [Tile room](tile-room/README.md) | Scripted movement and collection; no keyboard or victory rule. |
