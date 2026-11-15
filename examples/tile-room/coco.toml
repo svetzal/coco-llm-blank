@@ -1,5 +1,6 @@
 # Settings for scripts/coco.py. Paths are relative to this folder.
 source = "main.asm"
+prepare = "prepare.py"   # writes tiles.asm from tiles.png into the build folder
 
 # NTSC CoCo architecture with an explicit non-T1 6847 VDG and firmware.
 [targets.coco1]
@@ -23,6 +24,10 @@ extended = "extbas11.rom"
 [memory]
 at = { start = 0x3000 }
 below = { program_end = 0x7E00 }   # the stack is reserved from $7E00
+
+# The picture on the display is part of the claim, not only memory.
+[capture]
+video = true
 
 [check]
 checkpoint = "frame_ready"   # reached once per completed move

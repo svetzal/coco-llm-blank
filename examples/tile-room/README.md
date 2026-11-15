@@ -25,6 +25,9 @@ uv run python scripts/coco.py run examples/tile-room --target coco1
 result file for each target. Add `--target coco2` to check one target.
 Frame N of the check shows the room after N - 1 moves.
 
+At each frame, `check` compares screen memory and also XRoar's rendered picture, so it uses the
+instrumented XRoar.
+
 `check` runs headlessly. `run` opens XRoar, moves through the script once,
 and holds the final picture. Close XRoar to stop it.
 
@@ -106,6 +109,26 @@ becomes floor in the map before rendering.
 
 Each tile is eight bytes: one byte for each of eight pixel rows. For cell
 column `c` and row `r`, map offset is `r * 8 + c`.
+
+## Prepare the pictures from a drawing
+
+The five pictures are the cells of [tiles.png](tiles.png), left to right:
+floor, wall, collectible, exit and actor. Each cell is 8×8 source pixels, one
+source pixel for each RG6 pixel.
+
+Before each build, [prepare.py](prepare.py)
+deletes the old output and converts the drawing with `scripts/graphics.py`.
+The result is `tiles.asm` in the build folder, with the labels `tiles_r0c0` to
+`tiles_r0c4`. The [assets guide](../../guidance/techniques/assets.md) gives
+the method.
+
+The `pictures` table in `main.asm` gives the picture label for each image ID.
+The assembly stops in these conditions:
+
+- The table names a picture that the drawing does not have.
+- A picture is not eight rows of one byte. The program tests the `_bpr` and
+  `_rows` values that `graphics.py` writes.
+- The conversion failed. Then there is no `tiles.asm`.
 
 The first display byte is `$0400 + r * 256 + c`. The image rows after the
 first are 32 bytes apart. The lower-right cell starts at `$0907`, with its
@@ -204,9 +227,24 @@ The failed check did not write a success record. This was a correction to the
 test budget, not a speed claim.
 
 Assembly and emulator RAM evidence are distinct from rendered-display evidence.
-No GUI was launched for this task. These items remain untested:
+No GUI was launched for this task.
 
-- display appearance
+Later, the pictures moved from hand-written bytes to `tiles.png` and
+`prepare.py`, and the check started to compare XRoar's rendered picture.
+
+With the pinned XRoar, all 42 frames on both targets match `expected_frame`
+in all 98,304 samples. The art in `expected.py` is text drawings, not the
+drawing or the converted bytes. Integration tests in `scripts/coco_spec.py`
+make sure that these changes fail:
+
+- One changed pixel in `tiles.png` (7 screen bytes differ at frame 1).
+- A clear loop that writes one byte past the screen (a damaged guard).
+- A drawing without the actor's cell (the assembler stops).
+- Pictures converted at 16×16 (the assembler stops).
+
+These items remain untested:
+
+- appearance on a television or monitor
 - real keyboard input
 - physical hardware
 - PAL

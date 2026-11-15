@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 from coco import Host, ProjectError
 from native import ROOT, tool_path
+from PIL import Image
 
 SETTINGS = """
 source = "main.asm"
@@ -1201,6 +1202,34 @@ class DescribeEquipmentInXRoar:
 
         assert "coco3-1986 did not reach 'frame_ready' 1 times" in capsys.readouterr().err
 
+    @pytest.fixture
+    def tile_room(self, tmp_path: Path) -> Path:
+        if not instrumented_ready("coco1"):
+            pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
+        directory = tmp_path / "tile-room-copy"
+        shutil.copytree(ROOT / "examples/tile-room", directory)
+        return directory
+
+    def should_reject_a_changed_pixel_in_the_source_picture(self, tile_room: Path, capsys) -> None:
+        drawing = tile_room / "tiles.png"
+        with Image.open(drawing) as image:
+            changed = image.convert("RGB")
+        changed.putpixel((9, 1), (46, 188, 36))  # the wall's second row, second pixel
+        changed.save(drawing)
+
+        assert coco.main(["check", str(tile_room), "--target", "coco1"]) == 1
+
+        assert "screen bytes differ" in capsys.readouterr().err
+
+    def should_reject_a_write_past_the_screen(self, tile_room: Path, capsys) -> None:
+        source = tile_room / "main.asm"
+        clear = "clear   clr ,x+\n        cmpx #$1C00"
+        source.write_text(source.read_text().replace(clear, clear.replace("1C00", "1C01")))
+
+        assert coco.main(["check", str(tile_room), "--target", "coco1"]) == 1
+
+        assert "damaged guards" in capsys.readouterr().err
+
 
 @pytest.mark.integration
 class DescribeRealAssembler:
@@ -1214,3 +1243,30 @@ class DescribeRealAssembler:
 
         with pytest.raises(ProjectError, match=r"start must be at \$3000"):
             coco.build(coco.load_project(directory), Host())
+
+    @pytest.fixture
+    def tile_room(self, tmp_path: Path) -> Path:
+        if not tool_path("lwasm"):
+            pytest.skip("LWASM is not installed")
+        directory = tmp_path / "tile-room-copy"
+        shutil.copytree(ROOT / "examples/tile-room", directory)
+        return directory
+
+    def assembler_log(self, directory: Path) -> str:
+        project = coco.load_project(directory)
+        with pytest.raises(subprocess.CalledProcessError):
+            coco.build(project, Host())
+        return (project.output / "main.assemble.log").read_text()
+
+    def should_refuse_a_picture_table_that_names_a_missing_picture(self, tile_room: Path) -> None:
+        drawing = tile_room / "tiles.png"
+        with Image.open(drawing) as image:
+            image.crop((0, 0, 32, 8)).save(drawing)  # the actor's cell is gone
+
+        assert "Undefined symbol tiles_r0c4" in self.assembler_log(tile_room)
+
+    def should_refuse_pictures_of_another_size(self, tile_room: Path) -> None:
+        prepare = tile_room / "prepare.py"
+        prepare.write_text(prepare.read_text().replace('"--size", "8x8"', '"--size", "16x16"'))
+
+        assert "each picture row must be 1 byte" in self.assembler_log(tile_room)

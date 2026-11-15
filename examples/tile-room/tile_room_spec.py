@@ -1,11 +1,14 @@
 """The tile-room model obeys independent map rules: rejections, returns and collection."""
 
+import subprocess
 from pathlib import Path
 
 import pytest
-from coco import load_expected
+from coco import load_expected, load_module
 
-model = load_expected(Path(__file__).parent)
+HERE = Path(__file__).parent
+model = load_expected(HERE)
+pictures = load_module(HERE / "prepare.py")
 SYMBOLS = {
     "map_guard_before": 0x3EFF,
     "room": 0x3F00,
@@ -91,3 +94,34 @@ class DescribeTileRoom:
     def should_reject_missing_ram(self) -> None:
         with pytest.raises(ValueError, match="RAM"):
             model.verify_ram(b"", SYMBOLS, 1)
+
+    def should_show_the_screen_in_the_rendered_colours(self) -> None:
+        frame = model.expected_frame(1)
+
+        assert frame.shape == (192, 512, 3)
+        # Two samples per pixel: the first wall's top row is lit, the floor below it is not.
+        assert frame[0, 2 * 16].tolist() == [46, 188, 36]
+        assert frame[8, 0].tolist() == [0, 31, 0]
+
+
+class DescribeTilePictures:
+    def should_convert_the_drawing_to_the_independent_art(self, tmp_path: Path) -> None:
+        pictures.prepare(tmp_path)
+
+        drawn = b"".join(
+            bytes(int(row.replace("#", "1").replace(".", "0"), 2) for row in art)
+            for art in model.ART
+        )
+        assert (tmp_path / "tiles.bin").read_bytes() == drawn
+        assert "tiles_r0c4_rows equ 8" in (tmp_path / "tiles.asm").read_text()
+
+    def should_leave_no_include_when_the_conversion_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / "tiles.asm").write_text("stale pictures")
+        monkeypatch.setattr(pictures, "SOURCE", tmp_path / "missing.png")
+
+        with pytest.raises(subprocess.CalledProcessError):
+            pictures.prepare(tmp_path)
+
+        assert not (tmp_path / "tiles.asm").exists()

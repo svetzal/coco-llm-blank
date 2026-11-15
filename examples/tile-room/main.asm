@@ -121,12 +121,11 @@ cols    lda tile_row
         lda #4
         jsr tile
         rts
-* A is image ID. Each tile has eight byte-aligned rows.
+* A is image ID: the pictures table gives its eight byte-aligned rows.
 * destination = $0400 + cell_row*256 + cell_column.
-tile    ldb #8
-        mul
-        ldu #art
-        leau d,u
+tile    lsla
+        ldx #pictures
+        ldu a,x
         lda tile_row
         adda #4
         ldb tile_column
@@ -138,12 +137,17 @@ pixels  lda ,u+
         decb
         bne pixels
         rts
-* Original art: floor, brick wall, collectible, exit, actor.
-art     fcb $00,$00,$00,$00,$00,$00,$00,$00
-        fcb $FF,$81,$81,$FF,$18,$18,$18,$FF
-        fcb $00,$00,$18,$3C,$3C,$18,$00,$00
-        fcb $7E,$42,$5A,$52,$5A,$42,$7E,$00
-        fcb $18,$3C,$7E,$DB,$FF,$24,$24,$66
+* Image ID to picture: floor, wall, collectible, exit, actor. The labels
+* are cells of tiles.png, left to right; prepare.py converts it to tiles.asm.
+pictures fdb tiles_r0c0,tiles_r0c1,tiles_r0c2,tiles_r0c3,tiles_r0c4
+        include "tiles.asm"
+* tile draws 8 rows of 1 byte. Refuse pictures of a different size.
+        if tiles_r0c0_bpr-1
+        error "tiles.asm: each picture row must be 1 byte"
+        endc
+        if tiles_r0c0_rows-8
+        error "tiles.asm: each picture must be 8 rows"
+        endc
 passable fcb 1,0,1,1
 initial_map
         fcb 0,0,1,0,0,0,0,0

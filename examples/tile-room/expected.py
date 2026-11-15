@@ -1,9 +1,13 @@
 """Independent model of the tile room: a graph walk and hand-drawn pixel art."""
 
+import numpy as np
+
 ROOM = ("..#.....", ".*#..#..", "..#.....", "....##..", ".#......", "......E.")
+# The pinned XRoar's two RG6 colours for colour set 0, as in examples/first-screen.
+BLACK, GREEN = (0, 31, 0), (46, 188, 36)
 # Specification of requested directions, not read from the assembly or RAM.
 MOVES = "LURRDDDRURUUUURRDRRRDDDDDDLRLLLLLULULUUDU"
-# Pixel drawings are independent of the packed assembly byte table.
+# Pixel drawings are independent of tiles.png and of the converted bytes.
 ART = (
     ("........",) * 8,
     (
@@ -80,6 +84,13 @@ def expected_screen(frame: int) -> bytes:
             if ART[tile][y % 8][x % 8] == "#":
                 screen[y * 32 + x // 8] |= 128 >> (x % 8)
     return bytes(screen)
+
+
+def expected_frame(frame: int) -> np.ndarray:
+    """The rendered picture: two samples per pixel, XRoar's RG6 green or black (CSS=0)."""
+    lit = np.unpackbits(np.frombuffer(expected_screen(frame), np.uint8)).reshape(192, 256)
+    wide = np.repeat(lit.astype(bool), 2, axis=1)
+    return np.where(wide[:, :, None], np.array(GREEN), np.array(BLACK)).astype(np.uint8)
 
 
 def verify_ram(data: bytes, symbols: dict[str, int], frame: int) -> None:
