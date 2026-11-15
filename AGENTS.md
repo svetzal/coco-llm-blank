@@ -7,8 +7,15 @@ repository root.
 Task skills live in `.agents/skills/<name>/SKILL.md`. Each starts with a
 `description` of when to use it. When a task matches, read that `SKILL.md` and
 follow it; its `references/` and `scripts/` paths are relative to its folder.
-Use `simplified-technical-english` for anything an owner or agent follows step
-by step: project READMEs, setup and lab procedures, and troubleshooting.
+
+**Write all prose with the `simplified-technical-english` skill.** This is
+required for every README (the root, examples and projects), every file under
+`guidance/`, and any other prose you write or change. Read the skill before
+you write. Run its checker on each changed file and fix what it reports:
+
+```sh
+python3 .agents/skills/simplified-technical-english/scripts/ste_check.py <file>
+```
 
 ## Take responsibility for the first run
 
