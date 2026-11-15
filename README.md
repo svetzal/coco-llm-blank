@@ -170,7 +170,6 @@ You can start without reading these pages. Choose one when you need it:
 - [Examples](examples/README.md) for smaller programs to build and study.
 - [Agent guidance](guidance/README.md): how your agent uses this starter, and the
   game and demo techniques it uses.
-- [Experiments](experiments/README.md) for reproducing individual measurements.
 - [Agent instructions](AGENTS.md) for starting work.
 - [PLAN.md](PLAN.md) for outstanding work.
 

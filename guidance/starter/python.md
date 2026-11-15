@@ -70,6 +70,12 @@ branch coverage must reach 90%. But the threshold does not replace checking the
 behavior changed. The coverage report includes production scripts and excludes
 specs and fixtures.
 
+The root pytest configuration in `pyproject.toml` collects the `*_spec.py`
+files under `scripts/` and `examples/`, including the emulator integrations.
+CI runs `uv run pytest --cov`, Ruff and Ruff's format check.
+Keep test evidence that must survive a rerun under ignored `local/` or
+`build/`. Do not keep it in a pytest temporary directory.
+
 ### Complete starter validation environment
 
 Setup for a selected target prepares the demo, not the whole test suite of the
@@ -142,58 +148,3 @@ This command loads real Docling models.
 
 For CoCo binaries and emulator checks, load [toolchain.md](toolchain.md).
 For books and OCR, load [references.md](references.md).
-
-## Repository validation CLI
-
-Use the existing locked environment. Prepare it explicitly with
-`uv sync --locked` when needed. The runner never installs packages or tools.
-On macOS, the supported host is Apple Silicon.
-
-```sh
-uv run --locked --no-sync python scripts/validate_repository.py list
-uv run --locked --no-sync python scripts/validate_repository.py run root --heavy
-```
-
-Each selection runs pytest, Ruff, and Ruff's format check in separate processes
-from the repository root. Root selects the complete `scripts` and `examples`
-suites, including integrations. Root needs `--heavy`. It preserves the full
-coverage gate of the starter. It does not present a partial run as root
-validation.
-
-Root is the only scope now, because the setup checks moved into the root
-suite. An experiment name selects only that experiment.
-An experiment with heavy prerequisites needs `--heavy`.
-
-The word `all` selects every experiment but not root. No experiment remains,
-so `run all` stops with an error.
-
-The runner checks the entire selection before any work starts. Scopes run
-sequentially and stop at the first failed check.
-
-Root with `--heavy` needs the complete starter environment described above.
-Docling can download model weights. Native runs need the assembler, build
-tools, and verified ROMs for their documented machines.
-
-The runner does not prepare these inputs, launch experiment setup scripts, or
-start an interactive GUI. Missing prerequisites follow the behavior of the
-selected suite: some fail, while others skip tests. The runner preserves these
-outcomes and does not convert skips into failures.
-
-Inspect the pytest log and JUnit report before you claim full validation.
-A zero exit alone does not mean every check ran.
-
-Each invocation retains a new directory under ignored `build/validation/`.
-Each scope has numbered merged stdout/stderr logs and JSON records. The JSON
-records contain the command and the raw exit status of the child.
-Pytest writes JUnit results there and, where configured, coverage JSON and its
-data file. Temporary test files are isolated per invocation. The terminal
-prints log paths and statuses.
-
-An ordinary child failure becomes the runner's exit status. Signal termination
-uses `128 + signal`, and the JSON retains the raw negative status. The runner
-records a process that cannot start as 127. Later checks do not run after
-failure. A retry leaves earlier logs intact.
-
-Evidence paths that an experiment owns still obey the experiment's own rules.
-These results establish only what the selected tests measure. They do not
-establish physical hardware operation, visible display, or audible output.

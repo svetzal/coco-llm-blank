@@ -65,8 +65,7 @@ It verifies the firmware bytes named in `coco.toml` and passes their absolute
 paths to XRoar. Do not write a launcher or rely on a bare `xroar -run` command.
 Read [firmware and launching](guidance/starter/toolchain.md#firmware-and-launching).
 
-Python under `scripts/` and `experiments/` is to be run, not read: use its
-`--help`. It holds no CoCo knowledge. Read the examples' `main.asm`,
+Python under `scripts/` is to be run, not read: use its `--help`. It holds no CoCo knowledge. Read the examples' `main.asm`,
 `coco.toml`, `expected.py` and READMEs, and `guidance/`, instead.
 
 If XRoar shows only a checkerboard or never reaches the expected screen, stop
@@ -179,5 +178,4 @@ return to BUILD on the project that raised it. If a project's README has an
 `Open lab` line, ask whether to resume that lab or continue building.
 
 Never add research notes, validation reports or experiment packages to tracked
-folders. The existing `experiments/` folder holds labs that were never closed.
-Do not add to it.
+folders. Keep them in the lab folder under ignored `local/lab/`.

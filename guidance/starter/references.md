@@ -213,7 +213,7 @@ Its full-page image preserves the listing order.
 ## Sound effects, ROM calls and optional cartridge sound
 
 Read the [sound guide](../techniques/sound.md) for target restrictions and the
-separation between historical players and tested starter experiments.
+separation between historical players and tested starter examples.
 
 | Resource | Selected PDF pages | Use and limits |
 | --- | --- | --- |

@@ -30,8 +30,8 @@ For a complete playable example, start with
 reproduction checks and the limits of its evidence. For smaller building blocks,
 use the [example index](../../examples/README.md).
 
-To reproduce a measurement or inspect its failure controls, use the
-[experiment index](../../experiments/README.md). For setup instructions, use
+To reproduce a measurement, use the example that the guide links. Its
+`expected.py` and `coco.toml` hold the check. For setup instructions, use
 the [guidance index](../README.md).
 See [PLAN.md](../../PLAN.md) for outstanding work.
 
@@ -40,8 +40,8 @@ See [PLAN.md](../../PLAN.md) for outstanding work.
 **Published explanation** means we examined the cited passage. It does not
 mean we reproduced its program or established who first invented the idea.
 **Our adaptation** means the starter authors derived the advice or procedure.
-**Measured result** means a linked experiment checked a stated outcome.
-A proposal remains untested until an experiment supplies that evidence.
+**Measured result** means a linked example or check measured a stated outcome.
+A proposal remains untested until a check supplies that evidence.
 
 Citations are beside the claims they support. PDF page numbers are one-based
 positions in the archive file. Printed page numbers appear separately when
