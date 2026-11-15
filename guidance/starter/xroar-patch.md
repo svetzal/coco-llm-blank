@@ -106,7 +106,7 @@ available for every file, also for files that an earlier patch changed.
 3. Keep the upstream version of the upstream code.
 4. Put our call sites back where upstream moved that code.
 5. Change the patch message if it no longer describes the patch.
-6. Run `git add` for the files, then run `git rebase --continue`.
+6. Run `git add` for the files. Then run `git rebase --continue`.
 7. Run the trial command again without `--fresh`. `--fresh` discards your
    resolution.
 
@@ -157,10 +157,18 @@ build again as a control, and on the trial build.
 | `examples/timer-sound --video` | CoCo 3, both GIME revisions, four variants |
 
 It compares every file that each run wrote in `build/<example>/`, byte for
-byte. These files are the RAM snapshots, rendered frames, sound recordings,
-key scripts, XRoar logs, binaries and result records. The comparison ignores
-the emulator path in a result record. The files of each run stay in
-`local/lab/xroar-<version>/captures/`.
+byte. It compares these files:
+
+- RAM snapshots
+- Rendered frames
+- Sound recordings
+- Key scripts
+- XRoar logs
+- Binaries
+- Result records
+
+The comparison ignores the emulator path in a result record.
+The files of each run stay in `local/lab/xroar-<version>/captures/`.
 
 - `identical`, exit code 0: adopt the release.
 - `different`, exit code 3: every check passed, but some files are different.
@@ -192,6 +200,7 @@ XRoar runs every check that uses frames, sound or keys.
   A new install gets the pinned version, and an existing install keeps its
   version. To change it, delete `local/toolchain/bin/xroar` and run
   `uv run python scripts/native.py`.
+
 - macOS: Homebrew supplies the ordinary XRoar, and nothing pins it. Its
   version can be older or newer than the pin. Upgrade it with
   `brew upgrade xroar` only when the owner agrees.
@@ -210,12 +219,16 @@ If a plain check gives a different result on two hosts, compare their
 1. Run a trial on the pinned release, for example
    `trial 1.13 --base <base commit>`. This makes the lab clone with the
    series as commits.
+
 2. Change the code in `local/lab/xroar-<version>/xroar` on branch
    `coco-capture`. Use the steps in [fix a build failure](#fix-a-build-failure)
    to change a patch.
+
 3. Run the trial again. Every check must pass. A planned change to a capture
    gives the verdict `different`.
+
 4. Adopt with `--accept-differences` only for the changes that you planned.
+
 5. Add the matching `scripts/coco.py` ability and its tests to the same
    commit.
 
@@ -228,8 +241,8 @@ Commit these items together, in one commit:
 - The update to [the current pin](#the-current-pin) in this guide.
 - Changes to `scripts/coco.py`, examples or guides that the new release needs.
 
-In the message, give the release, the base commit, how each conflict was
-resolved, the equivalence results, and each difference with its explanation.
+In the message, give the release, the base commit, how you resolved each
+conflict, the equivalence results, and each difference with its explanation.
 Do not commit `local/`. Make changes to `scripts/xroar_upstream.py` and
 `scripts/instrumented_xroar.py` in a separate commit before the adoption.
 
@@ -247,22 +260,27 @@ result record was identical to 1.12.1. The adoption accepted these differences:
   and bytes from `$7F14` to `$7F20`, in the stack area that the examples
   reserve from `$7E00`. CoCo 3 snapshots show the same addresses in their
   upper 64 KiB.
+
 - Log ticks: checkpoint, key and sound ticks are the same on the CoCo 1. They
   are 48 ticks later on the CoCo 2. On the CoCo 3 they are 32 ticks earlier
   with the 1986 GIME and 48 ticks later with the 1987 GIME.
+
 - Cause of both: the ChangeLog entry "Fix 6809/6309 memory access pattern for
   TSTA, TSTB", commit `cbad6b5e`. TSTA and TSTB are now one cycle shorter.
   A control build of 1.13 without that commit gave RAM, frames, sound and
   ticks identical to 1.12.1.
-- XRoar logs: 1.13 does not write the "Colour BASIC CRC32 valid" lines. Cause: commit
-  `6e9eb4f6`, "machines: remove old ROM CRC verification". The ChangeLog does
-  not list it.
+
+- XRoar logs: 1.13 does not write the "Colour BASIC CRC32 valid" lines.
+  Cause: commit `6e9eb4f6`, "machines: remove old ROM CRC verification".
+  The ChangeLog does not list it.
 
 ## Toward upstream
 
 The series is test equipment for this starter. It is not ready to send to
 XRoar. Do not send it, and do not contact the maintainer, unless the owner
-asks. The changes below would make it acceptable. Send each feature as its own
+asks.
+
+The changes below would make it acceptable. Send each feature as its own
 small patch against the newest release.
 
 ### Use XRoar's option and module conventions
@@ -272,12 +290,15 @@ Replace the environment variables and fixed values with XRoar options:
 - Frame dump: a trap action, such as `-trap-screenshot <file>`, next to
   `-trap-snap`. Write PNG with the existing `screenshot_write_png()` where
   libpng is available.
+
 - Sound capture: an audio module, such as `-ao wav`, with the file in
   `-ao-device`. Take the rate, format and channels from `-ao-rate`,
   `-ao-format` and `-ao-channels`.
+
 - Key presses: trap actions, such as `-trap-press` and `-trap-release`, or a
   key script for each trap. Use the key names that `-kbd-bind` accepts in
   `src/dkbd.c`, for example `fullstop`.
+
 - Frame skip: keep the value that `-fskip` sets when the rate limit is off,
   as an explicit option.
 

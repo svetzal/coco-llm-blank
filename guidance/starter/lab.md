@@ -1,71 +1,78 @@
 # Work in a lab
 
 Read this when a session switches to LAB mode. A lab answers one technical
-question that the guides and examples do not settle yet: crackly audio, slow
-graphics, unreliable input, a mode nobody has tried. It ends by improving the
-starter's guides, examples or tools, and then it is removed.
+question that the guides and examples do not settle yet. Examples are crackly
+audio, slow graphics, unreliable input, a mode nobody has tried. A lab ends by
+improving the starter's guides, examples or tools. Then you remove the lab.
 
 ## Open a lab
 
 Open a lab only when the owner asks for one, or after they agree to your
-suggestion. Suggest one when a BUILD problem is not answered by the
-[technique guides](../techniques/README.md) or examples, explaining in plain
-words what you would investigate and why.
+suggestion. Suggest a lab when the
+[technique guides](../techniques/README.md) or examples do not answer a BUILD
+problem. Explain in plain words what you would investigate and why.
 
 1. Name the lab after the problem in a few lowercase words joined by hyphens,
    such as `crackly-audio`.
-2. Create `local/lab/<topic>/LAB.md` holding:
-   - the question, in one sentence;
-   - where it came from: the project and the symptom the owner saw, if any;
-   - what a finished answer looks like, so you know when to stop;
-   - the target machines the answer must cover.
+2. Create `local/lab/<topic>/LAB.md`. Put these items in it:
+   - The question, in one sentence.
+   - Where the question came from: the project and the symptom the owner saw,
+     if any.
+   - What a finished answer looks like, so you know when to stop.
+   - The target machines the answer must cover.
 3. If a project raised the question, add an `Open lab: <topic>` line to its
-   `README.md`, so a later session knows to resume the lab.
-4. Tell the owner the session is now in LAB mode, and what the question is.
+   `README.md`. That line tells a later session to resume the lab.
+4. Tell the owner that the session is now in LAB mode. Tell them the question.
 
 `local/` is ignored, so nothing in the lab is committed. Lab folders survive
-between sessions until closed.
+between sessions until the lab is closed.
 
 ## Explore
 
 - Read primary sources with the [reference lookup](references.md) procedure.
-  Note each fact with its title and PDF page in `LAB.md`.
-- Test ideas as small experiments: a folder in the lab with `main.asm`,
-  `coco.toml` and, where it helps, `expected.py`, run with `scripts/coco.py`.
-  Keep each experiment small enough to answer one sub-question.
-- Log every experiment in `LAB.md`: what was tried, the command, the result and
-  what it showed. Failed attempts are findings; keep them in the log.
+  Write each fact in `LAB.md` with its title and PDF page.
+- Test ideas as small experiments. An experiment is a folder in the lab with
+  `main.asm`, `coco.toml` and, where it helps, `expected.py`. Run it with
+  `scripts/coco.py`. Keep each experiment small enough to answer one
+  sub-question.
+- Log every experiment in `LAB.md`: what you tried, the command, the result and
+  what the result showed. Failed experiments are findings. Keep them in the log.
 - `scripts/coco.py` already presses scripted keys and captures XRoar's rendered
   screen and mixer sound ([evidence methods](development.md#check-the-feature-you-claim)).
   If an experiment needs equipment it lacks, building that ability is part of
-  the lab. Add it to `coco.py` with tests, not as a script in the lab; an
-  emulator hook goes in the [instrumented XRoar](toolchain.md#instrumented-xroar)
-  patch series.
+  the lab. Add the ability to `coco.py` with tests. Do not add it as a script
+  in the lab. Put an emulator hook in the patch series of the
+  [instrumented XRoar](toolchain.md#instrumented-xroar).
 
-Keep the evidence honest: separate source statements, deductions and measured
-results, keep expectations independent of the implementation, include a
-failure control, and report memory, rendered display, sound and physical
-hardware as separate evidence.
+Keep the evidence honest:
+
+- Separate source statements, deductions and measured results.
+- Keep expectations independent of the implementation.
+- Include a failure control.
+- Report memory, rendered display, sound and physical hardware as separate
+  evidence.
 
 ## Converge
 
-Stop exploring when `LAB.md` can state the answer in a few sentences, with the
-evidence behind it and its limits. If the answer is "it depends", state what it
-depends on. Check it on every target named when the lab opened.
+Stop exploring when `LAB.md` can state the answer in a few sentences. The
+statement must include the evidence behind the answer and its limits. If the
+answer is "it depends", state what it depends on. Check the answer on every
+target named when the lab opened.
 
 ## Codify the answer
 
 Turn the answer into lasting, committed changes:
 
-- Update the technique guide that covers it, or add one if none does, following
-  the [guide contract](../../PLAN.md#guide-contract). Cite sources inline.
-- Add or update an example in `examples/<name>/` when code demonstrates the
-  answer better than prose. Its `coco.py check` is the reproducible evidence.
+- Update the technique guide that covers the answer, or add a guide if none
+  does. Obey the [guide contract](../../PLAN.md#guide-contract). Cite sources
+  inline.
+- Add or update an example in `examples/<name>/` when code shows the answer
+  better than prose. Its `coco.py check` is the reproducible evidence.
 - Commit any new `coco.py` ability with its tests.
 
-Do not commit lab notes, experiment folders, logs or captures. A result that
-cannot be rerun cheaply gets one paragraph in its guide summarising what was
-measured and its limits.
+Do not commit lab notes, experiment folders, logs or captures. If a result
+cannot be rerun cheaply, give it one paragraph in its guide. That paragraph
+summarises what was measured and its limits.
 
 ## Close the lab
 
@@ -73,9 +80,9 @@ measured and its limits.
 2. Remove the `Open lab` line from the project's `README.md`.
 3. Tell the owner, in plain words, what was found and what changed in the
    guides, examples or tools.
-4. Return to BUILD mode on the project that raised the question, and apply the
+4. Return to BUILD mode on the project that raised the question. Apply the
    answer there.
 
 If the lab ends without an answer, still close it. Add one short paragraph to
-the relevant guide naming the open question, what was tried, and what evidence
-would settle it, so the next lab starts from there.
+the relevant guide. In it, name the open question, what was tried, and what
+evidence would settle the question. The next lab then starts from there.

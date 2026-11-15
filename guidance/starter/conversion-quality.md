@@ -1,73 +1,89 @@
 # Choose reference text or images
 
-Read this when a reference search reaches assembly code, a numeric table,
-a diagram, or a magazine with several columns. Start with
-[reference lookup](references.md) for acquisition and page navigation.
-Use OCR to find a passage. Use the image to establish exact syntax, row
-membership, bit labels, circuit connections, and reading order.
+Read this when a reference search reaches one of these:
+
+- assembly code
+- a numeric table
+- a diagram
+- a magazine with several columns
+
+Start with [reference lookup](references.md) for acquisition and page
+navigation. Use OCR to find a passage. Use the image to establish exact
+syntax, row membership, bit labels, circuit connections, and reading order.
 
 ## Decide before copying
 
-- Prose: search Markdown, then inspect the page when sentences jump, start
+- Prose: search Markdown. Then inspect the page when sentences jump, start
   mid-word, or cross article boundaries. A fluent sentence can still combine
   different columns.
-- Tables: open the full page. Check the header hierarchy, row boundaries,
-  footnotes, and which labels span several rows before taking values.
+- Tables: open the full page. Before you take values, check the header
+  hierarchy, row boundaries, footnotes, and which labels span several rows.
 - Assembly or BASIC: read the image at useful magnification. Check punctuation,
   zero versus letter O, operands, line continuations, and listing order.
-  Assemble or run an independently checked adaptation before calling it tested.
-- Diagrams: open the linked figure and its full page. The caption is searchable;
-  the wires, arrows, and labels might exist only in the PNG.
+  Assemble or run an independently checked adaptation before you call it tested.
+- Diagrams: open the linked figure and its full page. The caption is searchable.
+  The wires, arrows, and labels might exist only in the PNG.
 - An unclear original: retain the uncertainty. OCR correction cannot repair a
   missing symbol in the printed source. Consult another primary passage before
-  implementing the dependent behavior.
+  you implement the dependent behavior.
 
-These are workflow recommendations derived from the observations below, not
-claims made by the historical authors. No historical program was executed in
-this check, and no hardware behavior was measured.
+These are workflow recommendations derived from the observations below. They
+are not claims made by the historical authors. This check ran no
+historical program and measured no hardware behavior.
 
 ## Six-page inspection
 
-Checked on 2026-11-14 using actual selected-page Docling conversion, copied
-source PDFs, and an isolated output store. All six source pages were rendered
-separately with PDFium and visually inspected against exported images and
-Markdown. All five exported figure crops were also inspected.
+Checked on 2026-11-14. The check used actual Docling conversion of selected
+pages, copied source PDFs, and an isolated output store. All six source pages
+were rendered separately with PDFium and visually inspected against exported
+images and Markdown. All five exported figure crops were also inspected.
 
-The sample covers a CoCo 1 manual, a CoCo 2 manual, a CoCo 3 manual, a graphics
-instruction table, and two Matthews magazine pages. It is deliberately difficult,
-not random or balanced by machine. It cannot estimate book-wide accuracy or
-certify CoCo 1/2/3 compatibility of the historical examples.
+The sample covers:
+
+- a CoCo 1 manual
+- a CoCo 2 manual
+- a CoCo 3 manual
+- a graphics instruction table
+- two Matthews magazine pages
+
+The sample is deliberately difficult, not random or balanced by machine. It
+cannot estimate book-wide accuracy. It cannot certify CoCo 1/2/3 compatibility
+of the historical examples.
 
 ### Assembly graphics, PDF 108, printed 99
 
 Source [A], Table 5-2. Markdown moves the last store from the first 6R colour
 set into the next colour-set row. It also merges the 3R and 2R colour labels and
 instruction groups. The zero in one hexadecimal operand becomes letter O.
-The full-page export retains the table boundaries; no figure crop is emitted.
+The full-page export retains the table boundaries. The conversion emits no
+figure crop.
 
 Open the full page even when the instruction appears in search results. Read
-each colour-set block as a unit. The first load's missing immediate-marker
-appearance is present in the source image too; do not classify that as an OCR
-loss or silently repair it from memory. This page alone is not a complete
-machine initialization procedure.
+each colour-set block as a unit. In the source image too, the first load
+appears to lack its immediate marker. Do not classify that as an OCR loss.
+Do not silently repair it from memory. This page alone is not a complete
+procedure for machine initialization.
 
 ### CoCo 1 technical manual, PDF 31, printed 24
 
 Source [B], Table 1. The three leftmost SAM headers are visibly V2, V1, V0.
 Markdown changes the first to a square-root-like symbol and drops the other
 two labels. The next group is PIA bits, followed by a separate data-bit group.
-The full-page export keeps these distinctions; no separate figure is emitted.
+The full-page export keeps these distinctions. The conversion emits no
+separate figure.
 
-Search the mode name, then read the image header and the desired row together.
+Search the mode name. Then read the image header and the desired row together.
 Keep the X/N legend with the table. Do not infer that unlabeled Markdown
-columns are extra PIA bits, or that a blank header means a don't-care value.
+columns are extra PIA bits. Do not infer that a blank header means a
+don't-care value.
 
 ### CoCo 2 NTSC service manual, PDF/printed 33
 
 Source [C], Figure 4-8. The figure crop retains the circuit, including the
 input labels, connection dots, component labels, and Phase A output. It omits
 the caption and explanatory paragraphs, which remain on the full page and
-in Markdown. The circuit itself is not transcribed as searchable text.
+in Markdown. The conversion does not transcribe the circuit itself as
+searchable text.
 
 Use the crop for connections and the full page for the two prose columns.
 Read the left column before the right. A search that finds the caption but no
@@ -79,11 +95,11 @@ This check covers the manual's named NTSC models, not every CoCo 2 board.
 Source [D], Color Palette. The source image has separate White and Black
 entries. Markdown merges their labels in the first row and leaves the next
 row label blank. Zero-valued bit suffixes become letter O in several headers.
-The full-page export is readable; no figure crop is emitted.
+The full-page export is readable. The conversion emits no figure crop.
 
 Use the image to associate each colour with its RGB and composite columns.
 Keep the initialization list and the PAL qualification in view. The conversion
-log contains an empty-OCR warning before successful output; the final image
+log contains an empty-OCR warning before successful output. The final image
 has content. Neither a warning alone nor eventual success establishes accuracy.
 The page's printed values have not been validated electrically or in an emulator.
 
@@ -98,7 +114,7 @@ Read the full-page image for article order. The exported crop named
 `figure-001` is the publication badge, `figure-002` contains printed Figure 2,
 and `figure-003` contains printed Figure 1. Crop sequence is not printed figure
 numbering. The two illustration crops also include fragments of neighboring
-content. Use their visible captions, not their filenames, when citing them.
+content. Use their visible captions, not their filenames, when you cite them.
 
 ### Matthews, October 1987 Rainbow, PDF/printed 46
 
@@ -108,46 +124,55 @@ misreads slashed zeros, breaks keywords across lines, and loses part of the
 long DRAW string on line 210. Sorting the extracted line numbers cannot
 restore the missing characters or fix wrapped statements.
 
-Read the prose left to right by column, then the listing down its left column
-before its right column. The sole figure crop is the small check-value box,
-not the program. Use the full-page PNG for code. This sample ends at line 420;
-it is not the whole listing. Consult the article continuation identified in
-[the animation guide](../techniques/animation.md) before adapting the program.
-Page 47 was not reconverted or visually assessed in this six-page check.
+Read the prose left to right by column. Then read the listing down its left
+column before its right column. The sole figure crop is the small check-value
+box, not the program. Use the full-page PNG for code.
+
+This sample ends at line 420. It is not the whole listing. Before you adapt
+the program, consult the article continuation identified in
+[the animation guide](../techniques/animation.md).
+This six-page check did not reconvert or visually assess page 47.
 
 ## Coverage and conversion state
 
 The run used profile format 3, Docling 2.150.0, docling-core 2.107.0, and
-RapidOCR 3.10.0, with full-page English OCR, table recognition, and 2x image
-rendering. All six conversions completed. Eleven PNGs were exported: six full
-pages and five crops. All eleven files matched their checkpoint SHA-256 values.
-No selected page was marked sparse, despite the errors above. These counts
-measure completion and artifact integrity, not recognition accuracy.
+RapidOCR 3.10.0. It used full-page English OCR, table recognition, and 2x image
+rendering.
 
-At selection time, the shared Matthews extraction record listed only page 47
-under format 3. Pages 44 and 46 existed under format 2. This is a profile
-coverage mismatch, not evidence that those pages are absent from the magazine.
+All six conversions completed. The run exported eleven PNGs: six full pages
+and five crops. All eleven files matched their checkpoint SHA-256 values.
+The run marked no selected page as sparse, despite the errors above. These
+counts measure completion and artifact integrity, not recognition accuracy.
+
+At selection time, the shared extraction record for Matthews listed only
+page 47 under format 3. Pages 44 and 46 existed under format 2. This is a
+profile coverage mismatch, not evidence that those pages are absent from the
+magazine.
 The fresh format-3 conversions here still have reading-order and listing errors.
-They do not establish an improvement over format 2. Shared checkpoints and
-indexes were left untouched.
+They do not establish an improvement over format 2. The check left shared
+checkpoints and indexes untouched.
 
-For any resource, read `extraction.json` before searching. Follow its
-`checkpoints` path and `completed_pages`; do not combine arbitrary checkpoint
-folders. A missing page requires selected-page conversion. A missing search
-hit on a completed page requires image inspection before ruling out content.
+For any resource, read `extraction.json` before you search. Use its
+`checkpoints` path and `completed_pages`. Do not combine arbitrary checkpoint
+folders. A missing page needs selected-page conversion. A missing search
+hit on a completed page needs image inspection before you rule out content.
 
 The local evidence is under `local/research/conversion-quality/`:
-`selection.json` records source URLs, hashes, selected pages and previous
-extraction records; each resource directory contains its source copy, Markdown,
-extraction record, page JSON and PNGs. `checks.json` records image integrity and
-raster comparisons; `conversion.log` retains warnings; `converter.sha256`
-identifies the converter file used. Source renders and exports have equal
-sizes but are not pixel-identical. No pixel difference threshold or OCR score
-was used to infer correctness.
+
+- `selection.json` records source URLs, hashes, selected pages and previous
+  extraction records.
+- Each resource directory contains its source copy, Markdown, extraction
+  record, page JSON and PNGs.
+- `checks.json` records image integrity and raster comparisons.
+- `conversion.log` retains warnings.
+- `converter.sha256` identifies the converter file used.
+
+Source renders and exports have equal sizes but are not pixel-identical. The
+check used no pixel difference threshold or OCR score to infer correctness.
 
 ## Reproduce without changing shared checkpoints
 
-Run from the repository root with the existing project environment and the
+Run from the repository root. Use the existing project environment, with the
 five source PDFs already downloaded. The code below is original inspection
 orchestration, not copied book code. It uses the production converter directly,
 requests exactly six pages, and creates a new isolated directory on each run.
@@ -191,14 +216,20 @@ PY
 ```
 
 For an independent raster view, render the copied PDF with
-`pypdfium2.PdfDocument`, select `document[page - 1]`, and save
+`pypdfium2.PdfDocument`. Select `document[page - 1]`. Save
 `render(scale=2).to_pil()` under that same isolated directory. Open the PNG
-with an image-viewing tool; do not infer diagram content by inspecting bytes.
+with an image-viewing tool. Do not infer diagram content by inspecting bytes.
 Compare the requested passage with the full-page export and any linked crops.
-Expected failure controls are the displaced instruction on A/108, missing SAM
-headers on B/31, merged colour labels on D/17, and column interleaving on E/46.
+
+Expected failure controls are:
+
+- the displaced instruction on A/108
+- missing SAM headers on B/31
+- merged colour labels on D/17
+- column interleaving on E/46
+
 An inspection method that accepts those Markdown passages without an image
-check is insufficient for exact transcription.
+check is not enough for exact transcription.
 
 ## Source identities
 
