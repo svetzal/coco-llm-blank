@@ -44,8 +44,9 @@ the chosen target. It checks the actual installed ROM bytes, not only filenames.
 If firmware is missing, run `uv run python scripts/setup.py --roms-only` with
 the project's `--target`. Resolve checksum errors before continuing.
 
-Before writing code, create `projects/<name>/` with `main.asm`, `coco.toml`
-and `README.md`. Do not copy an example folder. Each example shows one practice.
+Before writing code, copy [`template/`](template/README.md) to
+`projects/<name>/`. It holds a minimal `main.asm`, `coco.toml` and `README.md`.
+Do not copy an example folder. Each example shows one practice.
 
 Write the project's `README.md`: what the owner asked for, how to run it in
 plain language, and the [project contract](guidance/starter/development.md#establish-the-contract).

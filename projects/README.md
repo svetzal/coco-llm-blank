@@ -15,8 +15,9 @@ A project folder holds:
 - Key scripts (optional): text files of keys to hold at each keyboard scan,
   named by a variant in `coco.toml`.
 
-To start a project, create its folder with these files. Do not copy an example
-folder. Each example shows one practice. Use it as a reference.
+To start a project, copy [`template/`](../template/README.md) to a new folder
+here. Do not copy an example folder. Each example shows one practice. Use it as
+a reference.
 
 Build, run and check it with `uv run python scripts/coco.py <command> projects/<name>`.
 [Development practice](../guidance/starter/development.md#reusable-launchers)

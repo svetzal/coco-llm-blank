@@ -1,0 +1,24 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# The first target is the default. Firmware is checked against roms.json.
+# Record these values in the contract of the project README.
+[targets.coco1]
+machine = "cocous"
+cpu = "6809"
+tv = "ntsc"
+vdg = "6847"
+ram_kib = 32
+basic = "bas11.rom"
+
+[memory]
+at = { start = 0x3000 }
+
+# For the check: the label where the snapshot is taken, and a label that must
+# never run.
+[check]
+checkpoint = "done"
+frames = [1]
+unreachable = "done+1"
+screen = 0x0400
+emulated_seconds = 10

@@ -112,5 +112,11 @@
     "title": "Speech-Sound Cartridge Manual (Tandy; optional expansion)",
     "url": "https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Speech-Sound%20Cartridge%20(Tandy).pdf",
     "sha256": "80aa645aa57da31121f7741d7373f21c5e5c69825f5a5eff8a86ad899055c92a"
+  },
+  {
+    "id": "color-basic-unravelled",
+    "title": "Color Basic Unravelled II (Spectral Associates; revised by Walter K. Zydhek, 1999)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Books/Unravelled%20Series/color-basic-unravelled.pdf",
+    "sha256": "3c1bc329f2371382b163f51755d71fa603b88b3c861b5286cee8efd5aa258c34"
   }
 ]

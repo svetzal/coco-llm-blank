@@ -304,9 +304,10 @@ uv run python scripts/coco.py snapshot projects/<name> --frame 3 --video \
   --keys keys.txt
 ```
 
-Besides its `README.md`, the folder holds three files. The
-[first-screen](../../examples/first-screen/README.md) files show the target
-settings with a comment.
+Besides its `README.md`, the folder holds three files. Start with a copy of
+[`template/`](../../template/README.md). It prints a message with the Color
+BASIC ROM and returns to BASIC. Add `expected.py` with the first feature that
+you can check.
 
 Do not copy an example folder as the base of a project. Each example shows one
 practice.
