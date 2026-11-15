@@ -1,66 +1,50 @@
 # Active plan
 
 Keep this file limited to open work. Remove each item when its acceptance
-criteria are met and its report is available; keep evidence in the relevant
-guide or validation record. The items below are open; they are not currently
-dispatched.
+criteria are met. Keep its evidence in the relevant guide or example. The items
+below are open. Nobody is working on them now.
 
 ## Continue from here
 
 Read [AGENTS.md](AGENTS.md), then choose one open item below. Use the
 [guidance index](guidance/README.md) for the current guides.
 
-Preserve ignored `local/`, `build/` and the prepared `.venv`. Do not treat a previous report as a new validation run. The repository
-is public, uses `main`, and remains unregistered with Foundry. Leave the separate
-`coco-lines` project and its processes untouched. Start no new beginner-agent
+Preserve ignored `local/`, `build/` and the prepared `.venv`. Do not treat a
+previous report as a new validation run.
+
+The repository is public, uses `main`, and remains unregistered with Foundry.
+Leave the separate `coco-lines` project and its processes untouched. Start no new beginner-agent
 trial without a new request.
 
 ## Open work
 
-- Close the labs that were never closed. `experiments/` and the former
-  `guidance/techniques/research/` are leftover lab material from before
-  [the lab workflow](guidance/starter/lab.md). Close them as that workflow
-  describes, in order:
-  1. One topic at a time: codify what its experiments, research notes and
-     validation reports established into the technique guide and examples,
-     moving useful assembly programs into `examples/`. Then delete that
-     topic's leftover files. Every topic is now closed. What remains is
-     `experiments/README.md` and a decision about
-     `scripts/validate_repository.py`, which now has only the root scope.
-     We closed the display topic. Its evidence is in the
-     [display test](guidance/techniques/colour.md#make-a-display-test-before-making-the-art).
-     We closed the animation topic. Its evidence is in the
-     [animation guide](guidance/techniques/animation.md) and the page-flip
-     examples. We closed the sound topic. Its evidence is in the
-     [sound guide](guidance/techniques/sound.md) and the sound-slots and
-     timer-sound examples. We closed the controls topic. Its evidence is in
-     the [controls guide](guidance/techniques/controls-and-collision.md) and
-     the keyboard-controls example. We closed the game-state topic. Its
-     evidence is in the [game-state guide](guidance/techniques/game-state.md)
-     and the turn-queue example. We closed the assets topic. Its evidence is
-     in the [assets guide](guidance/techniques/assets.md) and the tile-room
-     example. We closed the tiles topic. Its evidence is in the
-     [tile-map guide](guidance/techniques/tile-maps.md) and the tile-room
-     example. We closed the collect-room topic. Its evidence is in the
-     collect-room example and the
-     [sound guide](guidance/techniques/sound.md#measurements-the-examples-do-not-rerun).
-     We closed the setup topic. Its evidence is in the
-     [measured setup results](guidance/starter/toolchain.md#measured-setup-results)
-     and the setup specs in `scripts/`. We sorted the research notes and
-     deleted `guidance/techniques/research/`. Their readings, citations,
-     hashes and open questions are in the technique guides that cite them.
+- Finish closing the old labs. Every topic is closed. Two items remain:
+  1. Delete `experiments/README.md`. Decide whether
+     `scripts/validate_repository.py` still earns its place now that it has
+     only the root scope.
   2. Add a size check to CI so growth is a deliberate decision.
+- Remove the over-testing from the examples. Most examples have a
+  `*_spec.py` that tests the example's `expected.py` or `scripts/coco.py`, not
+  the program. The oracle in `expected.py` and `coco.py check` are the test of
+  an example. For each example:
+  1. Delete the spec, as for first-screen.
+  2. Move any test of the tool into `scripts/coco_spec.py`.
+  3. Keep a negative control only where the check would otherwise pass a
+     wrong result. Put it in `scripts/coco_spec.py`, as for the wrong-SAM
+     control. Palette-swatches' orientation controls are the first case to
+     decide.
+  4. Update the guidance that tells agents to write a model spec:
+     [development practice](guidance/starter/development.md) and the
+     [examples index](examples/README.md).
 - Clean Apple Silicon host and native Linux desktop onboarding, including
-  x86-64 Linux. Intel Mac support is excluded. Current container and configured
-  host results do not establish these journeys.
+  x86-64 Linux. Current container and configured host results do not
+  establish these journeys.
 - Disk-tool installation and Linux distribution coverage beyond the tested
   Ubuntu setup.
 - Target-specific reference groups and further difficult-page conversion checks.
   Existing page samples do not establish whole-book OCR quality.
 - Technique-driven source and errata reading, especially scrolling and broader
   sound/input integration. Continue only against a concrete builder need.
-  Do not reopen the stopped historical tile-ID hunt without a lead that
-  meets its boundary.
 - Make the instrumented XRoar's patch series acceptable to XRoar upstream, as
   [Toward upstream](guidance/starter/xroar-patch.md#toward-upstream) lists:
   XRoar-native trap actions and an audio module instead of environment
@@ -72,9 +56,9 @@ trial without a new request.
   validation where required by a guide's claim. Emulator-only checks must keep
   their stated limits.
 
-The historical tile-ID hunt remains stopped unless a new lead meets the
-boundary in the [tile-map guide](guidance/techniques/tile-maps.md#open-questions).
-Intel Mac support is excluded.
+Out of scope: Intel Mac support. The historical tile-ID hunt stays stopped
+unless a new lead meets the boundary in the
+[tile-map guide](guidance/techniques/tile-maps.md#open-questions).
 
 ## Guide contract
 
