@@ -281,49 +281,6 @@ wheels = [
 ]
 
 [[package]]
-name = "coco-llm-blank"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "docling", extra = ["rapidocr"] },
-    { name = "numpy" },
-    { name = "pillow" },
-    { name = "pydantic" },
-    { name = "pypdfium2" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-interactive = [
-    { name = "pygame-ce" },
-]
-music = [
-    { name = "music21" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "docling", extras = ["rapidocr"], specifier = ">=2.150.0" },
-    { name = "numpy", specifier = ">=2.5.4" },
-    { name = "pillow", specifier = ">=13.0.0" },
-    { name = "pydantic", specifier = ">=2.14.3" },
-    { name = "pypdfium2", specifier = ">=5.15.2" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=9.2.0" },
-    { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "ruff", specifier = ">=0.17.5" },
-]
-interactive = [{ name = "pygame-ce", specifier = ">=2.5.8" }]
-music = [{ name = "music21", specifier = ">=10.5.2" }]
-
-[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -2729,6 +2686,49 @@ sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179a
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl", hash = "sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0", size = 73075, upload-time = "2026-05-14T19:25:26.443Z" },
 ]
+
+[[package]]
+name = "retro-explorer-coco"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "docling", extra = ["rapidocr"] },
+    { name = "numpy" },
+    { name = "pillow" },
+    { name = "pydantic" },
+    { name = "pypdfium2" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+interactive = [
+    { name = "pygame-ce" },
+]
+music = [
+    { name = "music21" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "docling", extras = ["rapidocr"], specifier = ">=2.150.0" },
+    { name = "numpy", specifier = ">=2.5.4" },
+    { name = "pillow", specifier = ">=13.0.0" },
+    { name = "pydantic", specifier = ">=2.14.3" },
+    { name = "pypdfium2", specifier = ">=5.15.2" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=9.2.0" },
+    { name = "pytest-cov", specifier = ">=7.1.0" },
+    { name = "ruff", specifier = ">=0.17.5" },
+]
+interactive = [{ name = "pygame-ce", specifier = ">=2.5.8" }]
+music = [{ name = "music21", specifier = ">=10.5.2" }]
 
 [[package]]
 name = "rich"

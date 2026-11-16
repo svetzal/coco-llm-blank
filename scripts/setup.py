@@ -63,7 +63,7 @@ class DownloadGateway:
             try:
                 request = urllib.request.Request(
                     resource.url,
-                    headers={"User-Agent": "coco-llm-blank/0.1"},
+                    headers={"User-Agent": "retro-explorer-coco/0.1"},
                 )
                 with urllib.request.urlopen(request, timeout=60) as response:
                     shutil.copyfileobj(response, stream)

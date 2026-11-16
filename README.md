@@ -23,7 +23,7 @@ Copy this prompt into your agent. Replace the last line with your own idea,
 or keep it for a first project:
 
 ```text
-Start a new project from https://github.com/svetzal/coco-llm-blank.
+Start a new project from https://github.com/svetzal/retro-explorer-coco.
 Read its AGENTS.md and handle setup for me. I'm a beginner.
 
 Build a CoCo 1 animation with bouncing lines and a ten-line trail.
