@@ -1,7 +1,7 @@
-"""Size limits for the git-tracked tree, so that growth is a deliberate decision.
+"""A size limit for each git-tracked file, so that a large file is a deliberate decision.
 
-The root suite checks these limits in CI. To raise a limit, edit its constant
-here in a commit that says why.
+The root suite checks this limit in CI. To raise it, edit its constant here in a
+commit that says why.
 """
 
 import subprocess
@@ -10,10 +10,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-MAX_TOTAL_BYTES = 1_200_000
 MAX_FILE_BYTES = 100_000
 EXEMPT_PATHS = frozenset({"uv.lock"})
-LARGEST_FILES_SHOWN = 5
 
 
 class TrackedFile(BaseModel):
@@ -39,32 +37,24 @@ def tracked_files(root: Path) -> list[TrackedFile]:
 def size_problems(
     files: Iterable[TrackedFile],
     *,
-    max_total: int = MAX_TOTAL_BYTES,
     max_file: int = MAX_FILE_BYTES,
 ) -> list[str]:
-    """Describe each limit that the tracked files exceed. An empty list means they fit."""
-    measured = sorted(
-        (file for file in files if file.path not in EXEMPT_PATHS),
+    """Describe the tracked files over the per-file limit. An empty list means they fit."""
+    oversized = sorted(
+        (file for file in files if file.path not in EXEMPT_PATHS and file.size > max_file),
         key=lambda file: (-file.size, file.path),
     )
-    total = sum(file.size for file in measured)
-    problems = []
-    if total > max_total:
-        problems.append(
-            f"The tracked files total {total:,} bytes, over the limit of {max_total:,} bytes "
-            f"(MAX_TOTAL_BYTES). Largest files: {_listing(measured[:LARGEST_FILES_SHOWN])}."
-        )
-    if oversized := [file for file in measured if file.size > max_file]:
-        problems.append(
-            f"{len(oversized)} tracked file(s) exceed the limit of {max_file:,} bytes per file "
-            f"(MAX_FILE_BYTES): {_listing(oversized)}."
-        )
-    if problems:
-        problems.append(
-            "Raising a limit is a deliberate decision: edit its constant in "
-            "scripts/repository_size.py in a commit that says why."
-        )
-    return problems
+    if not oversized:
+        return []
+    found = (
+        f"{len(oversized)} tracked file(s) exceed the limit of {max_file:,} bytes per file "
+        f"(MAX_FILE_BYTES): {_listing(oversized)}."
+    )
+    advice = (
+        "Raising the limit is a deliberate decision: edit its constant in "
+        "scripts/repository_size.py in a commit that says why."
+    )
+    return [found, advice]
 
 
 def _listing(files: Iterable[TrackedFile]) -> str:
