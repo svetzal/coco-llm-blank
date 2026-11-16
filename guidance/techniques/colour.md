@@ -147,11 +147,10 @@ Every `check` also sets a trap on an address that the program must never
 reach. A fired trap or a missing checkpoint fails the check. A plausible
 image alone is not evidence that the program ran.
 
-There are two CoCo 2 targets. Each has NTSC, 32 KiB, a normal-clock 6809 and
-Extended Color BASIC 1.1. `coco2` is XRoar `cocous` with the MC6847 and Color
-BASIC 1.2. `coco2b` is XRoar `coco2bus` with the MC6847T1 and Color BASIC 1.3.
-The palette-swatches check passes on both with the same `xroar` palette in all
-four variants (measured).
+The palette-swatches check passes on `coco2` (MC6847) and `coco2b`
+(MC6847T1) with the same `xroar` palette in all four variants (measured). The
+[standard targets](../starter/toolchain.md#standard-targets)
+table gives each machine.
 
 ### Limits of the rendered check
 
@@ -164,15 +163,6 @@ four variants (measured).
   the [animation guide](animation.md) for those.
 - PAL and physical hardware are not tested. T1 text and semigraphics modes
   are not tested.
-
-An earlier private XRoar 1.12.1 build also captured frozen animation frames.
-A self-loop at the checkpoint stopped each scene after a completed draw.
-
-On CoCo 1, moving-objects frames 1, 35 and 65 matched every renderer sample. On
-the CoCo 2 target above, tile-room steps 0, 5, 39 and 41 and masked-object
-scenes 0, 2, 3 and 8 to 11 matched. Captures after half a second and after one
-emulated second were identical. They show selected still scenes, not motion.
-The examples do not run them again.
 
 ### Test your own display path
 

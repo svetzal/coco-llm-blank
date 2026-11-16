@@ -26,31 +26,15 @@ uv run --group music python path/to/music_tool.py
 Without these flags, later `uv run` commands can remove optional packages while
 they synchronize the environment. Keep the group flag on commands that use them.
 
-## What Python does here
-
-The original `coco-llm` used Python for:
-
-- fixed-point reference models
-- exact test vectors
-- waveforms and WAV output
-- palette and sprite packing
-- bitmap fonts
-- RS-DOS disk images
-- orchestration of XRoar test/capture
-
-Those are useful
-patterns for future projects. Their game and language-model implementations
-are not part of this blank starter.
-
-Keep pure transformations separate from file and process I/O. Test packed
-bytes and numeric outputs, not only rendered previews. Use `pathlib`, `struct`,
-`wave`, and `subprocess` from the standard library where they fit. Put generated
-assets in `build/` and reference implementations in `src/reference/` when needed.
-
 ## Python and specification conventions
 
 Use typed public functions and Pydantic models for validated records. Keep
-pure transformations separate from I/O. Put third-party calls behind a small,
+pure transformations separate from file and process I/O. Test packed bytes and
+numeric outputs, not only rendered previews. Use `pathlib`, `struct`, `wave`,
+and `subprocess` from the standard library where they fit. Put generated
+assets in `build/`.
+
+Put third-party calls behind a small,
 named gateway when tests need a controlled boundary. Mock only those gateways,
 with `Mock(spec=GatewayClass)`. Keep real HTTP, filesystem, executable discovery,
 and Docling checks where their behavior matters.
@@ -150,8 +134,6 @@ uv pip list --outdated
 ```
 
 Do not audit only the temporary environment containing pip-audit.
-
-This starter has no MkDocs site. Check the linked Markdown guides and examples.
 
 After changes, run:
 

@@ -175,16 +175,12 @@ advice above:
 
 `uv run python scripts/coco.py check examples/keyboard-controls` plays a key
 script through the pinned instrumented XRoar's keyboard matrix and PIA to the
-6809 scanner. It uses four targets:
+6809 scanner. It runs on the four
+[standard targets](../starter/toolchain.md#standard-targets).
+The check compares 16 update records with the model. The build without keys
+must stay idle.
 
-- CoCo 1 (`cocous`)
-- CoCo 2 (`cocous` with Color BASIC 1.2)
-- CoCo 2B (`coco2bus`, MC6847T1)
-- CoCo 3 (`coco3`)
-
-The check compares 16 update
-records with the model. The build without keys must stay idle. Integration
-tests in `scripts/coco_spec.py` break the scanner four ways: a wrong column, a
+Integration tests in `scripts/coco_spec.py` break the scanner four ways: a wrong column, a
 DDR left selected, a held-fire count and a stale history. Each fault fails at
 the expected update on all four targets. The DDR fault masks IRQ, so it fails
 in the records and not as a hang in BASIC's handler.
@@ -195,9 +191,8 @@ mixer output at each scan. Integration tests break its scanner three ways: a
 wrong column, a stale history and a held Space at startup.
 
 Both examples deliver keys through XRoar's API. They are not evidence for host
-key events, physical keys, switch bounce or joystick buttons. Both examples
-play their scripts on CoCo 1, 2 and 3. The
-A+B+I probe and most chords are not tested.
+key events, physical keys, switch bounce or joystick buttons. The A+B+I probe
+and most chords are not tested.
 
 ## Unresolved source conflicts
 

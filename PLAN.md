@@ -42,8 +42,8 @@ trial without a new request.
   and contact no one until the owner asks.
 - Bring the measured claims that cite a closed lab under the
   [evidence rules](guidance/starter/references.md#cite-each-kind-of-evidence).
-  The animation, assets, controls-and-collision and sound guides have results
-  that are "not rerun". Give each one a check, a method to repeat it, or an
+  The animation and controls-and-collision guides each have one result that
+  is "not rerun". Give each one a check, a method to repeat it, or an
   entry in the open questions. Do the same for the CoCo 3 examples: label the
   facts that only their checks establish.
 - Host keyboard delivery, window presentation, listening, and physical-machine

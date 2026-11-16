@@ -30,11 +30,10 @@ work.
 Start with the [technique index](techniques/README.md). It maps the effect the
 owner wants to a guide and states the current evidence for each.
 
-## Validation records
+## Kinds of evidence
 
-These records hold earlier measurements, not a fresh check of your
-environment. The checks for each example are in the
-[example READMEs](../examples/README.md). The measured setup results are in
+The checks for each example are in the
+[example READMEs](../examples/README.md). The tested setup hosts are in
 [the toolchain guide](starter/toolchain.md#measured-setup-results).
 
 Keep these kinds of evidence distinct:

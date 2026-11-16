@@ -40,15 +40,13 @@ On Apple Silicon, run a native arm64 terminal and Python rather than an x86-64
 process under Rosetta.
 
 Use Ubuntu 24.04 for the supported installation path on Linux.
-Its architecture handling is unchanged.
 
-On Apple Silicon macOS it uses Homebrew. If needed, it installs Homebrew from
-its official source.
-Existing Homebrew discovery through PATH and known prefixes is preserved.
+On Apple Silicon macOS the installer uses Homebrew. If needed, it installs
+Homebrew from its official source.
 
 System permissions may need the owner's help. Failures stop with an
 explanation.
-Existing tools and explicit executable overrides are preserved.
+The installer keeps existing tools and explicit executable overrides.
 
 On native Apple Silicon macOS, tool discovery also checks `/opt/homebrew/bin`
 when PATH does not include it.
@@ -98,38 +96,18 @@ Other Linux distributions need manual installation.
 
 ## Measured setup results
 
-On November 14, 2026, setup journeys ran in new Ubuntu 24.04.5 ARM64
-containers. The host was an Apple Silicon Mac with Docker 29.8.2. A digest
-pinned the Ubuntu image. These results came from the bootstrap of that date.
+On November 14, 2026, bootstrap completed in new Ubuntu 24.04 ARM64
+containers, as root and as an account with non-interactive sudo. The first
+run took 9 to 20 minutes. Most of that time was the first download of the
+Python packages, which filled a 5.9 GiB uv cache. A second bootstrap took
+about one second and kept an edited project note.
 
-As root, the bare image first stopped because curl was missing. Bootstrap now
-installs curl. After that change, a full bootstrap took 796 seconds.
+When sudo needed a password or refused the command, bootstrap stopped at
+once. It installed nothing and gave the administrator message.
 
-An ordinary account with `NOPASSWD` sudo completed bootstrap in 1,138 seconds.
-Without sudo, bootstrap stopped in 0.08 seconds and gave the administrator
-message. In two more containers, sudo needed a password or denied the command.
-Bootstrap stopped in less than 0.1 seconds and installed nothing. After the
-administrator changed the policy, bootstrap completed in 1,189 and 542 seconds.
-
-Each completed journey then passed the doctor for CoCo 2 and the CoCo 2
-moving-objects check. The two sudo journeys also passed an earlier
-collect-room check on CoCo 2. A second bootstrap took less than 1.1 seconds.
-It kept an edited project note byte for byte.
-
-Most of the time went to the first download of 130 Python packages, with a
-5.9 GiB uv cache. The versions were uv 0.13.8, Python 3.13.18, LWTOOLS 4.25
-and XRoar 1.12.1.
-
-On the same date, recovery checks ran on a configured Apple Silicon Mac with
-macOS 27.2. They used temporary project folders and fixture ROMs, not a clean
-host. They found that tool discovery missed `/opt/homebrew/bin` when PATH did
-not include it. A later change fixed that defect, and `native_spec.py` checks
-the fix.
-
-These results do not show a clean Apple Silicon Mac, a native Linux desktop,
-x86-64 Linux, other distributions or an interrupted apt. They do not show a
-GUI, audio or physical hardware. The scripts changed after these runs, and
-nobody ran the containers again.
+The scripts changed after these runs, and nobody ran the containers again.
+Nothing shows a clean Apple Silicon Mac, a native Linux desktop, x86-64
+Linux, other distributions or an interrupted apt.
 
 The root suite checks the same failures and recoveries with substitute
 commands. `bootstrap_spec.py` covers sudo and apt. `roms_spec.py` and
@@ -378,15 +356,6 @@ Extended BASIC starts the field-sync interrupt, as
 [Standard targets](#standard-targets) describes. Run `check` on a target with
 Extended BASIC first. Then make the disk.
 
-Keep ROMs in ignored local storage or use an explicit user-provided location.
-Record machine, RAM, video standard, CPU, and ROM selection in the project
-configuration before a run.
-
-A CPU simulator cannot validate keyboard, graphics, disk, or ROM behavior.
-Emulator results do not establish physical hardware timing.
-
-Use [python.md](python.md) when you add build orchestration or test scripts.
-
 ## Instrumented XRoar
 
 Scripted keys, rendered frames and mixer sound need a second XRoar. This is the
@@ -427,12 +396,9 @@ what to install:
 - macOS: `xcode-select --install`, then `brew install autoconf automake pkgconf`.
 - Ubuntu 24.04: `sudo apt-get install build-essential pkg-config autoconf automake`.
 
-`scripts/xroar_patches/upstream.json` is the one XRoar pin. It holds these
-items:
-
-- The release version, its git tag and commit
-- The base commit that the series is made against
-- The URL and SHA-256 of the source archive
+`scripts/xroar_patches/upstream.json` is the one XRoar pin.
+[The XRoar patch procedure](xroar-patch.md#what-the-series-is) lists what it
+holds.
 
 The native installer's Ubuntu build of the ordinary XRoar reads the same file.
 On macOS, Homebrew supplies the ordinary XRoar, so its version can differ from
@@ -446,26 +412,13 @@ only after you run the check again on it.
 The archive is cached under `local/toolchain-sources/` and must match the
 pinned SHA-256.
 
-The series is a set of `git format-patch` files exported with `--full-index`.
-Thus each patch names every changed file by its exact git blob hash before and
-after.
+Each patch names every changed file by its exact git blob hash. The build
+refuses a file whose bytes differ from that blob. Thus a different XRoar
+release fails with a plain message instead of a silently wrong patch.
 
-The build refuses a file whose bytes differ from the blob that the patch
-expects. Thus a different XRoar release fails with a plain message instead of
-a silently wrong patch.
-
-`build.json` beside the build records these items:
-
-- The release, tag, archive URL and hash
-- The patch names and a hash of the whole series
-- The hash of each patched or added file
-- The commands
-- The Autoconf and Automake versions
-- The host
-- The hash of the executable
-
-Each use checks that record. When the pin, the series, a patched file or the
-executable no longer match, the tool says why and rebuilds.
+`build.json` beside the build records what the tool built and from which
+sources. Each use checks that record. When the pin, the series, a patched
+file or the executable no longer match, the tool says why and rebuilds.
 
 Set `XROAR_INSTRUMENTED` to an executable path to make `scripts/coco.py` use
 that instrumented XRoar instead. The tool does not check it.

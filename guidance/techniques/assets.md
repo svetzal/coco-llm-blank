@@ -170,18 +170,6 @@ cell and 16×16 pictures. Each one must fail.
 Collect-room's check runs its converted terrain through a key journey on
 CoCo 1 and CoCo 2B. Neither check shows a television or a physical CoCo.
 
-**Earlier lab results, not rerun.** A host converter wrote four 8×8 RG6
-pictures and a room into a JSON bundle. 33 cases passed. They rejected
-missing, duplicate and unknown IDs, wrong sizes, pixels out of range, damaged
-or stale output, and a source file used as its output. A 6809 consumer then
-drew 48 cells through a pointer table on CoCo 1 and CoCo 2 with XRoar 1.12.1.
-In 35 tests, it matched all 6,144 framebuffer bytes with literal expectations.
-Complemented pictures gave 384 differing bytes, and a store past the screen
-damaged a guard.
-
-Tile-room now does that check with `graphics.py`, so we removed the converter
-and the consumer.
-
 ## Open questions
 
 Nothing checks text and palette sections in one file, banked storage, mapping

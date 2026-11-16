@@ -165,10 +165,8 @@ Read [sound scheduling](sound.md) before you combine them.
 ## What the example checks
 
 **Measured result.** On the pinned XRoar, `coco.py check examples/turn-queue`
-matches all 44 records of 19 cases on each target.
-The targets are a 32 KiB CoCo 1 with Color BASIC 1.1, two 32 KiB CoCo 2
-models with Color BASIC 1.2 and 1.3, and a 128 KiB CoCo 3.
-The CoCo 1 and CoCo 2 targets also load Extended Color BASIC 1.1.
+matches all 44 records of 19 cases on each of the four
+[standard targets](../starter/toolchain.md#standard-targets).
 The same program runs on each. Only the place of the records in the snapshot
 changes.
 The records cover these items:

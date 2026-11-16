@@ -456,10 +456,6 @@ result, and conclusion.
 Distinguish measured facts, sourced facts, proposals, and uncertainty.
 Update current-state notes in place. Git keeps their history.
 
-This guidance adapts general development practices from Stacey Vetzal's
-`coco-llm` project. It does not carry that project's language-model goals,
-game assumptions, private paths, or reference collection into this template.
-
 ## Keep implementation tied to verified facts
 
 A citation does not make a transcription correct. Compare each display-register

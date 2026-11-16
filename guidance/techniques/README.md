@@ -31,9 +31,7 @@ reproduction checks and the limits of its evidence. For smaller building blocks,
 use the [example index](../../examples/README.md).
 
 To reproduce a measurement, use the example that the guide links. Its
-`expected.py` and `coco.toml` hold the check. For setup instructions, use
-the [guidance index](../README.md).
-See [PLAN.md](../../PLAN.md) for outstanding work.
+`expected.py` and `coco.toml` hold the check.
 
 ## Read the evidence correctly
 

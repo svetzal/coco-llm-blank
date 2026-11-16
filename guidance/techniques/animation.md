@@ -121,15 +121,6 @@ settle the real timing.
 The `--video` check sees one frame: the second frame after each checkpoint.
 A fault that shows only in later frames can pass it.
 
-### Measured with a private XRoar build
-
-An earlier lab recorded 150 consecutive frames in XRoar 1.12.1 on CoCo 1 and
-non-T1 CoCo 2. With one screen, 47 were complete and two showed a partly erased
-object. With page flipping, all 150 were complete, also with 32 more NOPs for
-each background byte. One frame took 98.97 ms to draw, about seven video frames.
-On CoCo 3 (GIME 1986), 42 consecutive frames were complete. These are emulator
-results only, not physical tearing, PAL or host smoothness.
-
 ## Decide what to redraw
 
 Start with a full redraw. It is the correctness baseline, and the examples use

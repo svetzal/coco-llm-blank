@@ -167,43 +167,6 @@ not a specification.
 No report from a real 1987 GIME is known. For that revision, only Kowalski
 and XRoar support the later account. Record which account your timing uses.
 
-## Measurements the examples do not rerun
-
-A private XRoar 1.12.1 build logged the emulated time of each DAC write.
-It ran earlier versions of the examples: sound-slots then had a 57-cycle loop
-and read a fire button.
-The gaps, in slow-clock cycles, were:
-
-- Sound-slots: 57–138 on CoCo 1 and on the 64 KiB non-T1 CoCo 2, and 57–158
-  with the input fixture.
-- Timer-sound: cooperative 70–125 (light) and 70–80,002 (heavy). Timer 123–134
-  (light) and 123–133 (heavy) on both revisions, with a mean of 128.0 (1986) and
-  127.75 (1987), the predicted timer periods.
-
-A stable average rate is therefore not evenly spaced writes. As controls, a
-`NOP` added two cycles, and masking FIRQ during the clear gave an 80,002-cycle
-gap. On CoCo 2, a 10,000-iteration delay added exactly 80,003 cycles at each
-of 63 block boundaries. These are finite windows, not worst-case bounds.
-
-The same build counted progress in one emulated second. Sound-slots completed
-60 redraws. On timer-sound, the cooperative build fell from 12,746 to 2,508
-samples under the heavy load. The timer build kept 6,992 (1986) or 7,005 (1987)
-samples, but its redraws fell from 27 to 2. The counts are uncertain by a small
-amount at the edges of the window.
-
-A private XRoar 1.12.1 build recorded every rendered frame and all mixer output
-of collect-room for the first 43 lines of its journey. It ran on CoCo 1 and
-CoCo 2 (NTSC, 32 KiB, non-T1). Each run gave 447 continuous frames and 328,704
-samples. All 229 frames between a checkpoint and the next key sample showed
-the complete scene.
-
-The five effects peaked at 978 Hz (start), 1,739 Hz (pickup) and 680 Hz (win),
-with 16 high runs each. The title was silent. The first checkpoint came 2.15 s
-after audio start, and the next 42 scans took 5.27 s.
-
-Frames during a redraw were not compared, so this is no tear-free claim. The
-example check compares only one frame after each checkpoint.
-
 ## Apply the findings to a game
 
 These are our next steps, not a completed music engine:

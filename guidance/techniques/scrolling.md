@@ -9,10 +9,8 @@ or 2.
 
 Laurence A. Tepolt describes pre-shifted buffers with horizontal and vertical
 display offsets in *Assembly Language Programming for the CoCo3* (1987), PDF 59.
-This gives a starting point for motion across a larger picture.
-
-It also creates a memory cost that you must understand before implementation.
-[Tepolt, PDF 59][scroll]
+This gives a starting point for motion across a larger picture, at a memory
+cost. [Tepolt, PDF 59][scroll]
 
 Our proposed approach is to make that cost explicit:
 
@@ -91,8 +89,7 @@ physical display address.
 The corrected `$D8` and `$D9` contribute `$6C000` and `$6C800`.
 `$FF9E` supplies the remaining address bits.
 
-These are derived addresses. We calculated them from the documented bit
-assignments.
+We calculated these addresses from the documented bit assignments.
 [Tandy, PDF 13][registers]
 
 Tepolt explains that a 128K machine ignores address bits 18 and 17, so the same
@@ -102,8 +99,7 @@ text buffer at `$6C000`. [PDF 29][aliasing] [PDF 58][basic-map]
 Together, these sources explain why the original constants can reach the same
 RAM on 128K but select different RAM on 512K. The correction adds `$60000`. This
 changes those two upper address bits and does not change the lower 17.
-
-This is our cross-source explanation of the published correction.
+This explanation is ours, not the notice's.
 
 The [text-addressing example](../../examples/text-addressing/README.md) sets
 up a text screen from one physical address on 128K and 512K. Its negative
@@ -150,8 +146,7 @@ mapping that the foreground can select, mark these items:
 - the stack
 - the data that the handler uses
 
-Then check their accessibility during each transition. This review procedure is
-our synthesis of the mapping requirement.
+Then check their accessibility during each transition.
 
 The [timer-sound example](../../examples/timer-sound/README.md) checks
 interrupts with a fixed mapping. Its successful run does not validate bank

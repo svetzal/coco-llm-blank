@@ -33,10 +33,9 @@ historical program and measured no hardware behavior.
 
 ## Six-page inspection
 
-Checked on 2026-11-14. The check used actual Docling conversion of selected
-pages, copied source PDFs, and an isolated output store. All six source pages
-were rendered separately with PDFium and visually inspected against exported
-images and Markdown. All five exported figure crops were also inspected.
+Checked on 2026-11-14 with Docling 2.150.0 and RapidOCR 3.10.0. We compared
+a separate PDFium render of each source page with the exported images and
+Markdown.
 
 The sample covers:
 
@@ -133,123 +132,26 @@ the program, consult the article continuation identified in
 [the animation guide](../techniques/animation.md).
 This six-page check did not reconvert or visually assess page 47.
 
-## Coverage and conversion state
-
-The run used profile format 3, Docling 2.150.0, docling-core 2.107.0, and
-RapidOCR 3.10.0. It used full-page English OCR, table recognition, and 2x image
-rendering.
-
-All six conversions completed. The run exported eleven PNGs: six full pages
-and five crops. All eleven files matched their checkpoint SHA-256 values.
-The run marked no selected page as sparse, despite the errors above. These
-counts measure completion and artifact integrity, not recognition accuracy.
-
-At selection time, the shared extraction record for Matthews listed only
-page 47 under format 3. Pages 44 and 46 existed under format 2. This is a
-profile coverage mismatch, not evidence that those pages are absent from the
-magazine.
-The fresh format-3 conversions here still have reading-order and listing errors.
-They do not establish an improvement over format 2. The check left shared
-checkpoints and indexes untouched.
+## Read the extraction record first
 
 For any resource, read `extraction.json` before you search. Use its
 `checkpoints` path and `completed_pages`. Do not combine arbitrary checkpoint
 folders. A missing page needs selected-page conversion. A missing search
 hit on a completed page needs image inspection before you rule out content.
 
-The local evidence is under `local/research/conversion-quality/`:
+The conversion marked none of the six pages as sparse, despite the errors
+above. A completed conversion and valid image checksums measure completion,
+not recognition accuracy.
 
-- `selection.json` records source URLs, hashes, selected pages and previous
-  extraction records.
-- Each resource directory contains its source copy, Markdown, extraction
-  record, page JSON and PNGs.
-- `checks.json` records image integrity and raster comparisons.
-- `conversion.log` retains warnings.
-- `converter.sha256` identifies the converter file used.
+## Sources
 
-Source renders and exports have equal sizes but are not pixel-identical. The
-check used no pixel difference threshold or OCR score to infer correctness.
+The letters above identify these resources. `resources.json` gives the URL
+and the checksum of each one.
 
-## Reproduce without changing shared checkpoints
-
-Run from the repository root. Use the existing project environment, with the
-five source PDFs already downloaded. The code below is original inspection
-orchestration, not copied book code. It uses the production converter directly,
-requests exactly six pages, and creates a new isolated directory on each run.
-It does not run setup, rewrite the local index, or convert a whole book.
-
-```sh
-uv run --no-sync python - <<'PY'
-import json
-import shutil
-import sys
-import tempfile
-from pathlib import Path
-
-sys.path.insert(0, str(Path('scripts').resolve()))
-from references import DoclingGateway, Resource, convert, digest
-
-selected = {
-    'assembly-graphics': [108],
-    'coco1-technical': [31],
-    'coco2-service': [33],
-    'coco3-service': [17],
-    'rainbow-1987-10': [44, 46],
-}
-parent = Path('local/research/conversion-quality')
-parent.mkdir(parents=True, exist_ok=True)
-root = Path(tempfile.mkdtemp(prefix='repeat-', dir=parent))
-gateway = DoclingGateway()
-for record in json.loads(Path('resources.json').read_text()):
-    if record['id'] not in selected:
-        continue
-    resource = Resource(**record)
-    source = Path('local/references') / resource.id / 'source.pdf'
-    assert digest(source) == resource.sha256
-    output = root / resource.id
-    output.mkdir()
-    shutil.copyfile(source, output / 'source.pdf')
-    for page in selected[resource.id]:
-        print(convert(resource, output, (page, page), documents=gateway))
-print(root)
-PY
-```
-
-For an independent raster view, render the copied PDF with
-`pypdfium2.PdfDocument`. Select `document[page - 1]`. Save
-`render(scale=2).to_pil()` under that same isolated directory. Open the PNG
-with an image-viewing tool. Do not infer diagram content by inspecting bytes.
-Compare the requested passage with the full-page export and any linked crops.
-
-Expected failure controls are:
-
-- the displaced instruction on A/108
-- missing SAM headers on B/31
-- merged colour labels on D/17
-- column interleaving on E/46
-
-An inspection method that accepts those Markdown passages without an image
-check is not enough for exact transcription.
-
-## Source identities
-
-PDF page citations above identify the inspected passages. Archive links and
-SHA-256 values below identify the exact downloaded editions. Hashes were
-verified locally before copying. Copyrighted pages and extracted content stay
-in ignored local storage.
-
-- [A] Assembly Language Graphics for the TRS-80 Color Computer
-  (Don Inman, Kurt Inman with Dymax), [archive PDF](<https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf>).
-  SHA-256: `c1259497b7d1505e6908fd3c8a250d47e0c4b549140e308bdc6bf8e345b6ce01`.
-
-- [B] [Color Computer Technical Reference Manual (Tandy)](<https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%20Technical%20Reference%20Manual%20%28Tandy%29.pdf>).
-  SHA-256: `8c4ed0c6de6e54f941932999d6750202f75102bff061f215b2dd3f757067cc64`.
-
-- [C] [Color Computer 2 NTSC Service Manual (26-3134 & 26-3136) (Tandy)](<https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf>).
-  SHA-256: `7210e7a0da2b5211bc95a5833759a15fb575a5cc5787a0d9cbfa3c09b1622447`.
-
-- [D] [Color Computer 3 Service Manual (Tandy)](<https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Service%20Manual%20(Tandy).pdf>).
-  SHA-256: `5c4c82d1b825daacf861be097d93d0a0eff78fbdf394234d4adb06df0cfd3c29`.
-
-- [E] [The Rainbow Vol. 07 No. 03 - October 1987](<https://colorcomputerarchive.com/repo/Documents/Magazines/Rainbow,%20The%20(OCR)/The%20Rainbow%20Vol.%2007%20No.%2003%20-%20October%201987.pdf>).
-  SHA-256: `d41c55e0cdcadb693513a44af247ba725e93155f19c7e91ca957c8aa6118a029`.
+- [A] `assembly-graphics`: Don Inman, Kurt Inman with Dymax, *Assembly
+  Language Graphics for the TRS-80 Color Computer*.
+- [B] `coco1-technical`: Tandy, *Color Computer Technical Reference Manual*.
+- [C] `coco2-service`: Tandy, *Color Computer 2 NTSC Service Manual (26-3134
+  & 26-3136)*.
+- [D] `coco3-service`: Tandy, *Color Computer 3 Service Manual*.
+- [E] `rainbow-1987-10`: *The Rainbow*, Vol. 7 No. 3, October 1987.

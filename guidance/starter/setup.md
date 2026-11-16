@@ -2,9 +2,9 @@
 
 Use this guide if you want to run setup yourself or diagnose a setup problem.
 For an agent-led start, use the [README](../../README.md).
-Run all commands from the project folder.
+Run all commands from the starter folder.
 
-## Agent setup entry point
+## Bootstrap
 
 For a new project, the agent can run:
 
@@ -26,7 +26,11 @@ The final check needs the assembler, linker, emulator, and verified firmware.
 Missing tools produce a nonzero exit and installation guidance. Bootstrap
 installs missing native tools on Apple Silicon macOS and Ubuntu 24.04.
 Other Linux distributions still need manual installation of the native tools.
-If permissions or installation fail, use [toolchain.md](toolchain.md).
+Intel Macs are unsupported.
+
+If permissions or installation fail, use
+[toolchain.md](toolchain.md). Its
+[setup results](toolchain.md#measured-setup-results) give the tested hosts.
 
 Bootstrap also builds ToolShed. Directly launched demos do not need it. The
 `disk` command of `scripts/coco.py` needs it to make disk images.
@@ -71,7 +75,7 @@ uv run python scripts/setup.py --target coco1 --roms-only
 `roms.json` identifies archive ZIPs and selected ROM members by SHA-256 and
 size. Setup verifies cached files too. It preserves different existing
 firmware. It writes only selected members to ignored `local/roms/TARGET/`.
-The manifest uses the archive's MAME-MESS area. No ROM bytes ship in Git.
+No ROM bytes ship in Git.
 
 Bootstrap already does this step. For an existing checkout, `--roms-only`
 prepares firmware without reinstalling tools or converting books.
@@ -88,23 +92,10 @@ names before it starts XRoar. Do not launch XRoar manually to bypass a
 checksum error.
 See [toolchain](toolchain.md#firmware-and-launching) for launch options.
 
-The Python baseline includes:
-
-- Docling/RapidOCR
-- NumPy
-- Pillow
-- pytest
-- Ruff
-
-Optional groups cover interactive prototypes and music analysis. Read
-[Python tools](python.md) for their purpose and commands.
-
 ## Reference conversion
 
-Docling replaces the original conversion path, which used plain text and
-Tesseract. It processes layout, OCR, and tables locally. The first conversion
-downloads model weights. Poppler and the Tesseract executable are no longer
-necessary.
+Docling processes layout, OCR, and tables locally. The first conversion
+downloads model weights.
 
 Results are in ignored `local/`:
 
@@ -116,13 +107,8 @@ Results are in ignored `local/`:
 
 The Markdown links images for direct multimodal inspection. Reruns reuse
 completed pages. A new range adds pages without losing earlier work.
-Read [reference conversion](references.md) for cache behavior and limits.
+Read [reference lookup](references.md) for cache behavior and limits.
 OCR still needs checking, especially for assembly code and diagrams.
-
-The baseline targets Apple Silicon macOS and Linux. Intel Macs are unsupported.
-The [toolchain guide](toolchain.md#measured-setup-results) records the tested
-journeys in Ubuntu containers. Nobody has tested onboarding on a native
-desktop yet.
 
 Archive availability does not change copyright or licensing. Downloaded and
 derived content stays outside Git.
@@ -136,29 +122,11 @@ uv run python scripts/doctor.py
 ```
 
 Read [toolchain](toolchain.md) for executable overrides, installation
-sources, firmware requirements, and build verification. This starter currently
-uses assembly. A C compiler is not part of the baseline.
+sources, firmware requirements, and build verification. This starter uses
+assembly. A C compiler is not part of the baseline.
 
-## Agent entry point and checks
+## Checks of the starter
 
-Agents start at [AGENTS.md](../../AGENTS.md). It routes each task to ordinary Markdown
-files. No skill system is necessary, including for microgentic.
-
-```sh
-uv run pytest -m 'not integration'
-uv run pytest -m integration
-uv run pytest --cov
-uv run ruff check .
-uv run ruff format --check .
-```
-
-Integration tests use an original scanned PDF and the real Docling pipeline.
-Their first run needs model downloads. Co-located `*_spec.py` files use the
-pytest conventions `Describe*` / `should_*`. Other tests cover:
-
-- local HTTP downloads
-- cache and failure behavior
-- target preservation
-- executable discovery
-
-See [PLAN.md](../../PLAN.md) for scope and remaining work.
+To run the starter's own tests and style checks, read
+[Python tools](python.md). It gives the commands, the optional dependency
+groups and the [complete validation environment](python.md#complete-starter-validation-environment).
