@@ -114,10 +114,6 @@ available for every file, also for files that an earlier patch changed.
 7. Run the trial command again without `--fresh`. `--fresh` discards your
    resolution.
 
-Example: XRoar 1.13 moved the trap code from `src/xroar.c` to `src/trap.c`.
-The resolution kept the 1.13 `src/xroar.c`, and added the include and the two
-calls to `handle_trap()` in `src/trap.c`.
-
 ## Find the base
 
 A release archive can contain commits made after its tag. Then the archive
@@ -133,9 +129,8 @@ different.
    `git rebase --onto <commit> <tag> coco-capture`.
 5. Run the trial again with `--base <commit>`.
 
-Example: the XRoar 1.13 archive contains commit `1630182d` ("include
-src/bsdos/idelba.s"), made after tag 1.13. Every tracked file matches that
-commit.
+[The current pin](#the-current-pin) is an example: its base is one commit
+after its tag.
 
 ## Fix a build failure
 
@@ -190,7 +185,7 @@ For each different file, do these steps:
    branch. Build the series and the revert, run the same checks, and compare
    with the pinned captures.
 4. Record the difference, the upstream change and the control result in
-   `LAB.md`, in the commit message and in [the current pin](#the-current-pin).
+   `LAB.md` and in the commit message.
 
 Do not adopt a release if one difference has no explanation. Report what
 blocked it, and keep the old pin.
@@ -255,28 +250,6 @@ Do not commit `local/`. Make changes to `scripts/xroar_upstream.py` and
 XRoar 1.13: tag commit `af501b71`, base commit `1630182d`. The base is one
 commit after the tag, and the release archive matches it. The series has four
 patches. Its captures are the reference for the next trial.
-
-The move from 1.12.1 had one conflict: the trap code moved to `src/trap.c`.
-Every check passed. Every rendered frame, sound recording, key script and
-result record was identical to 1.12.1. The adoption accepted these differences:
-
-- RAM snapshots: 4 to 13 bytes are different. They are one byte at `$0113`
-  and bytes from `$7F14` to `$7F20`, in the stack area that the examples
-  reserve from `$7E00`. CoCo 3 snapshots show the same addresses in their
-  upper 64 KiB.
-
-- Log ticks: checkpoint, key and sound ticks are the same on the CoCo 1. They
-  are 48 ticks later on the CoCo 2. On the CoCo 3 they are 32 ticks earlier
-  with the 1986 GIME and 48 ticks later with the 1987 GIME.
-
-- Cause of both: the ChangeLog entry "Fix 6809/6309 memory access pattern for
-  TSTA, TSTB", commit `cbad6b5e`. TSTA and TSTB are now one cycle shorter.
-  A control build of 1.13 without that commit gave RAM, frames, sound and
-  ticks identical to 1.12.1.
-
-- XRoar logs: 1.13 does not write the "Colour BASIC CRC32 valid" lines.
-  Cause: commit `6e9eb4f6`, "machines: remove old ROM CRC verification".
-  The ChangeLog does not list it.
 
 ## Toward upstream
 

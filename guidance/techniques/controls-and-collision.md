@@ -159,17 +159,7 @@ Do not extend the loop to diagonal motion without a corner rule. If you limit
 the steps in one update, drop or defer the remaining steps. Do not jump to the
 destination. Two moving objects need a relative-motion test.
 
-**Measured result, not rerun here.** A host Python model of these policies
-passed 26 cases (Python 3.13). No example uses it, it ran no 6809 code and
-it shows nothing about speed or arbitrary shapes. Its cases agree with the
-advice above:
-
-- A destination-only test crossed a thin wall. Unit steps stopped at it.
-- Probes at offsets 0 and 2 missed a one-cell obstacle. Offset 1 found it.
-- Wall-coloured decoration changed art-derived movement, not map movement.
-- Two objects that swap places in one update overlap at neither end. A
-  relative sweep of the two intervals found the contact.
-- A new-against-old position test reported a false contact.
+Nothing checks these collision policies. No example uses them.
 
 ## What the examples check
 

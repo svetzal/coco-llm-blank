@@ -33,8 +33,8 @@ owner wants to a guide and states the current evidence for each.
 ## Kinds of evidence
 
 The checks for each example are in the
-[example READMEs](../examples/README.md). The tested setup hosts are in
-[the toolchain guide](starter/toolchain.md#measured-setup-results).
+[example READMEs](../examples/README.md). The supported hosts are in
+[the toolchain guide](starter/toolchain.md#supported-hosts).
 
 Keep these kinds of evidence distinct:
 

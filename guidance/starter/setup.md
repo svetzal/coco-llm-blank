@@ -30,7 +30,7 @@ Intel Macs are unsupported.
 
 If permissions or installation fail, use
 [toolchain.md](toolchain.md). Its
-[setup results](toolchain.md#measured-setup-results) give the tested hosts.
+[supported hosts](toolchain.md#supported-hosts) section gives the limits.
 
 Bootstrap also builds ToolShed. Directly launched demos do not need it. The
 `disk` command of `scripts/coco.py` needs it to make disk images.

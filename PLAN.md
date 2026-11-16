@@ -9,8 +9,7 @@ below are open. Nobody is working on them now.
 Read [AGENTS.md](AGENTS.md), then choose one open item below. Use the
 [guidance index](guidance/README.md) for the current guides.
 
-Preserve ignored `local/`, `build/` and the prepared `.venv`. Do not treat a
-previous report as a new validation run.
+Preserve ignored `local/`, `build/` and the prepared `.venv`.
 
 The repository is public, uses `main`, and remains unregistered with Foundry.
 Leave the separate `coco-lines` project and its processes untouched. Start no new beginner-agent
@@ -19,8 +18,7 @@ trial without a new request.
 ## Open work
 
 - Clean Apple Silicon host and native Linux desktop onboarding, including
-  x86-64 Linux. Current container and configured host results do not
-  establish these journeys.
+  x86-64 Linux. No check establishes these journeys.
 - ToolShed installation on a clean Ubuntu 24.04 host, and Linux distribution
   coverage beyond the tested Ubuntu setup. The ToolShed source build has run
   only on Apple Silicon macOS.
@@ -40,18 +38,17 @@ trial without a new request.
   Keep it current with
   [the XRoar patch procedure](guidance/starter/xroar-patch.md). Submit nothing
   and contact no one until the owner asks.
-- Bring the measured claims that cite a closed lab under the
-  [evidence rules](guidance/starter/references.md#cite-each-kind-of-evidence).
-  The animation and controls-and-collision guides each have one result that
-  is "not rerun". Give each one a check, a method to repeat it, or an
-  entry in the open questions. Do the same for the CoCo 3 examples: label the
-  facts that only their checks establish.
+- Bring the CoCo 3 examples under the
+  [evidence rules](guidance/starter/references.md#cite-each-kind-of-evidence):
+  label the facts that only their checks establish.
+- Checks for the selective-redraw procedure in the animation guide and the
+  collision policies in the controls-and-collision guide. Both are untested.
 - Host keyboard delivery, window presentation, listening, and physical-machine
   validation where required by a guide's claim. Emulator-only checks must keep
   their stated limits.
 
-Out of scope: Intel Mac support. The historical tile-ID hunt stays stopped
-unless a new lead meets the boundary in the
+Out of scope: Intel Mac support. A search for a historical tile-ID program is
+also out of scope unless a new lead meets the boundary in the
 [tile-map guide](guidance/techniques/tile-maps.md#open-questions).
 
 ## Guide contract

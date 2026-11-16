@@ -158,11 +158,7 @@ for each region in destination:
 Put every input that changes pixels in the record: geometry, colour indices and
 background. A fixed camera does not make a changed background safe.
 
-**Measured result, not rerun here.** A lab on XRoar 1.12.1 checked this
-procedure in two 640-byte RAM windows on CoCo 3 (GIME 1986, 128 and 512 KiB).
-Selective and full redraw matched an independent pixel model at 12 checkpoints.
-A shared record set left 64 wrong bytes. A missing invalidation left one wrong
-byte. The lab had no display and no timing, so it makes no speed claim.
+Nothing checks this procedure. It is a proposal.
 
 Selective redraw adds record storage, comparisons and invalidation rules.
 Measure both methods. Test growth, shrinkage and colour-only changes.

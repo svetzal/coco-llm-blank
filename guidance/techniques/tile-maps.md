@@ -189,12 +189,12 @@ walls. Refuse a map whose two sides of one opening disagree.
 
 ## Open questions
 
-**We stopped the historical tile-ID hunt.** We looked for a CoCo 1/2 program
-that goes from grid cell to tile ID to packed picture to bitmap address.
-PacDude has that chain, but on the CoCo 3. The other sources above, and Cubix,
-do not have it. This finding is about those sources only, not the archive.
+**No CoCo 1/2 source for tile IDs.** No CoCo 1/2 program that we read goes
+from grid cell to tile ID to packed picture to bitmap address. PacDude has
+that chain, but on the CoCo 3. The other sources above, and Cubix, do not have
+it. This finding is about those sources only, not the archive.
 
-Reopen the hunt only when both of these are true:
+Search for such a program only when both of these are true:
 
 - A builder needs something that the tile-room method does not give.
 - A credit, listing or index entry shows that a named CoCo 1/2 program or

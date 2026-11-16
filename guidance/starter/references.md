@@ -481,13 +481,12 @@ OCR, tables, figure crops, and the full-page image then use that same rendering.
 A failed or still nearly blank retry returns an error instead of saving it.
 Genuinely blank source pages remain valid.
 
-This recovered PDF pages 16–18 of the CoCo 3 service manual.
-Page 17's image was checked visually.
-Its OCR remains imperfect, including merged table-row labels.
+PDF pages 16–18 of the CoCo 3 service manual need this recovery.
+The OCR of page 17 still merges table-row labels.
 
 The detector is a rendering check, not a general score of OCR quality.
 Continue to inspect page images before you use hardware values.
 
 For concrete OCR and image-reading hazards, use the
-[six-page conversion assessment](conversion-quality.md). Successful conversion
+[hazards on six difficult pages](conversion-quality.md). Successful conversion
 and valid image checksums do not establish accurate tables or listings.

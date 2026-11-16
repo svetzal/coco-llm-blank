@@ -94,24 +94,22 @@ Other Linux distributions need manual installation.
 - [XRoar downloads](https://www.6809.org.uk/xroar/)
 - [XRoar build and configuration manual](https://www.6809.org.uk/xroar/doc/xroar.shtml)
 
-## Measured setup results
+## Supported hosts
 
-On November 14, 2026, bootstrap completed in new Ubuntu 24.04 ARM64
-containers, as root and as an account with non-interactive sudo. The first
-run took 9 to 20 minutes. Most of that time was the first download of the
-Python packages, which filled a 5.9 GiB uv cache. A second bootstrap took
-about one second and kept an edited project note.
+Bootstrap supports Apple Silicon macOS and Ubuntu 24.04. On Ubuntu it needs
+root, or an account with non-interactive sudo. Without that permission it
+stops at once, installs nothing and gives the administrator message.
 
-When sudo needed a password or refused the command, bootstrap stopped at
-once. It installed nothing and gave the administrator message.
+The first bootstrap can take 20 minutes. Most of that time is the first
+download of the Python packages. Allow about 6 GiB for the uv cache. A later
+bootstrap takes about one second and keeps the project notes.
 
-The scripts changed after these runs, and nobody ran the containers again.
-Nothing shows a clean Apple Silicon Mac, a native Linux desktop, x86-64
-Linux, other distributions or an interrupted apt.
+The root suite checks the sudo, apt and firmware failures and their
+recoveries with substitute commands. `bootstrap_spec.py` covers sudo and apt.
+`roms_spec.py` and `coco_spec.py` cover firmware.
 
-The root suite checks the same failures and recoveries with substitute
-commands. `bootstrap_spec.py` covers sudo and apt. `roms_spec.py` and
-`coco_spec.py` cover firmware.
+No check covers a complete bootstrap on a clean Apple Silicon Mac, a native
+Linux desktop, x86-64 Linux, other distributions or an interrupted apt.
 
 ## Check the actual workflow
 
@@ -335,7 +333,7 @@ The build is `main` or the variant name.
 The check adds 10 emulated seconds to `[check] emulated_seconds` for the boot
 and the load. The template needs 3 to 4 seconds.
 
-Measured in XRoar 1.13 with the `disk11.rom` of each profile:
+Measured in the pinned XRoar with the `disk11.rom` of each profile:
 
 - The template loads from a disk and reaches its checkpoint on `coco1`,
   `coco2`, `coco2b` and `coco3`.
@@ -406,9 +404,8 @@ the pin. `uv run python scripts/xroar_upstream.py report` shows both versions.
 When the pin moves, run `brew upgrade xroar`.
 
 In guidance and example READMEs, write "the pinned XRoar" for a current claim.
-Name a release only in a record of a measurement, such as "XRoar 1.12.1 passed
-these checks". Do not edit that record when the pin moves. Add the new release
-only after you run the check again on it.
+Name a release only where the claim depends on that release, such as a line
+number in its source.
 The archive is cached under `local/toolchain-sources/` and must match the
 pinned SHA-256.
 
@@ -466,10 +463,7 @@ checks, not visual claims.
 
 A checkerboard is not a successful boot check or a diagnosis by itself.
 Missing or zero-filled ROMs can leave XRoar running without reaching the
-program.
-
-In a bounded local probe, both cases returned exit code zero without the
-ready checkpoint of first-screen.
+program. In both cases XRoar can return exit code zero.
 Do not treat a process exit as boot evidence.
 
 When a probe fails, validate firmware bytes and explicit command paths first.

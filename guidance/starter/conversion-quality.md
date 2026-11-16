@@ -28,14 +28,13 @@ syntax, row membership, bit labels, circuit connections, and reading order.
   you implement the dependent behavior.
 
 These are workflow recommendations derived from the observations below. They
-are not claims made by the historical authors. This check ran no
-historical program and measured no hardware behavior.
+are not claims made by the historical authors. We ran no historical program
+and measured no hardware behavior.
 
-## Six-page inspection
+## Hazards on six difficult pages
 
-Checked on 2026-11-14 with Docling 2.150.0 and RapidOCR 3.10.0. We compared
-a separate PDFium render of each source page with the exported images and
-Markdown.
+We compared a separate PDFium render of each source page with the exported
+images and Markdown.
 
 The sample covers:
 
@@ -130,7 +129,7 @@ box, not the program. Use the full-page PNG for code.
 This sample ends at line 420. It is not the whole listing. Before you adapt
 the program, consult the article continuation identified in
 [the animation guide](../techniques/animation.md).
-This six-page check did not reconvert or visually assess page 47.
+We did not inspect page 47.
 
 ## Read the extraction record first
 
@@ -139,7 +138,7 @@ For any resource, read `extraction.json` before you search. Use its
 folders. A missing page needs selected-page conversion. A missing search
 hit on a completed page needs image inspection before you rule out content.
 
-The conversion marked none of the six pages as sparse, despite the errors
+The converter marks none of the six pages as sparse, despite the errors
 above. A completed conversion and valid image checksums measure completion,
 not recognition accuracy.
 

@@ -80,8 +80,7 @@ Those numbers are bytes inside the machine-code DATA, not separate BASIC screen
 coordinates. Our interpretation of the listing places them in the values that
 the program later writes to `$FF9D`.
 
-Small opcode probes with LWASM confirmed that interpretation. We did not run the
-original program.
+We did not run the original program.
 
 Tandy's table assigns `$FF9D` to address bits 18–11.
 The original values `$18` and `$19` contribute `$0C000` and `$0C800` to the
