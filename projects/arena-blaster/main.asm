@@ -119,7 +119,7 @@ FIRST_SCORE equ $0000           ; BCD, the low four digits of the score
 *   FIRST_DROP   the first place in drop_order.
 *   DEMO_SOON    the demo starts after 30 idle frames on the title, not 300.
 *   FIRST_PART=N the first demo part.
-*   FIRST_SCENE=N each part starts at its scene N.
+*   FIRST_SCENE=N the first demo after power-on starts at scene N.
 *   FIRST_LEVEL, FIRST_LIVES, FIRST_SCORE  other start values.
 
 * Things to collect (README.md "Things to collect"). Pickup types:
@@ -180,7 +180,7 @@ FIRST_PART equ 0
         endc
 PROMPT_COL equ 9                ; the byte column of the demo prompt
         ifndef FIRST_SCENE
-FIRST_SCENE equ 0               ; check only: a part starts at this scene
+FIRST_SCENE equ 0               ; check only: the first demo starts here
         endc
 SC_CAPTION equ 0                ; scene record: the banner text list
 SC_X    equ 2                   ; the player's start
@@ -405,6 +405,8 @@ clear   clr ,x+
         sta <new_rank           ; no entry of the table is new
         lda #FIRST_PART
         sta <part
+        lda #2*FIRST_SCENE
+        sta <skip
         ifdef SKIP_TITLE        ; check only: a game at once
         lda #PLAY
         sta <phase
@@ -1354,7 +1356,9 @@ start_demo
         lda <part
         lsla
         ldx a,x                 ; the scene list of the part
-        leax 2*FIRST_SCENE,x
+        ldb <skip               ; check only: skip scenes, one time
+        abx
+        clr <skip
         stx <scene_ptr
         lda <part               ; the next part, in a ring
         inca
@@ -2897,9 +2901,11 @@ level_text
 
 * --- The demo. parts: the scene list of each part. A scene list ends
 * with 0. Keys in a script: move keys in bits 3-0, shoot keys in bits 7-4.
-PARTS   equ 1
-parts   fdb part_a
+PARTS   equ 3
+parts   fdb part_a,part_b,part_c
 part_a  fdb scene_grunt,scene_hunter,scene_shooter,0
+part_b  fdb scene_points,scene_double,scene_spread,0
+part_c  fdb scene_star,scene_bomb,0
 
 scene_grunt
         fdb cap_grunt
@@ -2979,6 +2985,162 @@ cap_shooter
         fdb 76*32+5
         fcb GREEN_TEXT
         fcc "FIRES BACK  30 POINTS"
+        fcb 0
+        fdb $FFFF
+* The player walks right onto a coin.
+scene_points
+        fdb cap_points
+        fcb 40,92
+        fcb 0
+        fdb 0,0
+        fdb SEED
+        fcb PK_POINTS,80,94
+        fcb 0,0
+        fdb keys_points
+        fcb 0
+keys_points
+        fcb 0,6
+        fcb RIGHT,22
+        fcb 0,14
+        fcb 0,0
+* The player takes the double, then one shot right hits both grunts.
+scene_double
+        fdb cap_double
+        fcb 52,95
+        fcb 0
+        fdb 0,0
+        fdb SEED
+        fcb PK_DOUBLE,64,96
+        fcb 0,0
+        fdb keys_double
+        fcb GRUNT,8,95
+        fcb GRUNT,114,95
+        fcb 0
+keys_double
+        fcb 0,4
+        fcb RIGHT,4
+        fcb 0,10
+        fcb RIGHT*16,6
+        fcb 0,30
+        fcb 0,0
+* The player takes the spread, then one shot up hits four grunts.
+scene_spread
+        fdb cap_spread
+        fcb 61,95
+        fcb 0
+        fdb 0,0
+        fdb SEED
+        fcb PK_SPREAD,60,108
+        fcb 0,0
+        fdb keys_spread
+        fcb GRUNT,61,20
+        fcb GRUNT,61,170
+        fcb GRUNT,8,95
+        fcb GRUNT,114,95
+        fcb 0
+keys_spread
+        fcb 0,4
+        fcb DOWN,4
+        fcb 0,10
+        fcb UP*16,6
+        fcb 0,30
+        fcb 0,0
+* The player takes the star, then one shot up hits a ring of 8 grunts.
+scene_star
+        fdb cap_star
+        fcb 49,95
+        fcb 0
+        fdb 0,0
+        fdb SEED
+        fcb PK_STAR,60,96
+        fcb 0,0
+        fdb keys_star
+        fcb GRUNT,61,15
+        fcb GRUNT,61,175
+        fcb GRUNT,5,95
+        fcb GRUNT,117,95
+        fcb GRUNT,23,19
+        fcb GRUNT,99,19
+        fcb GRUNT,23,171
+        fcb GRUNT,99,171
+        fcb 0
+keys_star
+        fcb 0,4
+        fcb RIGHT,6
+        fcb 0,10
+        fcb UP*16,6
+        fcb 0,30
+        fcb 0,0
+* Grunts close in. The player steps onto the bomb, and they all go.
+scene_bomb
+        fdb cap_bomb
+        fcb 61,95
+        fcb 0
+        fdb 0,0
+        fdb SEED
+        fcb PK_BOMB,72,96
+        fcb 0,0
+        fdb keys_bomb
+        fcb GRUNT,30,60
+        fcb GRUNT,92,60
+        fcb GRUNT,30,130
+        fcb GRUNT,92,130
+        fcb GRUNT,61,50
+        fcb GRUNT,61,140
+        fcb 0
+keys_bomb
+        fcb 0,10
+        fcb RIGHT,4
+        fcb 0,30
+        fcb 0,0
+cap_points
+        fdb BANNER_ROW*32+10
+        fcb BIG+YELLOW_TEXT
+        fcc "POINTS"
+        fcb 0
+        fdb 76*32+8
+        fcb GREEN_TEXT
+        fcc "COLLECT FOR 100"
+        fcb 0
+        fdb $FFFF
+cap_double
+        fdb BANNER_ROW*32+10
+        fcb BIG+YELLOW_TEXT
+        fcc "DOUBLE"
+        fcb 0
+        fdb 76*32+7
+        fcb GREEN_TEXT
+        fcc "SHOTS GO TWO WAYS"
+        fcb 0
+        fdb $FFFF
+cap_spread
+        fdb BANNER_ROW*32+10
+        fcb BIG+YELLOW_TEXT
+        fcc "SPREAD"
+        fcb 0
+        fdb 76*32+7
+        fcb GREEN_TEXT
+        fcc "SHOTS GO FOUR WAYS"
+        fcb 0
+        fdb $FFFF
+cap_star
+        fdb BANNER_ROW*32+12
+        fcb BIG+YELLOW_TEXT
+        fcc "STAR"
+        fcb 0
+        fdb 76*32+6
+        fcb GREEN_TEXT
+        fcc "SHOTS GO EIGHT WAYS"
+        fcb 0
+        fdb $FFFF
+cap_bomb
+        fdb BANNER_ROW*32+12
+        fcb BIG+YELLOW_TEXT
+        fcc "BOMB"
+        fcb 0
+        fdb 76*32+8
+        fcb GREEN_TEXT
+        fcc "CLEARS THE AREA"
         fcb 0
         fdb $FFFF
 cap_grunt
@@ -3208,6 +3370,7 @@ scene   rmb 2                   ; the scene record
 dptr    rmb 2                   ; the next key pair of the script
 dcount  rmb 1                   ; frames left of the current key pair
 dkeys   rmb 1
+skip    rmb 1                   ; 2 x FIRST_SCENE until the first demo
 fresh   rmb 1                   ; the screen that needs the new screen, or 0
 state_end
 

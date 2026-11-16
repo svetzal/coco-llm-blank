@@ -111,19 +111,21 @@ and types `LOADM"ARENA":EXEC`. On a real CoCo, type the same command. With
 `--check`, XRoar does the same without a window, and the game must reach its
 first frame.
 
-The check runs twenty-six builds for 200 frames each, with Extended BASIC in
+The check runs thirty-one builds for 200 frames each, with Extended BASIC in
 the machine. At each frame it compares
 both screens, the game state, the rendered picture and the mixer output with
 `expected.py`. See [Checks](#checks).
 
 ## Status
 
-Increment 11b: demo part A has its three scenes: the grunt, the hunter and
-the shooter. SHOOT TO START flashes in the band during the demo (owner
-request).
+Increment 11c: demo parts B and C. Part B shows points, the double and the
+spread. Part C shows the star and the bomb.
 
+Increment 11b added the hunter and shooter scenes to demo part A, and the
+full SHOOT TO START prompt (owner request).
 Increment 11a added the demo. When the title has no key for 10 seconds, a
 part of the demo plays. A shoot key during the demo starts a game.
+
 Increment 10 added jinxes from level 8. A jinx is a pickup that hurts: half
 the fire speed, half the move speed, or a blitz of hunters. The band at the
 top shows the name of the gift and of the jinx, each with a bar of the
@@ -185,7 +187,7 @@ Nobody has listened to it yet.
   BASIC (owner request).
 - Disk BASIC RAM: Disk BASIC keeps its RAM from `$600`, just above the text
   screen, up to the graphics pages (*Disk Basic Unravelled II*, PDF 20). The
-  game loads at `$3C00`-`$6A36`, above that area. After `EXEC`, the game
+  game loads at `$3C00`-`$6BBE`, above that area. After `EXEC`, the game
   does not go back to BASIC, so it uses all RAM.
 - Drive motor: Disk BASIC turns the motor off in its IRQ handler (PDF 70).
   The game masks the IRQ, so at its start it stores 0 in `$FF40`. Bit 3 of
@@ -205,11 +207,11 @@ The CoCo 1 defaults come from
 | `$1C00`-`$1FFF` | Game state and erase lists (direct page `$1C`). An erase-list entry is the first screen byte and the erase routine of a sprite. |
 | `$2000`-`$23FF` | Stack, from `$2400` down |
 | `$2400`-`$3BFF` | Screen B, 6144 bytes |
-| `$3C00`-`$6A36` | Code, sprites, font, text, the demo and the high-score table |
-| `$6A37`-`$7FFF` | Free, about 5.4 KiB |
+| `$3C00`-`$6BBE` | Code, sprites, font, text, the demo and the high-score table |
+| `$6BBF`-`$7FFF` | Free, about 5.1 KiB |
 
 The game needs 32 KiB. The two screens use 12 KiB, so a 16 KiB machine
-does not have space for the program. The game state uses 197 of the 256
+does not have space for the program. The game state uses 198 of the 256
 bytes of the direct page. More state is at `$1F00`-`$1F91`, after the erase
 lists: a line buffer for text, the shot slots and the bullet slots.
 
@@ -480,6 +482,11 @@ the demo player are agent choices.
 | A | Grunt: SLOW  10 POINTS. Three grunts. The player shoots up, walks left and shoots, then walks right and shoots. |
 | A | Hunter: FAST  50 POINTS. A hunter comes from the right edge after 10 frames, and the player shoots it. The next one comes from the left 50 frames later, and the player shoots it when it is near. |
 | A | Shooter: FIRES BACK  30 POINTS. A shooter fires each 20 frames. The player steps aside, the bullet goes past, and the player steps back and shoots up. |
+| B | Points: COLLECT FOR 100. The player walks right onto a coin. |
+| B | Double: SHOTS GO TWO WAYS. The player takes the double. One shot right hits a grunt on each side. |
+| B | Spread: SHOTS GO FOUR WAYS. The player steps down onto the spread. One shot up hits four grunts: above, below, left and right. |
+| C | Star: SHOTS GO EIGHT WAYS. The player takes the star. One shot up hits a ring of 8 grunts. |
+| C | Bomb: CLEARS THE AREA. Six grunts close in. The player steps onto the bomb, and they all go. |
 
 The keys of each scene come from the model. `expected.py` played each
 scene with many sets of keys. We kept keys that hit each enemy with no
@@ -640,7 +647,12 @@ remove one part of the game. The key scripts are short and written by hand.
 | `level8` | `SKIP_TITLE` `FIRST_LEVEL=8` `NO_DEATH` | none | The level 8 banner with its hint, 16 grunts and 4 shooters |
 | `demo` | `DEMO_SOON` | none | The title, the demo at frame 30, the grunt scene (hits at frames 104, 124 and 143), then the hunter scene at frame 163. The prompt flashes. |
 | `demohunter` | `DEMO_SOON` `FIRST_SCENE=1` | none | The hunter scene at frame 30: hunters at frames 100 and 150, hits at frames 116 and 171. The shooter scene at frame 189. |
-| `demoshooter` | `DEMO_SOON` `FIRST_SCENE=2` | none | The shooter scene at frame 30: a bullet at frame 110 that goes past, a hit at frame 146, the title at frame 159, the demo again at frame 189 |
+| `demoshooter` | `DEMO_SOON` `FIRST_SCENE=2` | none | The shooter scene at frame 30: a bullet at frame 110 that goes past, a hit at frame 146, the title at frame 159. Part B starts at frame 189 with the points scene. |
+| `demopoints` | `DEMO_SOON` `FIRST_PART=1` | none | The points scene: the coin at frame 114, then the double scene |
+| `demodouble` | `DEMO_SOON` `FIRST_PART=1` `FIRST_SCENE=1` | none | The double at frame 98, both grunts at frames 115 and 116 |
+| `demospread` | `DEMO_SOON` `FIRST_PART=1` `FIRST_SCENE=2` | none | The spread at frame 95, four grunts at frames 112-116, the title at frame 145, part C at frame 175 |
+| `demostar` | `DEMO_SOON` `FIRST_PART=2` | none | The star at frame 97, eight grunts at frames 115-118, then the bomb scene |
+| `demobomb` | `DEMO_SOON` `FIRST_PART=2` `FIRST_SCENE=1` | none | The bomb at frame 103 removes six grunts. The title at frame 135, then part A again at frame 165. |
 | `demoshoot` | `DEMO_SOON` | `demoshoot.txt` | W at frame 10 starts the idle count again, so the demo starts at frame 40. A shoot key at frame 120 starts a game. |
 | `level10` | `SKIP_TITLE` `FIRST_LEVEL=10` | none | The banner with a two-digit level, 16 grunts and 4 shooters, a bullet up, a death at frame 91 |
 | `over` | `SKIP_TITLE` `NO_READY` `FIRST_LIVES=1` | none | Death at frame 39, game over at frame 84 with its sound. A score of 0 gets no place, so the title comes at frame 174. |
@@ -663,7 +675,8 @@ The controls:
 - `FIRST_DROP=N`: the first drop is place N of the drop order (from 0).
 - `DEMO_SOON`: the demo starts after 30 idle frames, not 300.
 - `FIRST_PART=N`: the first part of the demo (from 0).
-- `FIRST_SCENE=N`: each part of the demo starts at its scene N (from 0).
+- `FIRST_SCENE=N`: the first demo after power-on starts at scene N of its
+  part (from 0). Later parts start at their first scene.
 - `ONE_SHOOTER`: one shooter at x 61, y 30 that fires each 20 frames, and
   no other enemies.
 - `FIXED_ENEMIES`: a grunt at x 100, y 90 and a hunter at x 100, y 40. No
@@ -689,6 +702,9 @@ Negative controls, run on copies. Each one must fail:
   script fails at frame 163 (`demo`).
 - Increment 11b: a demo that starts each part at its first scene, with no
   `FIRST_SCENE`, fails at frame 30 (`demohunter`).
+- Increment 11c: a `FIRST_SCENE` for each part, not only the first part,
+  fails at frame 189 (`demoshooter`). Part B starts at its spread scene,
+  not at its points scene.
 - Increment 10: a slow jinx that keeps the shoot delay at 2 fails at frame
   1 (`slow`): the delay is 2, not 5.
 - Increment 9: a spread power with a step of 4 places, not 2, fails at

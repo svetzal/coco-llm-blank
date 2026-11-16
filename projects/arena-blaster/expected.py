@@ -80,6 +80,11 @@ CONTROLS = {
     "demoshoot": {"DEMO_SOON"},
     "demohunter": {"DEMO_SOON"},
     "demoshooter": {"DEMO_SOON"},
+    "demopoints": {"DEMO_SOON"},
+    "demodouble": {"DEMO_SOON"},
+    "demospread": {"DEMO_SOON"},
+    "demostar": {"DEMO_SOON"},
+    "demobomb": {"DEMO_SOON"},
     "over": {"SKIP_TITLE", "NO_READY"},
     "scores": {"NO_READY", "FIXED_ENEMIES"},
 }
@@ -183,7 +188,29 @@ SCENES["shooter"] = Scene("SHOOTER", 9, "FIRES BACK  30 POINTS", 5, (61, 150),
                           [(3, 61, 30)],
                           [("", 12), ("D", 8), ("", 14), ("A", 8), ("O", 10), ("", 16)],
                           fire=20)
-PARTS = [["grunt", "hunter", "shooter"]]
+SCENES["points"] = Scene("POINTS", 10, "COLLECT FOR 100", 8, (40, 92), [],
+                         [("", 6), ("D", 22), ("", 14)], pickup=(PK_POINTS, 80, 94))
+SCENES["double"] = Scene("DOUBLE", 10, "SHOTS GO TWO WAYS", 7, (52, 95),
+                         [(1, 8, 95), (1, 114, 95)],
+                         [("", 4), ("D", 4), ("", 10), (";", 6), ("", 30)],
+                         pickup=(PK_DOUBLE, 64, 96))
+SCENES["spread"] = Scene("SPREAD", 10, "SHOTS GO FOUR WAYS", 7, (61, 95),
+                         [(1, 61, 20), (1, 61, 170), (1, 8, 95), (1, 114, 95)],
+                         [("", 4), ("S", 4), ("", 10), ("O", 6), ("", 30)],
+                         pickup=(PK_SPREAD, 60, 108))
+SCENES["star"] = Scene("STAR", 12, "SHOTS GO EIGHT WAYS", 6, (49, 95),
+                       [(1, 61, 15), (1, 61, 175), (1, 5, 95), (1, 117, 95),
+                        (1, 23, 19), (1, 99, 19), (1, 23, 171), (1, 99, 171)],
+                       [("", 4), ("D", 6), ("", 10), ("O", 6), ("", 30)],
+                       pickup=(PK_STAR, 60, 96))
+SCENES["bomb"] = Scene("BOMB", 12, "CLEARS THE AREA", 8, (61, 95),
+                       [(1, 30, 60), (1, 92, 60), (1, 30, 130), (1, 92, 130), (1, 61, 50),
+                        (1, 61, 140)],
+                       [("", 10), ("D", 4), ("", 30)], pickup=(PK_BOMB, 72, 96))
+PARTS = [["grunt", "hunter", "shooter"], ["points", "double", "spread"], ["star", "bomb"]]
+FIRST_PART = {"demopoints": 1, "demodouble": 1, "demospread": 1, "demostar": 2,
+              "demobomb": 2}
+FIRST_SCENE.update({"demodouble": 1, "demospread": 2, "demobomb": 1})
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
 # field plays one record, so each frame plays two.
 SQUARE, NOISE = 0, 0x80
@@ -307,6 +334,7 @@ class Game:
     script: list[tuple[str, int]] = field(default_factory=list)  # the keys left
     dcount: int = 0
     dkeys: str = ""
+    skip: int = 0  # FIRST_SCENE, until the first demo
 
     def start_sound(self, name: str) -> None:
         if EFFECTS[name][0] >= self.priority:
@@ -410,7 +438,8 @@ def start_demo(game: Game) -> None:
     """The next part: the arena, one life that cannot end, level 1, score 0."""
     game.phase, game.demo, game.setup = PLAY, True, True
     game.lives, game.level, game.score, game.next_extra = 1, 1, 0, EXTRA_EVERY
-    game.scenes = list(PARTS[game.part])[FIRST_SCENE.get(game.variant, 0):]
+    game.scenes = list(PARTS[game.part])[game.skip:]
+    game.skip = 0
     game.part = (game.part + 1) % len(PARTS)
     start_scene(game)
 
@@ -451,7 +480,8 @@ def power_on(variant: str) -> Game:
     if "SKIP_TITLE" in CONTROLS[variant]:
         return new_game(variant)
     return Game(x=0, y=0, level=0, lives=0, next_extra=0, phase=TITLE,
-                controls=frozenset(CONTROLS[variant]), variant=variant)
+                controls=frozenset(CONTROLS[variant]), variant=variant,
+                part=FIRST_PART.get(variant, 0), skip=FIRST_SCENE.get(variant, 0))
 
 
 def game_end(game: Game) -> None:

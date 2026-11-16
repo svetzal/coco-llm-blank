@@ -117,6 +117,21 @@ defines = ["DEMO_SOON", "FIRST_SCENE=1"]
 [variants.demoshooter]
 defines = ["DEMO_SOON", "FIRST_SCENE=2"]
 
+[variants.demopoints]
+defines = ["DEMO_SOON", "FIRST_PART=1"]
+
+[variants.demodouble]
+defines = ["DEMO_SOON", "FIRST_PART=1", "FIRST_SCENE=1"]
+
+[variants.demospread]
+defines = ["DEMO_SOON", "FIRST_PART=1", "FIRST_SCENE=2"]
+
+[variants.demostar]
+defines = ["DEMO_SOON", "FIRST_PART=2"]
+
+[variants.demobomb]
+defines = ["DEMO_SOON", "FIRST_PART=2", "FIRST_SCENE=1"]
+
 [variants.level10]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=10"]
 
