@@ -1,6 +1,6 @@
-# Build something for the Color Computer
+# Build something for the Colour Computer
 
-Make a game, animation, or experiment for the Tandy Color Computer with your
+Make a game, animation, or experiment for the Tandy Colour Computer with your
 coding agent. This starter gives your agent project guidance, tools, and access
 to original reference books. You bring the idea.
 
@@ -9,7 +9,7 @@ before you start. Ask your agent to handle setup as part of building your
 project.
 
 You can try the result on your current computer using XRoar, an emulator that
-acts like a Color Computer. You do not need the original hardware. For now it
+acts like a Colour Computer. You do not need the original hardware. For now it
 works on Macs with Apple silicon and on Ubuntu Linux 24.04. It does not support
 Windows or older Intel Macs yet.
 
@@ -45,7 +45,7 @@ Start with what you want to see or do. For example:
 - "Draw a colourful pattern that changes when I press a key."
 - "Help me learn how to draw a sprite, one small step at a time."
 
-Name your Color Computer model if you know it. The starter lets you select
+Name your Colour Computer model if you know it. The starter lets you select
 a CoCo 1, CoCo 2, CoCo 2B or CoCo 3. A CoCo 2B has a different video chip,
 the MC6847T1. Its initial reference collection mainly covers CoCo 1 and 2.
 Your agent may need more references for a CoCo 3 project.
