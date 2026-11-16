@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: CoCo starter <coco-starter@example.invalid>
 Date: Sat, 14 Nov 2026 18:59:09 -0500
-Subject: [PATCH 4/4] machine: keep the configured frame skip without a rate
+Subject: [PATCH 4/5] machine: keep the configured frame skip without a rate
  limit
 
 Turning the rate limit off normally forces a ten-frame skip on the

@@ -65,6 +65,7 @@ class DescribeLog:
             ("COCO_CHECKPOINT,1,2\nCOCO_CHECKPOINT,3,4\n", "2 COCO_CHECKPOINT lines"),
             ("COCO_KEYS_UNKNOWN,spacebar\n", "does not know the key 'spacebar'"),
             ("COCO_VIDEO_TOO_LARGE,2000,900\n", "2000x900 is too large"),
+            ("COCO_FRAMES_SIZE,640,240\n", "size changed to 640x240"),
         ],
     )
     def should_reject_inconsistent_logs(self, text: str, message: str) -> None:
@@ -168,6 +169,89 @@ class DescribeSound:
         sound = recording.Sound(path=tmp_path, rate=4, samples=np.zeros(6, dtype=np.int16))
 
         assert sound.seconds == 1.5
+
+
+FIELD = 238944  # ticks in one NTSC field: 14318180 / 59.9227
+
+
+def stream_log(ticks: tuple[int, ...], audio: int = 0) -> Log:
+    return Log(
+        frames_start=(ticks[0], TICKS, 512, 192),
+        frame_ticks=ticks,
+        audio_start=(audio, 44100, 1024),
+    )
+
+
+class DescribeFrameStream:
+    def should_read_the_stream_lines(self) -> None:
+        text = f"COCO_FRAMES_START,{FIELD},{TICKS},512,192\nCOCO_FRAME,{FIELD}\nCOCO_FRAME,9\n"
+
+        log = recording.parse_log(text)
+
+        assert log.frames_start == (FIELD, TICKS, 512, 192)
+        assert log.frame_ticks == (FIELD, 9)
+
+    def should_continue_ticks_across_each_32_bit_wrap(self) -> None:
+        wrap = recording.TICK_WRAP
+
+        assert recording.unwrap((wrap - 10, 5, 20, 3), after=wrap - 20) == (
+            wrap - 10,
+            wrap + 5,
+            wrap + 20,
+            2 * wrap + 3,
+        )
+
+    def should_time_frames_with_the_emulator_clock(self) -> None:
+        ticks = tuple(FIELD * n for n in range(1, 601))
+
+        timing = recording.frame_timing(stream_log(ticks))
+
+        assert timing.frames == 600
+        assert timing.rate == pytest.approx(59.923, abs=0.001)
+        assert timing.offset == 0
+        assert (timing.width, timing.height) == (512, 192)
+
+    def should_measure_the_offset_from_the_start_of_audio(self) -> None:
+        ticks = tuple(FIELD * n for n in range(3, 6))
+
+        timing = recording.frame_timing(stream_log(ticks, audio=FIELD))
+
+        assert timing.offset == pytest.approx(FIELD / TICKS)
+
+    def should_time_a_recording_longer_than_one_tick_wrap(self) -> None:
+        ticks = tuple(FIELD * n % recording.TICK_WRAP for n in range(1, 20001))
+
+        assert recording.frame_timing(stream_log(ticks)).rate == pytest.approx(59.923, abs=0.001)
+
+    @pytest.mark.parametrize(
+        "ticks,message",
+        [
+            ((FIELD,), "fewer than two frames"),
+            ((FIELD, 2 * FIELD, 4 * FIELD, 5 * FIELD), "skipped frames"),
+        ],
+    )
+    def should_reject_a_stream_it_cannot_time(self, ticks: tuple[int, ...], message: str) -> None:
+        with pytest.raises(RecordingError, match=message):
+            recording.frame_timing(stream_log(ticks))
+
+    def should_keep_every_complete_audio_buffer(self) -> None:
+        log = audio_log(START, 3).model_copy(update={"frames_start": (FIELD, TICKS, 512, 192)})
+
+        rate, samples = recording.whole_sound(log, np.arange(3 * 1024, dtype="<i2").tobytes())
+
+        assert rate == 44100
+        assert samples.tolist() == list(range(3 * 1024))
+
+    @pytest.mark.parametrize(
+        "log,message",
+        [
+            (Log(audio_start=(0, 44100, 1024)), "start of the frame stream"),
+            (Log(frames_start=(FIELD, TICKS, 512, 192)), "start of audio capture"),
+        ],
+    )
+    def should_require_both_streams_for_the_sound(self, log: Log, message: str) -> None:
+        with pytest.raises(RecordingError, match=message):
+            recording.whole_sound(log, b"")
 
 
 class DescribeKeyScript:

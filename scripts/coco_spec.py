@@ -765,6 +765,127 @@ class DescribeCommandLine:
         assert coco.main(["check", str(folder), "--target", "coco2"], emulated()) == 1
 
 
+FIELD = 238944  # ticks in one NTSC field
+
+
+def recording_host(frames: int = 120, fault: bool = False) -> Mock:
+    """A host whose emulator streams frames and sound, and whose encoder writes the video."""
+    host = emulated()
+    host.encoder.return_value = "/tools/ffmpeg"
+    assemble = host.run.side_effect
+
+    def run(command, log, timeout, cwd=None, env=None):
+        if command[0] == "/tools/ffmpeg":
+            Path(command[-1]).write_bytes(b"HEVC")
+            return
+        assemble(command, log, timeout, cwd, env)
+
+    def record(command, log, timeout, env, stream, encoder, encoder_log):
+        if fault:
+            Path(command[command.index("-trap-snap") + 1]).write_bytes(b"")
+        lines = [f"COCO_FRAMES_START,{FIELD},{TICKS},512,192", "COCO_AUDIO_START,0,44100,1024"]
+        lines += [f"COCO_FRAME,{FIELD * n}" for n in range(1, frames + 1)]
+        buffers = 86
+        lines += [f"COCO_AUDIO,{round(n * 1024 * TICKS / 44100)}" for n in range(1, buffers + 1)]
+        log.write_text("\n".join(lines) + "\n")
+        Path(env["COCO_AUDIO"]).write_bytes(bytes(buffers * 1024 * 2))
+        Path(encoder[-1]).write_bytes(b"FFV1")
+
+    host.run.side_effect = run
+    host.record.side_effect = record
+    return host
+
+
+class DescribeRecording:
+    def should_scale_by_whole_numbers_to_a_four_by_three_picture(self) -> None:
+        assert coco.video_size(512, 192) == (1024, 768)
+        assert coco.video_size(256, 192) == (1024, 768)
+        assert coco.video_size(640, 240) == (1280, 960)
+
+    def should_render_every_frame_for_the_seconds_asked(self, project: coco.Project) -> None:
+        symbols = coco.parse_symbols(SYMBOLS)
+
+        options = coco.record_options(
+            symbols, 12.5, Path("/x.ram"), project.settings.check, coco.NO_EQUIPMENT, None
+        )
+
+        assert options[: len(coco.VIDEO_OPTIONS)] == coco.VIDEO_OPTIONS
+        assert "-fskip" in options and options[options.index("-fskip") + 1] == "0"
+        assert options[options.index("-timeout") + 1] == "12.5"
+        assert options[options.index("-trap") + 1] == "pc=0x3020"
+        assert "pc=0x3010" not in options  # no checkpoint: the run ends on time
+
+    def should_encode_at_the_measured_rate_with_the_sound(
+        self, folder: Path, project: coco.Project, capsys
+    ) -> None:
+        host = recording_host()
+
+        assert coco.main(["record", str(folder), "--seconds", "2"], host) == 0
+
+        video = project.output / "main-coco1-record.mp4"
+        assert capsys.readouterr().out.splitlines() == [str(video)]
+        command, _, _, env, stream, encoder, _ = host.record.call_args.args
+        assert command[1:4] == ["-no-c", "-machine", "cocous"]
+        assert command[0] == "/tools/xroar-instrumented"
+        assert env["COCO_FRAMES"] == str(stream) and stream.suffix == ".frames"
+        assert encoder[encoder.index("-i") + 1] == str(stream)
+        final = host.run.call_args.args[0]
+        filters = final[final.index("-vf") + 1]
+        assert filters.startswith("setpts=N/(59.922743*TB)+0.000000/TB,")
+        assert "scale=1024:768:flags=neighbor,setdar=4/3" in filters
+        assert final[final.index("-c:v") + 1] == "libx265"
+        assert final[final.index("-tag:v") + 1] == "hvc1"
+        assert (project.output / "main-coco1-record.wav").stat().st_size == 86 * 1024 * 2 + 44
+        assert not (project.output / "main-coco1-record.mkv").exists()
+        assert not (project.output / "main-coco1-record.pcm").exists()
+
+    def should_pass_the_key_script_to_the_emulator(self, folder: Path, project, capsys) -> None:
+        (folder / "coco.toml").write_text(SETTINGS + KEYS)
+        (folder / "play.txt").write_text("L\nF\n")
+        host = recording_host()
+
+        assert coco.main(["record", str(folder), "--variant", "play", "--seconds", "1"], host) == 0
+
+        env = host.record.call_args.args[3]
+        assert Path(env["COCO_KEYS"]).read_text() == "left\nspace\n"
+        assert env["COCO_KEYS_AT"] == "pc=0x3000"
+
+    @pytest.mark.parametrize(
+        "host,message",
+        [
+            (recording_host(fault=True), "unreachable checkpoint 'state' fired"),
+            (recording_host(frames=1), "fewer than two frames"),
+        ],
+    )
+    def should_not_encode_a_failed_recording(self, folder: Path, host, message, capsys) -> None:
+        assert coco.main(["record", str(folder), "--seconds", "1"], host) == 1
+
+        assert message in capsys.readouterr().err
+        assert all(call.args[0][0] != "/tools/ffmpeg" for call in host.run.call_args_list)
+
+    def should_blame_an_emulator_that_streams_no_frames(self, folder: Path, capsys) -> None:
+        host = recording_host()
+
+        def silent(command, log, timeout, env, stream, encoder, encoder_log):
+            log.write_text("COCO_AUDIO_START,0,44100,1024\n")
+            raise ProjectError("ffmpeg could not read the frames")
+
+        host.record.side_effect = silent
+
+        assert coco.main(["record", str(folder), "--seconds", "1"], host) == 1
+
+        assert "XRoar wrote no frames to the stream" in capsys.readouterr().err
+
+    @pytest.mark.parametrize("seconds", ["0", "-1", "3601", "soon"])
+    def should_reject_seconds_it_cannot_record(self, folder: Path, seconds: str) -> None:
+        host = Mock(spec=Host)
+
+        with pytest.raises(SystemExit):
+            coco.main(["record", str(folder), "--seconds", seconds], host)
+
+        assert not host.method_calls
+
+
 ONLY_COCO2 = '\n[variants.wide]\ndefines = ["WIDE"]\ntargets = ["coco2"]\n'
 
 
@@ -1174,6 +1295,39 @@ class DescribeHost:
 
         assert Host().instrumented() == "/lab/xroar"
 
+    def should_explain_a_missing_encoder(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(coco.shutil, "which", lambda name: None)
+
+        with pytest.raises(ProjectError, match="brew install ffmpeg"):
+            Host().encoder()
+
+    def should_stream_frames_from_the_emulator_to_the_encoder(self, tmp_path: Path) -> None:
+        stream, copy = tmp_path / "out.frames", tmp_path / "copy"
+        emulator = ["sh", "-c", 'printf frames > "$COCO_FRAMES"']
+        encoder = ["sh", "-c", f'cat "{stream}" > "{copy}"']
+
+        Host().record(
+            emulator,
+            tmp_path / "x.log",
+            10,
+            {"COCO_FRAMES": str(stream), "PATH": "/usr/bin:/bin"},
+            stream,
+            encoder,
+            tmp_path / "e.log",
+        )
+
+        assert copy.read_text() == "frames"
+        assert not stream.exists()
+
+    def should_release_the_encoder_when_the_emulator_writes_nothing(self, tmp_path: Path) -> None:
+        stream = tmp_path / "out.frames"
+        encoder = ["sh", "-c", f'cat "{stream}" > /dev/null; exit 1']
+
+        with pytest.raises(ProjectError, match="ffmpeg could not read the frames"):
+            Host().record(["true"], tmp_path / "x.log", 10, {}, stream, encoder, tmp_path / "e")
+
+        assert not stream.exists()
+
     def should_log_process_output(self, tmp_path: Path) -> None:
         log = tmp_path / "out.log"
 
@@ -1370,6 +1524,29 @@ class DescribeEquipmentInXRoar:
         output = capsys.readouterr().out
         assert "all 98304 samples of the 512x192 frame matched expected_frame" in output
         assert (ROOT / "build/first-screen-copy/main-coco1-1.png").is_file()
+
+    @pytest.mark.parametrize("target", ["coco1", "coco3"])
+    def should_record_every_frame_with_its_sound(self, first_screen: Path, target, capsys) -> None:
+        if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+            pytest.skip("ffmpeg is missing")
+
+        assert coco.main(["record", str(first_screen), "--target", target, "--seconds", "2"]) == 0
+
+        video = Path(capsys.readouterr().out.strip())
+        streams = json.loads(
+            subprocess.run(
+                ["ffprobe", "-v", "error", "-count_frames", "-show_streams", "-of", "json", video],
+                capture_output=True,
+                check=True,
+                text=True,
+            ).stdout
+        )["streams"]
+        picture, sound = streams
+        assert (picture["codec_name"], picture["codec_tag_string"]) == ("hevc", "hvc1")
+        assert (picture["width"], picture["height"]) == (1024, 768)
+        assert 115 <= int(picture["nb_read_frames"]) <= 120  # 2 s of 59.92 Hz fields
+        assert sound["codec_name"] == "aac"
+        assert float(sound["duration"]) == pytest.approx(2, abs=0.05)
 
     def should_reject_a_wrong_display_mode_that_memory_accepts(
         self, first_screen: Path, capsys

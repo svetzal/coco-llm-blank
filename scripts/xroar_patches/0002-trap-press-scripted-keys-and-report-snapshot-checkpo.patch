@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: CoCo starter <coco-starter@example.invalid>
 Date: Sat, 14 Nov 2026 18:59:09 -0500
-Subject: [PATCH 2/4] trap: press scripted keys and report snapshot checkpoints
+Subject: [PATCH 2/5] trap: press scripted keys and report snapshot checkpoints
 
 At every hit of the trap whose condition equals COCO_KEYS_AT, read the
 next line of the file named by COCO_KEYS: XRoar key names separated by

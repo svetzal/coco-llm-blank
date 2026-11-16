@@ -248,7 +248,7 @@ Do not commit `local/`. Make changes to `scripts/xroar_upstream.py` and
 ## The current pin
 
 XRoar 1.13: tag commit `af501b71`, base commit `1630182d`. The base is one
-commit after the tag, and the release archive matches it. The series has four
+commit after the tag, and the release archive matches it. The series has five
 patches. Its captures are the reference for the next trial.
 
 ## Toward upstream
@@ -267,6 +267,9 @@ Replace the environment variables and fixed values with XRoar options:
 - Frame dump: a trap action, such as `-trap-screenshot <file>`, next to
   `-trap-snap`. Write PNG with the existing `screenshot_write_png()` where
   libpng is available.
+
+- Frame stream: a video output module that writes each frame to a file or
+  a pipe, with the path in an option.
 
 - Sound capture: an audio module, such as `-ao wav`, with the file in
   `-ao-device`. Take the rate, format and channels from `-ao-rate`,

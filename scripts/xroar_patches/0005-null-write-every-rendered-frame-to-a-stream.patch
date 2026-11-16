@@ -1,0 +1,156 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CoCo starter <coco-starter@example.invalid>
+Date: Mon, 16 Nov 2026 05:54:18 -0500
+Subject: [PATCH 5/5] null: write every rendered frame to a stream
+
+When the COCO_FRAMES environment variable names a path, append every
+frame that the null UI's software renderer completes to it as a binary
+PPM, the same format as the single COCO_VIDEO frame. The path can be a
+named pipe to an encoder that reads a stream of PPM images, so a long
+recording needs no disk space for raw frames.
+
+Logs COCO_FRAMES_START,<tick>,<ticks per second>,<width>,<height>
+before the first frame and COCO_FRAME,<tick> after each frame, so that
+the frame rate and the offset from the audio recording come from the
+emulator's own clock. If the viewport size changes during a recording,
+XRoar logs COCO_FRAMES_SIZE,<width>,<height> and exits.
+
+Without COCO_FRAMES nothing is written.
+
+This is test equipment for the CoCo starter's scripts/coco.py.
+---
+ src/Makefile.am        |  1 +
+ src/null/coco_frames.c | 67 ++++++++++++++++++++++++++++++++++++++++++
+ src/null/coco_frames.h | 16 ++++++++++
+ src/null/coco_video.c  |  2 ++
+ 4 files changed, 86 insertions(+)
+ create mode 100644 src/null/coco_frames.c
+ create mode 100644 src/null/coco_frames.h
+
+diff --git a/src/Makefile.am b/src/Makefile.am
+index f082cdd46cb801ab61936965d752ad88dc467438..2866b8cc28fabafceff796d4c0d1e8820125d28e 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -46,6 +46,7 @@ xroar_SOURCES = \
+ 	module.c module.h \
+ 	mos6551.c mos6551.h \
+ 	ntsc.c ntsc.h \
++	null/coco_frames.c null/coco_frames.h \
+ 	null/coco_video.c null/coco_video.h \
+ 	null/ui_null.c \
+ 	part.c part.h \
+diff --git a/src/null/coco_frames.c b/src/null/coco_frames.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..32e9f713921a3e6ae578d06094a484701b866a3c
+--- /dev/null
++++ b/src/null/coco_frames.c
+@@ -0,0 +1,67 @@
++/** \file
++ *
++ *  \brief coco.py test equipment: every rendered frame from the null UI.
++ *
++ *  Original code for the CoCo starter's instrumented XRoar.
++ *
++ *  When the COCO_FRAMES environment variable names a path, every frame that
++ *  the null UI's software renderer completes is appended to it as a binary
++ *  PPM, the same format as the single COCO_VIDEO frame. The path can be a
++ *  named pipe to an encoder that reads a stream of PPM images. Nothing here
++ *  reads RAM or builds pixels.
++ *
++ *  Log lines on stderr: COCO_FRAMES_START,<tick>,<ticks per second>,<width>,
++ *  <height> before the first frame and COCO_FRAME,<tick> after each frame. If the viewport size
++ *  changes during a recording, COCO_FRAMES_SIZE,<width>,<height> is logged
++ *  and XRoar exits.
++ */
++
++#include "top-config.h"
++
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#include "events.h"
++#include "vo_render.h"
++
++#include "null/coco_frames.h"
++
++static FILE *coco_frames_file;
++static int coco_frames_w, coco_frames_h;
++
++static void coco_frames_open(const char *path, int w, int h) {
++	if (!(coco_frames_file = fopen(path, "wb"))) {
++		perror(path);
++		exit(2);
++	}
++	coco_frames_w = w;
++	coco_frames_h = h;
++	fprintf(stderr, "COCO_FRAMES_START,%u,%u,%d,%d\n", (unsigned)event_current_tick,
++	        (unsigned)EVENT_TICK_RATE, w, h);
++}
++
++void coco_frames_write(struct vo_render *vr) {
++	const char *path = getenv("COCO_FRAMES");
++	if (!path)
++		return;
++	int w = vr->viewport.w, h = vr->viewport.h;
++	if (!coco_frames_file)
++		coco_frames_open(path, w, h);
++	if (w != coco_frames_w || h != coco_frames_h) {
++		fprintf(stderr, "COCO_FRAMES_SIZE,%d,%d\n", w, h);
++		exit(2);
++	}
++	fprintf(coco_frames_file, "P6\n%d %d\n255\n", w, h);
++	for (int y = 0; y < h; ++y) {
++		uint32_t *row = (uint32_t *)vr->buffer + y * vr->buffer_pitch;
++		for (int x = 0; x < w; ++x) {
++			uint8_t rgb[3] = { row[x] >> 24, row[x] >> 16, row[x] >> 8 };
++			if (fwrite(rgb, 1, 3, coco_frames_file) != 3)
++				exit(2);
++		}
++	}
++	if (fflush(coco_frames_file))
++		exit(2);
++	fprintf(stderr, "COCO_FRAME,%u\n", (unsigned)event_current_tick);
++}
+diff --git a/src/null/coco_frames.h b/src/null/coco_frames.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..a312ca407e53f36d86f3dc740e0773276ed56f6c
+--- /dev/null
++++ b/src/null/coco_frames.h
+@@ -0,0 +1,16 @@
++/** \file
++ *
++ *  \brief coco.py test equipment: every rendered frame from the null UI.
++ *
++ *  Original code for the CoCo starter's instrumented XRoar.
++ */
++
++#ifndef XROAR_NULL_COCO_FRAMES_H_
++#define XROAR_NULL_COCO_FRAMES_H_
++
++struct vo_render;
++
++// Append the completed frame to the COCO_FRAMES path as a PPM, if it is set.
++void coco_frames_write(struct vo_render *vr);
++
++#endif
+diff --git a/src/null/coco_video.c b/src/null/coco_video.c
+index a6901b1614c95e8675604acf3d129a63fe5514a9..2e95e2308bd47f3ea797487257d5c85caecdf562 100644
+--- a/src/null/coco_video.c
++++ b/src/null/coco_video.c
+@@ -30,6 +30,7 @@
+ #include "vo.h"
+ #include "vo_render.h"
+ 
++#include "null/coco_frames.h"
+ #include "null/coco_video.h"
+ 
+ #define COCO_VIDEO_MAX_W 1024
+@@ -65,6 +66,7 @@ static void coco_video_write(struct vo_render *vr, const char *path) {
+ 
+ static void coco_video_draw(void *sptr) {
+ 	struct vo_interface *vo = sptr;
++	coco_frames_write(vo->renderer);
+ 	const char *path = getenv("COCO_VIDEO");
+ 	if (!path || coco_video_wait <= 0 || --coco_video_wait > 0)
+ 		return;

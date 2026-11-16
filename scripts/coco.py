@@ -18,10 +18,15 @@ disk puts the build on a Disk BASIC disk image made with ToolShed's decb. With
 --check it does the same headless and requires the [check] checkpoint. The
 target names its Disk BASIC ROM with disk = "<name>.rom".
 
-Rendered frames (--video), mixer sound (--audio) and scripted keys ([keys] in
-coco.toml) need the instrumented XRoar, which is built once into local/ on
-first use; it needs a C compiler, make and autotools. Everything else uses
-the installed XRoar.
+record runs a build from power-on for a number of emulated seconds and writes
+every rendered frame and the mixer sound as an HEVC video. The frame rate and
+the sound's alignment come from the emulator's clock. It needs ffmpeg with
+libx265 (FFMPEG names another executable).
+
+Rendered frames (--video, record), mixer sound (--audio, record) and scripted
+keys ([keys] in coco.toml) need the instrumented XRoar, which is built once
+into local/ on first use; it needs a C compiler, make and autotools.
+Everything else uses the installed XRoar.
 """
 
 import argparse
@@ -29,10 +34,13 @@ import hashlib
 import importlib.util
 import inspect
 import json
+import math
 import os
 import re
+import shutil
 import subprocess
 import sys
+import time
 import tomllib
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -41,7 +49,7 @@ from types import ModuleType
 import instrumented_xroar
 import numpy as np
 import recording
-from native import ROOT, tool_path
+from native import HOMEBREW_BIN, ROOT, tool_path
 from PIL import Image
 from pydantic import (
     BaseModel,
@@ -67,6 +75,14 @@ MODEL_FUNCTIONS = (
 VIDEO_OPTIONS = ["-tv-input", "svideo", "-ccr", "none", "-vo-picture", "zoomed", "-fskip", "0"]
 # Emulated seconds after the checkpoint: two complete video frames and a full audio buffer.
 RUN_ON_SECONDS = 0.06
+# A recorded video is scaled by whole numbers to at least this many lines, and shown at 4:3.
+VIDEO_LINES = 768
+# Wall-clock seconds allowed for each emulated or encoded second of a recording.
+RECORD_PACE = 10
+FFMPEG_HINT = (
+    "Install ffmpeg with libx265: on macOS run `brew install ffmpeg`; on Ubuntu 24.04 run "
+    "`sudo apt-get install ffmpeg`. Set FFMPEG to use another executable."
+)
 # Emulated seconds a disk check adds to [check].emulated_seconds for the boot, the typed
 # command and the load. The template needs 3 to 4; this is an allowance, not a limit.
 DISK_SECONDS = 10
@@ -332,6 +348,61 @@ class Host:
     def launch(self, command: list[str]) -> None:
         subprocess.run(command, check=True)
 
+    def encoder(self) -> str:
+        """FFMPEG if set, else ffmpeg on PATH or in Apple Silicon Homebrew."""
+        name = os.environ.get("FFMPEG", "ffmpeg")
+        path = shutil.which(name) or shutil.which(str(HOMEBREW_BIN / name))
+        if not path:
+            raise ProjectError(f"Missing {name}, which record needs. {FFMPEG_HINT}")
+        return path
+
+    def record(
+        self,
+        command: list[str],
+        log: Path,
+        timeout: float,
+        env: dict[str, str],
+        stream: Path,
+        encoder: list[str],
+        encoder_log: Path,
+    ) -> None:
+        """Run the emulator while the encoder reads its frames from the named pipe stream."""
+        stream.unlink(missing_ok=True)
+        os.mkfifo(stream)
+        try:
+            with encoder_log.open("w") as output:
+                reader = subprocess.Popen(
+                    encoder, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT
+                )
+                try:
+                    self.run(command, log, timeout, env=env)
+                finally:
+                    code = release(reader, stream, timeout)
+        finally:
+            stream.unlink(missing_ok=True)
+        if code:
+            raise ProjectError(f"ffmpeg could not read the frames; read {encoder_log}.")
+
+
+def release(reader: subprocess.Popen, stream: Path, timeout: float) -> int:
+    """Wait for the encoder after the emulator has ended, and return its exit code.
+
+    An emulator that never opened the pipe leaves the encoder waiting to open it. Opening and
+    closing the write end gives the encoder an end of stream. The encoder can reach its open
+    after the emulator ends, so keep trying until the encoder exits.
+    """
+    deadline = time.monotonic() + timeout
+    while (code := reader.poll()) is None:
+        if time.monotonic() > deadline:
+            reader.kill()
+            raise subprocess.TimeoutExpired(reader.args, timeout)
+        try:
+            os.close(os.open(stream, os.O_WRONLY | os.O_NONBLOCK))
+        except OSError:
+            pass
+        time.sleep(0.05)
+    return code
+
 
 # --- Pure decisions -------------------------------------------------------------------------
 
@@ -527,6 +598,121 @@ def capture_options(
         options.append("-trap-no-trace")
     run_on = RUN_ON_SECONDS if equipment.video or equipment.audio else 0
     return options + ["-trap-timeout", f"{run_on:g}"]
+
+
+def record_options(
+    symbols: dict[str, int],
+    seconds: float,
+    unreachable: Path,
+    check: Check | None,
+    equipment: Equipment,
+    keys: Keys | None,
+) -> list[str]:
+    """Headless, accelerated run from power-on for a number of emulated seconds.
+
+    Every frame is rendered (no frame skip). A declared unreachable label still ends the run.
+    """
+    options = [
+        *VIDEO_OPTIONS,
+        "-ui",
+        "null",
+        "-ao",
+        "null",
+        "-ram-init",
+        "set",
+        "-no-ratelimit",
+        "-timeout",
+        f"{seconds:g}",
+    ]
+    if check is not None:
+        options += [
+            "-trap",
+            f"pc=0x{address(symbols, check.unreachable):04x}",
+            "-trap-snap",
+            str(unreachable),
+        ]
+    if equipment.keys is not None:
+        options += ["-trap", trap_condition(symbols, keys.at), "-trap-range", "1-"]
+    return options + ["-trap-timeout", "0"]
+
+
+def video_size(width: int, height: int) -> tuple[int, int]:
+    """Whole-number scale factors that reach VIDEO_LINES and come closest to 4:3."""
+    lines = math.ceil(VIDEO_LINES / height)
+    columns = max(1, round(lines * height * 4 / (3 * width)))
+    return width * columns, height * lines
+
+
+def stream_command(ffmpeg: str, stream: Path, lossless: Path) -> list[str]:
+    """Read the stream of PPM frames into a lossless file; the rate is set later."""
+    return [
+        ffmpeg,
+        "-nostdin",
+        "-y",
+        "-loglevel",
+        "error",
+        "-f",
+        "image2pipe",
+        "-c:v",
+        "ppm",
+        "-framerate",
+        "60",
+        "-i",
+        str(stream),
+        "-c:v",
+        "ffv1",
+        str(lossless),
+    ]
+
+
+def video_command(
+    ffmpeg: str, lossless: Path, sound: Path, video: Path, timing: recording.Timing
+) -> list[str]:
+    """HEVC at the measured frame rate, delayed by its offset from the sound, with AAC sound."""
+    width, height = video_size(timing.width, timing.height)
+    rate = f"{timing.rate:.6f}"
+    filters = (
+        f"setpts=N/({rate}*TB)+{timing.offset:.6f}/TB,"
+        f"scale={width}:{height}:flags=neighbor,setdar=4/3"
+    )
+    return [
+        ffmpeg,
+        "-nostdin",
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(lossless),
+        "-i",
+        str(sound),
+        "-map",
+        "0:v",
+        "-map",
+        "1:a",
+        "-vf",
+        filters,
+        "-r",
+        rate,
+        "-c:v",
+        "libx265",
+        "-crf",
+        "16",
+        "-preset",
+        "medium",
+        "-pix_fmt",
+        "yuv420p",
+        "-tag:v",
+        "hvc1",
+        "-x265-params",
+        "log-level=error",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "160k",
+        "-movflags",
+        "+faststart",
+        str(video),
+    ]
 
 
 def recording_environment(
@@ -867,6 +1053,74 @@ def capture(
     )
 
 
+def record(
+    project: Project,
+    host: Host,
+    built: Build,
+    target: str,
+    seconds: float,
+    equipment: Equipment,
+) -> Path:
+    """Record every frame and the mixer sound from power-on; return the video's path."""
+    ffmpeg = host.encoder()
+    stem = built.binary.with_name(f"{built.binary.stem}-{target}-record")
+    paths = {
+        kind: stem.with_suffix(f".{kind}")
+        for kind in ("log", "frames", "mkv", "pcm", "wav", "mp4", "keys")
+    }
+    encoder_log = stem.with_suffix(".encode.log")
+    unreachable = stem.with_name(f"{stem.name}-unreachable.ram")
+    for path in (*paths.values(), encoder_log, unreachable):
+        path.unlink(missing_ok=True)
+    keys = project.settings.keys
+    check = project.settings.check
+    command = emulator(project, host, target, host.instrumented()) + record_options(
+        built.symbols, seconds, unreachable, check, equipment, keys
+    )
+    command += ["-run", str(built.binary)]
+    environment = {k: v for k, v in os.environ.items() if not k.startswith("COCO_")}
+    environment |= {"COCO_FRAMES": str(paths["frames"]), "COCO_AUDIO": str(paths["pcm"])}
+    if equipment.keys is not None:
+        paths["keys"].write_text(recording.key_lines(equipment.keys))
+        environment |= {
+            "COCO_KEYS": str(paths["keys"]),
+            "COCO_KEYS_AT": trap_condition(built.symbols, keys.at),
+        }
+    try:
+        host.record(
+            command,
+            paths["log"],
+            max(60.0, RECORD_PACE * seconds),
+            environment,
+            paths["frames"],
+            stream_command(ffmpeg, paths["frames"], paths["mkv"]),
+            encoder_log,
+        )
+    except ProjectError:
+        log = paths["log"].read_text() if paths["log"].exists() else ""
+        if "COCO_FRAMES_START" not in log:
+            raise ProjectError(
+                f"XRoar wrote no frames to the stream; read {paths['log']}. An emulator named "
+                "by XROAR_INSTRUMENTED must include every patch in scripts/xroar_patches/."
+            ) from None
+        raise
+    if unreachable.exists():
+        raise ProjectError(f"The unreachable checkpoint {check.unreachable!r} fired.")
+    log = recording.parse_log(paths["log"].read_text())
+    timing = recording.frame_timing(log)
+    raw = paths["pcm"].read_bytes() if paths["pcm"].exists() else b""
+    rate, samples = recording.whole_sound(log, raw)
+    recording.write_wav(paths["wav"], rate, samples)
+    host.run(
+        video_command(ffmpeg, paths["mkv"], paths["wav"], paths["mp4"], timing),
+        encoder_log,
+        max(120.0, RECORD_PACE * seconds),
+    )
+    for kind in ("mkv", "pcm"):
+        paths[kind].unlink(missing_ok=True)
+    return paths["mp4"]
+
+
 def require_check(project: Project) -> Check:
     if project.settings.check is None:
         raise ProjectError(f"{project.directory / SETTINGS} has no [check] section.")
@@ -1131,6 +1385,7 @@ COMMANDS = {
     "snapshot": "save RAM (and any captures) at the Nth checkpoint hit and print the paths",
     "check": "compare each checkpoint with expected.py and report the evidence",
     "disk": "assemble the project onto a Disk BASIC disk image and print its path",
+    "record": "record every frame and the sound from power-on as an HEVC video; print its path",
 }
 
 
@@ -1142,12 +1397,16 @@ def add_equipment(command: argparse.ArgumentParser, name: str) -> None:
         "--audio", action="store_true", help="record XRoar's mixer output as WAV (instrumented)"
     )
     if name == "snapshot":
-        command.add_argument(
-            "--keys",
-            type=Path,
-            metavar="SCRIPT",
-            help="key script to inject at the [keys] label (instrumented)",
-        )
+        add_keys(command)
+
+
+def add_keys(command: argparse.ArgumentParser) -> None:
+    command.add_argument(
+        "--keys",
+        type=Path,
+        metavar="SCRIPT",
+        help="key script to inject at the [keys] label (instrumented)",
+    )
 
 
 def parser() -> argparse.ArgumentParser:
@@ -1184,7 +1443,25 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument("--frame", type=int, default=1, help="checkpoint hit (from 1)")
         if name in ("snapshot", "check"):
             add_equipment(command, name)
+        if name == "record":
+            command.add_argument(
+                "--seconds",
+                type=positive_seconds,
+                required=True,
+                help="emulated seconds to record from power-on",
+            )
+            add_keys(command)
     return result
+
+
+def positive_seconds(text: str) -> float:
+    try:
+        value = float(text)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a number of seconds") from error
+    if not 0 < value <= 3600:
+        raise argparse.ArgumentTypeError("give between 0 and 3600 seconds")
+    return value
 
 
 def check_command(project: Project, arguments: argparse.Namespace, host: Host) -> None:
@@ -1207,6 +1484,13 @@ def snapshot_command(project: Project, arguments: argparse.Namespace, host: Host
     for recorded in (evidence.picture, evidence.sound):
         if recorded:
             print(recorded.path)
+
+
+def record_command(project: Project, arguments: argparse.Namespace, host: Host) -> None:
+    target = variant_target(project, arguments.variant, arguments.target)
+    equipment = equipment_for(project, arguments.variant, script=arguments.keys)
+    built = build(project, host, arguments.variant)
+    print(record(project, host, built, target, arguments.seconds, equipment))
 
 
 def disk_targets(project: Project, arguments: argparse.Namespace) -> list[str]:
@@ -1264,6 +1548,9 @@ def execute(arguments: argparse.Namespace, host: Host) -> None:
         return
     if arguments.command == "disk":
         disk_command(project, arguments, host)
+        return
+    if arguments.command == "record":
+        record_command(project, arguments, host)
         return
     target = variant_target(project, arguments.variant, arguments.target)
     built = build(project, host, arguments.variant)

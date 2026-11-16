@@ -356,8 +356,8 @@ Extended BASIC first. Then make the disk.
 
 ## Instrumented XRoar
 
-Scripted keys, rendered frames and mixer sound need a second XRoar. This is the
-pinned XRoar release built from source with the patch series in
+Scripted keys, rendered frames, mixer sound and videos need a second XRoar.
+This is the pinned XRoar release built from source with the patch series in
 `scripts/xroar_patches/` applied.
 
 `scripts/coco.py` builds it the first time that a project asks for one of
@@ -425,6 +425,40 @@ To move the series to a new XRoar release, or to change the equipment, obey
 [the XRoar patch procedure](xroar-patch.md). Run
 `uv run python scripts/xroar_upstream.py report` to see how far the pin is
 behind upstream.
+
+## Record a video
+
+`record` runs a build from power-on for a number of emulated seconds. It
+writes every frame that XRoar renders and the mixer sound into one HEVC video:
+
+```sh
+uv run python scripts/coco.py record <project-folder> --seconds 95
+uv run python scripts/coco.py record <project-folder> --variant <name> --seconds 20
+```
+
+The command prints the path of the video, `build/<name>/<build>-<target>-record.mp4`.
+The video shows the emulator's output only: no model draws a frame. Use it to
+show a project to people. It is not a check: no expected result is compared.
+
+- `--variant`, `--target` and `--keys` work as they do for `snapshot`.
+  A variant's key script plays.
+- The instrumented XRoar sends each frame to ffmpeg through a named pipe.
+  Thus a long recording needs no disk space for frames.
+- The emulator's clock sets the frame rate and the start of the picture
+  against the sound. A CoCo field is about 59.92 frames each second.
+- The picture is scaled by whole numbers to at least 768 lines and is shown
+  at 4:3. The video uses the `hvc1` tag, so Apple players open it.
+- A declared `unreachable` label stops the recording with a failure.
+
+`record` needs ffmpeg with libx265. Set `FFMPEG` to use another executable.
+
+- macOS: `brew install ffmpeg`.
+- Ubuntu 24.04: `sudo apt-get install ffmpeg`.
+
+Allow about one second of wall time for every 3 emulated seconds. Encoding
+takes most of this time. `coco_spec.py` records `first-screen` on the CoCo 1
+and the CoCo 3, and checks the codec, the size, the frame count and the
+length of the sound.
 
 ## Diagnose binary startup
 

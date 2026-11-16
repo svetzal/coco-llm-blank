@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: CoCo starter <coco-starter@example.invalid>
 Date: Sat, 14 Nov 2026 18:59:09 -0500
-Subject: [PATCH 3/4] null: record the mixer's output from the null audio
+Subject: [PATCH 3/5] null: record the mixer's output from the null audio
  module
 
 The null audio module normally asks XRoar's mixer for no samples. Give

@@ -175,7 +175,7 @@ class DescribeSeries:
     def should_read_the_committed_series_against_the_pinned_tag(self) -> None:
         pin, series = ix.load_pin(), ix.load_series()
 
-        assert [p.name[:4] for p in series.patches] == ["0001", "0002", "0003", "0004"]
+        assert [p.name[:4] for p in series.patches] == ["0001", "0002", "0003", "0004", "0005"]
         assert pin.tree == f"xroar-{pin.version}"
         assert native.SOURCES["xroar"] == (pin.version, pin.archive_url, pin.archive_sha256)
 

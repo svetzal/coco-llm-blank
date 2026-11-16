@@ -136,7 +136,7 @@ an example. Read its cited primary passages. The example is not a substitute.
 - Testing controls, sound or artwork: use the task-specific
   [evidence checks](guidance/starter/development.md#check-the-feature-you-claim), which
   link the existing keyboard, audio and artwork methods.
-- Building binaries, disks, or emulator tests: read [toolchain](guidance/starter/toolchain.md).
+- Building binaries, disks, emulator tests or videos: read [toolchain](guidance/starter/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read
   [Python tools](guidance/starter/python.md), including the co-located `*_spec.py` rules.
   For the full starter suite, prepare the

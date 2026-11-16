@@ -1,4 +1,4 @@
-"""Read what the instrumented XRoar recorded in one run: key steps, rendered frame and sound.
+"""Read what the instrumented XRoar recorded in one run: key steps, rendered frames and sound.
 
 Pure decoding and checks only. The patch series in scripts/xroar_patches/ makes
 XRoar write the raw files and log lines; nothing here makes pixels or samples.
@@ -28,6 +28,23 @@ class Log(BaseModel):
     audio_buffers: tuple[int, ...] = ()
     key_steps: tuple[int, ...] = ()
     keys_ended: int | None = None
+    frames_start: tuple[int, int, int, int] | None = None
+    frame_ticks: tuple[int, ...] = ()
+
+
+class Timing(BaseModel):
+    """When a recorded frame stream ran, measured with the emulator's clock.
+
+    offset is the time of the first frame after the start of audio capture.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    frames: int
+    rate: float
+    offset: float
+    width: int
+    height: int
 
 
 class Picture(BaseModel):
@@ -75,6 +92,10 @@ def parse_log(text: str) -> Log:
         raise RecordingError(f"The instrumented XRoar does not know the key {unknown[0]!r}.")
     if size := re.findall(r"^COCO_VIDEO_TOO_LARGE,(\d+),(\d+)$", text, re.MULTILINE):
         raise RecordingError(f"The rendered frame {size[0][0]}x{size[0][1]} is too large.")
+    if size := re.findall(r"^COCO_FRAMES_SIZE,(\d+),(\d+)$", text, re.MULTILINE):
+        raise RecordingError(
+            f"The rendered frame size changed to {size[0][0]}x{size[0][1]} during the recording."
+        )
     checkpoint = _single(text, "COCO_CHECKPOINT")
     ended = _single(text, "COCO_KEYS_END")
     return Log(
@@ -85,6 +106,42 @@ def parse_log(text: str) -> Log:
         audio_buffers=tuple(tick for tick, *_ in _numbers(text, "COCO_AUDIO")),
         key_steps=tuple(tick for _, tick in _numbers(text, "COCO_KEYS")),
         keys_ended=ended[1] if ended else None,
+        frames_start=_single(text, "COCO_FRAMES_START"),
+        frame_ticks=tuple(tick for (tick,) in _numbers(text, "COCO_FRAME")),
+    )
+
+
+TICK_WRAP = 1 << 32  # the hooks log XRoar's event tick as an unsigned 32-bit count
+
+
+def unwrap(ticks: tuple[int, ...], after: int = 0) -> tuple[int, ...]:
+    """Make ascending 32-bit tick counts continuous across each wrap, which is every 300 s."""
+    result, base, previous = [], 0, after
+    for tick in ticks:
+        if tick + base < previous:
+            base += TICK_WRAP
+        previous = tick + base
+        result.append(previous)
+    return tuple(result)
+
+
+def frame_timing(log: Log) -> Timing:
+    """Rate and audio offset of a frame stream; the frames must be evenly spaced."""
+    if log.frames_start is None or len(log.frame_ticks) < 2:
+        raise RecordingError("XRoar wrote fewer than two frames to the stream.")
+    first, tick_rate, width, height = log.frames_start
+    ticks = unwrap(log.frame_ticks, first)
+    gaps = np.diff(ticks)
+    mean = (ticks[-1] - ticks[0]) / (len(ticks) - 1)
+    if np.any(np.abs(gaps - mean) > mean / 100):
+        raise RecordingError("XRoar skipped frames: the recorded frames are not evenly spaced.")
+    audio = log.audio_start[0] if log.audio_start else 0
+    return Timing(
+        frames=len(ticks),
+        rate=tick_rate / mean,
+        offset=(ticks[0] - mean - audio) / tick_rate,
+        width=width,
+        height=height,
     )
 
 
@@ -147,18 +204,36 @@ def sound_until_checkpoint(log: Log, raw: bytes) -> tuple[int, np.ndarray]:
     checkpoint, tick_rate = require_checkpoint(log)
     if log.audio_start is None:
         raise RecordingError("The emulator log does not record the start of audio capture.")
+    start, rate, _ = log.audio_start
+    samples = _checked_samples(log, raw, tick_rate)
+    needed = round((checkpoint - start) * rate / tick_rate)
+    if len(samples) < needed:
+        raise RecordingError("The captured audio stops before the checkpoint.")
+    return rate, samples[:needed].astype(np.int16)
+
+
+def _checked_samples(log: Log, raw: bytes, tick_rate: int) -> np.ndarray:
+    """Every complete mixer buffer, each delivered on time."""
+    if log.audio_start is None:
+        raise RecordingError("The emulator log does not record the start of audio capture.")
     start, rate, frames = log.audio_start
     if len(raw) != len(log.audio_buffers) * frames * 2:
         raise RecordingError("The captured audio does not match the buffers the mixer delivered.")
     slack = 2 * tick_rate / rate
-    for number, tick in enumerate(log.audio_buffers, 1):
+    for number, tick in enumerate(unwrap(log.audio_buffers, start), 1):
         if abs(tick - (start + number * frames * tick_rate / rate)) > slack:
             raise RecordingError(f"Audio buffer {number} is out of time; samples are missing.")
-    needed = round((checkpoint - start) * rate / tick_rate)
-    samples = np.frombuffer(raw, dtype="<i2")
-    if len(samples) < needed:
-        raise RecordingError("The captured audio stops before the checkpoint.")
-    return rate, samples[:needed].astype(np.int16)
+    return np.frombuffer(raw, dtype="<i2")
+
+
+def whole_sound(log: Log, raw: bytes) -> tuple[int, np.ndarray]:
+    """Every mixer sample of a recording, timed by the frame stream's clock."""
+    if log.frames_start is None:
+        raise RecordingError("The emulator log does not record the start of the frame stream.")
+    if log.audio_start is None:
+        raise RecordingError("The emulator log does not record the start of audio capture.")
+    samples = _checked_samples(log, raw, log.frames_start[1])
+    return log.audio_start[1], samples.astype(np.int16)
 
 
 def keys_before_checkpoint(log: Log) -> int:
