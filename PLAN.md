@@ -54,8 +54,8 @@ also out of scope unless a new lead meets the boundary in the
 ## Guide contract
 
 A technique guide tells an agent how to achieve an effect on the CoCo. Keep it
-in ordinary Markdown in `guidance/techniques/`, under about 200 lines. Each
-guide states:
+in ordinary Markdown in `guidance/techniques/`. A guide of 200 to 300 lines is
+typical. Keep each guide below 300 lines. Each guide states:
 
 - The task, the machines and configurations it applies to, and their limits.
 - Practical steps, memory and timing tradeoffs, and likely failure cases.
