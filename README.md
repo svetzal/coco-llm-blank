@@ -149,6 +149,33 @@ computers. There are fewer and fewer places to go to learn so deeply about
 computing technology. These computers inspired and drove our entire personal
 computing field.
 
+## Play Arena Blaster
+
+This copy of the starter includes one finished project: Arena Blaster, an
+original arena shooter for the CoCo 1. An owner built it with a coding
+agent, one small increment at a time. It is in
+[`projects/arena-blaster`](projects/arena-blaster/README.md). Its README
+records each request and how the agent tested it.
+
+To play it, open a terminal in the starter folder. Prepare the tools and
+the CoCo 1 firmware one time, then start the game:
+
+```sh
+sh scripts/bootstrap.sh coco1
+uv run python scripts/coco.py run projects/arena-blaster
+```
+
+To run it from a Disk BASIC disk, use this command:
+
+```sh
+uv run python scripts/coco.py disk projects/arena-blaster --run
+```
+
+Use W, A, S and D to move. Use O, K, L and the semicolon key to shoot up, left,
+down and right. Hold two keys to move or shoot on a diagonal. If you do
+not touch a key on the title screen for 10 seconds, a demo shows the
+enemies, the gifts and the jinxes. Close the XRoar window to stop.
+
 ## Look inside when you are ready
 
 The games and demos you build are in 6809 assembly language, the Color
