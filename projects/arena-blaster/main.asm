@@ -2901,11 +2901,12 @@ level_text
 
 * --- The demo. parts: the scene list of each part. A scene list ends
 * with 0. Keys in a script: move keys in bits 3-0, shoot keys in bits 7-4.
-PARTS   equ 3
-parts   fdb part_a,part_b,part_c
+PARTS   equ 4
+parts   fdb part_a,part_b,part_c,part_d
 part_a  fdb scene_grunt,scene_hunter,scene_shooter,0
 part_b  fdb scene_points,scene_double,scene_spread,0
 part_c  fdb scene_star,scene_bomb,0
+part_d  fdb scene_slow,scene_heavy,scene_blitz,0
 
 scene_grunt
         fdb cap_grunt
@@ -3141,6 +3142,97 @@ cap_bomb
         fdb 76*32+8
         fcb GREEN_TEXT
         fcc "CLEARS THE AREA"
+        fcb 0
+        fdb $FFFF
+* The player takes the hourglass, then holds a shoot key: a shot each 6 frames.
+scene_slow
+        fdb cap_slow
+        fcb 49,150
+        fcb 0
+        fdb 0,0
+        fdb SEED
+        fcb PK_SLOW,60,151
+        fcb 0,0
+        fdb keys_slow
+        fcb GRUNT,61,15
+        fcb GRUNT,61,40
+        fcb GRUNT,61,65
+        fcb 0
+keys_slow
+        fcb 0,4
+        fcb RIGHT,6
+        fcb 0,6
+        fcb UP*16,40
+        fcb 0,16
+        fcb 0,0
+* The player takes the weight, walks away from a grunt at half speed, and shoots it.
+scene_heavy
+        fdb cap_heavy
+        fcb 49,95
+        fcb 0
+        fdb 0,0
+        fdb SEED
+        fcb PK_HEAVY,60,96
+        fcb 0,0
+        fdb keys_heavy
+        fcb GRUNT,117,30
+        fcb 0
+keys_heavy
+        fcb 0,4
+        fcb RIGHT,6
+        fcb 0,4
+        fcb LEFT,32
+        fcb RIGHT*16,8
+        fcb 0,16
+        fcb 0,0
+* The player takes the bolt. Three hunters come, and the player shoots each.
+scene_blitz
+        fdb cap_blitz
+        fcb 49,95
+        fcb 0
+        fdb 0,0
+        fdb $2718
+        fcb PK_BLITZ,60,96
+        fcb 0,0
+        fdb keys_blitz
+        fcb 0
+keys_blitz
+        fcb 0,4
+        fcb RIGHT,4
+        fcb 0,4
+        fcb (UP+RIGHT)*16,14
+        fcb LEFT*16,14
+        fcb RIGHT*16,10
+        fcb 0,16
+        fcb 0,0
+cap_slow
+        fdb BANNER_ROW*32+12
+        fcb BIG+YELLOW_TEXT
+        fcc "SLOW"
+        fcb 0
+        fdb 76*32+7
+        fcb GREEN_TEXT
+        fcc "JINX  SLOWER SHOTS"
+        fcb 0
+        fdb $FFFF
+cap_heavy
+        fdb BANNER_ROW*32+11
+        fcb BIG+YELLOW_TEXT
+        fcc "HEAVY"
+        fcb 0
+        fdb 76*32+7
+        fcb GREEN_TEXT
+        fcc "JINX  SLOWER STEPS"
+        fcb 0
+        fdb $FFFF
+cap_blitz
+        fdb BANNER_ROW*32+11
+        fcb BIG+YELLOW_TEXT
+        fcc "BLITZ"
+        fcb 0
+        fdb 76*32+5
+        fcb GREEN_TEXT
+        fcc "JINX  HUNTERS RUSH IN"
         fcb 0
         fdb $FFFF
 cap_grunt

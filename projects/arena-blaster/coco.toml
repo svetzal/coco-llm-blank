@@ -132,6 +132,15 @@ defines = ["DEMO_SOON", "FIRST_PART=2"]
 [variants.demobomb]
 defines = ["DEMO_SOON", "FIRST_PART=2", "FIRST_SCENE=1"]
 
+[variants.demoslow]
+defines = ["DEMO_SOON", "FIRST_PART=3"]
+
+[variants.demoheavy]
+defines = ["DEMO_SOON", "FIRST_PART=3", "FIRST_SCENE=1"]
+
+[variants.demoblitz]
+defines = ["DEMO_SOON", "FIRST_PART=3", "FIRST_SCENE=2"]
+
 [variants.level10]
 defines = ["SKIP_TITLE", "FIRST_LEVEL=10"]
 

@@ -85,6 +85,9 @@ CONTROLS = {
     "demospread": {"DEMO_SOON"},
     "demostar": {"DEMO_SOON"},
     "demobomb": {"DEMO_SOON"},
+    "demoslow": {"DEMO_SOON"},
+    "demoheavy": {"DEMO_SOON"},
+    "demoblitz": {"DEMO_SOON"},
     "over": {"SKIP_TITLE", "NO_READY"},
     "scores": {"NO_READY", "FIXED_ENEMIES"},
 }
@@ -207,10 +210,22 @@ SCENES["bomb"] = Scene("BOMB", 12, "CLEARS THE AREA", 8, (61, 95),
                        [(1, 30, 60), (1, 92, 60), (1, 30, 130), (1, 92, 130), (1, 61, 50),
                         (1, 61, 140)],
                        [("", 10), ("D", 4), ("", 30)], pickup=(PK_BOMB, 72, 96))
-PARTS = [["grunt", "hunter", "shooter"], ["points", "double", "spread"], ["star", "bomb"]]
+SCENES["slow"] = Scene("SLOW", 12, "JINX  SLOWER SHOTS", 7, (49, 150),
+                       [(1, 61, 15), (1, 61, 40), (1, 61, 65)],
+                       [("", 4), ("D", 6), ("", 6), ("O", 40), ("", 16)],
+                       pickup=(PK_SLOW, 60, 151))
+SCENES["heavy"] = Scene("HEAVY", 11, "JINX  SLOWER STEPS", 7, (49, 95), [(1, 117, 30)],
+                        [("", 4), ("D", 6), ("", 4), ("A", 32), (";", 8), ("", 16)],
+                        pickup=(PK_HEAVY, 60, 96))
+SCENES["blitz"] = Scene("BLITZ", 11, "JINX  HUNTERS RUSH IN", 5, (49, 95), [],
+                        [("", 4), ("D", 4), ("", 4), ("O;", 14), ("K", 14), (";", 10),
+                         ("", 16)], pickup=(PK_BLITZ, 60, 96), seed=0x2718)
+PARTS = [["grunt", "hunter", "shooter"], ["points", "double", "spread"], ["star", "bomb"],
+         ["slow", "heavy", "blitz"]]
 FIRST_PART = {"demopoints": 1, "demodouble": 1, "demospread": 1, "demostar": 2,
-              "demobomb": 2}
-FIRST_SCENE.update({"demodouble": 1, "demospread": 2, "demobomb": 1})
+              "demobomb": 2, "demoslow": 3, "demoheavy": 3, "demoblitz": 3}
+FIRST_SCENE.update({"demodouble": 1, "demospread": 2, "demobomb": 1, "demoheavy": 1,
+                    "demoblitz": 2})
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
 # field plays one record, so each frame plays two.
 SQUARE, NOISE = 0, 0x80
