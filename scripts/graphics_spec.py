@@ -1,5 +1,6 @@
 """The VDG graphics converter packs, renders and converts as the MC6847 layout specifies."""
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -20,14 +21,10 @@ from graphics import (
     convert_image,
     convert_images,
     crop_box,
-    crop_to_aspect,
     half_clock_width,
     label_from_name,
-    linear_to_lab,
     main,
-    pack,
     palette_rgb,
-    palette_spread,
     parse_mode,
     parse_palette,
     pixel_aspect,
@@ -39,6 +36,7 @@ from graphics import (
     unpack,
 )
 from PIL import Image
+from raster import crop_to_aspect, linear_to_lab, pack, palette_spread
 
 CG6, RG6, CG1 = MODES["CG6"], MODES["RG6"], MODES["CG1"]
 RED, YELLOW, BLUE, GREEN = (131, 26, 55), (255, 255, 151), (44, 37, 129), (46, 188, 36)
@@ -90,8 +88,8 @@ class DescribeModeTable:
         assert parse_mode(" cg6 ") is CG6
 
     @pytest.mark.parametrize("name", ["HSCREEN2", "CG4", ""])
-    def should_reject_unknown_modes_and_name_the_coco3_limit(self, name: str) -> None:
-        with pytest.raises(GraphicsError, match="GIME modes are not supported"):
+    def should_reject_unknown_modes_and_name_both_families(self, name: str) -> None:
+        with pytest.raises(GraphicsError, match="CG6, RG6. Known CoCo 3 GIME modes: gime-320x16"):
             parse_mode(name)
 
 
@@ -609,3 +607,183 @@ class DescribeCommandLine:
         out = capsys.readouterr().out
         assert exit_info.value.code == 0
         assert all(word in out for word in ("convert", "sheet", "render", "modes", "GIME"))
+
+
+class DescribeVdgMosaic:
+    def should_give_each_block_one_colour_of_the_set(self) -> None:
+        image = picture([[RED, YELLOW, BLUE, BLUE], [YELLOW, RED, BLUE, GREEN]])
+
+        codes = convert_image(image, exact(CG6, (4, 2), mosaic=(2, 2))).codes()
+
+        assert len(np.unique(codes[:, :2])) == 1 and codes[:, 2:].tolist() == [[2, 2], [2, 2]]
+
+    def should_refuse_a_mosaic_and_a_dither_together(self, tmp_path, capsys) -> None:
+        art = save(tmp_path / "art.png", [[RED] * 4])
+
+        with pytest.raises(SystemExit) as exit_info:
+            main(["convert", str(art), "--mode", "CG6", "--mosaic", "2x2", "--dither", "bayer",
+                  "--out", str(tmp_path / "x")])  # fmt: skip
+
+        assert exit_info.value.code == 2
+        assert "not allowed with argument" in capsys.readouterr().err
+
+
+# Composite colours of four GIME codes: black $00, white $30, red $07, blue $0B.
+G_BLACK, G_WHITE, G_RED, G_BLUE = (20, 20, 20), (255, 255, 255), (155, 18, 60), (34, 28, 222)
+
+
+class DescribeGimeCommandLine:
+    @pytest.fixture
+    def art(self, tmp_path) -> Path:
+        return save(tmp_path / "art.png", [[G_RED, G_BLUE, G_WHITE, G_BLACK]] * 2)
+
+    def run(self, *argv: str) -> int:
+        return main(list(argv))
+
+    def should_list_gime_modes_and_palettes(self, capsys) -> None:
+        main(["modes"])
+        main(["palettes"])
+
+        out = capsys.readouterr().out
+        assert "gime-640x4   640x192     2        4   111    01        160  30720  full" in out
+        assert "Tepolt" in out and "tcc1014.c" in out
+        assert "gime-rgb: Measured" in out and "  $3F: (253, 253, 253)" in out
+
+    def should_write_bytes_palette_files_and_a_preview(self, tmp_path, art, capsys) -> None:
+        out = tmp_path / "out" / "hero"
+
+        code = self.run("convert", str(art), "--mode", "gime-320x16", "--size", "4x2",
+                        "--fit", "stretch", "--resample", "nearest", "--display", "square",
+                        "--lock", "0=00", "--out", str(out))  # fmt: skip
+
+        assert code == 0
+        data = (tmp_path / "out" / "hero.bin").read_bytes()
+        palette = json.loads((tmp_path / "out" / "hero-palette.json").read_text())
+        codes = {entry["register"]: entry["code"] for entry in palette["registers"]}
+        assert codes[0] == 0x00 and {0x00, 0x07, 0x0B, 0x30} <= set(codes.values())
+        registers = {code: register for register, code in codes.items()}
+        first = registers[0x07] << 4 | registers[0x0B]
+        assert data[0] == first and len(data) == 4
+        text = (tmp_path / "out" / "hero-palette.asm").read_text()
+        assert "hero_palette_count equ 16\nhero_palette\n        fcb $00," in text
+        assert "gime-320x16 pixels, 4 bits each" in (tmp_path / "out" / "hero.asm").read_text()
+        preview = np.asarray(Image.open(tmp_path / "out" / "hero.png"))
+        assert preview.shape == (4, 8, 3)
+        assert [tuple(preview[0, x]) for x in (0, 2, 4, 6)] == [G_RED, G_BLUE, G_WHITE, G_BLACK]
+        assert "registers 0=$00" in capsys.readouterr().out
+
+    def should_render_a_conversion_back_with_its_palette_file(self, tmp_path, art) -> None:
+        self.run("convert", str(art), "--mode", "gime-640x4", "--size", "4x2", "--fit",
+                 "stretch", "--resample", "nearest", "--out", str(tmp_path / "a"))  # fmt: skip
+
+        code = self.run("render", str(tmp_path / "a.bin"), "--mode", "gime-640x4", "--size",
+                        "4x2", "--palette-file", str(tmp_path / "a-palette.json"),
+                        "--display", "xroar", "--out", str(tmp_path / "r.png"))  # fmt: skip
+
+        frame = np.asarray(Image.open(tmp_path / "r.png"))
+        assert code == 0 and frame.shape == (2, 4, 3)
+        assert [tuple(frame[1, x]) for x in range(4)] == [G_RED, G_BLUE, G_WHITE, G_BLACK]
+
+    def should_render_with_the_rgb_model_of_the_codes(self, tmp_path) -> None:
+        (tmp_path / "s.bin").write_bytes(bytes([0x1B]))
+
+        self.run("render", str(tmp_path / "s.bin"), "--mode", "gime-640x4", "--size", "4x1",
+                 "--codes", "00,3F,$24,0x09", "--palette", "gime-rgb", "--display", "xroar",
+                 "--out", str(tmp_path / "s.png"))  # fmt: skip
+
+        frame = np.asarray(Image.open(tmp_path / "s.png"))
+        assert [tuple(v) for v in frame[0]] == [
+            (2, 2, 2),
+            (253, 253, 253),
+            (253, 2, 2),
+            (2, 2, 253),
+        ]
+
+    def should_share_one_palette_across_a_sheet(self, tmp_path) -> None:
+        sheet = save(tmp_path / "sheet.png", [[G_RED, G_RED, G_BLUE, G_BLUE]])
+
+        code = self.run("sheet", str(sheet), "--mode", "gime-640x2", "--cell", "2x1",
+                        "--size", "8x1", "--fit", "stretch", "--resample", "nearest",
+                        "--out", str(tmp_path / "s"))  # fmt: skip
+
+        assert code == 0
+        palette = json.loads((tmp_path / "s-palette.json").read_text())
+        assert sorted(entry["code"] for entry in palette["registers"]) == [0x07, 0x0B]
+        assert sorted((tmp_path / "s.bin").read_bytes()) == [0x00, 0xFF]
+        assert "s_r0c1" in (tmp_path / "s.asm").read_text()
+
+    def should_choose_one_palette_for_several_images(self, tmp_path, capsys) -> None:
+        red = save(tmp_path / "red.png", [[G_RED] * 50] * 50)
+        blue = save(tmp_path / "blue.png", [[G_BLUE]])
+
+        code = self.run("palette", str(red), str(blue), "--mode", "gime-640x4",
+                        "--lock", "0=00", "--registers", "1-2", "--out",
+                        str(tmp_path / "shared"))  # fmt: skip
+
+        assert code == 0
+        text = (tmp_path / "shared-palette.asm").read_text()
+        assert "shared_palette\n        fcb $00,$0B,$07,$00\n" in text
+        assert "Registers [3] are not set" in text
+        assert "error per pixel" in capsys.readouterr().out
+
+    def should_fix_registers_from_a_palette_file_and_choose_the_rest(self, tmp_path) -> None:
+        red = save(tmp_path / "red.png", [[G_RED] * 4])
+        blue = save(tmp_path / "blue.png", [[G_BLUE] * 4])
+        self.run("palette", str(red), "--mode", "gime-640x4", "--registers", "0-0",
+                 "--palette", "gime-rgb", "--out", str(tmp_path / "bg"))  # fmt: skip
+
+        self.run("convert", str(blue), "--mode", "gime-640x4", "--size", "4x1",
+                 "--palette-file", str(tmp_path / "bg-palette.json"), "--registers", "1-1",
+                 "--out", str(tmp_path / "sprite"))  # fmt: skip
+
+        background = json.loads((tmp_path / "bg-palette.json").read_text())["registers"]
+        sprite = json.loads((tmp_path / "sprite-palette.json").read_text())
+        assert sprite["palette"] == "gime-rgb"
+        assert sprite["registers"][0] == background[0]
+        assert [entry["register"] for entry in sprite["registers"]] == [0, 1]
+        assert (tmp_path / "sprite.bin").read_bytes() == bytes([0x55])
+
+    def should_fill_a_taller_screen_with_rows(self, tmp_path, art) -> None:
+        self.run("convert", str(art), "--mode", "gime-80x4", "--rows", "225",
+                 "--out", str(tmp_path / "t"))  # fmt: skip
+
+        assert len((tmp_path / "t.bin").read_bytes()) == 20 * 225
+
+    @pytest.mark.parametrize(
+        ("argv", "message"),
+        [
+            (["convert", "{png}", "--mode", "CG6", "--rows", "200"], "--rows applies only"),
+            (["convert", "{png}", "--mode", "CG6", "--lock", "0=00"], "--lock applies only"),
+            (["convert", "{png}", "--mode", "gime-320x16", "--css", "1"], "no colour set"),
+            (["convert", "{png}", "--mode", "gime-320x16", "--palette", "xroar"], "GIME palette"),
+            (["convert", "{png}", "--mode", "CG6", "--palette", "gime-rgb"], "Unknown palette"),
+            (["convert", "{png}", "--mode", "gime-640x4", "--lock", "4=00"], "registers 0-3"),
+            (["convert", "{png}", "--mode", "gime-640x4", "--registers", "2-5"], "not inside"),
+            (["convert", "{png}", "--mode", "gime-640x4", "--codes", "00", "--lock", "0=01"],
+             "locked to both"),
+            (["convert", "{png}", "--mode", "gime-640x4", "--palette-file", "{png}"],
+             "is not a palette file"),
+            (["render", "{bin}", "--mode", "gime-640x4", "--size", "4x1"], "needs the palette"),
+            (["render", "{bin}", "--mode", "gime-640x4", "--size", "4x1", "--codes", "00"],
+             "registers [1"),
+            (["palette", "{png}", "--mode", "CG6"], "is a VDG mode"),
+        ],
+    )  # fmt: skip
+    def should_explain_bad_gime_input_and_exit_two(self, tmp_path, capsys, argv, message) -> None:
+        (tmp_path / "data.bin").write_bytes(b"\x1b")
+        png = save(tmp_path / "art.png", [[G_RED] * 4])
+        argv = [a.format(bin=tmp_path / "data.bin", png=png) for a in argv]
+
+        assert main([*argv, "--out", str(tmp_path / "x")]) == 2
+        assert message in capsys.readouterr().err
+
+    @pytest.mark.parametrize(
+        "option",
+        [["--lock", "0"], ["--lock", "x=00"], ["--codes", "40"], ["--codes", "zz"],
+         ["--registers", "8"], ["--rows", "240"]],
+    )  # fmt: skip
+    def should_reject_malformed_register_options(self, tmp_path, option) -> None:
+        with pytest.raises(SystemExit) as exit_info:
+            main(["convert", "a.png", "--mode", "gime-320x16", "--out", "x", *option])
+
+        assert exit_info.value.code == 2

@@ -249,6 +249,14 @@ The table name selects the firmware profile. A table with a different name
 must give the profile with `firmware = "<target>"`. Add `keyboard = "coco"`,
 or `keyboard = "coco3"` on the CoCo 3, when a check sends keys.
 
+#### An RGB monitor target
+
+The rendered capture shows XRoar's composite picture (S-video input). A CoCo 3
+target with `tv_input = "rgb"` shows XRoar's RGB monitor picture in its
+captures and recordings. The same palette code has a different colour on each.
+Add it only when the project contract names an RGB monitor. `xroar -tv-input
+help` lists the other values.
+
 #### A 6309 target
 
 A target with `cpu = "6309"` runs on the Hitachi 6309. Set it only when the

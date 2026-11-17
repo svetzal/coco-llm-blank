@@ -8,6 +8,39 @@ ends. [The system guide](guidance/starter/system.md) gives the procedure.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-16
+
+### Added
+
+- The `retro-art` skill in `.agents/skills/retro-art/`. It takes a game from
+  an art idea to screen bytes. Its steps are a visual system contract for the
+  game, image and set specs, generation, reduction and the XRoar check. It has
+  templates for a CoCo 3 16-colour game and a CoCo 1/2 CG6 game.
+- `scripts/art.py`: generates concept art with the OpenAI image API from
+  structured JSON specs. A contract holds what a game's pictures share. A set
+  spec makes a group of pictures in one style. `prompt` shows the exact
+  prompt for free. `generate` sends nothing without `--spend`, and an agent
+  must get the owner's agreement first. `--model sunburst` (the default) or
+  `--model flare` selects the quality. A transparent background uses
+  OpenAI's own transparency. Each image has a JSON record and a manifest
+  line. The owner supplies `OPENAI_API_KEY`.
+- `scripts/graphics.py` converts to the twenty CoCo 3 GIME graphics modes,
+  with 192, 200 or 225 rows.
+- Two measured 64-code CoCo 3 palettes: `gime-composite` (a television, the
+  default) and `gime-rgb` (an RGB monitor).
+- Palette selection for the CoCo 3: the converter chooses the codes for the
+  palette registers, or uses the codes you give (`--codes`, `--lock`,
+  `--registers`). The new `palette` command chooses one palette for several
+  pictures. A GIME conversion writes `-palette.asm` and `-palette.json`.
+- Mosaic reduction, `--mosaic WxH`, for the VDG and GIME modes.
+- A target key, `tv_input`. `tv_input = "rgb"` captures XRoar's RGB monitor
+  picture.
+
+### Changed
+
+- The `openai` package is a dependency. Run `uv sync --locked`.
+- The shared pixel code of `graphics.py` is in `scripts/raster.py`.
+
 ## [0.2.0] - 2026-11-16
 
 This is the first release. The git history has the changes before it.

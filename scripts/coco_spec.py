@@ -317,6 +317,13 @@ class DescribeCommands:
             "coco",
         ]
 
+    def should_pass_the_tv_input_a_target_names(self) -> None:
+        machine = coco.Machine(machine="coco3", ram_kib=128, tv_input="rgb")
+
+        command = coco.xroar_command("xroar", machine, {})
+
+        assert contains(command, ["-tv-input", "rgb"])
+
     def should_load_both_basic_roms_when_a_target_names_extended_basic(self) -> None:
         machine = coco.Machine(
             machine="cocous", ram_kib=32, basic="bas11.rom", extended="extbas11.rom"
@@ -1161,6 +1168,21 @@ class DescribeEquipmentRuns:
 
         assert options[: len(coco.VIDEO_OPTIONS)] == coco.VIDEO_OPTIONS
         assert options[-2:] == ["-trap-timeout", "0.06"]
+
+    def should_capture_through_the_tv_input_a_target_names(self, project: coco.Project) -> None:
+        options = coco.capture_options(
+            project.settings.check,
+            coco.parse_symbols(SYMBOLS),
+            1,
+            Path("s.ram"),
+            Path("u.ram"),
+            coco.Equipment(video=True),
+            tv_input="rgb",
+        )
+
+        assert options[:2] == ["-tv-input", "rgb"]
+        assert options[2 : len(coco.VIDEO_OPTIONS)] == coco.VIDEO_OPTIONS[2:]
+        assert "svideo" not in options
 
     def should_act_on_keys_at_every_hit_of_the_key_label(self, folder: Path) -> None:
         (folder / "coco.toml").write_text(SETTINGS + KEYS)

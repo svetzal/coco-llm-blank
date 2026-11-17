@@ -81,7 +81,9 @@ Downloading or converting a page does not count as reading it.
 Reuse facts already checked in this session.
 
 For CoCo 1/2, the [graphics guide](../techniques/graphics.md) gives the VDG
-mode table, colour sets and pixel order with citations. To turn an image into
+mode table, colour sets and pixel order with citations. For the CoCo 3 GIME
+modes, the [GIME graphics guide](../techniques/gime-graphics.md) gives the
+same facts. To turn an image into
 screen or sprite bytes, use `scripts/graphics.py` (run it with `--help`).
 
 Establish these facts from passages that apply to the selected hardware:

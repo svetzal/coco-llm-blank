@@ -22,7 +22,7 @@ Other guides cover the next steps:
   conversion at each build.
 - [Moving objects](moving-objects.md): how to draw pictures over scenery.
 
-CoCo 3 GIME modes are not in this guide, and the tool rejects them. Read
+CoCo 3 GIME modes are not in this guide. Read
 [the GIME graphics guide](gime-graphics.md) for them.
 
 ## Choose a mode
@@ -207,8 +207,10 @@ Do not let a generator draw words, numbers or scores. Draw those from data in
 the program. Keep the source image and the conversion command in the project,
 so that the conversion gives the same bytes again.
 
-The starter does not call an image service. If the owner uses one, they
-supply its account and key.
+`scripts/art.py` generates concept art with the OpenAI image API. The owner
+supplies the account and key, and agrees to the cost first. The
+[retro-art skill](../../.agents/skills/retro-art/SKILL.md) gives the
+procedure.
 
 ## Know what is verified
 

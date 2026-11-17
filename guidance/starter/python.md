@@ -13,7 +13,10 @@ Declare a dependency with `uv add`. Commit `pyproject.toml` and `uv.lock`
 together. `.python-version` selects Python 3.13.
 
 The baseline has Docling and RapidOCR for documents, NumPy for numeric reference
-models and test vectors, and Pillow for image conversion and previews.
+models and test vectors, and Pillow for image conversion and previews. The
+OpenAI client is for `scripts/art.py`, which generates artwork. The
+[retro-art skill](../../.agents/skills/retro-art/SKILL.md) tells how to use
+`art.py` and `graphics.py`.
 Development tools are pytest, pytest-cov, and Ruff. Optional groups provide
 pygame-ce for interactive prototypes and music21 for music analysis:
 

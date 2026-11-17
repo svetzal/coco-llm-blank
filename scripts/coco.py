@@ -84,6 +84,16 @@ HEADLESS_OPTIONS = ["-ui", "null", "-ao", "null"]
 JOYSTICK_OPTIONS = ["-joy", "none", "-joy-right", "none", "-joy-left", "none"]
 # Rendered frames: S-video palette without cross-colour, active area only.
 VIDEO_OPTIONS = ["-tv-input", "svideo", "-ccr", "none", "-vo-picture", "zoomed", "-fskip", "0"]
+
+
+def video_options(tv_input: str | None = None) -> list[str]:
+    """VIDEO_OPTIONS, with the target's TV input in place of svideo when it names one."""
+    options = VIDEO_OPTIONS.copy()
+    if tv_input:
+        options[options.index("-tv-input") + 1] = tv_input
+    return options
+
+
 # Emulated seconds after the checkpoint: two complete video frames and a full audio buffer.
 RUN_ON_SECONDS = 0.06
 # A recorded video is scaled by whole numbers to at least this many lines, and shown at 4:3.
@@ -109,6 +119,8 @@ class Machine(BaseModel):
     """One [targets.<name>] table: an XRoar machine and its validated firmware.
 
     screen, when set, replaces [check].screen for this target: an offset into its snapshot.
+    tv_input, when set, is XRoar's -tv-input for this target (xroar -tv-input help lists
+    the inputs). It also replaces the svideo input of rendered captures and recordings.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -119,6 +131,7 @@ class Machine(BaseModel):
     cpu: Literal["6809", "6309"] | None = None
     vdg: str | None = None
     tv: str | None = None
+    tv_input: str | None = None
     keyboard: str | None = None
     basic: str | None = None
     extended: str | None = None
@@ -513,6 +526,7 @@ def xroar_command(
         ("-machine-cpu", machine.cpu),
         ("-machine-keyboard", machine.keyboard),
         ("-tv-type", machine.tv),
+        ("-tv-input", machine.tv_input),
         ("-vdg-type", machine.vdg),
     ):
         if value:
@@ -567,6 +581,7 @@ def capture_options(
     equipment: Equipment = NO_EQUIPMENT,
     keys: Keys | None = None,
     extra_seconds: float = 0,
+    tv_input: str | None = None,
 ) -> list[str]:
     """Headless, accelerated run from nonzero RAM that snapshots the Nth checkpoint hit.
 
@@ -576,7 +591,7 @@ def capture_options(
     video or audio, the run continues briefly after the snapshot so that a complete
     frame and the audio up to the checkpoint are recorded.
     """
-    options = VIDEO_OPTIONS.copy() if equipment.video else []
+    options = video_options(tv_input) if equipment.video else []
     options += [
         *HEADLESS_OPTIONS,
         *JOYSTICK_OPTIONS,
@@ -621,13 +636,14 @@ def record_options(
     check: Check | None,
     equipment: Equipment,
     keys: Keys | None,
+    tv_input: str | None = None,
 ) -> list[str]:
     """Headless, accelerated run from power-on for a number of emulated seconds.
 
     Every frame is rendered (no frame skip). A declared unreachable label still ends the run.
     """
     options = [
-        *VIDEO_OPTIONS,
+        *video_options(tv_input),
         *HEADLESS_OPTIONS,
         *JOYSTICK_OPTIONS,
         "-ram-init",
@@ -1040,8 +1056,9 @@ def capture(
         path.unlink(missing_ok=True)
     keys = project.settings.keys
     extra = DISK_SECONDS if disk else 0
+    tv_input = target_machine(project, target)[1].tv_input
     command = emulator(project, host, target, disk=disk is not None) + capture_options(
-        check, built.symbols, frame, paths["ram"], unreachable, equipment, keys, extra
+        check, built.symbols, frame, paths["ram"], unreachable, equipment, keys, extra, tv_input
     )
     if disk:
         command += disk_options(disk, project.disk_name, write_back=False)
@@ -1095,8 +1112,9 @@ def record(
         path.unlink(missing_ok=True)
     keys = project.settings.keys
     check = project.settings.check
+    tv_input = target_machine(project, target)[1].tv_input
     command = emulator(project, host, target) + record_options(
-        built.symbols, seconds, unreachable, check, equipment, keys
+        built.symbols, seconds, unreachable, check, equipment, keys, tv_input
     )
     command += ["-run", str(built.binary)]
     environment = {k: v for k, v in os.environ.items() if not k.startswith("COCO_")}

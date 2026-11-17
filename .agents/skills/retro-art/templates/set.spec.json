@@ -1,0 +1,15 @@
+{
+  "Contract": "coco3-gime16.contract.json",
+  "Role": "sprite",
+  "Target": {"grid": {"width": 48, "height": 48}, "background": "transparent"},
+  "Canvas": {"size": "1024x1024"},
+  "Style": {"consistency": "every creature has the same outline weight, the same scale and the same friendly face style"},
+  "Items": [
+    {"slug": "fish", "name": "fish", "description": "a small round fish with big eyes"},
+    {"slug": "frog", "name": "frog", "description": "a round, cheerful frog sitting upright"},
+    {"slug": "dinosaur", "name": "dinosaur", "description": "a small friendly long-necked dinosaur"}
+  ],
+  "Output": {"pattern": "{slug}.png"},
+  "Composition": {"view": "three-quarter front", "framing": "the whole creature, centred"},
+  "Context": {"game": "a sliding evolution puzzle", "why": "one picture for each level of the chain"}
+}

@@ -1,0 +1,10 @@
+{
+  "Contract": "coco3-gime16.contract.json",
+  "Role": "sprite",
+  "Target": {"grid": {"width": 32, "height": 32}, "background": "transparent"},
+  "Canvas": {"size": "1024x1024"},
+  "Subject": {"name": "frog", "description": "a round, cheerful green frog sitting upright"},
+  "Composition": {"view": "three-quarter front", "pose": "sitting, smiling"},
+  "Constraints": {"must+": ["the whole frog is inside the frame"]},
+  "Context": {"game": "a sliding evolution puzzle", "why": "one tile picture"}
+}

@@ -11,8 +11,9 @@ does not cover text modes, scrolling, page flips or interrupts. The
 [text-addressing](../../examples/text-addressing/README.md),
 [scrolling](scrolling.md) and [animation](animation.md) guides cover them.
 
-`scripts/graphics.py` does not convert artwork to GIME modes. Write the bytes
-from the pixel formats below, or convert them with a host tool of your own.
+`scripts/graphics.py` converts artwork to the GIME modes and chooses the
+palette codes. Run it with `--help`, or read the
+[retro-art skill](../../.agents/skills/retro-art/SKILL.md).
 
 The [gime-graphics example](../../examples/gime-graphics/README.md) sets up
 each mode. Its README has the table of all twenty modes, the register values,

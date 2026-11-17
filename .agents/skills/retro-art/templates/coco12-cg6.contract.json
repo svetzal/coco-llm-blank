@@ -1,0 +1,38 @@
+{
+  "Name": "CoCo 1/2 CG6 four-colour game (template)",
+  "VisualLanguage": {
+    "genre": "early 1980s home-computer game art",
+    "rendering": "flat colour, no outlines unless one of the four colours is free for them",
+    "mood": "bold and simple"
+  },
+  "Palette": {
+    "colours": [
+      {"name": "green", "hex": "#2ebc24", "use": "background, grass"},
+      {"name": "yellow", "hex": "#ffff97", "use": "light areas, highlights"},
+      {"name": "blue", "hex": "#2c2581", "use": "dark areas, outlines"},
+      {"name": "red", "hex": "#831a37", "use": "accents, danger"}
+    ],
+    "rules": [
+      "There are only four colours. Every area is exactly one of them.",
+      "Use blue as the darkest colour for outlines and shadows."
+    ]
+  },
+  "Target": {
+    "machine": "CoCo 1 or 2",
+    "mode": "CG6",
+    "grid": {"width": 128, "height": 192},
+    "pixel_aspect": 1.714,
+    "background": "green"
+  },
+  "LineAndShape": {
+    "shapes": "very large and blocky; pixels are almost twice as wide as they are tall"
+  },
+  "TypographyPolicy": {"default": "No words, letters, numbers or pseudo-text."},
+  "CompositionPolicy": {
+    "screen": "A full playfield or scene that fills the frame.",
+    "sprite": "One subject, centred, with even padding on all sides.",
+    "sprite-sheet": "One subject in each cell, the same scale and baseline in every cell, no overlap.",
+    "concept": "A mood picture for discussion; not converted."
+  },
+  "NegativeKeywords": ["pixel art or visible pixels", "photorealism", "gradients", "fine detail", "lettering"]
+}

@@ -1,10 +1,14 @@
-"""Convert artwork to MC6847 VDG full-graphics bytes, and render those bytes back to pictures.
+"""Convert artwork to CoCo graphics bytes, and render those bytes back to pictures.
 
-Run `uv run python scripts/graphics.py --help`. The eight VDG full-graphics modes of the
-CoCo 1/2, which the CoCo 3 also shows (with the `xroar-coco3` palette). CoCo 3 GIME
-high-resolution modes are out of scope.
+Run `uv run python scripts/graphics.py --help`. Two families of modes:
 
-Sourced facts (Motorola MC6847/MC6847Y datasheet, 1984, DS9823-R1; resource `mc6847`):
+- The eight MC6847 VDG full-graphics modes of the CoCo 1/2, which the CoCo 3 also shows (with
+  the `xroar-coco3` palette). This module holds them.
+- The twenty CoCo 3 GIME graphics modes, whose pixels are palette registers. `gime.py` holds
+  them, the 64 colour codes and the palette selection; `raster.py` holds the colour matching,
+  reduction and packing that both families share.
+
+Sourced VDG facts (Motorola MC6847/MC6847Y datasheet, 1984, DS9823-R1; resource `mc6847`):
 
 - PDF 18 Table 2: memory size and colour count of each full-graphics mode.
 - PDF 20 (page image read; the OCR omits the CG2 paragraph): matrix size and pixel size of
@@ -18,7 +22,8 @@ Sourced facts (Motorola MC6847/MC6847Y datasheet, 1984, DS9823-R1; resource `mc6
 - PDF 13: the VDG clock is 3.579545 MHz. PDF 8 Figure 8: a line period is 227.5 clocks.
 
 Palette RGB values are not datasheet facts: see `XROAR`. The `ntsc` pixel aspect is a
-deduction with an external assumption: see `half_clock_width`.
+deduction with an external assumption: see `raster.half_clock_width`. The GIME sources are in
+`gime.py`.
 """
 
 import argparse
@@ -26,17 +31,63 @@ import re
 import sys
 from collections.abc import Sequence
 from enum import StrEnum
-from fractions import Fraction
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Literal
 
 import numpy as np
+from gime import (
+    GIME_MODES,
+    GIME_PALETTES,
+    GIME_SOURCE,
+    Assignment,
+    GimeConversion,
+    GimeMode,
+    GimeOptions,
+    GimePalette,
+    assignment_error,
+    check_assignment,
+    colour_samples,
+    convert_gime_images,
+    gime_assembly_block,
+    gime_pixel_aspect,
+    merge_locks,
+    palette_assembly,
+    palette_grid,
+    palette_json,
+    parse_gime_mode,
+    parse_gime_palette,
+    parse_palette_file,
+    preview_columns,
+    register_range,
+    render_gime,
+    select_palette,
+)
 from PIL import Image, UnidentifiedImageError
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-
-class GraphicsError(ValueError):
-    """An input that cannot be converted, packed or rendered as asked."""
+from pydantic import BaseModel, ConfigDict, model_validator
+from raster import (
+    DISPLAYS,
+    DITHERS,
+    RESAMPLES,
+    RGB,
+    ArtOptions,
+    Display,
+    GraphicsError,
+    Prepared,
+    as_rgba,
+    check_label,
+    crop_box,
+    fcb_rows,
+    half_clock_width,
+    label_from_name,
+    pack_with_mask,
+    prepare,
+    preview_scale,
+    quantize,
+    slice_cells,
+    srgb_to_linear,
+    total_error,
+    unpack,
+)
 
 
 class VdgColour(StrEnum):
@@ -113,13 +164,17 @@ TWO_COLOUR_SETS = ((_C.BLACK, _C.GREEN), (_C.BLACK, _C.BUFF))
 BORDER_COLOURS = (_C.GREEN, _C.BUFF)
 
 
-def parse_mode(name: str) -> Mode:
+def parse_mode(name: str, rows: int = 192) -> Mode | GimeMode:
+    """A VDG mode such as CG6, or a GIME mode such as gime-320x16 with its rows."""
+    key = name.strip()
+    if key.lower() in GIME_MODES:
+        return parse_gime_mode(key, rows)
     try:
-        return MODES[name.strip().upper()]
+        return MODES[key.upper()]
     except KeyError:
         raise GraphicsError(
             f"Unknown mode {name!r}. Known MC6847 full-graphics modes: {', '.join(MODES)}. "
-            "CoCo 3 GIME modes are not supported by this tool."
+            f"Known CoCo 3 GIME modes: {', '.join(GIME_MODES)}."
         ) from None
 
 
@@ -140,9 +195,6 @@ def _checked_css(css: int) -> int:
 
 
 # --- Palettes -------------------------------------------------------------------------------
-
-Channel = Annotated[int, Field(ge=0, le=255)]
-RGB = tuple[Channel, Channel, Channel]
 
 
 class Palette(BaseModel):
@@ -250,70 +302,12 @@ def palette_rgb(mode: Mode, css: int, palette: Palette) -> np.ndarray:
     return np.array([palette.rgb(c, css) for c in colour_set(mode, css)], dtype=np.uint8)
 
 
-# --- Pixel aspect ---------------------------------------------------------------------------
-
-Display = Literal["ntsc", "square"]
-DISPLAYS: tuple[Display, ...] = ("ntsc", "square")
-VDG_CLOCK_MHZ = 3.579545
-HALF_CLOCK_MHZ = 2 * VDG_CLOCK_MHZ
-NTSC_SQUARE_PIXEL_MHZ = 135 / 11 / 2
-
-
-def half_clock_width(display: Display) -> float:
-    """Width of one VDG half-clock, in units of one scan line's height.
-
-    `ntsc` is a deduction, not a sourced fact: it assumes a 4:3 NTSC picture with about 240
-    visible lines per non-interlaced field, whose square-pixel sampling rate is half the
-    BT.601 square-pixel rate for 480 lines (135/11 MHz / 2, about 6.136 MHz). A half-clock
-    lasts 1/7.159 us, so it is 6.136/7.159 (about 6/7) of a line height wide.
-    `square` treats one half-clock as one line high, the proportions of a sample grid.
-    """
-    if display == "ntsc":
-        return NTSC_SQUARE_PIXEL_MHZ / HALF_CLOCK_MHZ
-    if display == "square":
-        return 1.0
-    raise GraphicsError(f"Unknown display {display!r}; known: {', '.join(DISPLAYS)}.")
+# --- Pixel aspect and rendering ------------------------------------------------------------
 
 
 def pixel_aspect(mode: Mode, display: Display = "ntsc") -> float:
     """A mode's pixel width divided by its height on the named display."""
     return mode.half_clocks * half_clock_width(display) / mode.scan_lines
-
-
-def preview_scale(display: Display) -> tuple[int, int]:
-    """Preview samples per half-clock and rows per scan line, in the display's proportion."""
-    ratio = Fraction(half_clock_width(display)).limit_denominator(8)
-    factor = 2 if ratio == 1 else 1
-    return ratio.numerator * factor, ratio.denominator * factor
-
-
-# --- Packing and rendering ------------------------------------------------------------------
-
-
-def pack(codes: np.ndarray, bits_per_pixel: int) -> bytes:
-    """Pack rows of pixel codes, leftmost pixel in the most significant bits of each byte."""
-    height, width = codes.shape
-    per_byte = 8 // bits_per_pixel
-    if width % per_byte:
-        raise GraphicsError(f"Width {width} is not a whole number of {per_byte}-pixel bytes.")
-    if codes.size and int(codes.max()) >= 2**bits_per_pixel:
-        raise GraphicsError(f"A pixel code does not fit in {bits_per_pixel} bits.")
-    shifts = np.arange(per_byte - 1, -1, -1, dtype=np.uint16) * bits_per_pixel
-    grouped = codes.astype(np.uint16).reshape(height, width // per_byte, per_byte)
-    return (grouped << shifts).sum(axis=2).astype(np.uint8).tobytes()
-
-
-def unpack(data: bytes, width: int, height: int, bits_per_pixel: int) -> np.ndarray:
-    """Pixel codes, one row per screen row, from bytes packed as `pack` packs them."""
-    per_byte = 8 // bits_per_pixel
-    if width <= 0 or height <= 0 or width % per_byte:
-        raise GraphicsError(f"{width}x{height} is not a whole number of {per_byte}-pixel bytes.")
-    expected = width // per_byte * height
-    if len(data) != expected:
-        raise GraphicsError(f"{width}x{height} needs {expected} bytes, not {len(data)}.")
-    raw = np.frombuffer(data, dtype=np.uint8).reshape(height, width // per_byte, 1)
-    shifts = np.arange(per_byte - 1, -1, -1, dtype=np.uint8) * bits_per_pixel
-    return ((raw >> shifts) & (2**bits_per_pixel - 1)).reshape(height, width)
 
 
 def render(
@@ -334,140 +328,14 @@ def render(
     return np.repeat(picture, mode.half_clocks * samples_per_half_clock, axis=1)
 
 
-# --- Colour science -------------------------------------------------------------------------
-
-_SRGB_TO_XYZ = np.array(
-    [
-        [0.4124564, 0.3575761, 0.1804375],
-        [0.2126729, 0.7151522, 0.0721750],
-        [0.0193339, 0.1191920, 0.9503041],
-    ]
-)
-_D65_WHITE = np.array([0.95047, 1.0, 1.08883])
-_LAB_EDGE = 6 / 29
-
-
-def srgb_to_linear(rgb: np.ndarray) -> np.ndarray:
-    """sRGB 0-255 values to linear light 0-1."""
-    c = np.asarray(rgb, dtype=np.float64) / 255
-    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
-
-
-def linear_to_lab(linear: np.ndarray) -> np.ndarray:
-    """Linear-light sRGB (last axis RGB) to CIELAB, D65 white."""
-    xyz = np.asarray(linear, dtype=np.float64) @ _SRGB_TO_XYZ.T / _D65_WHITE
-    f = np.where(xyz > _LAB_EDGE**3, np.cbrt(xyz), xyz / (3 * _LAB_EDGE**2) + 4 / 29)
-    fx, fy, fz = f[..., 0], f[..., 1], f[..., 2]
-    return np.stack((116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)), axis=-1)
-
-
-def nearest_codes(linear: np.ndarray, palette_linear: np.ndarray) -> np.ndarray:
-    """Index of the palette colour nearest each pixel by CIELAB distance (Delta E 1976)."""
-    lab = linear_to_lab(np.clip(linear, 0, 1))[..., None, :]
-    distances = ((lab - linear_to_lab(palette_linear)) ** 2).sum(axis=-1)
-    return distances.argmin(axis=-1).astype(np.uint8)
-
-
-Dither = Literal["none", "bayer", "floyd-steinberg"]
-DITHERS: tuple[Dither, ...] = ("none", "bayer", "floyd-steinberg")
-BAYER_4 = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]])
-_DIFFUSION = ((0, 1, 7 / 16), (1, -1, 3 / 16), (1, 0, 5 / 16), (1, 1, 1 / 16))
-
-
-def palette_spread(palette_linear: np.ndarray) -> float:
-    """Mean linear-light distance from each palette colour to its nearest other colour."""
-    gaps = np.linalg.norm(palette_linear[:, None] - palette_linear[None], axis=-1)
-    np.fill_diagonal(gaps, np.inf)
-    return float(gaps.min(axis=1).mean())
-
-
-def quantize(
-    linear: np.ndarray,
-    opaque: np.ndarray,
-    palette_linear: np.ndarray,
-    dither: Dither = "none",
-    strength: float = 1.0,
-) -> np.ndarray:
-    """Pixel codes for linear-light pixels; transparent pixels get code 0.
-
-    Nearest colour is by CIELAB distance. `bayer` adds a 4x4 ordered threshold to all three
-    channels, scaled by `strength` times the palette's spread (a heuristic, not tuned).
-    `floyd-steinberg` diffuses `strength` times each pixel's linear-light error, left to
-    right on every row; the error is taken after clipping to 0-1, so colours the set cannot
-    reach do not pile up error. Both are deterministic.
-    """
-    if dither == "floyd-steinberg":
-        codes = _diffuse(linear, opaque, palette_linear, strength)
-    elif dither == "bayer":
-        height, width = opaque.shape
-        threshold = (BAYER_4[np.arange(height)[:, None] % 4, np.arange(width) % 4] + 0.5) / 16
-        offset = (threshold - 0.5) * strength * palette_spread(palette_linear)
-        codes = nearest_codes(linear + offset[..., None], palette_linear)
-    elif dither == "none":
-        codes = nearest_codes(linear, palette_linear)
-    else:
-        raise GraphicsError(f"Unknown dither {dither!r}; known: {', '.join(DITHERS)}.")
-    return np.where(opaque, codes, 0).astype(np.uint8)
-
-
-def _diffuse(
-    linear: np.ndarray, opaque: np.ndarray, palette_linear: np.ndarray, strength: float
-) -> np.ndarray:
-    work = np.array(linear, dtype=np.float64)
-    palette_lab = linear_to_lab(palette_linear)
-    codes = np.zeros(opaque.shape, dtype=np.uint8)
-    for y, x in zip(*np.nonzero(opaque), strict=True):
-        pixel = np.clip(work[y, x], 0, 1)
-        code = int(((palette_lab - linear_to_lab(pixel)) ** 2).sum(axis=1).argmin())
-        codes[y, x] = code
-        _spread_error(work, y, x, (pixel - palette_linear[code]) * strength)
-    return codes
-
-
-def _spread_error(work: np.ndarray, y: int, x: int, error: np.ndarray) -> None:
-    height, width, _ = work.shape
-    for dy, dx, weight in _DIFFUSION:
-        if y + dy < height and 0 <= x + dx < width:
-            work[y + dy, x + dx] += error * weight
-
-
-def total_error(
-    linear: np.ndarray, opaque: np.ndarray, codes: np.ndarray, palette_linear: np.ndarray
-) -> float:
-    """Sum of CIELAB distances between opaque pixels and their chosen colours."""
-    chosen = linear_to_lab(palette_linear)[codes]
-    gaps = np.linalg.norm(linear_to_lab(np.clip(linear, 0, 1)) - chosen, axis=-1)
-    return float(gaps[opaque].sum())
-
-
 # --- Conversion -----------------------------------------------------------------------------
 
-Resample = Literal["nearest", "box", "bilinear", "lanczos"]
-RESAMPLES: dict[str, Image.Resampling] = {
-    "nearest": Image.Resampling.NEAREST,
-    "box": Image.Resampling.BOX,
-    "bilinear": Image.Resampling.BILINEAR,
-    "lanczos": Image.Resampling.LANCZOS,
-}
-Fit = Literal["crop", "stretch"]
 
-
-class ConvertOptions(BaseModel):
-    """How to turn square-pixel RGBA artwork into one mode's pixel codes."""
-
-    model_config = ConfigDict(frozen=True)
+class ConvertOptions(ArtOptions):
+    """How to turn square-pixel RGBA artwork into one VDG mode's pixel codes."""
 
     mode: Mode
     css: Literal[0, 1, "auto"] = 0
-    size: tuple[int, int] | None = None
-    box: tuple[int, int, int, int] | None = None
-    fit: Fit = "crop"
-    resample: Resample = "box"
-    dither: Dither = "none"
-    dither_strength: float = Field(default=1.0, ge=0)
-    alpha_threshold: int = Field(default=128, ge=0, le=256)
-    pad: bool = False
-    display: Display = "ntsc"
     palette: Palette = XROAR
 
 
@@ -492,73 +360,20 @@ class Conversion(BaseModel):
         return unpack(self.data, self.width, self.height, self.mode.bits_per_pixel)
 
 
-class _Prepared(BaseModel):
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
-
-    linear: np.ndarray
-    opaque: np.ndarray
+def _prepare(rgba: np.ndarray, options: ConvertOptions) -> Prepared:
+    aspect = pixel_aspect(options.mode, options.display)
+    return prepare(rgba, options, options.mode, aspect)
 
 
-def target_size(options: ConvertOptions) -> tuple[int, int]:
-    """The requested pixel grid; the whole screen when no size is given."""
-    mode = options.mode
-    width, height = options.size or (mode.width, mode.height)
-    if width < 1 or height < 1:
-        raise GraphicsError(f"Size {width}x{height} must be at least 1x1 pixels.")
-    if width > mode.width or height > mode.height:
-        raise GraphicsError(
-            f"Size {width}x{height} is larger than the {mode.name} screen "
-            f"({mode.width}x{mode.height})."
-        )
-    if width % mode.pixels_per_byte and not options.pad:
-        raise GraphicsError(
-            f"Width {width} is not a multiple of {mode.pixels_per_byte} pixels per byte in "
-            f"{mode.name}. Choose another width, or pad the right edge with transparent pixels."
-        )
-    return width, height
-
-
-def crop_box(rgba: np.ndarray, box: tuple[int, int, int, int] | None) -> np.ndarray:
-    if box is None:
-        return rgba
-    x, y, width, height = box
-    if x < 0 or y < 0 or width < 1 or height < 1 or x + width > rgba.shape[1]:
-        raise GraphicsError(f"Box {box} is not inside the {rgba.shape[1]}x{rgba.shape[0]} image.")
-    if y + height > rgba.shape[0]:
-        raise GraphicsError(f"Box {box} is not inside the {rgba.shape[1]}x{rgba.shape[0]} image.")
-    return rgba[y : y + height, x : x + width]
-
-
-def crop_to_aspect(rgba: np.ndarray, aspect: float) -> np.ndarray:
-    """The centred largest region of the image whose width/height is `aspect`."""
-    height, width = rgba.shape[:2]
-    if width / height > aspect:
-        keep = max(1, round(height * aspect))
-        left = (width - keep) // 2
-        return rgba[:, left : left + keep]
-    keep = max(1, round(width / aspect))
-    top = (height - keep) // 2
-    return rgba[top : top + keep]
-
-
-def _prepare(rgba: np.ndarray, options: ConvertOptions) -> _Prepared:
-    width, height = target_size(options)
-    region = crop_box(rgba, options.box)
-    if options.fit == "crop":
-        region = crop_to_aspect(
-            region, width * pixel_aspect(options.mode, options.display) / height
-        )
-    image = Image.fromarray(np.ascontiguousarray(region), "RGBA")
-    resized = np.asarray(image.resize((width, height), RESAMPLES[options.resample]))
-    return _Prepared(
-        linear=srgb_to_linear(resized[..., :3]), opaque=resized[..., 3] >= options.alpha_threshold
-    )
-
-
-def _quantized(prepared: _Prepared, options: ConvertOptions, css: int) -> tuple[np.ndarray, float]:
+def _quantized(prepared: Prepared, options: ConvertOptions, css: int) -> tuple[np.ndarray, float]:
     palette_linear = srgb_to_linear(palette_rgb(options.mode, css, options.palette))
     codes = quantize(
-        prepared.linear, prepared.opaque, palette_linear, options.dither, options.dither_strength
+        prepared.linear,
+        prepared.opaque,
+        palette_linear,
+        options.dither,
+        options.dither_strength,
+        options.mosaic,
     )
     return codes, total_error(prepared.linear, prepared.opaque, codes, palette_linear)
 
@@ -566,24 +381,13 @@ def _quantized(prepared: _Prepared, options: ConvertOptions, css: int) -> tuple[
 def _finish(
     codes: np.ndarray, opaque: np.ndarray, mode: Mode, css: int, error: float
 ) -> Conversion:
-    pad = -codes.shape[1] % mode.pixels_per_byte
-    codes = np.pad(codes, ((0, 0), (0, pad)))
-    opaque = np.pad(opaque, ((0, 0), (0, pad)))
-    keep = np.where(opaque, 0, mode.colour_count - 1).astype(np.uint8)
-    return Conversion(
-        mode=mode,
-        css=css,
-        width=codes.shape[1],
-        height=codes.shape[0],
-        data=pack(codes, mode.bits_per_pixel),
-        mask=pack(keep, mode.bits_per_pixel),
-        error=error,
-    )
+    packed = pack_with_mask(codes, opaque, mode.bits_per_pixel)
+    return Conversion(mode=mode, css=css, error=error, **packed.model_dump())
 
 
 def convert_images(images: Sequence[np.ndarray], options: ConvertOptions) -> list[Conversion]:
     """Convert RGBA arrays with one colour set for all; `auto` picks the lower total error."""
-    prepared = [_prepare(_as_rgba(image), options) for image in images]
+    prepared = [_prepare(as_rgba(image), options) for image in images]
     candidates = (0, 1) if options.css == "auto" else (options.css,)
     attempts = {css: [_quantized(p, options, css) for p in prepared] for css in candidates}
     css = min(candidates, key=lambda c: sum(error for _, error in attempts[c]))
@@ -597,46 +401,7 @@ def convert_image(rgba: np.ndarray, options: ConvertOptions) -> Conversion:
     return convert_images([rgba], options)[0]
 
 
-def _as_rgba(image: np.ndarray) -> np.ndarray:
-    if image.ndim != 3 or image.shape[2] not in (3, 4) or 0 in image.shape[:2]:
-        raise GraphicsError("Expected a non-empty RGB or RGBA image.")
-    if image.shape[2] == 3:
-        image = np.dstack((image, np.full(image.shape[:2], 255, dtype=np.uint8)))
-    return image.astype(np.uint8)
-
-
-def slice_cells(rgba: np.ndarray, cell_width: int, cell_height: int) -> list[list[np.ndarray]]:
-    """Rows of equal cells from a sprite sheet, top-left first, with no gaps or margins."""
-    height, width = rgba.shape[:2]
-    if cell_width < 1 or cell_height < 1 or width % cell_width or height % cell_height:
-        raise GraphicsError(
-            f"The {width}x{height} sheet is not a whole grid of {cell_width}x{cell_height} cells."
-        )
-    return [
-        [rgba[y : y + cell_height, x : x + cell_width] for x in range(0, width, cell_width)]
-        for y in range(0, height, cell_height)
-    ]
-
-
 # --- Assembly include -----------------------------------------------------------------------
-
-LABEL = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
-BYTES_PER_LINE = 16
-
-
-def check_label(label: str) -> str:
-    if not LABEL.match(label):
-        raise GraphicsError(
-            f"Label {label!r} must start with a letter or underscore and hold only letters, "
-            "digits and underscores."
-        )
-    return label
-
-
-def label_from_name(name: str) -> str:
-    """Turn a file name such as ``hands-cg6`` into a label lwasm accepts."""
-    label = re.sub(r"\W", "_", name)
-    return label if LABEL.match(label) else f"_{label}"
 
 
 def assembly_block(label: str, conversion: Conversion, with_mask: bool = False) -> str:
@@ -651,31 +416,27 @@ def assembly_block(label: str, conversion: Conversion, with_mask: bool = False) 
         f"* Pixel codes from 0: {colours}. Leftmost pixel in the high bits.",
         f"{label}_bpr equ {bpr}",
         f"{label}_rows equ {conversion.height}",
-        *_fcb_rows(label, conversion.data, bpr),
+        *fcb_rows(label, conversion.data, bpr),
     ]
     if with_mask:
         lines += [
             f"* {label}_mask: preserve mask, (screen AND mask) OR {label}; 1 bits keep the screen.",
-            *_fcb_rows(f"{label}_mask", conversion.mask, bpr),
+            *fcb_rows(f"{label}_mask", conversion.mask, bpr),
         ]
     return "\n".join(lines) + "\n"
 
 
-def _fcb_rows(label: str, data: bytes, bytes_per_row: int) -> list[str]:
-    lines = [label]
-    for start in range(0, len(data), bytes_per_row):
-        row = data[start : start + bytes_per_row]
-        for part in range(0, len(row), BYTES_PER_LINE):
-            values = ",".join(f"${b:02X}" for b in row[part : part + BYTES_PER_LINE])
-            lines.append(f"        fcb {values}")
-    return lines
-
-
 def assembly_include(
-    blocks: Sequence[tuple[str, Conversion]], source: str, with_mask: bool = False
+    blocks: Sequence[tuple[str, Conversion | GimeConversion]], source: str, with_mask: bool = False
 ) -> str:
     header = f"* Generated by scripts/graphics.py from {source}. Regenerate rather than edit.\n"
-    return header + "".join(assembly_block(label, c, with_mask) for label, c in blocks)
+    return header + "".join(_block(label, c, with_mask) for label, c in blocks)
+
+
+def _block(label: str, conversion: Conversion | GimeConversion, with_mask: bool) -> str:
+    if isinstance(conversion, GimeConversion):
+        return gime_assembly_block(label, conversion, with_mask)
+    return assembly_block(label, conversion, with_mask)
 
 
 def sheet_preview(
@@ -694,17 +455,40 @@ def sheet_preview(
     )
 
 
+def gime_sheet_preview(
+    conversions: Sequence[Sequence[GimeConversion]],
+    assignment: Assignment,
+    palette: GimePalette,
+    display: Display,
+) -> np.ndarray:
+    """Every GIME cell in its grid position, rendered from the packed register numbers."""
+    columns, rows = preview_columns(conversions[0][0].mode, display)
+    return np.concatenate(
+        [
+            np.concatenate(
+                [render_gime(c.codes(), c.mode, assignment, palette, columns, rows) for c in row],
+                axis=1,
+            )
+            for row in conversions
+        ],
+        axis=0,
+    )
+
+
 # --- Command line ---------------------------------------------------------------------------
 
 DESCRIPTION = """\
-Convert artwork to MC6847 VDG full-graphics bytes for the CoCo 1/2, and render bytes back to
-pictures. Modes: CG1 RG1 CG2 RG2 CG3 RG3 CG6 RG6. CoCo 3 GIME modes are not supported.
+Convert artwork to CoCo graphics bytes, and render bytes back to pictures.
+VDG modes (MC6847: the CoCo 1/2, and the CoCo 3's VDG-compatible modes): CG1 RG1 CG2 RG2 CG3
+RG3 CG6 RG6. CoCo 3 GIME modes: gime-<pixels across>x<colours>, such as gime-320x16; run
+'modes' for all twenty.
 
 Conversion assumes square-pixel input (for example a PNG of concept art). It crops (optional
 --box), fits the region to the shape the target pixels have on the display, resizes, picks
-the nearest colour of the mode's colour set by CIELAB distance (Delta E 1976, D65), optionally
-dithers in linear light, and packs pixels with the leftmost pixel in the high bits (bit 7 in
-two-colour modes, bits 7-6 in four-colour modes).
+the nearest colour of the mode's colours by CIELAB distance (Delta E 1976, D65), optionally
+dithers in linear light or gives each --mosaic block one colour, and packs pixels with the
+leftmost pixel in the high bits (bit 7 in two-colour modes, bits 7-6 in four-colour modes,
+bits 7-4 in sixteen-colour modes).
 
 Colour sets (CSS): four-colour modes show green, yellow, blue, red (CSS=0) or buff, cyan,
 magenta, orange (CSS=1) for codes 0-3. Two-colour modes show black and green (CSS=0) or black
@@ -712,11 +496,20 @@ and buff (CSS=1). The border is green or buff. Mode sizes, packing and colour co
 the Motorola MC6847 datasheet (PDF pages 18-21). Palette RGB values are XRoar's rendered
 colours, measured in examples/palette-swatches; they are not a real TV's colours.
 
+GIME pixels are palette registers 0 to colours-1. Registers $FFB0-$FFBF hold six-bit colour
+codes (Tandy CoCo 3 Service Manual PDF 17). The tool chooses codes for an image, or for
+several images that share one palette, by CIELAB error against a measured colour model:
+gime-composite (default: XRoar's NTSC composite picture, which the starter's checks capture)
+or gime-rgb (XRoar's RGB monitor input). Modes are from Tepolt, Assembly Language Programming
+for the CoCo3, PDF 41-42 Table 4-10, and the Service Manual PDF 18; the byte layout from
+Tepolt PDF 38-39. The colour models are XRoar 1.13.1 measurements, not a monitor's colours.
+
 Commands:
   modes     list the modes: size, bits per pixel, bytes, pixel size and pixel aspect
   palettes  list the palettes and their RGB values
   convert   one image to one screen or sprite
   sheet     a sprite sheet to one labelled block per cell
+  palette   one GIME palette that several images share
   render    packed bytes to a PNG
 
 Run '%(prog)s <command> --help' for each command's options and outputs.
@@ -739,7 +532,28 @@ picture with about 240 visible lines per field, so a VDG half-clock (1/7.159 MHz
 6/7 as wide as a scan line is high. An RG6 pixel is then 0.857 as wide as it is high, a CG6
 pixel 1.714. 'square' makes a half-clock as wide as a line is high (a full screen is 256x192
 units). Neither is XRoar's capture layout of 2 samples per half-clock: see 'render --help'.
+
+CoCo 3 GIME modes also write:
+  PREFIX-palette.asm   lwasm include: <label>_palette_count, then <label>_palette with one
+                       'fcb' of colour codes for registers 0 to colours-1, register 0
+                       first; a program writes them to $FFB0 and up
+  PREFIX-palette.json  the registers the palette sets and their codes; --palette-file
+                       reads it back
+The tool chooses a code for each register in --registers (default: every register of the
+mode) that --lock, --codes and --palette-file do not fix. It makes the sum of CIELAB
+distances smallest against the --palette colour model. A locked register outside
+--registers stays in the palette, but no pixel uses it. All cells of a sheet share one
+palette. A GIME pixel's aspect is a deduction: XRoar draws a GIME line as 640 (full width)
+or 512 (short width) samples and a VDG line as 512, so a gime-320x16 or gime-256x16 pixel
+has the shape of an RG6 pixel.
 """
+
+DEFAULT_GIME_PALETTE = "gime-composite"
+GIME_DEDUCTION = (
+    "Samples per pixel and aspect are deductions from XRoar 1.13.1 src/tcc1014/tcc1014.c "
+    "(640 or 512 samples for each line)."
+)
+GIME_ONLY = ("rows", "registers", "lock", "codes", "palette_file")
 
 
 def _size(text: str) -> tuple[int, int]:
@@ -757,19 +571,88 @@ def _box(text: str) -> tuple[int, int, int, int]:
     return x, y, width, height
 
 
+def _code(text: str) -> int:
+    """A colour code in hexadecimal: 3F, $3F or 0x3F."""
+    match = re.fullmatch(r"(?:\$|0[xX])?([0-9A-Fa-f]{1,2})", text.strip())
+    if not match or int(match[1], 16) > 0x3F:
+        raise argparse.ArgumentTypeError(f"expected a colour code $00-$3F in hex, not {text!r}")
+    return int(match[1], 16)
+
+
+def _codes(text: str) -> tuple[int, ...]:
+    return tuple(_code(part) for part in text.split(","))
+
+
+def _lock(text: str) -> tuple[int, int]:
+    register, _, code = text.partition("=")
+    if not register.strip().isdigit() or not code:
+        raise argparse.ArgumentTypeError(f"expected REGISTER=CODE, such as 0=00, not {text!r}")
+    return int(register), _code(code)
+
+
+def _span(text: str) -> tuple[int, int]:
+    match = re.fullmatch(r"(\d+)-(\d+)", text.strip())
+    if not match:
+        raise argparse.ArgumentTypeError(
+            f"expected FIRST-LAST registers, such as 8-15, not {text!r}"
+        )
+    return int(match[1]), int(match[2])
+
+
+MODE_HELP = "a VDG mode (CG1 RG1 CG2 RG2 CG3 RG3 CG6 RG6) or a GIME mode (gime-320x16 ...)"
+PALETTE_HELP = (
+    "VDG: the preview palette, xroar (default) or xroar-coco3; GIME: the colour model that "
+    "codes are chosen and previewed with, gime-composite (default) or gime-rgb"
+)
+
+
+def _gime_options(parser: argparse.ArgumentParser, rows: bool = True, span: bool = True) -> None:
+    group = parser.add_argument_group("CoCo 3 GIME modes")
+    if rows:
+        group.add_argument(
+            "--rows", type=int, choices=(192, 200, 225), help="rows of a full screen (default 192)"
+        )
+    if span:
+        group.add_argument(
+            "--registers",
+            type=_span,
+            metavar="FIRST-LAST",
+            help="the registers the pixels may use (default: all of the mode's)",
+        )
+    group.add_argument(
+        "--lock",
+        type=_lock,
+        action="append",
+        metavar="REGISTER=CODE",
+        help="fix one register's colour code (hex), such as 0=00; repeat for more",
+    )
+    group.add_argument(
+        "--codes",
+        type=_codes,
+        metavar="CODE,CODE,...",
+        help="fix the codes (hex) of registers 0, 1, 2 ... in order, such as 00,30,12,24",
+    )
+    group.add_argument(
+        "--palette-file",
+        type=Path,
+        metavar="PREFIX-palette.json",
+        help="fix every register a palette file sets; its colour model is the default --palette",
+    )
+
+
 def _conversion_options() -> argparse.ArgumentParser:
     shared = argparse.ArgumentParser(add_help=False)
     shared.add_argument("image", type=Path, help="PNG or other image Pillow can read")
-    shared.add_argument("--mode", required=True, help="CG1 RG1 CG2 RG2 CG3 RG3 CG6 or RG6")
+    shared.add_argument("--mode", required=True, help=MODE_HELP)
     shared.add_argument("--out", required=True, type=Path, help="output path without suffix")
     shared.add_argument(
         "--label",
         help="assembly label (default: the --out file name, with other characters turned into _)",
     )
     css = shared.add_mutually_exclusive_group()
-    css.add_argument("--css", type=int, choices=(0, 1), default=0, help="colour set (default 0)")
+    css.add_argument("--css", type=int, choices=(0, 1), help="VDG colour set (default 0)")
     css.add_argument(
-        "--auto-css", action="store_true", help="choose the colour set with less colour error"
+        "--auto-css", action="store_true", help="VDG: choose the colour set with less colour error"
     )
     shared.add_argument("--box", type=_box, help="crop the source first: X,Y,WIDTH,HEIGHT")
     shared.add_argument(
@@ -786,12 +669,20 @@ def _conversion_options() -> argparse.ArgumentParser:
         help="nearest for pixel art; box (default, area average), bilinear or lanczos "
         "for illustrations and photos",
     )
-    shared.add_argument(
+    reduce = shared.add_mutually_exclusive_group()
+    reduce.add_argument(
         "--dither",
         choices=DITHERS,
         default="none",
         help="none (default); bayer: 4x4 ordered pattern; floyd-steinberg: error diffusion, "
         "left to right on every row. Both are deterministic",
+    )
+    reduce.add_argument(
+        "--mosaic",
+        type=_size,
+        metavar="WxH",
+        help="give each block of WxH target pixels, from the top left, one colour: the "
+        "nearest (CIELAB) to the block's mean in linear light. Not with --dither",
     )
     shared.add_argument(
         "--dither-strength",
@@ -813,7 +704,8 @@ def _conversion_options() -> argparse.ArgumentParser:
         "transparent code-0 pixels",
     )
     shared.add_argument("--display", choices=DISPLAYS, default="ntsc", help="default: ntsc")
-    shared.add_argument("--palette", default="xroar", help="preview palette (default: xroar)")
+    shared.add_argument("--palette", help=PALETTE_HELP)
+    _gime_options(shared)
     return shared
 
 
@@ -824,7 +716,7 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     commands = parser.add_subparsers(dest="command", required=True, metavar="command")
-    commands.add_parser("modes", help="list the VDG full-graphics modes")
+    commands.add_parser("modes", help="list the VDG and GIME graphics modes")
     commands.add_parser("palettes", help="list the palettes and their RGB values")
     shared = _conversion_options()
     convert = commands.add_parser(
@@ -843,22 +735,57 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Crop the sheet to --box if given, then slice it into equal --cell rectangles\n"
             "(no margins or gaps). Convert each cell to --size mode pixels, all with one colour\n"
-            "set, and label them <label>_r<row>c<col>, row 0 column 0 at the top left.\n"
-            "PREFIX.bin and PREFIX-mask.bin hold the cells row by row; the preview shows the grid."
+            "set (VDG) or one palette (GIME), and label them <label>_r<row>c<col>, row 0 column\n"
+            "0 at the top left. PREFIX.bin and PREFIX-mask.bin hold the cells row by row; the\n"
+            "preview shows the grid."
         ),
         epilog=CONVERT_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sheet.add_argument("--cell", type=_size, required=True, help="source cell size, WxH pixels")
     sheet.add_argument("--size", type=_size, required=True, help="each cell in mode pixels, WxH")
+    _palette_parser(commands)
+    _render_parser(commands)
+    return parser
+
+
+def _palette_parser(commands: argparse._SubParsersAction) -> None:
+    palette = commands.add_parser(
+        "palette",
+        help="one GIME palette that several images share",
+        description=(
+            "Choose the colour codes of one GIME palette for several images, such as a\n"
+            "background and a sprite sheet, and write PREFIX-palette.asm and\n"
+            "PREFIX-palette.json. Each image counts the same, whatever its size; an image\n"
+            "with more pixels than the mode's screen is first reduced to that many. Then\n"
+            "convert each image with --palette-file PREFIX-palette.json."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    palette.add_argument("images", type=Path, nargs="+", help="PNG or other images")
+    palette.add_argument("--mode", required=True, help="a GIME mode, such as gime-320x16")
+    palette.add_argument("--out", required=True, type=Path, help="output path without suffix")
+    palette.add_argument("--label", help="assembly label (default: from the --out file name)")
+    palette.add_argument("--palette", help="gime-composite (default) or gime-rgb")
+    palette.add_argument(
+        "--alpha-threshold", type=int, default=128, help="alpha below this is ignored (default 128)"
+    )
+    _gime_options(palette, rows=False)
+
+
+def _render_parser(commands: argparse._SubParsersAction) -> None:
     render_cmd = commands.add_parser(
         "render",
         help="packed bytes to a PNG",
-        description="Render packed bytes (leftmost pixel in the high bits) as a PNG picture.",
+        description=(
+            "Render packed bytes (leftmost pixel in the high bits) as a PNG picture. A GIME\n"
+            "mode needs the palette: --palette-file, --codes or --lock."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     render_cmd.add_argument("data", type=Path, help="packed bytes, top row first")
-    render_cmd.add_argument("--mode", required=True, help="CG1 RG1 CG2 RG2 CG3 RG3 CG6 or RG6")
-    render_cmd.add_argument("--css", type=int, choices=(0, 1), default=0, help="default 0")
+    render_cmd.add_argument("--mode", required=True, help=MODE_HELP)
+    render_cmd.add_argument("--css", type=int, choices=(0, 1), help="VDG colour set (default 0)")
     render_cmd.add_argument("--size", type=_size, help="WIDTHxHEIGHT pixels (default: screen)")
     render_cmd.add_argument("--out", required=True, type=Path, help="PNG to write")
     render_cmd.add_argument(
@@ -866,27 +793,82 @@ def build_parser() -> argparse.ArgumentParser:
         choices=(*DISPLAYS, "xroar"),
         default="ntsc",
         help="ntsc (default) or square proportions; xroar matches scripts/coco.py's capture "
-        "layout, 2 samples per half-clock",
+        "layout, 2 samples per half-clock (a GIME line is 640 or 512 samples)",
     )
-    render_cmd.add_argument("--palette", default="xroar", help="default: xroar")
-    return parser
+    render_cmd.add_argument("--palette", help=PALETTE_HELP)
+    _gime_options(render_cmd, span=False)
+
+
+def _refuse_gime_options(args: argparse.Namespace) -> None:
+    for name in GIME_ONLY:
+        if getattr(args, name, None):
+            flag = "--" + name.replace("_", "-")
+            raise GraphicsError(f"{flag} applies only to CoCo 3 GIME modes, not {args.mode}.")
+
+
+def _refuse_vdg_options(args: argparse.Namespace) -> None:
+    if args.css is not None or getattr(args, "auto_css", False):
+        raise GraphicsError(
+            "GIME pixels are palette registers, with no colour set; leave out --css and --auto-css."
+        )
+
+
+def _art_fields(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "size": args.size,
+        "box": args.box,
+        "fit": args.fit,
+        "resample": args.resample,
+        "dither": args.dither,
+        "dither_strength": args.dither_strength,
+        "mosaic": args.mosaic,
+        "alpha_threshold": args.alpha_threshold,
+        "pad": args.pad,
+        "display": args.display,
+    }
 
 
 def options_from(args: argparse.Namespace) -> ConvertOptions:
     return ConvertOptions(
         mode=parse_mode(args.mode),
-        css="auto" if args.auto_css else args.css,
-        size=args.size,
-        box=args.box,
-        fit=args.fit,
-        resample=args.resample,
-        dither=args.dither,
-        dither_strength=args.dither_strength,
-        alpha_threshold=args.alpha_threshold,
-        pad=args.pad,
-        display=args.display,
-        palette=parse_palette(args.palette),
+        css="auto" if args.auto_css else (args.css or 0),
+        palette=parse_palette(args.palette or XROAR.name),
+        **_art_fields(args),
     )
+
+
+def gime_locks(args: argparse.Namespace) -> tuple[Assignment, str | None]:
+    """Registers fixed by --palette-file, --codes and --lock, and the file's colour model."""
+    parts: list[Assignment] = []
+    named = None
+    if args.palette_file:
+        assignment, named = parse_palette_file(
+            args.palette_file.read_bytes(), str(args.palette_file)
+        )
+        parts.append(assignment)
+    if args.codes:
+        parts.append(dict(enumerate(args.codes)))
+    parts += [{register: code} for register, code in args.lock or ()]
+    return merge_locks(*parts), named
+
+
+def gime_options_from(args: argparse.Namespace, mode: GimeMode) -> GimeOptions:
+    _refuse_vdg_options(args)
+    locks, named = gime_locks(args)
+    return GimeOptions(
+        mode=mode,
+        palette=parse_gime_palette(args.palette or named or DEFAULT_GIME_PALETTE),
+        registers=args.registers,
+        locks=locks,
+        **_art_fields(args),
+    )
+
+
+def _screen_mode(args: argparse.Namespace) -> Mode | GimeMode:
+    mode = parse_mode(args.mode, args.rows or 192)
+    if not isinstance(mode, GimeMode):
+        _refuse_gime_options(args)
+    return mode
 
 
 def load_rgba(path: Path) -> np.ndarray:
@@ -899,9 +881,23 @@ def save_png(path: Path, picture: np.ndarray) -> None:
     Image.fromarray(picture, "RGB").save(path)
 
 
-def output_paths(prefix: Path, image: Path, with_mask: bool) -> list[Path]:
-    """PREFIX.bin, .asm, .png and, with a mask, PREFIX-mask.bin; never the input image."""
-    names = [".bin", ".asm", ".png", *(["-mask.bin"] if with_mask else [])]
+PALETTE_SUFFIXES = ("-palette.asm", "-palette.json")
+
+
+def output_paths(
+    prefix: Path, image: Path, with_mask: bool, with_palette: bool = False
+) -> list[Path]:
+    """PREFIX.bin, .asm, .png, PREFIX-mask.bin with a mask, and the GIME palette files.
+
+    Never the input image.
+    """
+    names = [
+        ".bin",
+        ".asm",
+        ".png",
+        *(["-mask.bin"] if with_mask else []),
+        *(PALETTE_SUFFIXES if with_palette else ()),
+    ]
     paths = [prefix.with_name(prefix.name + name) for name in names]
     if any(path.resolve() == image.resolve() for path in paths):
         raise GraphicsError(f"--out {prefix} would overwrite the input image {image}.")
@@ -910,44 +906,92 @@ def output_paths(prefix: Path, image: Path, with_mask: bool) -> list[Path]:
 
 def _write_outputs(
     args: argparse.Namespace,
-    grid: list[list[Conversion]],
+    grid: Sequence[Sequence[Conversion | GimeConversion]],
     labels: list[list[str]],
-    options: ConvertOptions,
+    preview: np.ndarray,
+    palette_files: tuple[str, str] | None = None,
 ) -> list[Path]:
-    paths = output_paths(args.out, args.image, args.mask)
+    paths = output_paths(args.out, args.image, args.mask, palette_files is not None)
     paths[0].parent.mkdir(parents=True, exist_ok=True)
     cells = [(label, c) for row_labels, row in zip(labels, grid, strict=True)
              for label, c in zip(row_labels, row, strict=True)]  # fmt: skip
     paths[0].write_bytes(b"".join(c.data for _, c in cells))
     paths[1].write_text(assembly_include(cells, args.image.name, args.mask))
-    save_png(paths[2], sheet_preview(grid, options.palette, options.display))
+    save_png(paths[2], preview)
     if args.mask:
         paths[3].write_bytes(b"".join(c.mask for _, c in cells))
+    if palette_files:
+        paths[-2].write_text(palette_files[0])
+        paths[-1].write_text(palette_files[1])
     return paths
 
 
+def _palette_files(label: str, assignment: Assignment, options: GimeOptions) -> tuple[str, str]:
+    return (
+        palette_assembly(f"{label}_palette", assignment, options.palette, options.mode),
+        palette_json(assignment, options.palette, options.mode),
+    )
+
+
 def run_convert(args: argparse.Namespace) -> list[str]:
-    options = options_from(args)
+    mode = _screen_mode(args)
     label = check_label(args.label or label_from_name(args.out.name))
-    output_paths(args.out, args.image, args.mask)
+    output_paths(args.out, args.image, args.mask, isinstance(mode, GimeMode))
+    if isinstance(mode, GimeMode):
+        return _gime_cells(args, mode, label, [[load_rgba(args.image)]])
+    options = options_from(args)
     conversion = convert_image(load_rgba(args.image), options)
-    paths = _write_outputs(args, [[conversion]], [[label]], options)
+    preview = sheet_preview([[conversion]], options.palette, options.display)
+    paths = _write_outputs(args, [[conversion]], [[label]], preview)
     return _report(conversion, conversion.error, paths)
 
 
 def run_sheet(args: argparse.Namespace) -> list[str]:
-    options = options_from(args)
+    mode = _screen_mode(args)
     label = check_label(args.label or label_from_name(args.out.name))
-    output_paths(args.out, args.image, args.mask)
-    rows = slice_cells(crop_box(load_rgba(args.image), options.box), *args.cell)
-    options = options.model_copy(update={"box": None})
+    output_paths(args.out, args.image, args.mask, isinstance(mode, GimeMode))
+    rows = slice_cells(crop_box(load_rgba(args.image), args.box), *args.cell)
+    args.box = None
+    labels = [[f"{label}_r{r}c{c}" for c in range(len(rows[0]))] for r in range(len(rows))]
+    if isinstance(mode, GimeMode):
+        lines = _gime_cells(args, mode, label, rows, labels)
+        return [f"{sum(map(len, rows))} cells in {len(rows)} rows of {len(rows[0])}", *lines]
+    options = options_from(args)
     flat = convert_images([cell for row in rows for cell in row], options)
     width = len(rows[0])
     grid = [flat[r * width : (r + 1) * width] for r in range(len(rows))]
-    labels = [[f"{label}_r{r}c{c}" for c in range(width)] for r in range(len(rows))]
-    paths = _write_outputs(args, grid, labels, options)
+    preview = sheet_preview(grid, options.palette, options.display)
+    paths = _write_outputs(args, grid, labels, preview)
     error = sum(c.error for c in flat)
     return [f"{len(flat)} cells in {len(rows)} rows of {width}", *_report(flat[0], error, paths)]
+
+
+def _gime_cells(
+    args: argparse.Namespace,
+    mode: GimeMode,
+    label: str,
+    rows: list[list[np.ndarray]],
+    labels: list[list[str]] | None = None,
+) -> list[str]:
+    """Convert a grid of images with one shared palette; write every output."""
+    options = gime_options_from(args, mode)
+    result = convert_gime_images([cell for row in rows for cell in row], options)
+    width = len(rows[0])
+    flat = result.conversions
+    grid = [flat[r * width : (r + 1) * width] for r in range(len(rows))]
+    preview = gime_sheet_preview(grid, result.assignment, options.palette, options.display)
+    files = _palette_files(label, result.assignment, options)
+    paths = _write_outputs(args, grid, labels or [[label]], preview, files)
+    return [
+        _assignment_line(mode, options.palette, result.assignment),
+        f"colour error (sum of CIELAB distances): {sum(c.error for c in flat):.1f}",
+        *(str(path) for path in paths),
+    ]
+
+
+def _assignment_line(mode: GimeMode, palette: GimePalette, assignment: Assignment) -> str:
+    codes = " ".join(f"{register}=${code:02X}" for register, code in assignment.items())
+    return f"{mode.name}, {mode.rows} rows, {palette.name} colours; registers {codes}"
 
 
 def _report(conversion: Conversion, error: float, paths: list[Path]) -> list[str]:
@@ -959,12 +1003,58 @@ def _report(conversion: Conversion, error: float, paths: list[Path]) -> list[str
     ]
 
 
-def run_render(args: argparse.Namespace) -> list[str]:
+def run_palette(args: argparse.Namespace) -> list[str]:
     mode = parse_mode(args.mode)
+    if not isinstance(mode, GimeMode):
+        raise GraphicsError(
+            f"palette chooses CoCo 3 GIME colour codes; {mode.name} is a VDG mode, whose colour "
+            "sets are fixed."
+        )
+    label = check_label(args.label or label_from_name(args.out.name))
+    locks, named = gime_locks(args)
+    palette = parse_gime_palette(args.palette or named or DEFAULT_GIME_PALETTE)
+    screen = mode.width * mode.rows
+    grids = [palette_grid(load_rgba(path), screen, args.alpha_threshold) for path in args.images]
+    colours, weights = colour_samples(grids, equal_weight=True)
+    assignment = select_palette(colours, weights, palette, mode.colour_count, args.registers, locks)
+    usable = [assignment[r] for r in register_range(args.registers, mode.colour_count)]
+    error = assignment_error(colours, weights, usable, palette) / len(grids)
+    paths = [args.out.with_name(args.out.name + suffix) for suffix in PALETTE_SUFFIXES]
+    paths[0].parent.mkdir(parents=True, exist_ok=True)
+    paths[0].write_text(palette_assembly(f"{label}_palette", assignment, palette, mode))
+    paths[1].write_text(palette_json(assignment, palette, mode))
+    return [
+        _assignment_line(mode, palette, assignment),
+        f"mean colour error per pixel, averaged over the images (CIELAB distance): {error:.2f}",
+        *(str(path) for path in paths),
+    ]
+
+
+def run_render(args: argparse.Namespace) -> list[str]:
+    mode = _screen_mode(args)
+    if isinstance(mode, GimeMode):
+        return _render_gime(args, mode)
     width, height = args.size or (mode.width, mode.height)
     codes = unpack(args.data.read_bytes(), width, height, mode.bits_per_pixel)
     scale = (2, 1) if args.display == "xroar" else preview_scale(args.display)
-    save_png(args.out, render(codes, mode, args.css, parse_palette(args.palette), *scale))
+    palette = parse_palette(args.palette or XROAR.name)
+    save_png(args.out, render(codes, mode, args.css or 0, palette, *scale))
+    return [str(args.out)]
+
+
+def _render_gime(args: argparse.Namespace, mode: GimeMode) -> list[str]:
+    _refuse_vdg_options(args)
+    locks, named = gime_locks(args)
+    if not locks:
+        raise GraphicsError(
+            "A GIME render needs the palette's codes: give --palette-file, --codes or --lock."
+        )
+    assignment = check_assignment(locks, mode.colour_count)
+    palette = parse_gime_palette(args.palette or named or DEFAULT_GIME_PALETTE)
+    width, height = args.size or (mode.width, mode.rows)
+    codes = unpack(args.data.read_bytes(), width, height, mode.bits_per_pixel)
+    columns, rows = preview_columns(mode, args.display)
+    save_png(args.out, render_gime(codes, mode, assignment, palette, columns, rows))
     return [str(args.out)]
 
 
@@ -978,7 +1068,24 @@ def run_modes(_: argparse.Namespace) -> list[str]:
             f"{mode.bytes_per_row:>9}  {mode.bytes_total:>5}  {mode.half_clocks:>13} x {mode.scan_lines}"
             f"{'':12}{pixel_aspect(mode, 'ntsc'):.3f}/{pixel_aspect(mode, 'square'):.3f}"
         )
-    return [*lines, f"Source: {_SOURCE}; CG2 from the PDF 20 page image."]
+    lines += [f"Source: {_SOURCE}; CG2 from the PDF 20 page image.", ""]
+    lines.append(
+        "GIME mode    pixels   bits  colours  HRES  CRES  bytes/row  bytes  width  "
+        "samples/pixel  aspect ntsc/square"
+    )
+    for mode in GIME_MODES.values():
+        width = "full" if mode.full else "short"
+        lines.append(
+            f"{mode.name:<12} {mode.width:>3}x{mode.rows:<4} {mode.bits_per_pixel:>4}  "
+            f"{mode.colour_count:>7}   {mode.hres:03b}    {mode.cres:02b}  {mode.bytes_per_row:>9}  "
+            f"{mode.bytes_total:>5}  {width:<5}  {mode.samples_per_pixel:>13}  "
+            f"{gime_pixel_aspect(mode, 'ntsc'):.3f}/{gime_pixel_aspect(mode, 'square'):.3f}"
+        )
+    return [
+        *lines,
+        "Rows: 192 (shown), 200 or 225 with --rows. One scan line for each row of pixels.",
+        f"Source: {GIME_SOURCE}. {GIME_DEDUCTION}",
+    ]
 
 
 def run_palettes(_: argparse.Namespace) -> list[str]:
@@ -987,6 +1094,9 @@ def run_palettes(_: argparse.Namespace) -> list[str]:
         lines += [f"{palette.name}: {palette.description}"]
         lines += [f"  black (CSS={css}): {rgb}" for css, rgb in enumerate(palette.black)]
         lines += [f"  {colour.value}: {rgb}" for colour, rgb in palette.colours.items()]
+    for gime_palette in GIME_PALETTES.values():
+        lines += [f"{gime_palette.name}: {gime_palette.description}"]
+        lines += [f"  ${code:02X}: {rgb}" for code, rgb in enumerate(gime_palette.colours)]
     return lines
 
 
@@ -995,6 +1105,7 @@ COMMANDS = {
     "palettes": run_palettes,
     "convert": run_convert,
     "sheet": run_sheet,
+    "palette": run_palette,
     "render": run_render,
 }
 
