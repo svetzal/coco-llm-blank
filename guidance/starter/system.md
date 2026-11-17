@@ -59,7 +59,29 @@ folder. The XRoar trial makes `local/system/xroar-<version>/` with its own
 ## Finish
 
 1. Run the full suite: `uv run pytest --cov`. Every test must pass.
-2. Commit the scoped paths on `main`. Push only when the owner asks.
-3. Delete `local/system/<topic>/`.
-4. Tell the owner, in plain words, what changed and what to decide next.
-5. Return to the mode that the session came from.
+2. Add the changes to `CHANGELOG.md` under a new section,
+   `## [x.y.z] - YYYY-MM-DD`. Write for a person who uses the starter: what
+   they can do now, and what they must do differently. Use the headings
+   Added, Changed, Fixed and Removed.
+3. Choose the new version. Before 1.0.0, increase the second number for a new
+   ability or a change that a project or a person must adapt to. Increase the
+   third number for a fix or a change to the guides only.
+4. Set the version in `pyproject.toml`. Then run `uv lock` and
+   `uv run python scripts/release.py check`.
+5. Commit the scoped paths on `main`, and push.
+6. Tag the commit and publish the release:
+
+   ```sh
+   git tag -a v<x.y.z> -m "retro-explorer-coco <x.y.z>"
+   git push origin v<x.y.z>
+   uv run python scripts/release.py notes > local/system/notes.md
+   gh release create v<x.y.z> --title "<x.y.z>" --notes-file local/system/notes.md
+   ```
+
+7. Delete `local/system/<topic>/` and `local/system/notes.md`.
+8. Tell the owner, in plain words, what changed, the new version and what to
+   decide next.
+9. Return to the mode that the session came from.
+
+A copy of the starter with no remote of its own keeps steps 1 to 4 and the
+commit. It does not push, tag or publish.
