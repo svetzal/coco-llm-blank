@@ -1,0 +1,250 @@
+{
+  "created": "2026-11-17T04:12:21.648038+00:00",
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1024",
+  "quality": "auto",
+  "background": "transparent",
+  "has_alpha": true,
+  "contract": "projects/untitled-1/art/game.contract.json",
+  "layers": [
+    "projects/untitled-1/art/creatures.spec.json"
+  ],
+  "slug": "09-mouse",
+  "variant": null,
+  "references": [
+    {
+      "path": "projects/untitled-1/art/creatures/05-frog.png",
+      "sha256": "de2e05df93b392c81fbd69525de2f3e162ba5828328ecefdcd343d60a43670af"
+    }
+  ],
+  "image_sha256": "08bed45d7cfeb1995800c524e1e37d8e7b9417bae0bdf720f5a9f8ddce3091d7",
+  "prompt": "Create one image for a CoCo 3 game. The whole image will be reduced to a 48x40 grid of target pixels (gime-320x16). On the display, each target pixel is 0.857:1, width to height.\nUse only these 16 colours, each as flat areas: black $00 (#141414), dark grey $10 (#3F3F3F), grey $20 (#9A9A9A), white $30 (#FFFFFF), brown $05 (#751D02), orange $15 (#E75D1F), tan $25 (#FFB053), yellow $24 (#FFC82E), dark green $0E (#004315), green $12 (#47910B), light green $21 (#63FF30), blue $0B (#221CDE), sky blue $1C (#227FF1), cyan $2D (#43F8FF), dark red $07 (#9B123C), red $16 (#FF4F4B). Do not use gradients, dithering, anti-aliasing, texture or any other colour.\nMake every important shape at least 3 target pixels across: at least 6.2% of the image width and 7.5% of the image height. Leave out detail smaller than that.\nFollow the JSON specification below exactly. The Context section explains why the image exists. Do not draw anything from it. Do not draw text, letters or numbers unless the specification explicitly asks for them.\nThe background must be fully transparent. Give the subject crisp, hard edges, with no semi-transparent glow, shadow or fringe, and leave generous padding around the subject.\n\nThe reference images are given in this order:\n1. An approved style sample. Match its style (the owner-approved style for every creature: thick black outline, flat colour with one darker shade step, big white eyes with black pupils, chibi proportions, cheerful open-mouth smile, the same scale and padding), but use only the listed colours.\nTake the pose, view and composition from the specification, not from the reference images.\n\n{\n  \"Name\": \"untitled-1: evolution sliding puzzle\",\n  \"VisualLanguage\": {\n    \"genre\": \"bright 1980s home-computer puzzle game\",\n    \"rendering\": \"flat colour cartoon with a black outline and one darker shade step per colour\",\n    \"mood\": \"friendly, playful, a little funny; every creature looks happy to evolve\",\n    \"world\": \"a cartoon history of life, from the sea to the land\"\n  },\n  \"Palette\": {\n    \"colours\": [\n      {\n        \"name\": \"black $00\",\n        \"hex\": \"#141414\",\n        \"use\": \"outlines, pupils, board background\"\n      },\n      {\n        \"name\": \"dark grey $10\",\n        \"hex\": \"#3f3f3f\",\n        \"use\": \"shadow on grey, shell shadow\"\n      },\n      {\n        \"name\": \"grey $20\",\n        \"hex\": \"#9a9a9a\",\n        \"use\": \"shells, rock, teeth shadow\"\n      },\n      {\n        \"name\": \"white $30\",\n        \"hex\": \"#ffffff\",\n        \"use\": \"eye whites, teeth, highlights\"\n      },\n      {\n        \"name\": \"brown $05\",\n        \"hex\": \"#751d02\",\n        \"use\": \"fur shadow, hair\"\n      },\n      {\n        \"name\": \"orange $15\",\n        \"hex\": \"#e75d1f\",\n        \"use\": \"fur, fish, beaks\"\n      },\n      {\n        \"name\": \"tan $25\",\n        \"hex\": \"#ffb053\",\n        \"use\": \"skin, faces, light fur, bellies\"\n      },\n      {\n        \"name\": \"yellow $24\",\n        \"hex\": \"#ffc82e\",\n        \"use\": \"bellies, beaks, bright details\"\n      },\n      {\n        \"name\": \"dark green $0E\",\n        \"hex\": \"#004315\",\n        \"use\": \"shadow on green\"\n      },\n      {\n        \"name\": \"green $12\",\n        \"hex\": \"#47910b\",\n        \"use\": \"frog, lizard, dinosaur skin\"\n      },\n      {\n        \"name\": \"light green $21\",\n        \"hex\": \"#63ff30\",\n        \"use\": \"highlights on green, microbe\"\n      },\n      {\n        \"name\": \"blue $0B\",\n        \"hex\": \"#221cde\",\n        \"use\": \"shadow on blue, clothing\"\n      },\n      {\n        \"name\": \"sky blue $1C\",\n        \"hex\": \"#227ff1\",\n        \"use\": \"jellyfish, bird, clothing\"\n      },\n      {\n        \"name\": \"cyan $2D\",\n        \"hex\": \"#43f8ff\",\n        \"use\": \"jellyfish glow, water highlights\"\n      },\n      {\n        \"name\": \"dark red $07\",\n        \"hex\": \"#9b123c\",\n        \"use\": \"mouths, shadow on red\"\n      },\n      {\n        \"name\": \"red $16\",\n        \"hex\": \"#ff4f4b\",\n        \"use\": \"tongues, cheeks, red details\"\n      }\n    ],\n    \"rules\": [\n      \"Each colour is one flat area. Shade with the darker colour of the same family, as one hard-edged step, never a gradient.\",\n      \"Outline every creature in black $00, thick and even.\",\n      \"Eyes are large: a white area with a black pupil, big enough to stay white at 48 pixels across.\"\n    ]\n  },\n  \"Target\": {\n    \"machine\": \"CoCo 3\",\n    \"mode\": \"gime-320x16\",\n    \"grid\": {\n      \"width\": 48,\n      \"height\": 40\n    },\n    \"pixel_aspect\": 0.857,\n    \"background\": \"transparent\"\n  },\n  \"LineAndShape\": {\n    \"outline\": \"black, thick, about 1/24 of the creature's width\",\n    \"shapes\": \"large, simple, rounded; a strong silhouette that is clear when the creature is the size of a thumbnail\",\n    \"proportions\": \"chibi: a big head and a small body, so the face is easy to see\"\n  },\n  \"SubjectLanguage\": {\n    \"creatures\": \"Each creature is one character with a face that shows a happy, curious expression. Each is clearly different in shape and main colour from the creatures before and after it in the chain.\",\n    \"scale\": \"Every creature fills the frame the same way, whatever its real size: a microbe is as large on the tile as a dinosaur.\"\n  },\n  \"BackgroundPolicy\": {\n    \"default\": \"transparent; the program draws the board square behind the creature\"\n  },\n  \"TypographyPolicy\": {\n    \"default\": \"No words, letters, numbers or pseudo-text.\"\n  },\n  \"CompositionPolicy\": {\n    \"sprite\": \"One creature, centred, the whole body inside the frame, with even padding of about one tenth of the frame on every side. Three-quarter front view, facing the viewer.\"\n  },\n  \"QualityRules\": [\n    \"The creature reads clearly as a silhouette.\",\n    \"No detail smaller than the minimum feature size.\",\n    \"All eleven creatures look like one family of characters drawn by the same artist.\"\n  ],\n  \"NegativeKeywords\": [\n    \"pixel art or visible pixels\",\n    \"photorealism\",\n    \"gradients\",\n    \"soft airbrush shading\",\n    \"noise or texture\",\n    \"lettering\",\n    \"scenery\",\n    \"ground shadow\"\n  ],\n  \"Role\": \"sprite\",\n  \"Canvas\": {\n    \"size\": \"1024x1024\"\n  },\n  \"Style\": {\n    \"consistency\": \"the same outline weight, the same eye style, the same chibi proportions and the same scale for every creature\"\n  },\n  \"Subject\": {\n    \"name\": \"mouse\",\n    \"description\": \"a round grey mouse sitting up, large round ears with red inner ears, a long thin tail, a pink-red nose\"\n  },\n  \"Composition\": {\n    \"framing\": \"the whole creature, centred\",\n    \"view\": \"three-quarter front\"\n  },\n  \"Constraints\": {\n    \"must\": [],\n    \"must_not\": []\n  },\n  \"Context\": {\n    \"game\": \"a sliding evolution puzzle on a 4 by 4 board\",\n    \"why\": \"one picture for each level of the evolution chain; two equal creatures merge into the next\"\n  }\n}",
+  "revised_prompt": null,
+  "spec": {
+    "Name": "untitled-1: evolution sliding puzzle",
+    "VisualLanguage": {
+      "genre": "bright 1980s home-computer puzzle game",
+      "rendering": "flat colour cartoon with a black outline and one darker shade step per colour",
+      "mood": "friendly, playful, a little funny; every creature looks happy to evolve",
+      "world": "a cartoon history of life, from the sea to the land"
+    },
+    "Palette": {
+      "colours": [
+        {
+          "name": "black $00",
+          "hex": "#141414",
+          "use": "outlines, pupils, board background"
+        },
+        {
+          "name": "dark grey $10",
+          "hex": "#3f3f3f",
+          "use": "shadow on grey, shell shadow"
+        },
+        {
+          "name": "grey $20",
+          "hex": "#9a9a9a",
+          "use": "shells, rock, teeth shadow"
+        },
+        {
+          "name": "white $30",
+          "hex": "#ffffff",
+          "use": "eye whites, teeth, highlights"
+        },
+        {
+          "name": "brown $05",
+          "hex": "#751d02",
+          "use": "fur shadow, hair"
+        },
+        {
+          "name": "orange $15",
+          "hex": "#e75d1f",
+          "use": "fur, fish, beaks"
+        },
+        {
+          "name": "tan $25",
+          "hex": "#ffb053",
+          "use": "skin, faces, light fur, bellies"
+        },
+        {
+          "name": "yellow $24",
+          "hex": "#ffc82e",
+          "use": "bellies, beaks, bright details"
+        },
+        {
+          "name": "dark green $0E",
+          "hex": "#004315",
+          "use": "shadow on green"
+        },
+        {
+          "name": "green $12",
+          "hex": "#47910b",
+          "use": "frog, lizard, dinosaur skin"
+        },
+        {
+          "name": "light green $21",
+          "hex": "#63ff30",
+          "use": "highlights on green, microbe"
+        },
+        {
+          "name": "blue $0B",
+          "hex": "#221cde",
+          "use": "shadow on blue, clothing"
+        },
+        {
+          "name": "sky blue $1C",
+          "hex": "#227ff1",
+          "use": "jellyfish, bird, clothing"
+        },
+        {
+          "name": "cyan $2D",
+          "hex": "#43f8ff",
+          "use": "jellyfish glow, water highlights"
+        },
+        {
+          "name": "dark red $07",
+          "hex": "#9b123c",
+          "use": "mouths, shadow on red"
+        },
+        {
+          "name": "red $16",
+          "hex": "#ff4f4b",
+          "use": "tongues, cheeks, red details"
+        }
+      ],
+      "rules": [
+        "Each colour is one flat area. Shade with the darker colour of the same family, as one hard-edged step, never a gradient.",
+        "Outline every creature in black $00, thick and even.",
+        "Eyes are large: a white area with a black pupil, big enough to stay white at 48 pixels across."
+      ]
+    },
+    "Target": {
+      "machine": "CoCo 3",
+      "mode": "gime-320x16",
+      "grid": {
+        "width": 48,
+        "height": 40
+      },
+      "pixel_aspect": 0.857,
+      "background": "transparent"
+    },
+    "LineAndShape": {
+      "outline": "black, thick, about 1/24 of the creature's width",
+      "shapes": "large, simple, rounded; a strong silhouette that is clear when the creature is the size of a thumbnail",
+      "proportions": "chibi: a big head and a small body, so the face is easy to see"
+    },
+    "SubjectLanguage": {
+      "creatures": "Each creature is one character with a face that shows a happy, curious expression. Each is clearly different in shape and main colour from the creatures before and after it in the chain.",
+      "scale": "Every creature fills the frame the same way, whatever its real size: a microbe is as large on the tile as a dinosaur."
+    },
+    "BackgroundPolicy": {
+      "default": "transparent; the program draws the board square behind the creature"
+    },
+    "TypographyPolicy": {
+      "default": "No words, letters, numbers or pseudo-text."
+    },
+    "CompositionPolicy": {
+      "sprite": "One creature, centred, the whole body inside the frame, with even padding of about one tenth of the frame on every side. Three-quarter front view, facing the viewer."
+    },
+    "QualityRules": [
+      "The creature reads clearly as a silhouette.",
+      "No detail smaller than the minimum feature size.",
+      "All eleven creatures look like one family of characters drawn by the same artist."
+    ],
+    "PromptKeywords": [],
+    "NegativeKeywords": [
+      "pixel art or visible pixels",
+      "photorealism",
+      "gradients",
+      "soft airbrush shading",
+      "noise or texture",
+      "lettering",
+      "scenery",
+      "ground shadow"
+    ],
+    "ApprovedSamples": [
+      {
+        "file": "projects/untitled-1/art/creatures/05-frog.png",
+        "use": "the owner-approved style for every creature: thick black outline, flat colour with one darker shade step, big white eyes with black pupils, chibi proportions, cheerful open-mouth smile, the same scale and padding"
+      }
+    ],
+    "Role": "sprite",
+    "Canvas": {
+      "size": "1024x1024"
+    },
+    "Style": {
+      "consistency": "the same outline weight, the same eye style, the same chibi proportions and the same scale for every creature"
+    },
+    "Items": [
+      {
+        "name": "microbe",
+        "description": "a round blob-shaped single cell in light green, with a darker green nucleus spot, a few short wiggly cilia around its edge, and a happy face",
+        "slug": "01-microbe"
+      },
+      {
+        "name": "jellyfish",
+        "description": "a dome-shaped jellyfish in sky blue with a cyan highlight, four short curly tentacles below, and a happy face on the dome",
+        "slug": "02-jellyfish"
+      },
+      {
+        "name": "trilobite",
+        "description": "a trilobite seen from above at a slight angle: an oval segmented grey shell with dark grey grooves, small antennae, and a happy face on the head shield",
+        "slug": "03-trilobite"
+      },
+      {
+        "name": "fish",
+        "description": "a plump orange fish with a yellow belly, a forked tail fin, and a happy face; side view facing the viewer's left",
+        "slug": "04-fish"
+      },
+      {
+        "name": "frog",
+        "description": "a round green frog sitting upright, yellow belly, large eyes on top of its head, wide smile",
+        "slug": "05-frog"
+      },
+      {
+        "name": "lizard",
+        "description": "a small green lizard standing on four legs, curled tail, yellow belly stripe, happy face",
+        "slug": "06-lizard"
+      },
+      {
+        "name": "dinosaur",
+        "description": "a friendly long-necked dinosaur in green with a yellow belly and darker green back spots, standing on four sturdy legs",
+        "slug": "07-dinosaur"
+      },
+      {
+        "name": "bird",
+        "description": "a round sky blue songbird with a yellow beak, a white belly and small wings raised, standing",
+        "slug": "08-bird"
+      },
+      {
+        "name": "mouse",
+        "description": "a round grey mouse sitting up, large round ears with red inner ears, a long thin tail, a pink-red nose",
+        "slug": "09-mouse"
+      },
+      {
+        "name": "primate",
+        "description": "a small orange-brown monkey sitting, a tan face and tan belly, round ears, a curled tail",
+        "slug": "10-primate"
+      },
+      {
+        "name": "human",
+        "description": "a cheerful cave-person child with tan skin, brown shaggy hair, and a simple orange one-shoulder tunic, waving one hand",
+        "slug": "11-human"
+      }
+    ],
+    "Output": {
+      "pattern": "{slug}.png"
+    },
+    "Composition": {
+      "framing": "the whole creature, centred",
+      "view": "three-quarter front"
+    },
+    "Constraints": {
+      "must": [],
+      "must_not": []
+    },
+    "Context": {
+      "game": "a sliding evolution puzzle on a 4 by 4 board",
+      "why": "one picture for each level of the evolution chain; two equal creatures merge into the next"
+    }
+  }
+}
