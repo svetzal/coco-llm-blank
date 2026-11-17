@@ -1,4 +1,4 @@
-"""Independent model of Evolve (untitled-1): its screens and its rules.
+"""Independent model of Evolve: its screens and its rules.
 
 Written from the layout rules and the game rules in the README, not from the
 assembly's output. The key policy and the slide rules are modelled here, and

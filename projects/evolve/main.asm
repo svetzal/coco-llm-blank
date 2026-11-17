@@ -1,4 +1,4 @@
-* Evolve (project untitled-1): an evolution sliding puzzle for the CoCo 3.
+* Evolve: an evolution sliding puzzle for the CoCo 3.
 *
 * The title screen shows the eleven creatures. Space starts a game. The
 * board is 4x4 squares in 320x192 with 16 colours. The arrow keys slide

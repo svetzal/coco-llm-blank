@@ -1,7 +1,7 @@
 # Evolve
 
 A sliding puzzle about evolution, for the CoCo 3. The owner named it Evolve.
-The project folder keeps its first name, `untitled-1`.
+Its first name was `untitled-1`.
 
 Creatures sit on a grid. Each arrow key slides all creatures in that
 direction. When two equal creatures meet, they merge into the next creature of
@@ -135,7 +135,7 @@ each generation before it runs.
 Convert each creature with the 16 codes of the contract, in register order:
 
 ```sh
-uv run python scripts/graphics.py convert projects/untitled-1/art/creatures/05-frog.png --mode gime-320x16 --size 48x40 --codes 00,10,20,30,05,15,25,24,0E,12,21,0B,1C,2D,07,16 --mask --out build/untitled-1/art/05-frog
+uv run python scripts/graphics.py convert projects/evolve/art/creatures/05-frog.png --mode gime-320x16 --size 48x40 --codes 00,10,20,30,05,15,25,24,0E,12,21,0B,1C,2D,07,16 --mask --out build/evolve/art/05-frog
 ```
 
 The trilobite is wide and low. Crop it to the creature first, so that its face
@@ -147,8 +147,8 @@ to its command (the owner chose this).
 Commands start in the starter folder:
 
 ```sh
-uv run python scripts/coco.py run projects/untitled-1
-uv run python scripts/coco.py check projects/untitled-1
+uv run python scripts/coco.py run projects/evolve
+uv run python scripts/coco.py check projects/evolve
 ```
 
 The `run` command opens XRoar. Close the window to stop it.
@@ -201,7 +201,7 @@ In order of importance:
 ## Check
 
 ```sh
-uv run python scripts/coco.py check projects/untitled-1
+uv run python scripts/coco.py check projects/evolve
 ```
 
 The check runs five builds. Each build stops at `ready` 21 times, once for
