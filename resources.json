@@ -6,6 +6,18 @@
     "sha256": "022da9b939f61be4d612d23f52a2f3599280c12a60b46ea96b906fb150f5189e"
   },
   {
+    "id": "6309-technical-reference",
+    "title": "HD63B09EP Technical Reference Guide (Chet Simpson, with additions by Alan DeKok)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Microprocessors/HD6309/HD63B09EP%20Technical%20Reference%20Guide.pdf",
+    "sha256": "66cc262f6edd0b5611b35228075434d3f75111d80528642d58303407b8f3d1c8"
+  },
+  {
+    "id": "6309-book",
+    "title": "The 6309 Book (Burke & Burke)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Books/The%206309%20Book%20%28Burke%20%26%20Burke%29.pdf",
+    "sha256": "e5c9dbdaab21f779cb03105106cad706e060f12c56743ef1a888a529c45ce2da"
+  },
+  {
     "id": "assembly-graphics",
     "title": "Assembly Language Graphics for the TRS-80 Color Computer (Don Inman, Kurt Inman with Dymax)",
     "url": "https://colorcomputerarchive.com/repo/Documents/Books/Assembly%20Language%20Graphics%20for%20the%20TRS-80%20Color%20Computer%20%28Don%20Inman%2C%20Kurt%20Inman%20with%20Dymax%29.pdf",

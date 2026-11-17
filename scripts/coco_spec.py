@@ -145,7 +145,7 @@ def emulated(
             if command[1] == "dskini":
                 (cwd / command[2]).write_bytes(b"DISK")
             return
-        if "--6809" in command:
+        if "--6809" in command or "--6309" in command:
             symbols = next(arg for arg in command if arg.startswith("--symbol-dump="))
             Path(symbols.split("=", 1)[1]).write_text(SYMBOLS)
             binary = next(arg for arg in command if arg.startswith("--output="))
@@ -420,6 +420,46 @@ class DescribeBuild:
         with pytest.raises(ProjectError, match="Unknown variant 'slow'"):
             coco.build(project, host, "slow")
 
+    def should_assemble_for_the_6809_unless_the_target_names_the_6309(
+        self, project: coco.Project
+    ) -> None:
+        host = emulated()
+
+        built = coco.build(project, host, cpu=coco.instruction_set(project, "coco2"))
+
+        command = host.run.call_args.args[0]
+        assert "--6809" in command
+        assert "--define=H6309" not in command
+        assert built.binary.name == "main.bin"
+
+    def should_assemble_6309_instructions_for_a_6309_target(self, folder: Path) -> None:
+        (folder / "coco.toml").write_text(SETTINGS.replace('cpu = "6809"', 'cpu = "6309"'))
+        project = coco.load_project(folder)
+        host = emulated()
+
+        built = coco.build(project, host, cpu=coco.instruction_set(project, "coco1"))
+
+        command = host.run.call_args.args[0]
+        assert "--6309" in command
+        assert "--6809" not in command
+        assert "--define=H6309" in command
+        assert built.binary.name == "main-6309.bin"
+
+    def should_reject_a_cpu_xroar_and_lwasm_do_not_share(self, folder: Path) -> None:
+        (folder / "coco.toml").write_text(SETTINGS.replace('cpu = "6809"', 'cpu = "6502"'))
+
+        with pytest.raises(ProjectError, match="is invalid"):
+            coco.load_project(folder)
+
+    def should_build_run_and_check_with_the_cpu_of_their_target(self, folder: Path) -> None:
+        (folder / "coco.toml").write_text(SETTINGS.replace('cpu = "6809"', 'cpu = "6309"'))
+        host = emulated()
+
+        assert coco.main(["build", str(folder), "--target", "coco1"], host) == 0
+        assert "--6309" in host.run.call_args.args[0]
+        assert coco.main(["build", str(folder), "--target", "coco2"], host) == 0
+        assert "--6809" in host.run.call_args.args[0]
+
 
 class DescribeCapture:
     def should_return_the_snapshot_of_the_requested_frame(self, project: coco.Project) -> None:
@@ -536,6 +576,19 @@ def with_disk(folder: Path, extra: str = "") -> Path:
 
 
 class DescribeDiskImages:
+    def should_refuse_one_image_for_disk_targets_of_two_cpus(
+        self, folder: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        settings = SETTINGS.replace('cpu = "6809"', 'cpu = "6309"').replace(
+            'basic = "bas12.rom"\n', 'basic = "bas12.rom"\ndisk = "disk11.rom"\n'
+        )
+        (folder / "coco.toml").write_text(settings)
+        with_disk(folder)
+
+        assert coco.main(["disk", str(folder), "--check"], emulated()) == 1
+        assert "use different CPUs (6309, 6809)" in capsys.readouterr().err
+        assert coco.main(["disk", str(folder), "--target", "coco1"], emulated()) == 0
+
     @pytest.mark.parametrize(
         "folder_name,declared,expected",
         [("arena-blaster", None, "ARENABLA"), ("demo", "GAME1", "GAME1"), ("---", None, "PROGRAM")],
@@ -1501,7 +1554,7 @@ class DescribeFirmwareBoundary:
             damaged.mkdir()
         monkeypatch.setattr(coco, "ROOT", root)
         monkeypatch.setattr(
-            coco, "build", lambda *args: coco.Build(binary=root / "x.bin", symbols={})
+            coco, "build", lambda *args, **kwargs: coco.Build(binary=root / "x.bin", symbols={})
         )
         host = Host()
         monkeypatch.setattr(host, "executable", lambda name: name)
@@ -1914,6 +1967,83 @@ class DescribeRealAssembler:
         prepare.write_text(prepare.read_text().replace('"--size", "8x8"', '"--size", "16x16"'))
 
         assert "each picture row must be 1 byte" in self.assembler_log(tile_room)
+
+
+NATIVE_6309 = """
+* MD bit 0 selects native mode (HD63B09EP Technical Reference Guide, PDF 5);
+* LDMD takes an immediate value (PDF 17). In native mode an interrupt also
+* stacks W (PDF 7), so interrupts stay off for BASIC's 6809 handlers.
+        org $3000
+start   orcc #$50
+        ldmd #$01
+        ldw #$1234
+        stw result
+ready   bra ready
+result  fdb 0
+        end start
+"""
+NATIVE_6309_SETTINGS = """
+source = "main.asm"
+
+[targets.coco3]
+machine = "coco3"
+cpu = "{cpu}"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"
+{options}
+[memory]
+at = {{ start = 0x3000 }}
+
+[check]
+checkpoint = "ready"
+frames = [1]
+unreachable = "result"
+emulated_seconds = 5
+"""
+# The CoCo 3 snapshot is physical RAM: with 128 KiB, logical $xxxx is at
+# 0x10000 + $xxxx (Tepolt PDF 58, as examples/collect-room/expected.py uses).
+NATIVE_6309_MODEL = """
+def verify_ram(ram, symbols, frame):
+    at = 0x10000 + symbols["result"]
+    if ram[at : at + 2] != b"\\x12\\x34":
+        raise ValueError(f"result is {ram[at : at + 2].hex()}, not 1234")
+"""
+
+
+@pytest.mark.integration
+class DescribeThe6309InXRoar:
+    """A 6309 target assembles 6309 instructions and XRoar runs them on a 6309."""
+
+    def native(self, tmp_path: Path, cpu: str = "6309", options: str = "") -> Path:
+        if not emulator_ready("coco3"):
+            pytest.skip("LWTOOLS, XRoar or the coco3 firmware is not available")
+        directory = tmp_path / "native-6309"
+        directory.mkdir()
+        (directory / "main.asm").write_text(NATIVE_6309)
+        (directory / "coco.toml").write_text(NATIVE_6309_SETTINGS.format(cpu=cpu, options=options))
+        (directory / "expected.py").write_text(NATIVE_6309_MODEL)
+        return directory
+
+    def should_store_what_a_6309_instruction_loads(self, tmp_path: Path) -> None:
+        assert coco.main(["check", str(self.native(tmp_path))]) == 0
+
+    def should_fail_when_a_6809_runs_the_same_program(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        folder = self.native(tmp_path, options='options = ["-machine-cpu", "6809"]\n')
+
+        assert coco.main(["check", str(folder)]) == 1
+        assert "not 1234" in capsys.readouterr().err
+
+    def should_refuse_6309_instructions_for_a_6809_target(self, tmp_path: Path) -> None:
+        project = coco.load_project(self.native(tmp_path, cpu="6809"))
+
+        with pytest.raises(subprocess.CalledProcessError):
+            coco.build(project, Host(), cpu=coco.instruction_set(project, "coco3"))
+        log = (project.output / "main.assemble.log").read_text()
+        assert "Illegal use of 6309 instruction in 6809 mode (ldmd)" in log
 
 
 @pytest.mark.integration

@@ -69,6 +69,7 @@ sounding answer from model memory does not count as verification. Start here:
 | Graphics | `local/references/assembly-graphics/text.md` |
 | CoCo 1 hardware | `local/references/coco1-technical/text.md` |
 | 6809 CPU | `local/references/6809-programming/text.md` |
+| 6309 CPU | `local/references/6309-technical-reference/text.md`, then `local/references/6309-book/text.md` |
 | Color BASIC ROM routines | `local/references/color-basic-unravelled/text.md` |
 
 These are starting sources, not guarantees that every target or peripheral is

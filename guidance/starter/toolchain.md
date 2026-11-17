@@ -249,6 +249,32 @@ The table name selects the firmware profile. A table with a different name
 must give the profile with `firmware = "<target>"`. Add `keyboard = "coco"`,
 or `keyboard = "coco3"` on the CoCo 3, when a check sends keys.
 
+#### A 6309 target
+
+A target with `cpu = "6309"` runs on the Hitachi 6309. Set it only when the
+project contract names the 6309. `scripts/coco.py` then makes these changes
+for builds of that target:
+
+- LWASM assembles with `--6309`, so it accepts the 6309 instructions.
+- The build defines `H6309`. Put code for each CPU under `ifdef H6309`, so
+  that one source can also build for a 6809 target.
+- The build files end in `-6309`, such as `main-6309.bin`.
+
+Every other target assembles with `--6809`, and a 6309 instruction stops the
+build. A disk image serves all of its disk targets, so those targets must use
+one CPU. Name one target with `--target` when they do not.
+
+The 6309 starts in 6809 emulation mode. Its new instructions also run in that
+mode. Bit 0 of the MD register selects native mode, which runs many
+instructions in fewer cycles. In native mode an interrupt also stacks the W
+register, so a handler that changes its return address at `10,S` must use
+`12,S`. Source: *HD63B09EP Technical Reference Guide*, PDF 3, 5 and 7.
+
+`DescribeThe6309InXRoar` in `scripts/coco_spec.py` checks a program that
+stores the result of `LDW` on a 6309 target. Its control runs the same program
+on a 6809, and the check fails. A 6309 target is not a stock CoCo 3: a stock
+machine has a 6809, so it cannot run a program that uses 6309 instructions.
+
 #### Firmware sources
 
 The archive ZIP files are copies of the MAME ROM sets. The table gives the

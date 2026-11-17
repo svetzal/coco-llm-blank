@@ -18,6 +18,10 @@ disk puts the build on a Disk BASIC disk image made with ToolShed's decb. With
 --check it does the same headless and requires the [check] checkpoint. The
 target names its Disk BASIC ROM with disk = "<name>.rom".
 
+A target's cpu = "6309" assembles the build for the Hitachi 6309: LWASM accepts
+its instructions, the build defines H6309 and its files end in -6309. Any other
+target assembles for the 6809, so a 6309 instruction there fails to assemble.
+
 record runs a build from power-on for a number of emulated seconds and writes
 every rendered frame and the mixer sound as an HEVC video. The frame rate and
 the sound's alignment come from the emulator's clock. It needs ffmpeg with
@@ -47,6 +51,7 @@ import tomllib
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from types import ModuleType
+from typing import Literal
 
 import instrumented_xroar
 import numpy as np
@@ -111,7 +116,7 @@ class Machine(BaseModel):
     firmware: str | None = None
     machine: str
     ram_kib: int = Field(gt=0)
-    cpu: str | None = None
+    cpu: Literal["6809", "6309"] | None = None
     vdg: str | None = None
     tv: str | None = None
     keyboard: str | None = None
@@ -473,11 +478,16 @@ def check_memory(memory: Memory, symbols: dict[str, int]) -> None:
 
 
 def assemble_command(
-    lwasm: str, source: Path, binary: Path, symbols: Path, defines: Sequence[str]
+    lwasm: str,
+    source: Path,
+    binary: Path,
+    symbols: Path,
+    defines: Sequence[str],
+    cpu: str = "6809",
 ) -> list[str]:
     return [
         lwasm,
-        "--6809",
+        f"--{cpu}",
         "--format=decb",
         f"--output={binary}",
         f"--symbol-dump={symbols}",
@@ -868,14 +878,25 @@ def variant_target(project: Project, variant: str, target: str | None) -> str:
     return name
 
 
+def instruction_set(project: Project, target: str) -> str:
+    """The CPU that LWASM assembles for: the target's cpu, else the 6809."""
+    return project.settings.targets[target].cpu or "6809"
+
+
 def build(
-    project: Project, host: Host, variant: str = "", extra_defines: Sequence[str] = ()
+    project: Project,
+    host: Host,
+    variant: str = "",
+    extra_defines: Sequence[str] = (),
+    cpu: str = "6809",
 ) -> Build:
     """Assemble fresh DECB output and symbols, then enforce the declared memory layout."""
-    defines = (*defines_for(project, variant), *extra_defines)
+    native = ("H6309",) if cpu == "6309" else ()
+    defines = (*defines_for(project, variant), *extra_defines, *native)
     output = project.output
     output.mkdir(parents=True, exist_ok=True)
-    stem = "-".join((variant or "main", *extra_defines)).lower()
+    suffix = ("6309",) if cpu == "6309" else ()
+    stem = "-".join((variant or "main", *extra_defines, *suffix)).lower()
     binary, symbols = output / f"{stem}.bin", output / f"{stem}.sym"
     for path in (binary, symbols):
         path.unlink(missing_ok=True)
@@ -890,6 +911,7 @@ def build(
         binary,
         symbols,
         defines,
+        cpu,
     )
     host.run(command, output / f"{stem}.assemble.log", timeout=60)
     labels = parse_symbols(symbols.read_text())
@@ -1162,7 +1184,7 @@ def check_variant(
     equipment: Equipment = NO_EQUIPMENT,
 ) -> dict[str, object]:
     check = require_check(project)
-    built = build(project, host, variant)
+    built = build(project, host, variant, cpu=instruction_set(project, target))
     screen_bytes = rendered = 0
     evidence, sounds = [], []
     for frame in check.frames:
@@ -1472,7 +1494,7 @@ def snapshot_command(project: Project, arguments: argparse.Namespace, host: Host
     equipment = equipment_for(
         project, arguments.variant, arguments.video, arguments.audio, arguments.keys
     )
-    built = build(project, host, arguments.variant)
+    built = build(project, host, arguments.variant, cpu=instruction_set(project, target))
     evidence = capture(project, host, built, target, arguments.frame, equipment)
     print(evidence.log.with_suffix(".ram"))
     for recorded in (evidence.picture, evidence.sound):
@@ -1483,7 +1505,7 @@ def snapshot_command(project: Project, arguments: argparse.Namespace, host: Host
 def record_command(project: Project, arguments: argparse.Namespace, host: Host) -> None:
     target = variant_target(project, arguments.variant, arguments.target)
     equipment = equipment_for(project, arguments.variant, script=arguments.keys)
-    built = build(project, host, arguments.variant)
+    built = build(project, host, arguments.variant, cpu=instruction_set(project, target))
     print(record(project, host, built, target, arguments.seconds, equipment))
 
 
@@ -1510,12 +1532,28 @@ def disk_targets(project: Project, arguments: argparse.Namespace) -> list[str]:
     return targets
 
 
+def disk_instruction_set(
+    project: Project, arguments: argparse.Namespace, targets: list[str]
+) -> str:
+    """One disk image serves every disk target, so they must share an instruction set."""
+    names = targets or [variant_target(project, arguments.variant, arguments.target)]
+    cpus = {instruction_set(project, name) for name in names}
+    if len(cpus) > 1:
+        raise ProjectError(
+            f"The disk targets {names} use different CPUs ({', '.join(sorted(cpus))}); "
+            "name one with --target."
+        )
+    return cpus.pop()
+
+
 def disk_command(project: Project, arguments: argparse.Namespace, host: Host) -> None:
     """Make the image; --run opens the first disk target, --check boots every one."""
     targets = disk_targets(project, arguments) if arguments.run or arguments.check else []
     if arguments.check:
         require_check(project)
-    built = build(project, host, arguments.variant)
+    built = build(
+        project, host, arguments.variant, cpu=disk_instruction_set(project, arguments, targets)
+    )
     image = make_disk(project, host, built)
     if arguments.run:
         host.launch(
@@ -1547,7 +1585,7 @@ def execute(arguments: argparse.Namespace, host: Host) -> None:
         record_command(project, arguments, host)
         return
     target = variant_target(project, arguments.variant, arguments.target)
-    built = build(project, host, arguments.variant)
+    built = build(project, host, arguments.variant, cpu=instruction_set(project, target))
     if arguments.command == "build":
         print(built.binary)
     else:
