@@ -18,8 +18,18 @@ The contract and the layers merge in order, contract first:
 - A key that ends in "+", such as "must+", appends its list to the earlier list
   of the same name. Use it to add constraints or samples without repeating them.
 
-Paths in "Contract", "ApprovedSamples[].file" and "Items[].reference" are
-relative to the file that contains them.
+A subject can come from two kinds of image:
+
+- A reference ("Items[].reference", or --reference): an approved picture of the
+  subject. The image keeps its look, and takes the pose from the spec.
+- A sketch ("Sketch" for one image, "Items[].sketch" for a set, or --sketch):
+  the owner's own drawing, such as a phone photo of a pencil sketch. It is the
+  design and the pose. The image redraws it in the spec's style and colours.
+
+Reference images and sketches can be PNG, JPEG or WebP files.
+
+Paths in "Contract", "Sketch", "ApprovedSamples[].file", "Items[].reference"
+and "Items[].sketch" are relative to the file that contains them.
 
 Commands:
 
@@ -107,8 +117,18 @@ SUBJECT_REFERENCE = (
     "{number}. The subject. Keep its appearance, proportions, colours and features "
     "exactly as shown."
 )
+SKETCH_REFERENCE = (
+    "{number}. The owner's own drawing of this subject. It is the design: keep its shapes, "
+    "proportions, pose, features and character. Redraw it as finished art in the specified "
+    "style, with only the listed colours. Do not copy the paper, pencil marks, smudges, "
+    "shading or handwriting."
+)
 REFERENCE_RULE = (
     "Take the pose, view and composition from the specification, not from the reference images."
+)
+SKETCH_RULE = (
+    "Take the pose, view and composition from the owner's drawing. "
+    "Take the style, colours, size and background from the specification."
 )
 
 Role = Literal[
@@ -207,10 +227,11 @@ class Subject(OpenSection):
 
 
 class Item(Subject):
-    """One subject of a set spec, with its file name slug and optional reference."""
+    """One subject of a set spec, with its file name slug, and optional reference and sketch."""
 
     slug: str = Field(pattern=SLUG_PATTERN)
     reference: Path | None = None
+    sketch: Path | None = Field(default=None, description="The owner's own drawing of the item.")
 
 
 class Variant(OpenSection):
@@ -276,6 +297,9 @@ class Spec(Section):
         alias="Subject",
         description="One subject, or a list with one per cell in reading order.",
     )
+    sketch: Path | None = Field(
+        default=None, alias="Sketch", description="The owner's own drawing of the one subject."
+    )
     items: list[Item] | None = Field(default=None, alias="Items", min_length=1)
     variants: list[Variant] | None = Field(default=None, alias="Variants", min_length=1)
     output: Output = Field(default=Output(), alias="Output")
@@ -309,6 +333,8 @@ class Spec(Section):
         if value is not None:
             if info.data.get("subject") is not None:
                 raise ValueError("use Subject for one image or Items for a set, not both")
+            if info.data.get("sketch") is not None:
+                raise ValueError("Sketch is for one image; give each item its own sketch")
             _unique_slugs(value)
         return value
 
@@ -441,29 +467,32 @@ def _dotted(path: tuple[str, ...]) -> str:
     return ".".join(path) or "(top level)"
 
 
+ANCHORED_PATHS = ("Contract", "Sketch")
 ANCHORED_LISTS = (
-    ("ApprovedSamples", "file"),
-    ("ApprovedSamples+", "file"),
-    ("Items", "reference"),
-    ("Items+", "reference"),
+    ("ApprovedSamples", ("file",)),
+    ("ApprovedSamples+", ("file",)),
+    ("Items", ("reference", "sketch")),
+    ("Items+", ("reference", "sketch")),
 )
 
 
 def anchor_paths(layer: dict, directory: Path) -> dict:
     """The layer with its file paths made relative to the current directory."""
-    result = dict(layer)
-    if isinstance(result.get("Contract"), str):
-        result["Contract"] = os.path.normpath(directory / result["Contract"])
-    for key, field in ANCHORED_LISTS:
+    result = _anchored(layer, ANCHORED_PATHS, directory)
+    for key, fields in ANCHORED_LISTS:
         if isinstance(result.get(key), list):
-            result[key] = [_anchored(entry, field, directory) for entry in result[key]]
+            result[key] = [_anchored(entry, fields, directory) for entry in result[key]]
     return result
 
 
-def _anchored(entry: object, field: str, directory: Path) -> object:
-    if isinstance(entry, dict) and isinstance(entry.get(field), str):
-        return entry | {field: os.path.normpath(directory / entry[field])}
-    return entry
+def _anchored(entry: object, fields: Sequence[str], directory: Path) -> object:
+    if not isinstance(entry, dict):
+        return entry
+    return entry | {
+        field: os.path.normpath(directory / entry[field])
+        for field in fields
+        if isinstance(entry.get(field), str)
+    }
 
 
 def load_layer(path: Path) -> tuple[str, dict]:
@@ -520,16 +549,18 @@ class PlannedImage(BaseModel):
     document: dict
     samples: list[Sample]
     subject_references: list[Path]
+    sketches: list[Path] = []
 
     @property
     def references(self) -> list[Path]:
-        return [sample.file for sample in self.samples] + self.subject_references
+        """Every input image, in the order the prompt numbers them."""
+        return [sample.file for sample in self.samples] + self.subject_references + self.sketches
 
     def names(self) -> set[str]:
         return {self.slug, self.path.stem} | ({self.variant} if self.variant else set())
 
 
-PROMPT_EXCLUDED = ("ApprovedSamples", "Items", "Variants", "Output")
+PROMPT_EXCLUDED = ("ApprovedSamples", "Sketch", "Items", "Variants", "Output")
 
 
 def image_document(spec: Spec, item: Item | None = None, variant: Variant | None = None) -> dict:
@@ -541,7 +572,7 @@ def image_document(spec: Spec, item: Item | None = None, variant: Variant | None
     document["CompositionPolicy"] = {spec.role: policy} if policy else {}
     if item is not None:
         document["Subject"] = item.model_dump(
-            mode="json", exclude={"slug", "reference"}, exclude_none=True
+            mode="json", exclude={"slug", "reference", "sketch"}, exclude_none=True
         )
     if variant is not None:
         document["Variant"] = variant.model_dump(mode="json", exclude={"slug"}, exclude_none=True)
@@ -555,33 +586,52 @@ def _in_order(document: dict) -> dict:
     return {key: document[key] for key in order if document.get(key) not in (None, {}, [])}
 
 
-def plan_images(spec: Spec, out: Path, references: Sequence[Path] = ()) -> list[PlannedImage]:
+class SubjectInputs(BaseModel):
+    """The subject images given on the command line, for every image."""
+
+    model_config = ConfigDict(frozen=True)
+
+    references: list[Path] = []
+    sketch: Path | None = None
+
+
+NO_SUBJECT_INPUTS = SubjectInputs()
+
+
+def plan_images(
+    spec: Spec, out: Path, inputs: SubjectInputs = NO_SUBJECT_INPUTS
+) -> list[PlannedImage]:
     """Each image a spec describes. out is a .png file, or a directory for a set."""
     if spec.items is None:
         if out.suffix.lower() != ".png":
             raise SpecError(f"{out}: a single-image spec needs a .png output file")
-        return [_single(spec, out, references)]
+        return [_single(spec, out, inputs)]
     if out.suffix.lower() == ".png":
         raise SpecError(f"{out}: a set spec needs an output directory, not a .png file")
     return [
-        _set_image(spec, out, item, variant, references)
+        _set_image(spec, out, item, variant, inputs)
         for item in spec.items
         for variant in spec.variants or [None]
     ]
 
 
-def _single(spec: Spec, out: Path, references: Sequence[Path]) -> PlannedImage:
+def _present(*paths: Path | None) -> list[Path]:
+    return [path for path in paths if path is not None]
+
+
+def _single(spec: Spec, out: Path, inputs: SubjectInputs) -> PlannedImage:
     return PlannedImage(
         path=out,
         slug=out.stem,
         document=image_document(spec),
         samples=spec.samples,
-        subject_references=list(references),
+        subject_references=inputs.references,
+        sketches=_present(spec.sketch, inputs.sketch),
     )
 
 
 def _set_image(
-    spec: Spec, out: Path, item: Item, variant: Variant | None, references: Sequence[Path]
+    spec: Spec, out: Path, item: Item, variant: Variant | None, inputs: SubjectInputs
 ) -> PlannedImage:
     name = spec.pattern().format(slug=item.slug, variant=variant.slug if variant else "")
     return PlannedImage(
@@ -590,7 +640,8 @@ def _set_image(
         variant=variant.slug if variant else None,
         document=image_document(spec, item, variant),
         samples=spec.samples,
-        subject_references=([item.reference] if item.reference else []) + list(references),
+        subject_references=_present(item.reference) + inputs.references,
+        sketches=_present(item.sketch, inputs.sketch),
     )
 
 
@@ -635,11 +686,15 @@ def reference_rules(image: PlannedImage) -> str | None:
         for number, sample in enumerate(image.samples, 1)
     ]
     first_subject = len(image.samples) + 1
+    first_sketch = first_subject + len(image.subject_references)
     lines += [
-        SUBJECT_REFERENCE.format(number=number)
-        for number in range(first_subject, first_subject + len(image.subject_references))
+        SUBJECT_REFERENCE.format(number=number) for number in range(first_subject, first_sketch)
     ]
-    lines.append(REFERENCE_RULE)
+    lines += [
+        SKETCH_REFERENCE.format(number=number)
+        for number in range(first_sketch, first_sketch + len(image.sketches))
+    ]
+    lines.append(SKETCH_RULE if image.sketches else REFERENCE_RULE)
     return "\n".join(lines)
 
 
@@ -761,7 +816,7 @@ def check_job(job: Job) -> None:
     if count > MAXIMUM_REFERENCES:
         raise SpecError(
             f"{job.image.path}: {count} reference images; the API accepts at most "
-            f"{MAXIMUM_REFERENCES}. Remove approved samples or references."
+            f"{MAXIMUM_REFERENCES}. Remove approved samples, references or sketches."
         )
     if len(job.prompt) > MAXIMUM_PROMPT:
         raise SpecError(
@@ -794,10 +849,16 @@ def png_has_alpha(data: bytes) -> bool:
         return False
 
 
+def subject_inputs(arguments: argparse.Namespace) -> SubjectInputs:
+    return SubjectInputs(references=arguments.reference, sketch=arguments.sketch)
+
+
 def plan(arguments: argparse.Namespace) -> Batch:
     """Check everything that can be checked before any money is spent."""
     loaded = load(arguments.layers)
-    images = select(plan_images(loaded.spec, arguments.out, arguments.reference), arguments.only)
+    images = select(
+        plan_images(loaded.spec, arguments.out, subject_inputs(arguments)), arguments.only
+    )
     jobs = [
         Job(image=image, prompt=build_prompt(loaded.spec, image), exists=image.path.exists())
         for image in images
@@ -855,6 +916,10 @@ def _sha256(data: bytes | str) -> str:
     return hashlib.sha256(data.encode() if isinstance(data, str) else data).hexdigest()
 
 
+def _hashed(batch: Batch, paths: Sequence[Path]) -> list[dict[str, str]]:
+    return [{"path": str(path), "sha256": batch.hashes[str(path)]} for path in paths]
+
+
 def record(batch: Batch, job: Job, image: GeneratedImage, created: datetime) -> dict:
     """The sidecar that lets anyone regenerate or audit the image."""
     loaded = batch.loaded
@@ -869,9 +934,8 @@ def record(batch: Batch, job: Job, image: GeneratedImage, created: datetime) -> 
         "layers": [str(path) for path in loaded.layers],
         "slug": job.image.slug,
         "variant": job.image.variant,
-        "references": [
-            {"path": str(path), "sha256": batch.hashes[str(path)]} for path in job.image.references
-        ],
+        "references": _hashed(batch, job.image.references),
+        "sketches": _hashed(batch, job.image.sketches),
         "image_sha256": _sha256(image.png),
         "prompt": job.prompt,
         "revised_prompt": image.revised_prompt,
@@ -884,6 +948,7 @@ def manifest_line(batch: Batch, job: Job, image: GeneratedImage, created: dateti
         "path": str(job.image.path),
         "slug": job.image.slug,
         "variant": job.image.variant,
+        "sketches": [str(path) for path in job.image.sketches],
         "prompt_sha256": _sha256(job.prompt),
         "model": batch.model,
         "size": batch.size,
@@ -972,6 +1037,13 @@ def _add_selection(command: argparse.ArgumentParser) -> None:
         help="a subject reference image for every image; repeat for more",
     )
     command.add_argument(
+        "--sketch",
+        type=Path,
+        metavar="IMG",
+        help="the owner's own drawing of the subject, for every image: "
+        "the image keeps its design and pose (PNG, JPEG or WebP)",
+    )
+    command.add_argument(
         "--only",
         action="append",
         default=[],
@@ -1026,7 +1098,7 @@ def compose(arguments: argparse.Namespace) -> int:
 def prompt(arguments: argparse.Namespace) -> int:
     spec = load(arguments.layers).spec
     out = Path("image.png") if spec.items is None else Path(".")
-    images = select(plan_images(spec, out, arguments.reference), arguments.only)
+    images = select(plan_images(spec, out, subject_inputs(arguments)), arguments.only)
     if spec.items is None:
         print(build_prompt(spec, images[0]))
         return 0

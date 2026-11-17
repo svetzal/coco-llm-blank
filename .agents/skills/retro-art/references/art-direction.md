@@ -68,6 +68,23 @@ composite table has only one dark grey, and its browns are dark and red.
 - In the 4-colour GIME modes, choose the 4 codes for the scene, then ask for
   art in those 4 colours, as for the CoCo 1 and 2.
 
+## Polish the owner's drawing
+
+The owner's drawing gives the design. The contract gives the style. A spec
+for a sketch must keep that split clear.
+
+- In the item's `description`, write what the owner said that the picture
+  must keep, in their words: "the big eyes", "three spots on its back".
+- Do not describe a different pose or view than the drawing has. The
+  generator takes them from the drawing.
+- A sketch can have more detail than the grid can show. Ask the owner which
+  details matter most. Make those large, and leave out the others.
+- Colour in a sketch is a wish, not a palette. Map each colour of the
+  drawing to the nearest contract colour. Name it in the description, for
+  example "the body is green $12, as in the drawing".
+- A drawing on the target grid is already pixel art. Convert it with
+  `--resample nearest`. Do not send it to the generator unless the owner asks.
+
 ## Keep a set the same
 
 - Put everything that all pictures share in the contract. Put only the

@@ -2,29 +2,99 @@
 name: retro-art
 description: >
   Design and make artwork for a CoCo 1, 2 or 3 game: sprites, tiles,
-  backgrounds, title pictures and concept art. Generate pictures with the
-  OpenAI image API from structured JSON specs (scripts/art.py), then reduce
-  them to a CoCo mode with palette selection, mosaic or dithering
+  backgrounds, title pictures and concept art. Start from the owner's own
+  drawing, sketch, photo or model whenever possible: convert it directly, or
+  polish it with the OpenAI image API (scripts/art.py, as a sketch input), then
+  reduce it to a CoCo mode with palette selection, mosaic or dithering
   (scripts/graphics.py). Use this skill whenever a project needs pictures,
   a sprite set, a consistent art style, a palette for the CoCo 3 GIME, or
   conversion of an image to screen bytes, even if the owner does not ask for
-  generated art by name.
+  art by name.
 ---
 
 # Retro art for the CoCo
 
-This skill takes a game from an art idea to screen bytes:
+This skill takes a game from the owner's idea to screen bytes:
 
-1. Choose the target: the mode, the grid and the colours.
-2. Write one visual system contract for the game.
-3. Write an image spec or a set spec for each group of pictures.
-4. Show the plan to the owner. Generate only after the owner agrees.
-5. Reduce each picture to the CoCo mode, and look at the result.
-6. Show the result in XRoar.
+1. Ask the owner for their own art: a drawing, a sketch or anything they
+   make. Read [the owner's art comes first](#the-owners-art-comes-first).
+2. Choose the target: the mode, the grid and the colours.
+3. Write one visual system contract for the game.
+4. Write an image spec or a set spec for each group of pictures, with the
+   owner's drawings as sketches.
+5. Show the plan to the owner. Generate only after the owner agrees.
+6. Reduce each picture to the CoCo mode. Show it to the owner beside their
+   drawing, and refine it with them.
+7. Show the result in XRoar.
 
 Read [the art direction reference](references/art-direction.md) before you
 write a contract. It tells how to ask for art that reduces well to a few
 colours.
+
+## The owner's art comes first
+
+The game belongs to the owner, and so does its look. Their own hand in the
+art is more important than a polished picture. A generator can draw a clean
+frog. Only the owner can draw *their* frog. Thus ask for their art before you
+write a spec, and treat a generator as a tool that polishes their design.
+
+### Ask for it
+
+Before the first spec, ask the owner for a picture of each thing that the game
+shows. Say clearly that skill does not matter. A rough sketch is enough, and
+a stick figure is a good start. Give examples of what they can send:
+
+- a pencil or pen drawing on paper, photographed with a phone
+- a drawing in any paint app, on a tablet or on a computer
+- squares coloured in on graph paper, one square for each CoCo pixel
+- a photo of a model of clay, building bricks or cut paper
+- a picture of a thing from their own life that the art must look like
+- a drawn layout of a screen: where the board, the score and the title go
+
+Ask what each picture must keep: "the big eyes", "the curl in its tail".
+Write those words in the spec, as the owner said them.
+
+If the owner prefers not to draw, do not insist. Ask them to describe each
+thing in their own words. Then offer to make a quick, low-cost draft that
+they can draw over. Ask again at the next picture: an owner who saw one
+result often wants to draw the next one.
+
+### Choose the path
+
+Use the path that keeps the most of the owner's work.
+
+| The owner's picture | Path | Cost |
+| --- | --- | --- |
+| Drawn on the target grid: graph paper, or a paint app at the sprite size | Convert it directly with `graphics.py convert --resample nearest`. Do not generate. | None |
+| A sketch, a drawing in any style, or a photo of a model | Polish it: give it to the generator as a sketch (`Items[].sketch` or `--sketch`). The generator keeps the design, the pose and the features. The contract gives the style and the colours. | One image for each picture |
+| Words only | Write the owner's words in the spec. Make one draft with `--model flare`. Invite the owner to draw over it. | One draft, then as above |
+
+A drawing on the grid is already game art. Polish it only if the owner asks.
+To convert a drawing on graph paper, crop the photo to the grid
+(`--box`). Then convert it at the grid size with `--resample nearest`.
+
+### Keep the originals
+
+Put each picture from the owner in `art/owner/` in the project. Name it for
+its subject, for example `art/owner/frog-sketch.jpg`. Do not
+change these files. A spec names them as sketches, so each generated record
+names the owner's drawing as its source. In the project README, say which
+pictures come from the owner's drawings.
+
+### Refine it together
+
+After each conversion, show the owner three pictures side by side: their
+drawing, the polished picture and the CoCo picture. Ask what is right and
+what is wrong. Ask them to point at things, not to name art terms.
+
+- Write each change in the spec, in the owner's words. Then generate again.
+- Invite the owner to draw on the result. Enlarge the CoCo preview with
+  nearest-neighbour scaling (for example 8 times), so that each pixel is a
+  square that they can colour. Their changed picture is the next sketch, or,
+  on the grid, the next direct conversion.
+- If the generator loses something that the owner drew, the result is wrong,
+  even if it looks better. Say so, and try again with that feature named in
+  the spec.
 
 ## Rules
 
@@ -45,6 +115,8 @@ colours.
   commands in the project too, so that a build makes the same bytes again.
 - A generated picture is a source, not a result. The reduced picture and the
   XRoar check are the result.
+- The owner's drawing is the design. Ask for it first. Do not replace it with
+  your own idea of the subject. Do not change the owner's files.
 - Do not copy an existing game's characters, art or look. Describe original
   subjects.
 
@@ -116,9 +188,19 @@ Read the exact prompt. It costs nothing:
 uv run python scripts/art.py prompt projects/<name>/art/creatures.spec.json
 ```
 
+To polish the owner's drawing, give it as `sketch` on the item of a set, or
+as `Sketch` in a spec for one picture. The path is relative to the spec. The tool sends it as a reference image. It tells the
+generator that the drawing is the design. The generator keeps its shapes,
+proportions, pose and features. It redraws them in the contract's style and
+colours.
+
+The generator does not copy pencil marks, paper or handwriting. A photo from
+a phone is accepted.
+
 To keep a style or a character the same, add approved pictures as
 `ApprovedSamples` in the contract, or `reference` on an item. The tool sends
-them as reference images.
+them as reference images. A `reference` is a finished picture: the generator
+keeps its appearance and colours exactly, and takes the pose from the spec.
 
 ## 4. Generate
 
@@ -131,6 +213,12 @@ uv run python scripts/art.py generate projects/<name>/art/creatures.spec.json --
 Show the owner the list of images, the model and the size. After the owner
 agrees, run the same command with `--spend`. Use `--only SLUG` to make one
 item. The tool skips images that exist. Use `--force` to make one again.
+
+For one picture from one drawing, give the drawing with `--sketch`:
+
+```sh
+uv run python scripts/art.py generate projects/<name>/art/hero.spec.json --sketch projects/<name>/art/owner/hero-sketch.jpg --out projects/<name>/art/hero.png
+```
 
 Each image has a JSON record beside it, and a line in `manifest.jsonl`. They
 hold the exact prompt, the model and the resolved spec.
@@ -169,9 +257,11 @@ uv run python scripts/graphics.py convert art/frog.png --mode gime-320x16 --size
 uv run python scripts/graphics.py convert art/title.png --mode cg6 --auto-css --dither bayer --out build/title
 ```
 
-Look at the preview PNG. It is drawn from the packed bytes. If a shape is
-lost, change the spec (larger shapes, fewer details) and generate again. Do
-not correct the generated picture by hand unless the owner asks.
+Look at the preview PNG. It is drawn from the packed bytes. Then show it to
+the owner beside their drawing, as
+[refine it together](#refine-it-together) tells. If a shape is lost, change
+the spec (larger shapes, fewer details) and generate again. Do not correct
+the picture by hand yourself. The owner can draw on it.
 
 ## 6. Check in XRoar
 

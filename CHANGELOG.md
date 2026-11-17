@@ -8,6 +8,32 @@ ends. [The system guide](guidance/starter/system.md) gives the procedure.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-17
+
+### Added
+
+- `scripts/art.py` accepts the owner's own drawing as a sketch. Give it as
+  `Sketch` in a spec for one picture, as `sketch` on an item of a set, or as
+  `--sketch IMG` on `prompt` and `generate`. A sketch can be a phone photo (PNG, JPEG or
+  WebP). The prompt tells the generator that the drawing is the design. The
+  generator keeps its shapes, proportions, pose and features. It redraws them
+  in the contract's style and colours, without the paper or the pencil marks.
+  The image record and `manifest.jsonl` name each sketch, so the owner's
+  drawing stays recorded as the source.
+
+### Changed
+
+- The `retro-art` skill starts from the owner's own art. Before a spec, the
+  agent asks the owner for a picture of their own. It can be a drawing, graph
+  paper or a photo of a model. The agent says that skill does not matter. A drawing on the target
+  grid is converted directly, at no cost. Other drawings are polished as
+  sketches. Words alone come last, with a draft that the owner can draw over.
+  The owner's files stay in `art/owner/`. Each result is shown beside the
+  owner's drawing, and is refined with the owner.
+- The art direction reference tells how to write a spec for a sketch.
+- `AGENTS.md` and development practice tell agents to ask the owner for their
+  own drawings early, when a game shows pictures.
+
 ## [0.3.0] - 2026-11-16
 
 ### Added

@@ -25,6 +25,12 @@ Keep `coco.toml` consistent with it.
 Notes filled in after a run describe that run. They do not replace this
 implementation contract.
 
+If the game shows pictures, such as characters, creatures or a title
+picture, ask the owner early for their own drawings of them. A rough sketch
+or a phone photo is enough. Their drawing is the design. The
+[retro-art skill](../../.agents/skills/retro-art/SKILL.md#the-owners-art-comes-first)
+tells how to ask and how to polish it.
+
 Setup selects a starting target. Setup does not establish that an application
 supports that target. Keep unknowns explicit.
 Do not silently enable a 6309, more RAM, or a faster clock to pass a test.

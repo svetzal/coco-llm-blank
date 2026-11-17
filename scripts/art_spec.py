@@ -16,6 +16,7 @@ from art import (
     ImageServiceError,
     Runtime,
     SpecError,
+    SubjectInputs,
     background_arguments,
     build_prompt,
     image_document,
@@ -133,6 +134,27 @@ def runtime(service: Mock, opened_keys: list[str]) -> Runtime:
         return service
 
     return Runtime(environ={"OPENAI_API_KEY": KEY}, open_service=open_service, now=lambda: CREATED)
+
+
+SKETCH_LINE = (
+    "The owner's own drawing of this subject. It is the design: keep its shapes, "
+    "proportions, pose, features and character. Redraw it as finished art in the specified "
+    "style, with only the listed colours. Do not copy the paper, pencil marks, smudges, "
+    "shading or handwriting."
+)
+SKETCH_RULE = (
+    "Take the pose, view and composition from the owner's drawing. "
+    "Take the style, colours, size and background from the specification."
+)
+REFERENCE_RULE = (
+    "Take the pose, view and composition from the specification, not from the reference images."
+)
+
+
+def reference_lines(prompt: str) -> list[str]:
+    """The numbered list of input images and the closing rule after it."""
+    start = prompt.index("The reference images are given in this order:")
+    return prompt[start : prompt.index("\n\n", start)].splitlines()[1:]
 
 
 def json_section(prompt: str) -> dict:
@@ -278,6 +300,12 @@ class DescribeValidation:
         with pytest.raises(SpecError, match=message):
             resolve([("c.json", CONTRACT), ("s.json", SPRITE), ("set.json", layer)])
 
+    def should_refuse_a_top_level_sketch_in_a_set(self) -> None:
+        layer = {"Subject": None, "Sketch": "miner.jpg", "Items": [{"slug": "a", "name": "A"}]}
+
+        with pytest.raises(SpecError, match="Sketch is for one image"):
+            resolve([("c.json", CONTRACT), ("s.json", SPRITE), ("set.json", layer)])
+
     def should_need_something_to_draw(self) -> None:
         with pytest.raises(SpecError, match="needs Subject"):
             resolve([("c.json", CONTRACT), ("role.json", {"Role": "screen"})])
@@ -303,6 +331,32 @@ class DescribeLoading:
 
         assert spec.samples[0].file == tmp_path / "samples" / "approved.png"
         assert spec.items[0].reference == set_spec.parent / "refs" / "miner.png"
+
+    def should_resolve_sketch_paths_relative_to_the_file_that_names_them(
+        self, tmp_path: Path, contract: Path
+    ) -> None:
+        cast = write_json(
+            tmp_path / "sets" / "cast.spec.json",
+            SET | {"Items": [{"slug": "miner", "name": "Miner", "sketch": "drawings/miner.jpg"}]},
+        )
+        extra = write_json(
+            tmp_path / "more" / "extra.json",
+            {"Items+": [{"slug": "bat", "name": "Bat", "sketch": "bat.webp"}]},
+        )
+
+        items = load([cast, extra]).spec.items
+
+        assert [item.sketch for item in items] == [
+            tmp_path / "sets" / "drawings" / "miner.jpg",
+            tmp_path / "more" / "bat.webp",
+        ]
+
+    def should_resolve_a_single_image_sketch_relative_to_its_file(
+        self, tmp_path: Path, contract: Path
+    ) -> None:
+        spec = write_json(tmp_path / "s.json", SPRITE | {"Sketch": "drawings/miner.jpeg"})
+
+        assert load([spec]).spec.sketch == tmp_path / "drawings" / "miner.jpeg"
 
     def should_let_a_later_layer_add_constraints(self, tmp_path: Path, sprite: Path) -> None:
         extra = write_json(tmp_path / "extra.json", {"Constraints": {"must_not+": ["no floor"]}})
@@ -382,7 +436,8 @@ class DescribeThePrompt:
     def should_explain_each_reference_image_in_order(self, sample: Path) -> None:
         layer = SPRITE | {"ApprovedSamples": [{"file": str(sample), "use": "outline weight"}]}
         spec = resolve([("c.json", CONTRACT), ("s.json", layer)])
-        image = plan_images(spec, Path("miner.png"), [Path("miner-ref.png")])[0]
+        inputs = SubjectInputs(references=[Path("miner-ref.png")])
+        image = plan_images(spec, Path("miner.png"), inputs)[0]
 
         prompt = build_prompt(spec, image)
 
@@ -390,6 +445,48 @@ class DescribeThePrompt:
         assert "1. An approved style sample. Match its style (outline weight)" in prompt
         assert "2. The subject. Keep its appearance" in prompt
         assert "not from the reference images" in prompt
+
+    def should_number_sketches_after_samples_and_references(self, sample: Path) -> None:
+        layer = SPRITE | {
+            "ApprovedSamples": [{"file": str(sample), "use": "outline weight"}],
+            "Sketch": "miner-drawing.jpg",
+        }
+        spec = resolve([("c.json", CONTRACT), ("s.json", layer)])
+        inputs = SubjectInputs(references=[Path("miner-ref.png")], sketch=Path("pose.webp"))
+        image = plan_images(spec, Path("miner.png"), inputs)[0]
+
+        prompt = build_prompt(spec, image)
+
+        assert image.references == [
+            sample,
+            Path("miner-ref.png"),
+            Path("miner-drawing.jpg"),
+            Path("pose.webp"),
+        ]
+        lines = reference_lines(prompt)
+        assert lines[0].startswith("1. An approved style sample.")
+        assert lines[1].startswith("2. The subject. Keep its appearance")
+        assert lines[2:] == [f"3. {SKETCH_LINE}", f"4. {SKETCH_LINE}", SKETCH_RULE]
+        assert REFERENCE_RULE not in prompt
+
+    def should_keep_the_reference_rule_without_a_sketch(self, spec) -> None:
+        image = plan_images(spec, Path("miner.png"), SubjectInputs(references=[Path("r.png")]))[0]
+
+        lines = reference_lines(build_prompt(spec, image))
+
+        assert lines[-1] == REFERENCE_RULE
+        assert "owner's" not in build_prompt(spec, image)
+
+    def should_take_the_rule_from_the_drawing_with_only_a_sketch(self, spec) -> None:
+        image = plan_images(spec, Path("miner.png"), SubjectInputs(sketch=Path("s.png")))[0]
+
+        assert reference_lines(build_prompt(spec, image)) == [f"1. {SKETCH_LINE}", SKETCH_RULE]
+
+    def should_keep_the_sketch_path_out_of_the_image_document(self) -> None:
+        layer = SPRITE | {"Sketch": "miner-drawing.jpg"}
+        spec = resolve([("c.json", CONTRACT), ("s.json", layer)])
+
+        assert "Sketch" not in image_document(spec)
 
     def should_say_nothing_about_references_without_them(self, spec) -> None:
         prompt = build_prompt(spec, plan_images(spec, Path("miner.png"))[0])
@@ -414,6 +511,22 @@ class DescribeSets:
         assert "Items" not in images[1].document
         assert images[0].subject_references == [set_spec.parent / "refs" / "miner.png"]
         assert images[2].subject_references == []
+
+    def should_send_each_item_its_own_sketch(self, tmp_path: Path) -> None:
+        layer = {
+            "Subject": None,
+            "Items": [
+                {"slug": "miner", "name": "Miner", "sketch": "miner.jpg"},
+                {"slug": "bat", "name": "Bat"},
+            ],
+        }
+        spec = resolve([("c.json", CONTRACT), ("s.json", SPRITE), ("set.json", layer)])
+
+        images = plan_images(spec, tmp_path, SubjectInputs(sketch=Path("all.png")))
+
+        assert images[0].sketches == [Path("miner.jpg"), Path("all.png")]
+        assert images[1].sketches == [Path("all.png")]
+        assert images[0].document["Subject"] == {"name": "Miner"}
 
     def should_use_the_output_pattern(self, tmp_path: Path) -> None:
         layer = {
@@ -509,6 +622,101 @@ class DescribeGenerate:
             {"path": str(sample), "sha256": hashlib.sha256(SAMPLE).hexdigest()},
             {"path": str(reference), "sha256": hashlib.sha256(b"\x89PNG reference").hexdigest()},
         ]
+
+    def should_send_a_sketch_last_and_record_it_as_the_source(
+        self, sprite: Path, tmp_path: Path, runtime: Runtime, service: Mock
+    ) -> None:
+        reference = tmp_path / "miner-ref.png"
+        reference.write_bytes(b"\x89PNG reference")
+        sketch = tmp_path / "pencil.jpg"
+        sketch.write_bytes(b"\xff\xd8 phone photo")
+        out = tmp_path / "art" / "miner.png"
+
+        main(
+            [
+                "generate",
+                str(sprite),
+                "--out",
+                str(out),
+                "--spend",
+                "--reference",
+                str(reference),
+                "--sketch",
+                str(sketch),
+            ],
+            runtime,
+        )
+
+        call = service.edit.call_args.kwargs
+        assert call["references"] == [reference, sketch]
+        assert SKETCH_RULE in call["prompt"]
+        record = json.loads(out.with_suffix(".json").read_text())
+        sketch_entry = {
+            "path": str(sketch),
+            "sha256": hashlib.sha256(sketch.read_bytes()).hexdigest(),
+        }
+        assert record["sketches"] == [sketch_entry]
+        assert record["references"][-1] == sketch_entry
+        line = json.loads((out.parent / "manifest.jsonl").read_text())
+        assert line["sketches"] == [str(sketch)]
+
+    def should_record_no_sketches_when_none_was_given(
+        self, sprite: Path, tmp_path: Path, runtime: Runtime
+    ) -> None:
+        out = tmp_path / "miner.png"
+
+        main(["generate", str(sprite), "--out", str(out), "--spend"], runtime)
+
+        assert json.loads(out.with_suffix(".json").read_text())["sketches"] == []
+        assert json.loads((tmp_path / "manifest.jsonl").read_text())["sketches"] == []
+
+    def should_print_the_sketch_in_the_prompt_command(self, sprite: Path, capsys) -> None:
+        assert main(["prompt", str(sprite), "--sketch", "pencil.jpg"]) == 0
+
+        output = capsys.readouterr().out
+        assert f"1. {SKETCH_LINE}" in output
+        assert SKETCH_RULE in output
+
+    def should_count_sketches_toward_the_reference_limit(
+        self, sprite: Path, tmp_path: Path, capsys
+    ) -> None:
+        references = []
+        for number in range(MAXIMUM_REFERENCES):
+            reference = tmp_path / f"ref-{number}.png"
+            reference.write_bytes(b"x")
+            references += ["--reference", str(reference)]
+        sketch = tmp_path / "pencil.jpg"
+        sketch.write_bytes(b"x")
+
+        status = main(
+            [
+                "generate",
+                str(sprite),
+                "--out",
+                str(tmp_path / "m.png"),
+                *references,
+                "--sketch",
+                str(sketch),
+            ]
+        )
+
+        assert status == 1
+        error = capsys.readouterr().err
+        assert "17 reference images; the API accepts at most 16" in error
+        assert "Remove approved samples, references or sketches." in error
+
+    def should_refuse_a_sketch_that_is_not_an_image_file(
+        self, sprite: Path, tmp_path: Path, capsys
+    ) -> None:
+        sketch = tmp_path / "pencil.heic"
+        sketch.write_bytes(b"x")
+
+        status = main(
+            ["generate", str(sprite), "--out", str(tmp_path / "m.png"), "--sketch", str(sketch)]
+        )
+
+        assert status == 1
+        assert "pencil.heic: a reference image must be PNG, JPEG or WebP" in capsys.readouterr().err
 
     def should_need_the_api_key_and_never_show_it(
         self, sprite: Path, tmp_path: Path, runtime: Runtime, service: Mock, capsys

@@ -138,8 +138,9 @@ an example. Read its cited primary passages. The example is not a substitute.
   link the existing keyboard, audio and artwork methods.
 - Making artwork, a sprite set or a CoCo 3 palette, or converting an image to
   screen bytes: read the
-  [retro-art skill](.agents/skills/retro-art/SKILL.md). Never generate an
-  image before the owner agrees to its cost.
+  [retro-art skill](.agents/skills/retro-art/SKILL.md). Ask the owner for
+  their own drawing first, and polish it. Never generate an image before the
+  owner agrees to its cost.
 - Building binaries, disks, emulator tests or videos: read [toolchain](guidance/starter/toolchain.md).
 - Writing host-side scripts, assets, or Python tests: read
   [Python tools](guidance/starter/python.md), including the co-located `*_spec.py` rules.
