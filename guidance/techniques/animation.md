@@ -172,6 +172,10 @@ author's report.
 
 For packed CoCo 3 pixels, read the [colour guide](colour.md#keep-the-neighbour-pixel-and-the-palette-separate).
 
+To slide board tiles between squares, redraw only the trail of each moving
+tile and the tile. Read [Slide tiles between squares](slide-tiles.md). The
+[slide tiles](../../examples/slide-tiles/README.md) example checks it.
+
 ## Budget the storage for animation
 
 **Published explanation.** Steven R. Polsz compares oversized BASIC arrays with
