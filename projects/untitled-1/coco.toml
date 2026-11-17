@@ -13,6 +13,7 @@ vdg = "gime1986"
 ram_kib = 512
 extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
 disk = "disk11.rom"
+keyboard = "coco3"        # the key script uses the CoCo 3 keyboard layout
 
 [memory]
 at = { start = 0x2000 }
@@ -22,11 +23,21 @@ below = { ends = 0x6000 }   # CPU $6000-$7FFF is the screen window
 [capture]
 video = true
 
-# For the check: the label where the snapshot is taken, and a label that must
-# never run.
+# Scripted keys take effect at the scanner entry: one keys.txt line per scan.
+[keys]
+at = "sample"
+letters = { U = "up", D = "down", L = "left", R = "right", F = "space" }
+
+# The main build gets no keys: the board must stay at the opening layout.
+# The keys build plays keys.txt through the emulated keyboard.
+[variants.keys]
+keys = "keys.txt"
+
+# For the check: the label where each snapshot is taken (once for each scan,
+# so once for each keys.txt line), and a data label that must never run.
 [check]
 checkpoint = "ready"
-frames = [1]
-unreachable = "ready+1"
+frames = ["1-21"]
+unreachable = "opening"
 screen = 0x00000         # physical $00000 is this snapshot offset
 emulated_seconds = 60

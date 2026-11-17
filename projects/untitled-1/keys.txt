@@ -1,0 +1,25 @@
+# Keys board purpose. Line 1 is the startup sample; line N is held at scan N.
+# U/D/L/R = arrows, F = Space, - = none. The board is four rows of levels,
+# 0 is empty, A is 10 and B is 11. Each board is written by hand from the
+# rules in README.md.
+L    1111/1120/0303/BBAA  an arrow held at the start is not a press
+L    1111/1120/0303/BBAA  still held: no move
+-    1111/1120/0303/BBAA  release
+L    2200/2200/4000/BBB0  pairs merge; a merged creature does not merge again; humans do not merge
+L    2200/2200/4000/BBB0  held: no repeat
+-    2200/2200/4000/BBB0  release
+U    33B0/4B00/B000/0000  up
+-    33B0/4B00/B000/0000  release
+LR   33B0/4B00/B000/0000  two arrows: no move
+-    33B0/4B00/B000/0000  release
+R    004B/004B/000B/0000  right
+-    004B/004B/000B/0000  release
+D    0000/000B/000B/005B  down
+-    0000/000B/000B/005B  release
+D    0000/000B/000B/005B  nothing can move: no change
+DR   0000/000B/000B/005B  a second arrow while one is held: no move
+R    0000/000B/000B/005B  Right was held at the last scan: no move
+-    0000/000B/000B/005B  release
+L    0000/B000/B000/5B00  left
+F    0000/B000/B000/5B00  Space does nothing
+U    BB00/B000/5000/0000  up
