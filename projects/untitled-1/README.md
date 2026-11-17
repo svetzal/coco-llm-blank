@@ -10,9 +10,8 @@ square. The player wins when the last creature of the chain appears. The game
 ends when no move can change the grid.
 
 The program draws the 4 by 4 board in 320×192 with 16 colours. The arrow
-keys slide and merge the creatures. The game starts from a fixed layout, and
-new creatures do not appear yet. Random new creatures, the win and the end of
-the game come next.
+keys slide and merge the creatures. When you win, the squares turn green. When
+you lose, they turn red. Then press Space for a new game.
 
 ## The rules of a move
 
@@ -23,8 +22,17 @@ the game come next.
 - Two equal creatures that meet merge into the next creature of the chain.
   The pairs nearest the edge merge first.
 - A creature made by a merge does not merge again in the same move.
-- The human is the last creature. Two humans do not merge.
-- Other keys do nothing.
+- A press that changes nothing is not a move.
+- After each move, a microbe appears in an empty square.
+- You win when the human appears. The squares turn green.
+- You lose when the board is full and no two neighbours are equal. The
+  squares turn red.
+- After a win or a loss, the arrows do nothing. Space starts a new game with
+  two microbes.
+- In play, other keys do nothing.
+
+The squares change colour because palette register 1 changes. Grey parts of
+the creatures change colour too. Words on the screen come later.
 
 ## What the owner asked for
 
@@ -68,6 +76,24 @@ A press that changes nothing on the board is not a move, so no creature
 appears (agent default). Without this rule, the player can fill the board with
 presses that do nothing. New creatures appear in a random empty square
 (agent default).
+
+### The random choice
+
+The generator is a 16-bit xorshift with the shifts 7, 9 and 8 (agent
+choice). One step is:
+
+1. `seed = seed XOR (seed << 7)`
+2. `seed = seed XOR (seed >> 9)`
+3. `seed = seed XOR (seed << 8)`
+
+All values are 16 bits. The seed starts at `$7A35`. The generator steps once
+at each keyboard scan, except the first scan. It steps once more for each new
+microbe. Then the low byte of the seed, modulo the number of empty squares,
+gives `k`. The microbe goes in empty square `k`, counted from 0 in row order.
+
+The scans step the generator, so the time between your presses changes where
+the microbes appear. The two first microbes come before any scan, so the
+first board is the same each time the program starts.
 
 ## The art
 
@@ -125,7 +151,8 @@ defaults for the CoCo 3, not choices of the owner.
   [the GIME graphics guide](../../guidance/techniques/gime-graphics.md).
 - Board: 4 by 4 squares (agent-selected prototype choice)
 - Controls: the keyboard (owner requirement). The four arrow keys slide the
-  creatures, one move for each press (agent-selected prototype choice).
+  creatures, one move for each press. Space starts a new game after a win
+  or a loss (agent-selected prototype choices).
 - Loader: XRoar runs the DECB binary directly (starter default)
 - Disk: `coco.toml` names Disk BASIC, `disk11.rom`, for a disk image only.
   Read [disk images](../../guidance/starter/toolchain.md#disk-images).
@@ -134,56 +161,70 @@ defaults for the CoCo 3, not choices of the owner.
 
 In order of importance:
 
-1. New creatures: 2 at the start, and a microbe in a random empty square
-   after every move. Add a fixed random seed for the check only.
-2. The end of the game: a win when the human appears, and the end when no
-   move can change the board. Add a fixed layout for the check only.
-3. No ripple on the screen. Draw the next board on a second screen that is
+1. No ripple on the screen. Draw the next board on a second screen that is
    not shown, then show it in the vertical blank. Read the GIME display
    address and the vertical sync sources first.
-4. Faster drawing, so that the next board is ready soon after the key press.
-5. Later: the game's name, a title screen, a score, sound, and a board
-   colour that is not grey, so that grey creatures stand out.
+2. Faster drawing, so that the next board is ready soon after the key press.
+3. A different first board at each start, for example from the time until
+   the first key press on a title screen.
+4. Later: the game's name, a title screen, words for the win and the loss, a
+   score and sound.
+5. A board colour that is not grey, so that grey creatures stand out.
 
+## Check
 
 ```sh
 uv run python scripts/coco.py check projects/untitled-1
 ```
 
-The check runs two builds. Each build stops at `ready` 21 times, once for
+The check runs five builds. Each build stops at `ready` 21 times, once for
 each scan of the keyboard. At each stop, the check compares the 30720 screen
 bytes at physical `$00000` and XRoar's rendered picture with
-[expected.py](expected.py).
+[expected.py](expected.py). The rendered picture shows the colour of the
+squares.
 
-- **The main build** gets no keys. The board must stay at the opening layout.
-- **The keys build** plays [keys.txt](keys.txt) through XRoar's keyboard
-  matrix and the program's own scanner. Each line gives the held keys and the
-  board after that scan. The boards are written by hand from the rules above.
-  The model in `expected.py` applies the rules too, and it must agree with
-  each board.
+| Build | Defines | Keys | What it checks |
+| --- | --- | --- | --- |
+| main | none | none | The first two microbes, from the generator. No change without keys. |
+| `play` | none | [play.txt](play.txt) | Seven moves of the game that you play, with the random microbes. |
+| `rules` | `LAYOUT`, `RULES`, `FIRST_EMPTY` | [keys.txt](keys.txt) | The rules of a move, and the keys. |
+| `win` | `LAYOUT`, `WIN`, `FIRST_EMPTY` | [win.txt](win.txt) | The human wins. No moves after it. Space starts a new game. |
+| `lose` | `LAYOUT`, `LOSE`, `FIRST_EMPTY` | [lose.txt](lose.txt) | A press that changes nothing. A full board with no pair loses. No moves after it. Space. |
 
-The opening layout has one rule in each row: four equal creatures, a merged
-creature next to an equal one, gaps, and two humans. The script tests a held
-arrow, two arrows, a new arrow while another is held, a move that changes
-nothing, and Space.
+The keys go through XRoar's keyboard matrix and the program's own scanner.
+
+The main and `play` builds are the game that you play. The model in
+`expected.py` follows the rules and the generator of this README.
+
+The other three builds have test controls, which are only for the check.
+`LAYOUT` with `RULES`, `WIN` or `LOSE` starts from a fixed layout.
+`FIRST_EMPTY` puts each new microbe in the first empty square. Thus the
+scripts give the board and the phase after each scan, written by hand from
+the rules. The model must agree with each of them.
+
+These builds do not check
+the random choice. The main and `play` builds check it.
 
 The model converts the creature pictures by its own route. It does not read
 bytes from the build or the emulator.
 
 These faults were run once on a copy, and each failed the check:
 
-| Fault | First failed stop |
-| --- | --- |
-| `WRONG_COLUMN`: Up is read from the wrong column | 7: no move up |
-| `HELD_REPEAT`: a held arrow moves at every scan | 2: the startup arrow moves |
-| `REMERGE`: a merged creature can merge again | 4: three microbes make a trilobite |
-| `$FF99` for 640×192 with 4 colours (board step) | rendered check only |
-| No page advance in the screen window (board step) | 119 screen bytes |
+| Fault | Build | First failed stop |
+| --- | --- | --- |
+| `WRONG_COLUMN`: Up is read from the wrong column | `rules` | 7: no move up |
+| `HELD_REPEAT`: a held arrow moves at every scan | `rules` | 2: the startup arrow moves |
+| `REMERGE`: a merged creature can merge again | `rules` | 4: three microbes make a trilobite |
+| `SPAWN_ALWAYS`: a microbe after a press that changes nothing | `lose` | 2 |
+| `NO_SCAN_STEP`: the generator does not step at each scan | `play` | 2: the microbe is in a different square |
+| `NO_JUDGE`: no win and no loss | `win` | 2: the squares stay grey |
+| `$FF99` for 640×192 with 4 colours (board step) | main | rendered check only |
+| No page advance in the screen window (board step) | main | 119 screen bytes |
 
-The defines of the first three faults are only for the check. The game that
-you play has none of them.
+The fault defines are only for the check. The game that you play has none of
+them.
 
-Not checked: the rule that two humans do not merge has no fault control.
+Not checked: a full board that still has an equal pair, which must not lose.
 Physical keys, the host keyboard and window focus are not tested.
 
 The capture shows the middle 512 of the 640 samples of each line. It shows

@@ -23,21 +23,35 @@ below = { ends = 0x6000 }   # CPU $6000-$7FFF is the screen window
 [capture]
 video = true
 
-# Scripted keys take effect at the scanner entry: one keys.txt line per scan.
+# Scripted keys take effect at the scanner entry: one script line per scan.
 [keys]
 at = "sample"
 letters = { U = "up", D = "down", L = "left", R = "right", F = "space" }
 
-# The main build gets no keys: the board must stay at the opening layout.
-# The keys build plays keys.txt through the emulated keyboard.
-[variants.keys]
+# The main build gets no keys: it must stay at its first two microbes.
+# The play build is the same program, with play.txt through the keyboard.
+[variants.play]
+keys = "play.txt"
+
+# For the check only: fixed layouts, and a new microbe in the first empty
+# square, so the key scripts can give each board by hand.
+[variants.rules]
 keys = "keys.txt"
+defines = ["LAYOUT", "RULES", "FIRST_EMPTY"]
+
+[variants.win]
+keys = "win.txt"
+defines = ["LAYOUT", "WIN", "FIRST_EMPTY"]
+
+[variants.lose]
+keys = "lose.txt"
+defines = ["LAYOUT", "LOSE", "FIRST_EMPTY"]
 
 # For the check: the label where each snapshot is taken (once for each scan,
-# so once for each keys.txt line), and a data label that must never run.
+# so once for each key-script line), and a data label that must never run.
 [check]
 checkpoint = "ready"
 frames = ["1-21"]
-unreachable = "opening"
+unreachable = "lines"
 screen = 0x00000         # physical $00000 is this snapshot offset
 emulated_seconds = 60

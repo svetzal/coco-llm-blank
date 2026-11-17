@@ -1,8 +1,10 @@
 * untitled-1: an evolution sliding puzzle for the CoCo 3.
 *
 * The board is 4x4 squares in 320x192 with 16 colours. The arrow keys slide
-* the creatures, and two equal creatures merge into the next one. In this
-* step the game starts from a fixed layout, and no new creatures appear.
+* the creatures, and two equal creatures merge into the next one. The game
+* starts with two microbes, and a microbe appears after every move. The game
+* is won when the human appears, and lost when no move can change the board.
+* Then the squares change colour, and Space starts a new game.
 *
 * Sources (read before changing a value):
 *   Tandy, Color Computer 3 Service Manual:
@@ -15,7 +17,7 @@
 *     PDF 41-42 Table 4-10: HRES 111, CRES 10 is 320 pixels, 16 colours.
 *   examples/gime-graphics: the same display setup, checked in XRoar.
 *   Keyboard matrix: Tandy, Color Computer 3 Service Manual, PDF 40, figure
-*     5-9: Up, Down, Left, Right are row PA3, columns PB3, PB4, PB5, PB6.
+*     5-9: Up, Down, Left, Right, Space are row PA3, columns PB3 to PB7.
 *     PDF 9: the PIA registers and control bit 2. A pressed key reads 0.
 *     guidance/techniques/controls-and-collision.md and
 *     examples/keyboard-controls and collect-room use the same scan.
@@ -40,7 +42,10 @@ CELLH   equ 44
 SPRX    equ 2                       creature: 4 pixels in from the square
 SPRY    equ 4
 GREY    equ $11                     two pixels of register 1 (dark grey $10)
-TOP     equ 11                      the last creature: it does not merge
+TOP     equ 11                      the last creature: it wins the game
+WINCODE equ $12                     square colour code after a win (green)
+LOSECODE equ $07                    square colour code after a loss (red)
+SPACE   equ 16                      the held bit of Space
 
         org $2000
 * Set our own stack. BASIC's stack could be in CPU $6000-$7FFF, which this
@@ -65,16 +70,23 @@ start   lds #stacktop
         ora #4
         sta $FF03
         stb $FF02
-* The game starts from the fixed layout. Nothing is on the screen yet.
+* Every square is drawn first: $FF is not a level.
+        ldx #shown
+init    lda #$FF
+        sta ,x+
+        cmpx #shown+16
+        blo init
+        ifdef LAYOUT
+* For the check only: start from a fixed layout.
         ldx #opening
         ldu #cells
-        ldy #shown
-init    lda ,x+
+lay     lda ,x+
         sta ,u+
-        lda #$FF                    not a level: every square is drawn
-        sta ,y+
         cmpu #cells+16
-        blo init
+        blo lay
+        else
+        lbsr newgame
+        endc
         clr rval                    clear the screen to register 0
         clr rx
         clr ry
@@ -117,6 +129,10 @@ pal     lda ,x+
 * keeps the picture still for the capture and sets the scan rate.
 ready   lbsr pause
         lbsr sample
+        ifndef NO_SCAN_STEP
+* NO_SCAN_STEP is a fault for the check only.
+        lbsr rand
+        endc
         lbsr update
         lbsr board
         bra ready
@@ -127,7 +143,7 @@ pwait   leax -1,x
         bne pwait
         rts
 
-* sample: the arrows into held. Up 1, Down 2, Left 4, Right 8.
+* sample: the keys into held. Up 1, Down 2, Left 4, Right 8, Space 16.
 * Strobe one column low, test row PA3 (bit 3). Leave all columns high.
 * A key script takes effect at each entry of sample.
 sample  clr held
@@ -143,23 +159,31 @@ scan    lda ,x+
         stb held
         puls b
 up      lslb
-        cmpx #columns+4
+        cmpx #columns+5
         blo scan
         lda #$FF
         sta $FF02
         rts
 
-* update: one move for a new press of one arrow. A move needs exactly one
-* arrow held, and that arrow was not held at the previous sample.
+* update: in play, one move for a new press of one arrow. A move needs
+* exactly one arrow held, and that arrow was not held at the previous
+* sample. After the end of a game, a new press of Space starts a new game.
 update  ldb previous
         comb
-        andb held                   B: the arrows pressed since last time
+        andb held                   B: the keys pressed since last time
         lda held
         sta previous
         ifdef HELD_REPEAT
 * A fault for the check only: a held arrow moves at every sample.
         tfr a,b
         endc
+        tst phase
+        beq uplay
+        bitb #SPACE
+        beq uend
+        lbsr newgame
+uend    rts
+uplay   anda #15
         ldx #arrows
 udir    cmpa ,x
         beq ufound
@@ -172,13 +196,119 @@ ufound  andb ,x
         tfr x,d
         subd #arrows                B: 0 up, 1 down, 2 left, 3 right
         lbsr slide
+        ifndef SPAWN_ALWAYS
+* SPAWN_ALWAYS is a fault for the check only.
+        tst moved
+        beq unew                    nothing changed: not a move
+        endc
+        lbsr spawn
+        ifndef NO_JUDGE
+* NO_JUDGE is a fault for the check only.
+        lbsr judge
+        endc
 unew    rts
+
+* newgame: an empty board with two microbes, in the colours of play.
+newgame clr phase
+        lda c01_palette+1
+        sta $FFB1
+        ldx #cells
+ngclr   clr ,x+
+        cmpx #cells+16
+        blo ngclr
+        lbsr spawn
+        lbsr spawn
+        rts
+
+* spawn: a microbe in an empty square. Step the generator, then take its low
+* byte modulo the number of empty squares: k. Use the k-th empty square,
+* counted from 0 in cell order.
+spawn   lbsr rand
+        ldx #cells
+        clr empty
+spcount tst ,x+
+        bne spnext
+        inc empty
+spnext  cmpx #cells+16
+        blo spcount
+        tst empty
+        beq spdone
+        lda seed+1
+        ifdef FIRST_EMPTY
+* For the check only: always the first empty square.
+        clra
+        endc
+spmod   cmpa empty
+        blo spfind
+        suba empty
+        bra spmod
+spfind  ldx #cells
+spf1    tst ,x+
+        bne spf1
+        deca
+        bpl spf1
+        lda #1
+        sta -1,x
+spdone  rts
+
+* judge: after a move, a human wins. Otherwise the game goes on while a
+* square is empty or two neighbours are equal. If not, the game is lost.
+judge   ldx #cells
+jwin    lda ,x+
+        cmpa #TOP
+        beq won
+        cmpx #cells+16
+        blo jwin
+        ldx #cells
+jempty  tst ,x+
+        beq jplay
+        cmpx #cells+16
+        blo jempty
+        ldx #cells
+        ldy #pairs
+jpair   ldb ,y+
+        lda b,x
+        ldb ,y+
+        cmpa b,x
+        beq jplay
+        cmpy #pairs+48
+        blo jpair
+        lda #2
+        sta phase
+        lda #LOSECODE
+        sta $FFB1
+jplay   rts
+won     lda #1
+        sta phase
+        lda #WINCODE
+        sta $FFB1
+        rts
+
+* rand: one step of a 16-bit xorshift generator, shifts 7, 9 and 8.
+* seed = seed XOR (seed << 7); seed = seed XOR (seed >> 9);
+* seed = seed XOR (seed << 8). Our choice of generator.
+rand    ldd seed
+        ldx #7
+rshift  lslb
+        rola
+        leax -1,x
+        bne rshift
+        eora seed
+        eorb seed+1
+        std seed
+        lsra                        A: the high byte >> 1
+        eora seed+1
+        sta seed+1                  low = low XOR (high >> 1)
+        eora seed
+        sta seed                    high = high XOR new low
+        rts
 
 * slide: move every line toward the edge of direction B. Each line is four
 * cell numbers from "lines", the edge first. Creatures close up; two equal
 * neighbours merge into the next level. A merged creature does not merge
-* again in the same move. The last creature does not merge.
-slide   lda #16
+* again in the same move.
+slide   clr moved
+        lda #16
         mul
         ldx #lines
         abx
@@ -205,8 +335,6 @@ smerge  lda ,u+
         beq snext
         cmpa last
         bne sput
-        cmpa #TOP
-        beq sput
         inca
         sta -1,y
         clr last
@@ -226,7 +354,11 @@ snext   decb
         sta count
 swrite  ldb ,x+
         lda ,u+
+        cmpa b,y
+        beq ssame
+        inc moved
         sta b,y
+ssame
         dec count
         bne swrite
         dec lcount
@@ -353,12 +485,33 @@ put     sta ,x+
         ldx #WINDOW
 put1    rts
 
-* The opening layout, row by row; 0 is empty. Each row tests a rule.
-* New creatures do not appear yet, so this layout is the whole game.
+* For the check only: fixed layouts, row by row; 0 is empty.
+        ifdef RULES
+* One rule in each row: four equal, a merged creature next to an equal one,
+* gaps, and three equal.
 opening fcb 1,1,1,1
         fcb 1,1,2,0
         fcb 0,3,0,3
-        fcb 11,11,10,10
+        fcb 0,2,2,2
+        endc
+        ifdef WIN
+* Two primates: one move makes the human.
+opening fcb 0,0,0,0
+        fcb 0,0,0,0
+        fcb 0,0,0,0
+        fcb 10,10,0,0
+        endc
+        ifdef LOSE
+* One move to the right, then the new microbe fills the board.
+opening fcb 1,2,1,2
+        fcb 2,1,2,1
+        fcb 3,4,3,4
+        fcb 3,1,3,0
+        endc
+
+* The 24 pairs of neighbouring cells: 12 across, then 12 down.
+pairs   fcb 0,1,1,2,2,3,4,5,5,6,6,7,8,9,9,10,10,11,12,13,13,14,14,15
+        fcb 0,4,4,8,8,12,1,5,5,9,9,13,2,6,6,10,10,14,3,7,7,11,11,15
 
 * Cell numbers of each line, the edge of the move first: up, down, left,
 * right. A cell number is row * 4 + column.
@@ -366,7 +519,8 @@ lines   fcb 0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15
         fcb 12,8,4,0,13,9,5,1,14,10,6,2,15,11,7,3
         fcb 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
         fcb 3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12
-* The held bit of each arrow, and its column strobe ($FF02), in that order.
+* The held bit of each arrow, and the column strobe ($FF02) of each key:
+* Up, Down, Left, Right and Space.
 arrows  fcb 1,2,4,8
 columns
         ifdef WRONG_COLUMN
@@ -374,7 +528,7 @@ columns
         else
         fcb $F7
         endc
-        fcb $EF,$DF,$BF
+        fcb $EF,$DF,$BF,$7F
 
 sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11
         include "c01.asm"
@@ -404,6 +558,10 @@ lptr    fdb 0
 lcount  fcb 0
 last    fcb 0
 held    fcb 0
+phase   fcb 0                       0 play, 1 won, 2 lost
+moved   fcb 0                       squares changed by the last slide
+empty   fcb 0
+seed    fdb $7A35                   the generator's state: never 0
 previous fcb 0
 rx      fcb 0
 ry      fcb 0

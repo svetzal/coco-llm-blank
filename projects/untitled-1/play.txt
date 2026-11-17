@@ -1,0 +1,16 @@
+# The game as the owner plays it: no defines. The model in expected.py
+# places each new microbe with the generator in README.md.
+-    startup sample
+L    left
+-    release
+U    up
+-    release
+R    right
+-    release
+D    down
+-    release
+L    left
+-    release
+U    up
+-    release
+R    right

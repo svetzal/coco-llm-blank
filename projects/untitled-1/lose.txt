@@ -1,0 +1,10 @@
+# The lose build: defines LOSE and FIRST_EMPTY, for the check only.
+# Columns as in keys.txt. The squares are red while the phase is L.
+-    1212/2121/3434/3130  P  startup sample
+L    1212/2121/3434/3130  P  nothing can move left: no new microbe
+-    1212/2121/3434/3130  P  release
+R    1212/2121/3434/1313  L  the new microbe fills the board, no pair is equal: lost
+-    1212/2121/3434/1313  L  release
+U    1212/2121/3434/1313  L  no moves after a loss
+-    1212/2121/3434/1313  L  release
+F    1100/0000/0000/0000  P  Space: a new game with two microbes

@@ -1,0 +1,10 @@
+# The win build: defines WIN and FIRST_EMPTY, for the check only.
+# Columns as in keys.txt. The squares are green while the phase is W.
+-    0000/0000/0000/AA00  P  startup sample
+L    1000/0000/0000/B000  W  two primates make the human: won
+-    1000/0000/0000/B000  W  release
+R    1000/0000/0000/B000  W  no moves after a win
+-    1000/0000/0000/B000  W  release
+F    1100/0000/0000/0000  P  Space: a new game with two microbes
+-    1100/0000/0000/0000  P  release
+R    1002/0000/0000/0000  P  the new game plays

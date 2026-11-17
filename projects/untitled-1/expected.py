@@ -2,7 +2,7 @@
 
 Written from the layout rules and the game rules in the README, not from the
 assembly's output. The key policy and the slide rules are modelled here, and
-the model must agree with the boards written by hand in keys.txt. The creature pixels come from the source pictures in
+the model must agree with the boards written by hand in the key scripts. The creature pixels come from the source pictures in
 art/creatures/ by the model's own conversion, not from bytes that the build or
 the emulator made. The model therefore checks placement, packing, the page
 crossings of the screen window and the display setup. It trusts
@@ -28,10 +28,19 @@ CELL = (2, 2, 52, 44)  # grey cell inside a square: x, y, width, height
 SPRITE = (4, 4, 48, 40)  # creature inside a square
 BLACK, GREY = 0, 1  # palette registers
 
-# The opening layout: levels row by row, 0 is empty.
-OPENING = [1, 1, 1, 1, 1, 1, 2, 0, 0, 3, 0, 3, 11, 11, 10, 10]
-TOP = 11  # the last creature does not merge
+TOP = 11  # the human: it wins the game
 ARROWS = "UDLR"
+SEED = 0x7A35
+FRAMES = 21
+# Each build: its fixed layout (None: a new game) and whether a new microbe
+# goes in the first empty square (True) or where the generator says.
+BUILDS = {
+    "": ("", None),
+    "play": ("play.txt", None),
+    "rules": ("keys.txt", [1, 1, 1, 1, 1, 1, 2, 0, 0, 3, 0, 3, 0, 2, 2, 2]),
+    "win": ("win.txt", [0] * 12 + [10, 10, 0, 0]),
+    "lose": ("lose.txt", [1, 2, 1, 2, 2, 1, 2, 1, 3, 4, 3, 4, 3, 1, 3, 0]),
+}
 
 # The contract's codes in register order, and their gime-composite colours as
 # `graphics.py palettes` lists them (measured in XRoar 1.13.1).
@@ -43,6 +52,9 @@ RENDERED = [
     (34, 127, 241), (67, 248, 255), (155, 18, 60), (255, 79, 75),
 ]  # fmt: skip
 SQUARE_RGB = RENDERED[GREY]
+# The colour of register 1 in each phase: grey in play, then the win code $12
+# (register 9) or the loss code $07 (register 14).
+PHASE_RGB = {"P": RENDERED[GREY], "W": RENDERED[9], "L": RENDERED[14]}
 BOXES = {"03-trilobite": "90,133,849,826"}
 
 # A full-width line is 640 samples, two for each pixel. XRoar 1.13.1 centres
@@ -79,7 +91,7 @@ def slide_line(line: list[int]) -> list[int]:
     out: list[int] = []
     mergeable = False
     for level in (v for v in line if v):
-        if mergeable and out[-1] == level and level < TOP:
+        if mergeable and out[-1] == level:
             out[-1] += 1
             mergeable = False
         else:
@@ -96,33 +108,98 @@ def move(board: list[int], arrow: str) -> list[int]:
     return [int(v) for v in np.rot90(moved, -turns).flatten()]
 
 
+def step(seed: int) -> int:
+    """The 16-bit xorshift generator of the README: shifts 7, 9 and 8."""
+    seed ^= (seed << 7) & 0xFFFF
+    seed ^= seed >> 9
+    return seed ^ ((seed << 8) & 0xFFFF)
+
+
+class Game:
+    """The game as the README states it, one scan at a time."""
+
+    def __init__(self, layout: list[int] | None, first_empty: bool) -> None:
+        self.first_empty = first_empty
+        self.seed = SEED
+        self.previous = ""
+        if layout is None:
+            self.new_game()
+        else:
+            self.board, self.phase = list(layout), "P"
+
+    def spawn(self) -> None:
+        self.seed = step(self.seed)
+        empty = [i for i, v in enumerate(self.board) if not v]
+        if empty:
+            k = 0 if self.first_empty else (self.seed & 0xFF) % len(empty)
+            self.board[empty[k]] = 1
+
+    def new_game(self) -> None:
+        self.board, self.phase = [0] * 16, "P"
+        self.spawn()
+        self.spawn()
+
+    def judge(self) -> None:
+        grid = np.array(self.board).reshape(4, 4)
+        if TOP in self.board:
+            self.phase = "W"
+        elif 0 not in self.board and not (
+            (grid[:, 1:] == grid[:, :-1]).any() or (grid[1:] == grid[:-1]).any()
+        ):
+            self.phase = "L"
+
+    def scan(self, keys: str, first: bool) -> None:
+        held = "" if keys == "-" else keys
+        pressed = "".join(k for k in held if k not in self.previous)
+        self.previous = held
+        if first:
+            return  # the startup sample only seeds the history
+        self.seed = step(self.seed)
+        if self.phase != "P":
+            if "F" in pressed:
+                self.new_game()
+            return
+        arrows = "".join(k for k in held if k in ARROWS)
+        if len(arrows) == 1 and arrows in pressed:
+            after = move(self.board, arrows)
+            if after != self.board:
+                self.board = after
+                self.spawn()
+                self.judge()
+
+
 def parse_board(text: str) -> list[int]:
     return [int(c, 16) for c in text.replace("/", "")]
 
 
 @cache
-def boards(variant: str) -> tuple[tuple[int, ...], ...]:
-    """The board at each checkpoint: one for each keys.txt line.
+def states(variant: str) -> tuple[tuple[tuple[int, ...], str], ...]:
+    """The board and the phase at each checkpoint, one for each scan.
 
-    A move needs exactly one arrow held that was not held at the scan before.
-    The first line only seeds that history.
+    Scans after the end of the script hold no keys. Where the script gives a
+    board and a phase written by hand, the model must agree with them.
     """
-    if variant != "keys":
-        return (tuple(OPENING),) * 21
-    lines = [
-        line.split()
-        for line in (HERE / "keys.txt").read_text().splitlines()
-        if line.strip() and not line.startswith("#")
-    ]
-    board, previous, result = list(OPENING), "", []
-    for number, (keys, written, *_) in enumerate(lines, start=1):
-        held = "" if keys == "-" else "".join(k for k in keys if k in ARROWS)
-        if number > 1 and len(held) == 1 and held not in previous:
-            board = move(board, held)
-        previous = held
-        if board != parse_board(written):
-            raise ValueError(f"keys.txt line {number}: the rules give {board}, not {written}")
-        result.append(tuple(board))
+    script, layout = BUILDS[variant]
+    lines: list[list[str]] = []
+    if script:
+        lines = [
+            line.split()
+            for line in (HERE / script).read_text().splitlines()
+            if line.strip() and not line.startswith("#")
+        ]
+    lines += [["-"]] * (FRAMES - len(lines))
+    game = Game(layout, first_empty=layout is not None)
+    result = []
+    for number, words in enumerate(lines, start=1):
+        game.scan(words[0], first=number == 1)
+        if layout is not None:
+            board, phase = words[1:3] if len(words) > 2 else (None, None)
+            if board and (parse_board(board) != game.board or phase != game.phase):
+                raise ValueError(
+                    f"{script} line {number}: the rules give {game.board} {game.phase}, "
+                    f"not {board} {phase}"
+                )
+        result.append((tuple(game.board), game.phase))
     return tuple(result)
 
 
@@ -142,12 +219,14 @@ def picture(board: tuple[int, ...]) -> np.ndarray:
 
 def expected_screen(frame: int, variant: str = "") -> bytes:
     """Two pixels in each byte, the left pixel in the high bits (Tepolt PDF 38-39)."""
-    pixels = picture(boards(variant)[frame - 1])
+    pixels = picture(states(variant)[frame - 1][0])
     return bytes((pixels[:, 0::2] << 4 | pixels[:, 1::2]).flatten())
 
 
 def expected_frame(frame: int, variant: str = "", target: str = "coco3") -> np.ndarray:
     """The middle 512 samples of each 640-sample line."""
+    board, phase = states(variant)[frame - 1]
     colours = np.array(RENDERED, dtype=np.uint8)
+    colours[GREY] = PHASE_RGB[phase]
     columns = (FULL_WIDTH_START + np.arange(CAPTURE_SAMPLES)) // 2
-    return colours[picture(boards(variant)[frame - 1])[:, columns]]
+    return colours[picture(board)[:, columns]]
