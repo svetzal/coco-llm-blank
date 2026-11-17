@@ -5,6 +5,9 @@ creature PNG in art/creatures/ (1024x1024, transparent background) is put on
 the board square's grey, then converted to a 48x40 gime-320x16 sprite with the
 16 colour codes of art/game.contract.json, in register order. The old outputs
 are removed first, so a failed conversion stops the assembly.
+
+The words of font.py are packed into text.asm: two pixels in each byte, the
+left pixel in the high bits.
 """
 
 import subprocess
@@ -14,6 +17,9 @@ from pathlib import Path
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from font import GLYPHS, WORDS
+
 CREATURES = HERE / "art/creatures"
 # The contract's colour codes, register 0 first. Register 1 ($10, dark grey) is
 # the board square, so the sprites are put on its measured colour.
@@ -23,9 +29,37 @@ SQUARE_RGB = (63, 63, 63)
 BOXES = {"03-trilobite": "90,133,849,826"}
 
 
+def word_rows(text: str, scale: int, ink: int) -> list[list[int]]:
+    """The palette register of each pixel, row by row, at the scale."""
+    rows = []
+    for glyph_row in range(8):
+        row = []
+        for letter in text:
+            for mark in GLYPHS[letter][glyph_row]:
+                row += [ink if mark == "#" else 0] * scale
+        rows += [row] * scale
+    return rows
+
+
+def write_words(output: Path) -> None:
+    lines = ["* Made by prepare.py from font.py. Do not edit."]
+    for label, text, scale, ink in WORDS:
+        rows = word_rows(text, scale, ink)
+        lines.append(f"t_{label}_bpr equ {len(rows[0]) // 2}")
+        lines.append(f"t_{label}_rows equ {len(rows)}")
+        lines.append(f"t_{label}")
+        for row in rows:
+            packed = [row[i] << 4 | row[i + 1] for i in range(0, len(row), 2)]
+            for start in range(0, len(packed), 16):
+                values = ",".join(f"${b:02X}" for b in packed[start : start + 16])
+                lines.append(f"        fcb {values}")
+    (output / "text.asm").write_text("\n".join(lines) + "\n")
+
+
 def prepare(output: Path) -> None:
     from native import ROOT
 
+    write_words(output)
     sources = sorted(CREATURES.glob("[0-9][0-9]-*.png"))
     if len(sources) != 11:
         raise SystemExit(f"expected 11 creature pictures in {CREATURES}, found {len(sources)}")

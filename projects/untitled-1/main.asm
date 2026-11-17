@@ -1,10 +1,15 @@
-* untitled-1: an evolution sliding puzzle for the CoCo 3.
+* Evolve (project untitled-1): an evolution sliding puzzle for the CoCo 3.
 *
-* The board is 4x4 squares in 320x192 with 16 colours. The arrow keys slide
+* The title screen shows the eleven creatures. Space starts a game. The
+* board is 4x4 squares in 320x192 with 16 colours. The arrow keys slide
 * the creatures, and two equal creatures merge into the next one. The game
 * starts with two microbes, and a microbe appears after every move. The game
 * is won when the human appears, and lost when no move can change the board.
-* Then the squares change colour, and Space starts a new game.
+* Then the squares change colour, a banner shows the result, and Space
+* starts a new game.
+*
+* Two screens: the program draws into the screen that is not shown, then
+* shows it in the vertical blank. Thus a change appears all at once.
 *
 * Sources (read before changing a value):
 *   Tandy, Color Computer 3 Service Manual:
@@ -12,6 +17,12 @@
 *     PDF 15-16: MMU $FFA0-$FFA7; $FFA3 maps CPU $6000-$7FFF; data bits
 *       5..0 are physical address bits 18..13.
 *     PDF 17: palette registers $FFB0-$FFBF.
+*     PDF 11: $FF92 bit 3 = VBORD.
+*   Tepolt, PDF 50: an $FF92 bit sets only if $FF90 enables IRQ (IEN); a
+*     read of $FF92 clears it.
+*   guidance/techniques/animation.md, "Flip pages in the GIME native modes",
+*     and examples/page-flip: write $FF9D after a new VBORD, then wait for
+*     one more VBORD before drawing into the old screen.
 *   Laurence A. Tepolt, Assembly Language Programming for the CoCo3:
 *     PDF 38-39: byte formats, leftmost pixel in the high bits.
 *     PDF 41-42 Table 4-10: HRES 111, CRES 10 is 320 pixels, 16 colours.
@@ -23,9 +34,10 @@
 *     examples/keyboard-controls and collect-room use the same scan.
 *
 * Memory (CPU addresses, BASIC's MMU map):
-*   $2000-$5FFF  this program, its sprites and its own stack
-*   $6000-$7FFF  the window that shows one 8 KiB page of the screen
-*   physical $00000-$077FF  the screen, 160 bytes x 192 rows
+*   $0E00-$5FFF  this program, its sprites, its words and its own stack
+*   $6000-$7FFF  the window that shows one 8 KiB page of a screen
+*   physical $00000-$077FF  screen A, 160 bytes x 192 rows (pages 0-3)
+*   physical $08000-$0F7FF  screen B (pages 4-7)
 
 WINDOW  equ $6000
 MMUWIN  equ $FFA3                   MMU task 0 entry for CPU $6000-$7FFF
@@ -46,8 +58,21 @@ TOP     equ 11                      the last creature: it wins the game
 WINCODE equ $12                     square colour code after a win (green)
 LOSECODE equ $07                    square colour code after a loss (red)
 SPACE   equ 16                      the held bit of Space
+* $FF9D = physical address bits 18..11; $FF9E = bits 10..3 stays 0.
+VIEWA   equ $00                     $00000 / 2048
+VIEWB   equ $10                     $08000 / 2048
+* Phases.
+PLAY    equ 0
+WON     equ 1
+LOST    equ 2
+TITLE   equ 3
+* What a screen holds: its scene, its banner, then the level in each square.
+NOSCENE equ 0
+TSCENE  equ 1
+BSCENE  equ 2
+DSIZE   equ 18
 
-        org $2000
+        org $0E00
 * Set our own stack. BASIC's stack could be in CPU $6000-$7FFF, which this
 * program maps to the screen.
 start   lds #stacktop
@@ -70,34 +95,29 @@ start   lds #stacktop
         ora #4
         sta $FF03
         stb $FF02
-* Every square is drawn first: $FF is not a level.
-        ldx #shown
-init    lda #$FF
-        sta ,x+
-        cmpx #shown+16
-        blo init
+* Both screens are black, and neither holds a scene.
+        lda #4
+        sta bpage
+        lbsr clear
+        clr bpage
+        lbsr clear
+        clr desc
+        clr desc+DSIZE
         ifdef LAYOUT
-* For the check only: start from a fixed layout.
+* For the check only: start a game from a fixed layout.
         ldx #opening
         ldu #cells
 lay     lda ,x+
         sta ,u+
         cmpu #cells+16
         blo lay
+        clr phase
         else
-        lbsr newgame
+        lda #TITLE
+        sta phase
         endc
-        clr rval                    clear the screen to register 0
-        clr rx
-        clr ry
-        lda #BPR
-        sta rw
-        lda #ROWS
-        sta rh
-        lbsr fill
-        lbsr board
 
-* Set the palette and show the screen (as examples/gime-graphics).
+* Set the palette and show screen A (as examples/gime-graphics).
         ldx #c01_palette
         ldu #$FFB0
 pal     lda ,x+
@@ -105,21 +125,30 @@ pal     lda ,x+
         cmpu #$FFC0
         blo pal
         clr $FF9A                   border: colour code 0
-        lda #%01001110              CoCo 3 mode, MMU on, 32K internal ROM
+* CoCo 3 mode, MMU on, IEN on (the VBORD flag), 32K internal ROM. IRQ is
+* masked in the CPU, so no handler reads $FF92.
+        lda #%01101110
         sta $FF90
+        lda #%00001000              VBORD only
+        sta $FF92
         lda #%10000000              graphics, one line for each row
         sta $FF98
         lda #%00011110              192 rows, HRES 111, CRES 10
         sta $FF99
         clr $FF9C
-        clr $FF9D                   display at physical $00000
+        lda #VIEWA
+        sta $FF9D                   display at physical $00000
         clr $FF9E
         clr $FF9F
+        lda #1                      screen B is not shown
+        sta back
+        lbsr render
+        lbsr flip
 
 * Let a few fields pass in the new mode before the first snapshot. XRoar
 * sets its picture window once for each field, from the mode at the end of
-* vertical sync (src/tcc1014/tcc1014.c), so the first field still has the
-* window of BASIC's text mode.
+* vertical sync (src/tcc1014/tcc1014.c), so a field that starts in BASIC's
+* text mode has the window of that mode.
         lbsr pause
 * An arrow held at the start is not a new press.
         lbsr sample
@@ -134,7 +163,11 @@ ready   lbsr pause
         lbsr rand
         endc
         lbsr update
-        lbsr board
+        tst dirty
+        beq ready
+        clr dirty
+        lbsr render
+        lbsr flip
         bra ready
 
 * pause: about 96000 cycles, 6 fields at the normal clock.
@@ -179,7 +212,7 @@ update  ldb previous
         endc
         tst phase
         beq uplay
-        bitb #SPACE
+        bitb #SPACE                 title, won or lost: Space starts a game
         beq uend
         lbsr newgame
 uend    rts
@@ -206,12 +239,12 @@ ufound  andb ,x
 * NO_JUDGE is a fault for the check only.
         lbsr judge
         endc
+        inc dirty
 unew    rts
 
-* newgame: an empty board with two microbes, in the colours of play.
+* newgame: an empty board with two microbes.
 newgame clr phase
-        lda c01_palette+1
-        sta $FFB1
+        inc dirty
         ldx #cells
 ngclr   clr ,x+
         cmpx #cells+16
@@ -273,15 +306,11 @@ jpair   ldb ,y+
         beq jplay
         cmpy #pairs+48
         blo jpair
-        lda #2
+        lda #LOST
         sta phase
-        lda #LOSECODE
-        sta $FFB1
 jplay   rts
-won     lda #1
+won     lda #WON
         sta phase
-        lda #WINCODE
-        sta $FFB1
         rts
 
 * rand: one step of a 16-bit xorshift generator, shifts 7, 9 and 8.
@@ -365,12 +394,209 @@ ssame
         bne sline
         rts
 
-* Draw each square whose level differs from "shown", row by row.
+* render: make the screen that is not shown hold the picture of the phase.
+* Draw only what differs from what that screen holds (its record at dptr).
+render  lda back
+        ldb #DSIZE
+        mul
+        addd #desc
+        std dptr
+        lda back
+        lsla
+        lsla
+        sta bpage                   screen A: pages 0-3; screen B: pages 4-7
+        ldx dptr
+        lda phase
+        cmpa #TITLE
+        bne rboard
+        lda ,x
+        cmpa #TSCENE
+        beq rdone
+        lbsr clear
+        lbsr title
+        ldx dptr
+        lda #TSCENE
+        sta ,x
+        clr 1,x
+rdone   rts
+rboard  lda ,x
+        cmpa #BSCENE
+        beq rbanner
+        lbsr clear                  a new scene: every square must be drawn
+        ldx dptr
+        lda #BSCENE
+        sta ,x
+        clr 1,x
+        leay 2,x
+        bsr forget
+rbanner lda 1,x                     a banner that must go: make its area
+        beq rsq                     black, then draw squares 4-11 again
+        cmpa phase
+        beq rsq
+        clr 1,x
+        leay 6,x
+        ldb #8
+        bsr forget8
+        ifndef KEEP_FRAME
+* KEEP_FRAME is a fault for the check only.
+        ldd #28*256+72
+        std rx
+        ldd #104*256+48
+        std rw
+        clr rval
+        lbsr fill
+        endc
+rsq     lbsr board
+        ldx dptr
+        lda phase
+        beq rdone
+        cmpa 1,x
+        beq rdone
+        sta 1,x
+        lbra banner
+
+* forget: mark 16 squares from Y as unknown ($FF is not a level).
+* forget8: mark B squares from Y.
+forget  ldb #16
+forget8 lda #$FF
+fgt     sta ,y+
+        decb
+        bne fgt
+        rts
+
+* flip: show the screen that was just drawn, in the vertical blank. Set the
+* square colour of the phase at the same time. Then wait one more VBORD,
+* so that the old screen is no longer shown before it is drawn.
+flip    lda $FF92                   clear an old VBORD
+fwait1  lda $FF92
+        bita #%00001000
+        beq fwait1
+        lda #VIEWA
+        tst back
+        beq fshow
+        lda #VIEWB
+fshow   sta $FF9D
+        ldx #squarecode
+        ldb phase
+        lda b,x
+        sta $FFB1
+        lda $FF92
+fwait2  lda $FF92
+        bita #%00001000
+        beq fwait2
+        ifndef ONE_SCREEN
+* ONE_SCREEN is a fault for the check only: it draws on the shown screen.
+        lda back
+        eora #1
+        sta back
+        endc
+        rts
+
+* clear: make the four pages of the screen at bpage black.
+clear   lda bpage
+        sta page
+cpage   lda page
+        sta MMUWIN
+        ldx #WINDOW
+        ldd #0
+cword   std ,x++
+        cmpx #WINDOW+$2000
+        blo cword
+        inc page
+        lda page
+        suba bpage
+        cmpa #4
+        blo cpage
+        rts
+
+* title: the name, the eleven creatures as a family photo on a grey
+* backdrop, and "PRESS SPACE".
+title   ldd #4*256+44
+        std rx
+        ldd #152*256+104
+        std rw
+        lda #GREY
+        sta rval
+        lbsr fill
+        clr square
+tpose   ldb square
+        lslb
+        ldx #photo
+        abx
+        lda ,x
+        sta rx
+        lda 1,x
+        sta ry
+        ldx #sprites
+        ldb square
+        lslb
+        ldu b,x
+        lda #c01_bpr
+        sta rw
+        lda #c01_rows
+        sta rh
+        lbsr blit
+        inc square
+        lda square
+        cmpa #11
+        blo tpose
+        ldu #t_evolve
+        ldd #(80-t_evolve_bpr/2)*256+12
+        std rx
+        ldd #t_evolve_bpr*256+t_evolve_rows
+        std rw
+        lbsr blit
+        ldu #t_press
+        ldd #(80-t_press_bpr/2)*256+164
+        std rx
+        ldd #t_press_bpr*256+t_press_rows
+        std rw
+        lbra blit
+
+* banner: a white frame and a black box over the middle of the board, with
+* the result and "PRESS SPACE".
+banner  ldd #28*256+72
+        std rx
+        ldd #104*256+48
+        std rw
+        lda #$33                    two pixels of register 3, white
+        sta rval
+        lbsr fill
+        ldd #29*256+74
+        std rx
+        ldd #102*256+44
+        std rw
+        clr rval
+        lbsr fill
+        lda phase
+        cmpa #WON
+        bne bover
+        ldu #t_win
+        ldd #(80-t_win_bpr/2)*256+80
+        std rx
+        ldd #t_win_bpr*256+t_win_rows
+        std rw
+        bra bword
+bover   ldu #t_over
+        ldd #(80-t_over_bpr/2)*256+80
+        std rx
+        ldd #t_over_bpr*256+t_over_rows
+        std rw
+bword   lbsr blit
+        ldu #t_press
+        ldd #(80-t_press_bpr/2)*256+104
+        std rx
+        ldd #t_press_bpr*256+t_press_rows
+        std rw
+        lbra blit
+
+* board: draw each square whose level differs from the screen's record.
 board   clr square
 bsq     ldx #cells
         ldb square
         lda b,x
-        ldx #shown
+        ldx dptr
+        leax 2,x
         cmpa b,x
         lbeq bnext
         sta b,x
@@ -465,6 +691,7 @@ rowat   lda ry
         lsrb
         lsrb
         lsrb
+        addb bpage
         stb page
         stb MMUWIN
         anda #$1F
@@ -509,6 +736,14 @@ opening fcb 1,2,1,2
         fcb 3,1,3,0
         endc
 
+* Register 1 (the squares) in each phase: play, won, lost, title.
+squarecode fcb $10,WINCODE,LOSECODE,$10
+
+* The family photo: byte column and row of each creature, levels 1 to 11.
+* Levels 1-5 stand in front, levels 6-11 behind them.
+photo   fcb 20,100,44,100,68,100,92,100,116,100
+        fcb 8,52,32,52,56,52,80,52,104,52,128,52
+
 * The 24 pairs of neighbouring cells: 12 across, then 12 down.
 pairs   fcb 0,1,1,2,2,3,4,5,5,6,6,7,8,9,9,10,10,11,12,13,13,14,14,15
         fcb 0,4,4,8,8,12,1,5,5,9,9,13,2,6,6,10,10,14,3,7,7,11,11,15
@@ -543,6 +778,7 @@ sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11
         include "c10.asm"
         include "c11.asm"
         include "c01-palette.asm"
+        include "text.asm"
         if c01_bpr-24
         error "c01.asm: a sprite row must be 24 bytes"
         endc
@@ -551,7 +787,12 @@ sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11
         endc
 
 cells   rmb 16                      the level in each square; 0 is empty
-shown   rmb 16                      the level drawn in each square
+* The record of each screen: scene, banner (a phase), then 16 levels.
+desc    rmb DSIZE*2
+dptr    fdb 0                       the record of the screen being drawn
+back    fcb 0                       the screen not shown: 0 A, 1 B
+bpage   fcb 0                       its first page: 0 or 4
+dirty   fcb 0                       the picture must change
 vin     rmb 4                       one line before the move
 vout    rmb 4                       one line after the move
 lptr    fdb 0

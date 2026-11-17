@@ -1,6 +1,8 @@
 # The game as the owner plays it: no defines. The model in expected.py
 # places each new microbe with the generator in README.md.
 -    startup sample
+F    Space: the title gives way to a new game
+-    release
 L    left
 -    release
 U    up

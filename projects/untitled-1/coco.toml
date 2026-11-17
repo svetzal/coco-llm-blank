@@ -16,7 +16,7 @@ disk = "disk11.rom"
 keyboard = "coco3"        # the key script uses the CoCo 3 keyboard layout
 
 [memory]
-at = { start = 0x2000 }
+at = { start = 0x0E00 }
 below = { ends = 0x6000 }   # CPU $6000-$7FFF is the screen window
 
 # The rendered picture is the evidence for the display.
@@ -28,7 +28,7 @@ video = true
 at = "sample"
 letters = { U = "up", D = "down", L = "left", R = "right", F = "space" }
 
-# The main build gets no keys: it must stay at its first two microbes.
+# The main build gets no keys: it must stay at the title screen.
 # The play build is the same program, with play.txt through the keyboard.
 [variants.play]
 keys = "play.txt"
@@ -53,5 +53,4 @@ defines = ["LAYOUT", "LOSE", "FIRST_EMPTY"]
 checkpoint = "ready"
 frames = ["1-21"]
 unreachable = "lines"
-screen = 0x00000         # physical $00000 is this snapshot offset
 emulated_seconds = 60

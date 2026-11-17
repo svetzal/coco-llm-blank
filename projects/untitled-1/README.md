@@ -1,7 +1,7 @@
-# Untitled 1
+# Evolve
 
-A sliding puzzle about evolution, for the CoCo 3. The owner has not named it
-yet.
+A sliding puzzle about evolution, for the CoCo 3. The owner named it Evolve.
+The project folder keeps its first name, `untitled-1`.
 
 Creatures sit on a grid. Each arrow key slides all creatures in that
 direction. When two equal creatures meet, they merge into the next creature of
@@ -9,9 +9,17 @@ the evolution chain. After each move, a new simple creature appears in an empty
 square. The player wins when the last creature of the chain appears. The game
 ends when no move can change the grid.
 
-The program draws the 4 by 4 board in 320×192 with 16 colours. The arrow
-keys slide and merge the creatures. When you win, the squares turn green. When
-you lose, they turn red. Then press Space for a new game.
+The title screen shows the name and all eleven creatures, like a family
+that poses for a photo. Press Space to start.
+
+The program draws the 4 by 4 board in 320×192 with 16 colours. The arrow keys slide and merge the
+creatures. When you win, the squares turn green and the words "YOU WIN!"
+appear. When you lose, the squares turn red and the words "GAME OVER" appear.
+Then press Space for a new game.
+
+The program draws each change on a second screen that you do not see. Then
+it shows that screen between two video frames, so the whole change appears at
+once.
 
 ## The rules of a move
 
@@ -91,9 +99,9 @@ at each keyboard scan, except the first scan. It steps once more for each new
 microbe. Then the low byte of the seed, modulo the number of empty squares,
 gives `k`. The microbe goes in empty square `k`, counted from 0 in row order.
 
-The scans step the generator, so the time between your presses changes where
-the microbes appear. The two first microbes come before any scan, so the
-first board is the same each time the program starts.
+The scans step the generator, also on the title screen. Thus the time
+before you press Space changes the first board, and the time between your
+presses changes where the microbes appear.
 
 ## The art
 
@@ -149,10 +157,17 @@ defaults for the CoCo 3, not choices of the owner.
 - Graphics: richer than the CoCo 1 and 2 (owner requirement). GIME 320×192
   with 16 colours, `$FF99` = `$1E` (agent-selected prototype choice). Read
   [the GIME graphics guide](../../guidance/techniques/gime-graphics.md).
+- Name: Evolve (owner requirement)
+- Title screen: the eleven creatures pose like a family for a photo (owner
+  requirement). The name, the backdrop and the two rows are agent choices.
 - Board: 4 by 4 squares (agent-selected prototype choice)
+- Display: two screens, and a switch in the vertical blank, so that a change
+  appears at once (owner requirement)
 - Controls: the keyboard (owner requirement). The four arrow keys slide the
-  creatures, one move for each press. Space starts a new game after a win
-  or a loss (agent-selected prototype choices).
+  creatures, one move for each press. Space starts a game on the title
+  screen, and a new game after a win or a loss (agent-selected prototype
+  choices).
+- Words: an 8×8 font drawn in [font.py](font.py) (agent choice)
 - Loader: XRoar runs the DECB binary directly (starter default)
 - Disk: `coco.toml` names Disk BASIC, `disk11.rom`, for a disk image only.
   Read [disk images](../../guidance/starter/toolchain.md#disk-images).
@@ -161,15 +176,12 @@ defaults for the CoCo 3, not choices of the owner.
 
 In order of importance:
 
-1. No ripple on the screen. Draw the next board on a second screen that is
-   not shown, then show it in the vertical blank. Read the GIME display
-   address and the vertical sync sources first.
-2. Faster drawing, so that the next board is ready soon after the key press.
-3. A different first board at each start, for example from the time until
-   the first key press on a title screen.
-4. Later: the game's name, a title screen, words for the win and the loss, a
-   score and sound.
-5. A board colour that is not grey, so that grey creatures stand out.
+1. Sound: a short sound for a merge, and a larger sound for the first
+   appearance of each creature.
+2. A score.
+3. Faster drawing, so that the next board is ready sooner after the key
+   press. The owner found the game responsive, so this is not urgent.
+4. A board colour that is not grey, so that grey creatures stand out.
 
 ## Check
 
@@ -178,18 +190,20 @@ uv run python scripts/coco.py check projects/untitled-1
 ```
 
 The check runs five builds. Each build stops at `ready` 21 times, once for
-each scan of the keyboard. At each stop, the check compares the 30720 screen
-bytes at physical `$00000` and XRoar's rendered picture with
-[expected.py](expected.py). The rendered picture shows the colour of the
-squares.
+each scan of the keyboard. At each stop, the check compares both screens,
+30720 bytes each at physical `$00000` and `$08000`, with
+[expected.py](expected.py). The shown screen must hold the new picture, and
+the hidden screen the picture before it. The check also compares XRoar's
+rendered picture of the shown screen. The rendered picture shows the colour
+of the squares.
 
 | Build | Defines | Keys | What it checks |
 | --- | --- | --- | --- |
-| main | none | none | The first two microbes, from the generator. No change without keys. |
-| `play` | none | [play.txt](play.txt) | Seven moves of the game that you play, with the random microbes. |
+| main | none | none | The title screen. No change without keys. |
+| `play` | none | [play.txt](play.txt) | Space on the title, then seven moves of the game that you play, with the random microbes. |
 | `rules` | `LAYOUT`, `RULES`, `FIRST_EMPTY` | [keys.txt](keys.txt) | The rules of a move, and the keys. |
-| `win` | `LAYOUT`, `WIN`, `FIRST_EMPTY` | [win.txt](win.txt) | The human wins. No moves after it. Space starts a new game. |
-| `lose` | `LAYOUT`, `LOSE`, `FIRST_EMPTY` | [lose.txt](lose.txt) | A press that changes nothing. A full board with no pair loses. No moves after it. Space. |
+| `win` | `LAYOUT`, `WIN`, `FIRST_EMPTY` | [win.txt](win.txt) | The human wins, with its banner. No moves after it. Space starts a new game, and the banner goes. |
+| `lose` | `LAYOUT`, `LOSE`, `FIRST_EMPTY` | [lose.txt](lose.txt) | A press that changes nothing. A full board with no pair loses, with its banner. No moves after it. Space. |
 
 The keys go through XRoar's keyboard matrix and the program's own scanner.
 
@@ -205,19 +219,22 @@ the rules. The model must agree with each of them.
 These builds do not check
 the random choice. The main and `play` builds check it.
 
-The model converts the creature pictures by its own route. It does not read
-bytes from the build or the emulator.
+The model converts the creature pictures by its own route. It draws the
+letters from the drawings in [font.py](font.py), also by its own route. It does
+not read bytes from the build or the emulator.
 
 These faults were run once on a copy, and each failed the check:
 
-| Fault | Build | First failed stop |
+| Fault | Build | What failed |
 | --- | --- | --- |
-| `WRONG_COLUMN`: Up is read from the wrong column | `rules` | 7: no move up |
-| `HELD_REPEAT`: a held arrow moves at every scan | `rules` | 2: the startup arrow moves |
-| `REMERGE`: a merged creature can merge again | `rules` | 4: three microbes make a trilobite |
-| `SPAWN_ALWAYS`: a microbe after a press that changes nothing | `lose` | 2 |
-| `NO_SCAN_STEP`: the generator does not step at each scan | `play` | 2: the microbe is in a different square |
-| `NO_JUDGE`: no win and no loss | `win` | 2: the squares stay grey |
+| `ONE_SCREEN`: the program draws on the shown screen | `play` | screen A: 18262 bytes |
+| `KEEP_FRAME`: the banner frame stays after the banner goes | `win` | screen A: 70 bytes |
+| `WRONG_COLUMN`: Up is read from the wrong column | `rules` | screen B: 5010 bytes |
+| `HELD_REPEAT`: a held arrow moves at every scan | `rules` | screen A: 18117 bytes |
+| `REMERGE`: a merged creature can merge again | `rules` | screen A: 908 bytes |
+| `SPAWN_ALWAYS`: a microbe after a press that changes nothing | `lose` | screen A: 17954 bytes |
+| `NO_SCAN_STEP`: the generator does not step at each scan | `play` | screen A: 1664 bytes |
+| `NO_JUDGE`: no win and no loss | `win` | screen A: 4382 bytes |
 | `$FF99` for 640×192 with 4 colours (board step) | main | rendered check only |
 | No page advance in the screen window (board step) | main | 119 screen bytes |
 
@@ -227,12 +244,20 @@ them.
 Not checked: a full board that still has an equal pair, which must not lose.
 Physical keys, the host keyboard and window focus are not tested.
 
+The check sees the screens at each stop, and one rendered frame after it. It
+does not see the frames while the program draws. Thus it shows that the
+program draws only on the hidden screen, but not the absence of a ripple. That
+comes from the order of the work, and from a person who looks at the game.
+
 The capture shows the middle 512 of the 640 samples of each line. It shows
-all of the board, but not the outer 32 pixels at each side of the screen.
+all of the board, but not the outer 32 pixels at each side of the screen. On
+the title screen, the outer parts of the backdrop are outside the capture.
 XRoar sets its picture window once for each field, from the mode at that
 time. Thus the program waits some fields after the mode change before the
 first stop.
 
-Memory: the program, the sprites and the program's own stack are at CPU
-`$2000-$5FFF`. CPU `$6000-$7FFF` is the window to the screen. The program
-masks IRQ and FIRQ, so nothing of BASIC runs after the start.
+Memory: the program, the sprites, the words and the program's own stack are
+at CPU `$0E00-$5FFF`. CPU `$6000-$7FFF` is the window to a screen. Screen A is
+at physical `$00000` and screen B at `$08000`. The program masks IRQ and FIRQ,
+so nothing of BASIC runs after the start. It turns on the GIME's VBORD flag
+and reads it at `$FF92`.
