@@ -36,6 +36,17 @@
 *     PDF 9: the PIA registers and control bit 2. A pressed key reads 0.
 *     guidance/techniques/controls-and-collision.md and
 *     examples/keyboard-controls and collect-room use the same scan.
+*   Sound (as examples/timer-sound; guidance/techniques/sound.md):
+*     Tepolt, PDF 47-53: FIRQ saves CC and PC; the jump table entry $FEF4;
+*     $FF90 bit 4 (FEN), $FF91 bit 5 (fast timer input), $FF93 bit 5
+*     (timer FIRQ); a read of $FF93 releases the request. Service Manual,
+*     PDF 9-10: the DAC in $FF20 bits 7-2, the mux select in $FF01 and
+*     $FF03 bit 3, sound enable $FF23 bit 3, the PIA FIRQ enables. PDF 12:
+*     the write to $FF94 starts the 12-bit timer, which reloads itself.
+*     Kowalski, GIME register reference: one count is 279.365 ns, and a
+*     period is the reload value plus 2 counts on the 1986 GIME.
+*     TFM and interrupts: the HD63B09EP Technical Reference Guide, PDF 12,
+*     says an interrupt can stop a TFM; the 6309 Book, PDF 230, says not.
 *
 * Memory (CPU addresses, BASIC's MMU map):
 *   $0E00-$5FFF  this program, its sprites, its words and its own stack
@@ -111,6 +122,7 @@ start   lds #stacktop
         ora #4
         sta $FF03
         stb $FF02
+        lbsr sound
 * Both screens are black, and neither holds a scene.
         lda #4
         sta bpage
@@ -128,6 +140,7 @@ lay     lda ,x+
         cmpu #cells+16
         blo lay
         clr phase
+        lbsr seen
         else
         lda #TITLE
         sta phase
@@ -141,9 +154,13 @@ pal     lda ,x+
         cmpu #$FFC0
         blo pal
         clr $FF9A                   border: colour code 0
-* CoCo 3 mode, MMU on, IEN on (the VBORD flag), 32K internal ROM. IRQ is
-* masked in the CPU, so no handler reads $FF92.
-        lda #%01101110
+* CoCo 3 mode, MMU on, IEN on (the VBORD flag), FEN on (the sound timer),
+* 32K internal ROM. IRQ is masked in the CPU, so no handler reads $FF92.
+        ifdef SILENT
+        lda #%01101110              a fault for the check only: no FIRQ
+        else
+        lda #%01111110              FEN on: the GIME timer FIRQ
+        endc
         sta $FF90
         lda #%00001000              VBORD only
         sta $FF92
@@ -266,6 +283,7 @@ ufound  andb ,x
 * NO_BEST is a fault for the check only.
         lbsr record
         endc
+        lbsr chime
         inc dirty
 unew    rts
 
@@ -295,7 +313,7 @@ ngclr   clr ,x+
         blo ngclr
         lbsr spawn
         lbsr spawn
-        rts
+        lbra seen
 
 * spawn: a microbe in an empty square. Step the generator, then take its low
 * byte modulo the number of empty squares: k. Use the k-th empty square,
@@ -381,6 +399,7 @@ rshift  lslb
 * neighbours merge into the next level. A merged creature does not merge
 * again in the same move.
 slide   clr moved
+        clr mtop
         lda #16
         mul
         ldx #lines
@@ -410,7 +429,10 @@ smerge  lda ,u+
         bne sput
         inca
         sta -1,y
-        lbsr addpts
+        cmpa mtop
+        bls smax
+        sta mtop                    the highest new level of this move
+smax    lbsr addpts
         clr last
         ifdef REMERGE
 * A fault for the check only: the merged creature can merge again.
@@ -437,6 +459,139 @@ ssame
         bne swrite
         dec lcount
         bne sline
+        rts
+
+* seen: topseen is the highest level on the board.
+seen    clr topseen
+        ldx #cells
+seloop  lda ,x+
+        cmpa topseen
+        bls senext
+        sta topseen
+senext  cmpx #cells+16
+        blo seloop
+        rts
+
+* chime: after a move, choose a sound. A loss or a win has its own sound.
+* Otherwise a merge to a level not seen in this game plays three rising
+* notes, and other merges play one note. A move without a merge is silent.
+chime   ldx #losesnd
+        lda phase
+        cmpa #LOST
+        beq cplay
+        ldx #winsnd
+        cmpa #WON
+        beq cplay
+        lda mtop
+        beq cdone
+        ifdef FLAT
+        suba #1                     a fault for the check only: wrong note
+        else
+        suba #2                     A: the note, 0 for level 2
+        endc
+        ldb mtop
+        ifndef NO_FIND
+* NO_FIND is a fault for the check only.
+        cmpb topseen
+        bls cblip
+        stb topseen
+        ldb #16
+        mul
+        ldx #finds
+        abx
+        bra cplay
+        endc
+cblip   ldb #8
+        mul
+        ldx #blips
+        abx
+* Start the sound at X. It replaces a sound that plays. Mask FIRQ while
+* the timer and the note change. Enable the timer FIRQ, then read $FF93
+* to release a request that waits.
+cplay   orcc #$40
+        lbsr load
+        lda #$20
+        sta $FF93
+        lda $FF93
+        andcc #$BF
+cdone   rts
+
+* load: start the note at X. Write the reload value low byte first: the
+* write to $FF94 starts the timer. At the end of the sound, turn off the
+* timer FIRQ.
+load    ldd 2,x
+        beq lstop
+        std edges
+        ldd ,x
+        stb $FF95
+        sta $FF94
+        leax 4,x
+        stx snote
+        rts
+lstop   clr $FF93
+        rts
+
+* firq: the GIME timer FIRQ. FIRQ saves only CC and PC, so save A, B and
+* X. Read $FF93 to release the request. Change the DAC level: one edge of
+* the square wave. After the last edge of the note, start the next note.
+firq    pshs a,b,x
+        lda $FF93
+        lda dacval
+        eora #$40
+        sta dacval
+        ora lowbits
+        sta $FF20
+        ldd edges
+        subd #1
+        std edges
+        bne fdone
+        ldx snote
+        bsr load
+fdone   puls a,b,x
+        rti
+
+* sound: the DAC as in examples/timer-sound, and the timer FIRQ. The
+* timer FIRQ is enabled for each sound (chime).
+sound   lda $FF21                   $FF20 bits 7-2 are outputs
+        anda #$FB
+        sta $FF21
+        lda $FF20
+        ora #$FC
+        sta $FF20
+        lda $FF21
+        ora #4
+        sta $FF21
+        lda $FF20
+        anda #3
+        sta lowbits
+        ora dacval
+        sta $FF20                   the DAC at rest
+        lda $FF01                   the audio mux selects the DAC
+        anda #$F7
+        sta $FF01
+        lda $FF03
+        anda #$F7
+        sta $FF03
+        lda $FF23                   sound on
+        ora #8
+        sta $FF23
+        lda $FF21                   no PIA FIRQ: CD and cartridge off
+        anda #$FE
+        sta $FF21
+        lda $FF23
+        anda #$FE
+        sta $FF23
+        lda $FF20                   clear their flags
+        lda $FF22
+        lda #$7E                    JMP firq in the FIRQ jump table entry
+        sta $FEF4
+        ldd #firq
+        std $FEF5
+        lda #$20                    fast timer input, executive task
+        sta $FF91
+        clr $FF93                   no FIRQ source until a sound starts
+        lda $FF93
+        andcc #$BF                  unmask FIRQ; IRQ stays masked
         rts
 
 * render: make the screen that is not shown hold the picture of the phase.
@@ -645,9 +800,14 @@ clear   lda bpage
         sta page
 cpage   lbsr mapwin
         ldx #WINDOW
-        ldy #zero
-        ldw #$2000
+* Clear in blocks of 256 bytes (774 cycles, 0.87 ms). Sources disagree
+* whether an interrupt can stop a TFM, so no TFM is long enough to delay
+* the next sound edge by much.
+cblock  ldy #zero
+        ldw #256
         tfm y,x+
+        cmpx #WINDOW+$2000
+        blo cblock
         inc page
         lda page
         suba bpage
@@ -924,6 +1084,91 @@ points  fcb 0,0,0,0,0,0                    levels 0 and 1: no merge makes them
         fcb $00,$02,$56,$00,$05,$12         levels 8, 9: 256, 512
         fcb $00,$10,$24,$00,$20,$48         levels 10, 11: 1024, 2048
 
+* note: one square-wave note of \1 Hz for \2 ms. The first word is the
+* timer reload value. A period of the timer is the reload value plus 2
+* counts of 279.365 ns, and each period is half a wave:
+* reload = 14318180 / 8 / f - 2. The second word is the number of DAC
+* edges: 2 * f * t / 1000. A sound ends with two zero words.
+note    macro
+        fdb 1789773/\1-2,\1*\2/500
+        endm
+
+* The C major scale from C5 (523 Hz) to B6 (1976 Hz). A merge to level L
+* uses note L-2: level 2 is C5 and level 11 is E6.
+* blips: one short note for a merge. 8 bytes for each level.
+blips   note 523,40
+        fdb 0,0
+        note 587,40
+        fdb 0,0
+        note 659,40
+        fdb 0,0
+        note 698,40
+        fdb 0,0
+        note 784,40
+        fdb 0,0
+        note 880,40
+        fdb 0,0
+        note 988,40
+        fdb 0,0
+        note 1047,40
+        fdb 0,0
+        note 1175,40
+        fdb 0,0
+        note 1319,40
+        fdb 0,0
+* finds: a creature seen for the first time in this game. Three rising
+* notes of the scale: L-2, L and L+2. 16 bytes for each level.
+finds   note 523,40
+        note 659,40
+        note 784,80
+        fdb 0,0
+        note 587,40
+        note 698,40
+        note 880,80
+        fdb 0,0
+        note 659,40
+        note 784,40
+        note 988,80
+        fdb 0,0
+        note 698,40
+        note 880,40
+        note 1047,80
+        fdb 0,0
+        note 784,40
+        note 988,40
+        note 1175,80
+        fdb 0,0
+        note 880,40
+        note 1047,40
+        note 1319,80
+        fdb 0,0
+        note 988,40
+        note 1175,40
+        note 1397,80
+        fdb 0,0
+        note 1047,40
+        note 1319,40
+        note 1568,80
+        fdb 0,0
+        note 1175,40
+        note 1397,40
+        note 1760,80
+        fdb 0,0
+        note 1319,40
+        note 1568,40
+        note 1976,80
+        fdb 0,0
+* The win: C6 E6 G6, then a long C7. The loss: G5 E5, then a long C5.
+winsnd  note 1047,80
+        note 1319,80
+        note 1568,80
+        note 2093,240
+        fdb 0,0
+losesnd note 784,150
+        note 659,150
+        note 523,300
+        fdb 0,0
+
 * The 24 pairs of neighbouring cells: 12 across, then 12 down.
 pairs   fcb 0,1,1,2,2,3,4,5,5,6,6,7,8,9,9,10,10,11,12,13,13,14,14,15
         fcb 0,4,4,8,8,12,1,5,5,9,9,13,2,6,6,10,10,14,3,7,7,11,11,15
@@ -967,6 +1212,12 @@ sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11
         endc
 
 zero    fcb 0                       a zero byte for the clear
+mtop    fcb 0                       the highest level made by this move
+topseen fcb 0                       the highest level seen in this game
+snote   fdb 0                       the next note of the sound
+edges   fdb 0                       DAC edges left in this note
+dacval  fcb $80                     DAC bits 7-2 now
+lowbits fcb 0                       $FF20 bits 1-0, kept as they were
 score   fcb 0,0,0                   BCD, most significant byte first
 best    fcb 0,0,0
 nx      fcb 0

@@ -106,33 +106,51 @@ def sprite(level: int) -> np.ndarray:
     return np.stack([data >> 4, data & 15], axis=1).reshape(40, 48)
 
 
-def slide_line(line: list[int]) -> tuple[list[int], int]:
+def slide_line(line: list[int]) -> tuple[list[int], int, int]:
     """One line, the edge of the move first: close up, then merge equal pairs once.
 
-    Each merge scores 2 to the power of the new level.
+    Each merge scores 2 to the power of the new level. Also give the highest
+    level that a merge made (0: no merge).
     """
     out: list[int] = []
-    points = 0
+    points = top = 0
     mergeable = False
     for level in (v for v in line if v):
         if mergeable and out[-1] == level:
             out[-1] += 1
             points += 2 ** out[-1]
+            top = max(top, out[-1])
             mergeable = False
         else:
             out.append(level)
             mergeable = True
-    return out + [0] * (4 - len(out)), points
+    return out + [0] * (4 - len(out)), points, top
 
 
-def move(board: list[int], arrow: str) -> tuple[list[int], int]:
+def move(board: list[int], arrow: str) -> tuple[list[int], int, int]:
     grid = np.array(board).reshape(4, 4)
     turns = {"L": 0, "U": 1, "R": 2, "D": 3}[arrow]  # turn the edge to the left
     turned = np.rot90(grid, turns)
     lines = [slide_line(list(row)) for row in turned]
-    moved = np.array([line for line, _ in lines])
-    points = sum(p for _, p in lines)
-    return [int(v) for v in np.rot90(moved, -turns).flatten()], points
+    moved = np.array([line for line, _, _ in lines])
+    points = sum(p for _, p, _ in lines)
+    top = max(t for _, _, t in lines)
+    return [int(v) for v in np.rot90(moved, -turns).flatten()], points, top
+
+
+# The sounds of the README, as notes of (Hz, ms). A merge to level L plays
+# note L-2 of the C major scale from C5. A level not seen before in this game
+# plays notes L-2, L and L+2 of the scale instead.
+SCALE = [523, 587, 659, 698, 784, 880, 988, 1047, 1175, 1319, 1397, 1568, 1760, 1976]
+WIN_SOUND = ((1047, 80), (1319, 80), (1568, 80), (2093, 240))
+LOSE_SOUND = ((784, 150), (659, 150), (523, 300))
+
+
+def merge_sound(level: int, new: bool) -> tuple[tuple[int, int], ...]:
+    note = level - 2
+    if new:
+        return ((SCALE[note], 40), (SCALE[note + 2], 40), (SCALE[note + 4], 80))
+    return ((SCALE[note], 40),)
 
 
 def step(seed: int) -> int:
@@ -151,10 +169,12 @@ class Game:
         self.previous = ""
         self.changed = False
         self.score = self.best = 0
+        self.sounds: list[tuple[tuple[int, int], ...]] = []  # each sound started
         if layout is None:
             self.board, self.phase = [0] * 16, "T"
         else:
             self.board, self.phase = list(layout), "P"
+        self.seen = max(self.board)  # the highest level seen in this game
 
     def spawn(self) -> None:
         self.seed = step(self.seed)
@@ -167,6 +187,7 @@ class Game:
         self.board, self.phase, self.score = [0] * 16, "P", 0
         self.spawn()
         self.spawn()
+        self.seen = max(self.board)
         self.changed = True
 
     def judge(self) -> None:
@@ -192,7 +213,7 @@ class Game:
             return
         arrows = "".join(k for k in held if k in ARROWS)
         if len(arrows) == 1 and arrows in pressed:
-            after, points = move(self.board, arrows)
+            after, points, top = move(self.board, arrows)
             if after != self.board:
                 self.board = after
                 self.score += points
@@ -200,6 +221,17 @@ class Game:
                 self.judge()
                 self.best = max(self.best, self.score)
                 self.changed = True
+                self.chime(top)
+
+    def chime(self, top: int) -> None:
+        """The sound of a move: a loss, a win, a new creature, a merge or none."""
+        if self.phase == "L":
+            self.sounds.append(LOSE_SOUND)
+        elif self.phase == "W":
+            self.sounds.append(WIN_SOUND)
+        elif top:
+            self.sounds.append(merge_sound(top, new=top > self.seen))
+            self.seen = max(self.seen, top)
 
     def scene(self) -> tuple:
         """What the picture shows: the title, or the board and any banner."""
@@ -219,6 +251,7 @@ class Screens(NamedTuple):
     held: tuple[tuple | None, tuple | None]  # None: black
     shown: int  # 0 screen A, 1 screen B
     phase: str
+    sounds: tuple  # every sound started up to this scan
 
 
 @cache
@@ -256,7 +289,7 @@ def states(variant: str) -> tuple[Screens, ...]:
                     f"{script} line {number}: the rules give {game.board} {game.phase} "
                     f"{game.score}, not {board} {phase} {score}"
                 )
-        result.append(Screens((held[0], held[1]), shown, game.phase))
+        result.append(Screens((held[0], held[1]), shown, game.phase, tuple(game.sounds)))
     return tuple(result)
 
 
@@ -355,3 +388,104 @@ def expected_frame(frame: int, variant: str = "", target: str = "coco3") -> np.n
     colours[GREY] = PHASE_RGB[state.phase]
     columns = (FULL_WIDTH_START + np.arange(CAPTURE_SAMPLES)) // 2
     return colours[picture(state.held[state.shown])[:, columns]]
+
+
+# The sound timer: one count is 4 / 14,318,180 s with the fast input, and a
+# period is the reload value plus 2 counts on the 1986 GIME (the sound guide,
+# guidance/techniques/sound.md). Each period is one edge: half a wave.
+COUNT_HZ = 14_318_180 / 4
+SILENCE_MS = 10  # a longer gap between edges ends a sound
+PITCH_TOLERANCE = 0.01
+
+
+def timer_note(hz: int, ms: int) -> tuple[float, int]:
+    """The frequency that the timer makes for a note, and its number of edges."""
+    reload = int(COUNT_HZ / 2 / hz) - 2
+    return COUNT_HZ / 2 / (reload + 2), 2 * hz * ms // 1000
+
+
+def sound_edges(samples: np.ndarray) -> np.ndarray:
+    """The sample numbers of the DAC edges of the sounds.
+
+    The first change is the program's setup, which puts the DAC at rest. It is
+    not part of a sound.
+    """
+    change = np.abs(np.diff(samples.astype(int)))
+    return np.flatnonzero(change > 1000)[1:]
+
+
+def heard_notes(edges: np.ndarray, notes, rate: int, short: bool) -> list[float] | None:
+    """The pitch of each note in edges, or None if the edges do not fit the notes.
+
+    Each note must have its number of edges and its pitch within 1%. If short
+    is true, the sound may stop early: the edges may be only its start.
+    """
+    heard = []
+    first = 0
+    for hz, ms in notes:
+        pitch, count = timer_note(hz, ms)
+        part = edges[first : first + count]
+        if len(part) > 2:
+            hz_heard = rate / 2 / ((part[-1] - part[0]) / (len(part) - 1))
+            if abs(hz_heard - pitch) > PITCH_TOLERANCE * pitch:
+                return None
+            heard.append(round(float(hz_heard), 1))
+        first += len(part)
+        if len(part) < count:
+            break
+    if first != len(edges) or (not short and first != sum(timer_note(*n)[1] for n in notes)):
+        return None
+    return heard
+
+
+def burst_notes(burst: np.ndarray, sounds, rate: int, playing: bool) -> list[float] | None:
+    """One burst of edges: one sound, or a sound that the next sound cut short.
+
+    The last sound in the burst may still play at the end of the recording.
+    """
+    if len(sounds) == 1:
+        return heard_notes(burst, sounds[0], rate, short=playing)
+    for cut in range(1, len(burst)):
+        before = heard_notes(burst[:cut], sounds[0], rate, short=True)
+        if before is None:
+            continue
+        after = heard_notes(burst[cut:], sounds[1], rate, short=playing)
+        if after is not None:
+            return before + after
+    return None
+
+
+def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
+    """Every sound started up to this scan, note by note, in the mixer output.
+
+    The edges fall into bursts separated by silence. A burst is one sound, or
+    a sound that the next move cut short and the sound of that move. Each note
+    must have its number of edges and its pitch within 1%. The last sound may
+    still play at the snapshot: the recording can end in it.
+    """
+    expected = list(states(variant)[frame - 1].sounds)
+    edges = sound_edges(sound.samples)
+    gap = SILENCE_MS * sound.rate // 1000
+    bursts = np.split(edges, np.flatnonzero(np.diff(edges) > gap) + 1) if len(edges) else []
+    heard: list[float] = []
+    cuts = 0
+    for number, burst in enumerate(bursts, start=1):
+        playing = number == len(bursts) and len(sound.samples) - burst[-1] < gap
+        for size in (1, 2):
+            sounds = expected[:size]
+            fit = burst_notes(burst, sounds, sound.rate, playing) if len(sounds) == size else None
+            if fit is not None:
+                break
+        else:
+            raise ValueError(
+                f"Scan {frame}: sound {number} in the mixer output ({len(burst)} edges) "
+                f"does not fit the next expected sounds {expected[:2]}."
+            )
+        heard += fit
+        cuts += size - 1
+        del expected[:size]
+    if expected:
+        raise ValueError(
+            f"Scan {frame}: {len(expected)} expected sounds are not in the mixer output."
+        )
+    return {"frame": frame, "sounds": len(bursts) + cuts, "cut_short": cuts, "notes_hz": heard}

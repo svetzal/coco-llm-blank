@@ -17,6 +17,9 @@ creatures. When you win, the squares turn green and the words "YOU WIN!"
 appear. When you lose, the squares turn red and the words "GAME OVER" appear.
 Then press Space for a new game.
 
+Each merge plays a short note. A creature that appears for the first time in
+a game plays three rising notes. A win and a loss each have their own sound.
+
 The program draws each change on a second screen that you do not see. Then
 it shows that screen between two video frames, so the whole change appears at
 once.
@@ -30,11 +33,15 @@ one stop of the check to the next (emulated time):
 | Step | Time |
 | --- | --- |
 | A scan with no change | 17 ms, one video frame |
-| A move | 83 to 117 ms |
-| Space on the title, and the first move after it | 280 ms each |
+| A move | 100 to 168 ms |
+| Space on the title, and the first move after it | 300 to 320 ms each |
 
 Each of these times includes two waits for the vertical blank. The first
 move is slower because each screen must first be made black.
+
+A sound uses CPU time while it plays. With the sounds, some moves take one or
+two more video frames than without them (measured in the `rules` and `play`
+builds).
 
 ## The rules of a move
 
@@ -65,6 +72,27 @@ move is slower because each screen must first be made black.
   is not kept when the CoCo is switched off.
 - Each number shows its five low digits (agent choice). A game that reaches
   the human scores about 20000.
+
+## The sounds
+
+The sound is a square wave from the 6-bit DAC. The GIME timer starts each
+edge of the wave (agent choice). The notes come from the C major scale, from
+C5 (523 Hz) to B6 (1976 Hz) (agent choice).
+
+| Event | Sound |
+| --- | --- |
+| A merge | One note of 40 ms. A merge to level L plays note L-2 of the scale: the jellyfish is C5, the human E6. |
+| A creature that appears for the first time in this game | Notes L-2, L and L+2 of the scale: 40 ms, 40 ms, then 80 ms. |
+| A win | C6, E6 and G6 for 80 ms each, then C7 for 240 ms. |
+| A loss | G5 and E5 for 150 ms each, then C5 for 300 ms. |
+
+- If one move makes more than one merge, the highest new level sets the
+  sound.
+- A loss or a win replaces the sound of its merge.
+- A move without a merge is silent.
+- A new sound stops a sound that still plays.
+- At the start of a game, the highest level on the board counts as seen.
+  Thus a new game starts with the microbe seen.
 
 The squares change colour because palette register 1 changes. Grey parts of
 the creatures change colour too. Words on the screen come later.
@@ -195,6 +223,11 @@ defaults for the CoCo 3, not choices of the owner.
   screen, and a new game after a win or a loss (agent-selected prototype
   choices).
 - Words: an 8×8 font drawn in [font.py](font.py) (agent choice)
+- Sound: the owner asked for a short sound for a merge, and a larger sound
+  for the first appearance of each creature. The notes, the win and loss
+  sounds, the square wave and the GIME timer are agent choices. Read
+  [the sound guide](../../guidance/techniques/sound.md) and
+  [timer sound](../../examples/timer-sound/README.md).
 - Loader: XRoar runs the DECB binary directly (starter default)
 - Disk: `coco.toml` names Disk BASIC, `disk11.rom`, for a disk image only.
   Read [disk images](../../guidance/starter/toolchain.md#disk-images).
@@ -203,11 +236,9 @@ defaults for the CoCo 3, not choices of the owner.
 
 In order of importance:
 
-1. Sound: a short sound for a merge, and a larger sound for the first
-   appearance of each creature.
-2. A faster start: draw only the board's own area when a screen changes
+1. A faster start: draw only the board's own area when a screen changes
    from the title to the board.
-3. A board colour that is not grey, so that grey creatures stand out.
+2. A board colour that is not grey, so that grey creatures stand out.
 
 ## Check
 
@@ -222,6 +253,16 @@ each scan of the keyboard. At each stop, the check compares both screens,
 the hidden screen the picture before it. The check also compares XRoar's
 rendered picture of the shown screen. The rendered picture shows the colour
 of the squares.
+
+At each stop, the check also records XRoar's mixer output from the start.
+The model gives each sound that started up to that scan. The check finds the
+DAC edges and compares each note: its number of edges, and its pitch within
+1%.
+
+The model calculates the pitch from the timer: a period is the reload
+value plus 2 counts of 279.365 ns on the 1986 GIME. A sound can still play at
+a stop, so the last sound can end early in the recording. A sound that the
+next move stops is also accepted. The `play` build has one.
 
 | Build | Defines | Keys | What it checks |
 | --- | --- | --- | --- |
@@ -264,6 +305,9 @@ These faults were run once on a copy, and each failed the check:
 | `SPAWN_ALWAYS`: a microbe after a press that changes nothing | `lose` | screen A: 17954 bytes |
 | `NO_SCAN_STEP`: the generator does not step at each scan | `play` | screen A: 1664 bytes |
 | `NO_JUDGE`: no win and no loss | `win` | screen A: 4382 bytes |
+| `SILENT`: no timer FIRQ | `play` | scan 6: no sound |
+| `NO_FIND`: a new creature plays the merge note | `play` | scan 6: 41 edges, not three notes |
+| `FLAT`: each merge plays the note below | `play` | scan 6: the notes do not fit |
 | `$FF99` for 640×192 with 4 colours (board step) | main | rendered check only |
 
 The fault defines are only for the check. The game that you play has none of
@@ -271,6 +315,8 @@ them.
 
 Not checked: a full board that still has an equal pair, which must not lose.
 Physical keys, the host keyboard and window focus are not tested.
+The mixer output is XRoar's digital signal. The check does not prove the
+sound on a television or a physical CoCo, and nobody has listened to it yet.
 
 The check sees the screens at each stop, and one rendered frame after it. It
 does not see the frames while the program draws. Thus it shows that the
@@ -290,6 +336,15 @@ Memory: the program, the sprites, the words and the program's own stack are
 at CPU `$0E00-$5FFF`. CPU `$6000-$9FFF` is the window to two pages of a
 screen, so a row is never split. The program does not use BASIC, which is in
 `$8000-$9FFF`. Screen A is
-at physical `$00000` and screen B at `$08000`. The program masks IRQ and FIRQ,
-so nothing of BASIC runs after the start. It turns on the GIME's VBORD flag
-and reads it at `$FF92`.
+at physical `$00000` and screen B at `$08000`.
+
+The program masks IRQ, so
+nothing of BASIC runs after the start. It turns on the GIME's VBORD flag and
+reads it at `$FF92`. FIRQ comes only from the GIME timer, for the sound.
+The FIRQ jump table entry at `$FEF4` holds `JMP firq`.
+
+Sources disagree whether an interrupt can stop a `TFM`. The HD63B09EP
+Technical Reference Guide, PDF 12, says that it can. The 6309 Book, PDF 230,
+says that the interrupt waits until the transfer ends. The program keeps
+each `TFM` to 256 bytes or fewer, so either way a sound edge waits at most
+0.87 ms. This question is open.

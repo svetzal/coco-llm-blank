@@ -19,9 +19,11 @@ keyboard = "coco3"        # the key script uses the CoCo 3 keyboard layout
 at = { start = 0x0E00 }
 below = { ends = 0x6000 }   # CPU $6000-$7FFF is the screen window
 
-# The rendered picture is the evidence for the display.
+# The rendered picture is the evidence for the display. The mixer output
+# is the evidence for the sound.
 [capture]
 video = true
+audio = true
 
 # Scripted keys take effect at the scanner entry: one script line per scan.
 [keys]
