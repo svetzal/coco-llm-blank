@@ -1,27 +1,28 @@
 # The rules build: defines RULES and FIRST_EMPTY, for the check only.
-# Keys board phase purpose. Line 1 is the startup sample; line N is held at
+# Keys board phase score purpose. Line 1 is the startup sample; line N is held at
 # scan N. U/D/L/R = arrows, F = Space, - = none. The board is four rows of
 # levels: 0 is empty, A is 10 and B is 11. Phase: P play, W won, L lost.
+# Score: each merge scores 2 to the power of the new level.
 # After each move, a microbe appears in the first empty square.
 # Each board is written by hand from the rules in README.md.
-L    1111/1120/0303/0222  P  an arrow held at the start is not a press
-L    1111/1120/0303/0222  P  still held: no move
--    1111/1120/0303/0222  P  release
-L    2210/2200/4000/3200  P  pairs merge; a merged creature does not merge again; the pair at the edge merges first
-L    2210/2200/4000/3200  P  held: no repeat
--    2210/2200/4000/3200  P  release
-U    3311/4200/3000/0000  P  up
--    3311/4200/3000/0000  P  release
-LR   3311/4200/3000/0000  P  two arrows: no move
--    3311/4200/3000/0000  P  release
-R    1042/0042/0003/0000  P  right
--    1042/0042/0003/0000  P  release
-D    1000/0000/0003/1053  P  down
--    1000/0000/0003/1053  P  release
-D    1000/0000/0000/2054  P  down again
-DR   1000/0000/0000/2054  P  a second arrow while one is held: no move
-R    1000/0000/0000/2054  P  Right was held at the last scan: no move
--    1000/0000/0000/2054  P  release
-L    1100/0000/0000/2540  P  left
-F    1100/0000/0000/2540  P  Space does nothing in play
-U    1141/2500/0000/0000  P  up
+L    1111/1120/0303/0222  P     0  an arrow held at the start is not a press
+L    1111/1120/0303/0222  P     0  still held: no move
+-    1111/1120/0303/0222  P     0  release
+L    2210/2200/4000/3200  P    36  pairs merge; a merged creature does not merge again; the pair at the edge merges first
+L    2210/2200/4000/3200  P    36  held: no repeat
+-    2210/2200/4000/3200  P    36  release
+U    3311/4200/3000/0000  P    52  up
+-    3311/4200/3000/0000  P    52  release
+LR   3311/4200/3000/0000  P    52  two arrows: no move
+-    3311/4200/3000/0000  P    52  release
+R    1042/0042/0003/0000  P    72  right
+-    1042/0042/0003/0000  P    72  release
+D    1000/0000/0003/1053  P   112  down
+-    1000/0000/0003/1053  P   112  release
+D    1000/0000/0000/2054  P   132  down again
+DR   1000/0000/0000/2054  P   132  a second arrow while one is held: no move
+R    1000/0000/0000/2054  P   132  Right was held at the last scan: no move
+-    1000/0000/0000/2054  P   132  release
+L    1100/0000/0000/2540  P   132  left
+F    1100/0000/0000/2540  P   132  Space does nothing in play
+U    1141/2500/0000/0000  P   132  up

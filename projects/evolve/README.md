@@ -54,6 +54,18 @@ move is slower because each screen must first be made black.
   two microbes.
 - In play, other keys do nothing.
 
+## The score
+
+- Each merge scores 2 to the power of the new creature's level: a jellyfish
+  (level 2) scores 4, a trilobite 8, and the human (level 11) 2048 (agent
+  choice).
+- "SCORE" at the left of the board shows the score of this game. A new game
+  starts at 0.
+- "BEST" at the right shows the highest score since the program started. It
+  is not kept when the CoCo is switched off.
+- Each number shows its five low digits (agent choice). A game that reaches
+  the human scores about 20000.
+
 The squares change colour because palette register 1 changes. Grey parts of
 the creatures change colour too. Words on the screen come later.
 
@@ -193,10 +205,9 @@ In order of importance:
 
 1. Sound: a short sound for a merge, and a larger sound for the first
    appearance of each creature.
-2. A score.
-3. A faster start: draw only the board's own area when a screen changes
+2. A faster start: draw only the board's own area when a screen changes
    from the title to the board.
-4. A board colour that is not grey, so that grey creatures stand out.
+3. A board colour that is not grey, so that grey creatures stand out.
 
 ## Check
 
@@ -216,8 +227,8 @@ of the squares.
 | --- | --- | --- | --- |
 | main | none | none | The title screen. No change without keys. |
 | `play` | none | [play.txt](play.txt) | Space on the title, then seven moves of the game that you play, with the random microbes. |
-| `rules` | `LAYOUT`, `RULES`, `FIRST_EMPTY` | [keys.txt](keys.txt) | The rules of a move, and the keys. |
-| `win` | `LAYOUT`, `WIN`, `FIRST_EMPTY` | [win.txt](win.txt) | The human wins, with its banner. No moves after it. Space starts a new game, and the banner goes. |
+| `rules` | `LAYOUT`, `RULES`, `FIRST_EMPTY` | [keys.txt](keys.txt) | The rules of a move, the score, and the keys. |
+| `win` | `LAYOUT`, `WIN`, `FIRST_EMPTY` | [win.txt](win.txt) | The human wins, with its banner. No moves after it. Space starts a new game, and the banner goes. The best score stays. |
 | `lose` | `LAYOUT`, `LOSE`, `FIRST_EMPTY` | [lose.txt](lose.txt) | A press that changes nothing. A full board with no pair loses, with its banner. No moves after it. Space. |
 
 The keys go through XRoar's keyboard matrix and the program's own scanner.
@@ -228,8 +239,8 @@ The main and `play` builds are the game that you play. The model in
 The other three builds have test controls, which are only for the check.
 `LAYOUT` with `RULES`, `WIN` or `LOSE` starts from a fixed layout.
 `FIRST_EMPTY` puts each new microbe in the first empty square. Thus the
-scripts give the board and the phase after each scan, written by hand from
-the rules. The model must agree with each of them.
+scripts give the board, the phase and the score after each scan, written by
+hand from the rules. The model must agree with each of them.
 
 These builds do not check
 the random choice. The main and `play` builds check it.
@@ -242,6 +253,8 @@ These faults were run once on a copy, and each failed the check:
 
 | Fault | Build | What failed |
 | --- | --- | --- |
+| `NO_DAA`: the score adds in binary, not in decimal | `rules` | screen A: 74 bytes |
+| `NO_BEST`: the best score is not kept | `win` | screen A: 38 bytes |
 | `NO_PAGE_STEP`: a row that passes $8000 does not map the next page | `play` | screen B: 2416 bytes |
 | `ONE_SCREEN`: the program draws on the shown screen | `play` | screen A: 18262 bytes |
 | `KEEP_FRAME`: the banner frame stays after the banner goes | `win` | screen A: 70 bytes |
@@ -267,6 +280,8 @@ comes from the order of the work, and from a person who looks at the game.
 The capture shows the middle 512 of the 640 samples of each line. It shows
 all of the board, but not the outer 32 pixels at each side of the screen. On
 the title screen, the outer parts of the backdrop are outside the capture.
+
+The scores are mostly outside the capture too. The screen bytes include them.
 XRoar sets its picture window once for each field, from the mode at that
 time. Thus the program waits some fields after the mode change before the
 first stop.

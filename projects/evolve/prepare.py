@@ -6,8 +6,8 @@ the board square's grey, then converted to a 48x40 gime-320x16 sprite with the
 16 colour codes of art/game.contract.json, in register order. The old outputs
 are removed first, so a failed conversion stops the assembly.
 
-The words of font.py are packed into text.asm: two pixels in each byte, the
-left pixel in the high bits.
+The words and the digits of font.py are packed into text.asm: two pixels in
+each byte, the left pixel in the high bits.
 """
 
 import subprocess
@@ -18,7 +18,7 @@ from PIL import Image
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from font import GLYPHS, WORDS
+from font import DIGIT_INK, GLYPHS, WORDS
 
 CREATURES = HERE / "art/creatures"
 # The contract's colour codes, register 0 first. Register 1 ($10, dark grey) is
@@ -53,6 +53,12 @@ def write_words(output: Path) -> None:
             for start in range(0, len(packed), 16):
                 values = ",".join(f"${b:02X}" for b in packed[start : start + 16])
                 lines.append(f"        fcb {values}")
+    lines.append("* The digits 0 to 9: 8 rows of 4 bytes each.")
+    lines.append("digits")
+    for digit in "0123456789":
+        for row in word_rows(digit, 1, DIGIT_INK):
+            packed = [row[i] << 4 | row[i + 1] for i in range(0, len(row), 2)]
+            lines.append("        fcb " + ",".join(f"${b:02X}" for b in packed))
     (output / "text.asm").write_text("\n".join(lines) + "\n")
 
 

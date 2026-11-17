@@ -25,7 +25,7 @@ from PIL import Image
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
-from font import GLYPHS, WORDS
+from font import DIGIT_INK, GLYPHS, WORDS
 
 WIDTH, ROWS = 320, 192
 SQUARE_W, SQUARE_H = 56, 48  # pixels; square on the display
@@ -43,6 +43,10 @@ TITLE_ROW, PRESS_ROW = 12, 164
 # The banner: a white frame and a black box (x, y, width, height).
 FRAME, BOX = (56, 72, 208, 48), (58, 74, 204, 44)
 RESULT_ROW, BANNER_PRESS_ROW = 80, 104
+# The scores in the black margins: "SCORE" and its 5 digits at x 4; "BEST"
+# at x 280 and its 5 digits at x 276. Labels at row 8, digits at row 20.
+SCORE_LABEL, BEST_LABEL, SCORE_DIGITS, BEST_DIGITS = 4, 280, 4, 276
+LABEL_ROW, DIGIT_ROW = 8, 20
 
 TOP = 11  # the human: it wins the game
 ARROWS = "UDLR"
@@ -102,26 +106,33 @@ def sprite(level: int) -> np.ndarray:
     return np.stack([data >> 4, data & 15], axis=1).reshape(40, 48)
 
 
-def slide_line(line: list[int]) -> list[int]:
-    """One line, the edge of the move first: close up, then merge equal pairs once."""
+def slide_line(line: list[int]) -> tuple[list[int], int]:
+    """One line, the edge of the move first: close up, then merge equal pairs once.
+
+    Each merge scores 2 to the power of the new level.
+    """
     out: list[int] = []
+    points = 0
     mergeable = False
     for level in (v for v in line if v):
         if mergeable and out[-1] == level:
             out[-1] += 1
+            points += 2 ** out[-1]
             mergeable = False
         else:
             out.append(level)
             mergeable = True
-    return out + [0] * (4 - len(out))
+    return out + [0] * (4 - len(out)), points
 
 
-def move(board: list[int], arrow: str) -> list[int]:
+def move(board: list[int], arrow: str) -> tuple[list[int], int]:
     grid = np.array(board).reshape(4, 4)
     turns = {"L": 0, "U": 1, "R": 2, "D": 3}[arrow]  # turn the edge to the left
     turned = np.rot90(grid, turns)
-    moved = np.array([slide_line(list(row)) for row in turned])
-    return [int(v) for v in np.rot90(moved, -turns).flatten()]
+    lines = [slide_line(list(row)) for row in turned]
+    moved = np.array([line for line, _ in lines])
+    points = sum(p for _, p in lines)
+    return [int(v) for v in np.rot90(moved, -turns).flatten()], points
 
 
 def step(seed: int) -> int:
@@ -139,6 +150,7 @@ class Game:
         self.seed = SEED
         self.previous = ""
         self.changed = False
+        self.score = self.best = 0
         if layout is None:
             self.board, self.phase = [0] * 16, "T"
         else:
@@ -152,7 +164,7 @@ class Game:
             self.board[empty[k]] = 1
 
     def new_game(self) -> None:
-        self.board, self.phase = [0] * 16, "P"
+        self.board, self.phase, self.score = [0] * 16, "P", 0
         self.spawn()
         self.spawn()
         self.changed = True
@@ -180,18 +192,21 @@ class Game:
             return
         arrows = "".join(k for k in held if k in ARROWS)
         if len(arrows) == 1 and arrows in pressed:
-            after = move(self.board, arrows)
+            after, points = move(self.board, arrows)
             if after != self.board:
                 self.board = after
+                self.score += points
                 self.spawn()
                 self.judge()
+                self.best = max(self.best, self.score)
                 self.changed = True
 
     def scene(self) -> tuple:
         """What the picture shows: the title, or the board and any banner."""
         if self.phase == "T":
             return ("T",)
-        return ("B", tuple(self.board), self.phase if self.phase in "WL" else "")
+        banner = self.phase if self.phase in "WL" else ""
+        return ("B", tuple(self.board), banner, self.score, self.best)
 
 
 def parse_board(text: str) -> list[int]:
@@ -234,11 +249,12 @@ def states(variant: str) -> tuple[Screens, ...]:
             shown = 1 - shown
             held[shown] = game.scene()
         if layout is not None:
-            board, phase = words[1:3] if len(words) > 2 else (None, None)
-            if board and (parse_board(board) != game.board or phase != game.phase):
+            board, phase, score = words[1:4] if len(words) > 3 else (None, None, None)
+            given = (parse_board(board), phase, int(score)) if board else None
+            if given and given != (game.board, game.phase, game.score):
                 raise ValueError(
-                    f"{script} line {number}: the rules give {game.board} {game.phase}, "
-                    f"not {board} {phase}"
+                    f"{script} line {number}: the rules give {game.board} {game.phase} "
+                    f"{game.score}, not {board} {phase} {score}"
                 )
         result.append(Screens((held[0], held[1]), shown, game.phase))
     return tuple(result)
@@ -255,11 +271,20 @@ def word(label: str) -> np.ndarray:
     return np.kron(small, np.ones((scale, scale), dtype=bool)).astype(np.uint8) * ink
 
 
-def put_word(screen: np.ndarray, label: str, y: int) -> None:
-    """A word centred on the screen, at an even column (two pixels in a byte)."""
+def put_word(screen: np.ndarray, label: str, y: int, x: int | None = None) -> None:
+    """A word at column x, or centred at an even column (two pixels in a byte)."""
     pixels = word(label)
-    x = 2 * (80 - pixels.shape[1] // 4)
+    if x is None:
+        x = 2 * (80 - pixels.shape[1] // 4)
     screen[y : y + pixels.shape[0], x : x + pixels.shape[1]] = pixels
+
+
+def put_number(screen: np.ndarray, value: int, x: int) -> None:
+    """The five low digits, with leading zeros, from column x at the digit row."""
+    for place, digit in enumerate(f"{value % 100000:05d}"):
+        marks = np.array([[c == "#" for c in row] for row in GLYPHS[digit]], dtype=np.uint8)
+        left = x + 8 * place
+        screen[DIGIT_ROW : DIGIT_ROW + 8, left : left + 8] = marks * DIGIT_INK
 
 
 def box(screen: np.ndarray, area: tuple[int, int, int, int], value: int) -> None:
@@ -280,7 +305,11 @@ def picture(scene: tuple | None) -> np.ndarray:
         put_word(screen, "evolve", TITLE_ROW)
         put_word(screen, "press", PRESS_ROW)
         return screen
-    _, board, banner = scene
+    _, board, banner, score, best = scene
+    put_word(screen, "score", LABEL_ROW, SCORE_LABEL)
+    put_word(screen, "best", LABEL_ROW, BEST_LABEL)
+    put_number(screen, score, SCORE_DIGITS)
+    put_number(screen, best, BEST_DIGITS)
     for square, level in enumerate(board):
         x0 = BOARD_X + (square % 4) * SQUARE_W
         y0 = (square // 4) * SQUARE_H

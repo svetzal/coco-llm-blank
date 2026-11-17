@@ -71,11 +71,19 @@ PLAY    equ 0
 WON     equ 1
 LOST    equ 2
 TITLE   equ 3
-* What a screen holds: its scene, its banner, then the level in each square.
+* What a screen holds: its scene, its banner, the level in each square,
+* then the score and the best score that it shows (3 BCD bytes each).
 NOSCENE equ 0
 TSCENE  equ 1
 BSCENE  equ 2
-DSIZE   equ 18
+DSCORE  equ 18
+DBEST   equ 21
+DSIZE   equ 24
+* The scores, in the black margins beside the board: byte column and row.
+SCOREX  equ 2                       5 digits: pixels 4-43
+BESTX   equ 138                     5 digits: pixels 276-315
+DIGITY  equ 20
+LABELY  equ 8
 
         ifndef H6309
         error "Evolve uses 6309 instructions (TFM): build for a 6309 target"
@@ -254,12 +262,33 @@ ufound  andb ,x
 * NO_JUDGE is a fault for the check only.
         lbsr judge
         endc
+        ifndef NO_BEST
+* NO_BEST is a fault for the check only.
+        lbsr record
+        endc
         inc dirty
 unew    rts
+
+* record: the best score is the highest score since the program started.
+record  ldd score
+        cmpd best
+        bhi rnew
+        blo rkeep
+        lda score+2
+        cmpa best+2
+        bls rkeep
+rnew    ldd score
+        std best
+        lda score+2
+        sta best+2
+rkeep   rts
 
 * newgame: an empty board with two microbes.
 newgame clr phase
         inc dirty
+        clr score
+        clr score+1
+        clr score+2
         ldx #cells
 ngclr   clr ,x+
         cmpx #cells+16
@@ -381,6 +410,7 @@ smerge  lda ,u+
         bne sput
         inca
         sta -1,y
+        lbsr addpts
         clr last
         ifdef REMERGE
 * A fault for the check only: the merged creature can merge again.
@@ -443,7 +473,11 @@ rboard  lda ,x
         sta ,x
         clr 1,x
         leay 2,x
-        bsr forget
+        lbsr forget                 Y: the scores of the record
+        ldb #6
+        lbsr forget8
+        lbsr labels
+        ldx dptr
 rbanner lda 1,x                     a banner that must go: make its area
         beq rsq                     black, then draw squares 4-11 again
         cmpa phase
@@ -451,7 +485,7 @@ rbanner lda 1,x                     a banner that must go: make its area
         clr 1,x
         leay 6,x
         ldb #8
-        bsr forget8
+        lbsr forget8
         ifndef KEEP_FRAME
 * KEEP_FRAME is a fault for the check only.
         ldd #28*256+72
@@ -462,6 +496,7 @@ rbanner lda 1,x                     a banner that must go: make its area
         lbsr fill
         endc
 rsq     lbsr board
+        lbsr scores
         ldx dptr
         lda phase
         beq rdone
@@ -469,6 +504,104 @@ rsq     lbsr board
         beq rdone
         sta 1,x
         lbra banner
+
+* addpts: add the points of a merge to the score: 2 to the power of the new
+* level A, from the table "points" (3 BCD bytes for each level).
+addpts  pshs a,b,x
+        ldb #3
+        mul
+        ldx #points
+        abx
+        lda score+2
+        adda 2,x
+        ifndef NO_DAA
+* NO_DAA is a fault for the check only: binary, not decimal, addition.
+        daa
+        endc
+        sta score+2
+        lda score+1
+        adca 1,x
+        daa
+        sta score+1
+        lda score
+        adca ,x
+        daa
+        sta score
+        puls a,b,x,pc
+
+* labels: "SCORE" and "BEST" above the two numbers.
+labels  ldu #t_score
+        ldd #SCOREX*256+LABELY
+        std rx
+        ldd #t_score_bpr*256+t_score_rows
+        std rw
+        lbsr blit
+        ldu #t_best
+        ldd #(BESTX+2)*256+LABELY
+        std rx
+        ldd #t_best_bpr*256+t_best_rows
+        std rw
+        lbra blit
+
+* scores: draw the score and the best score where they differ from what
+* the screen shows.
+scores  ldy dptr
+        leay DSCORE,y
+        ldu #score
+        lda #SCOREX
+        bsr number
+        ldy dptr
+        leay DBEST,y
+        ldu #best
+        lda #BESTX
+* number: if the 3 BCD bytes at U differ from the record at Y, copy them
+* there and draw their 5 low digits from byte column A.
+number  sta nx
+        ldd ,u
+        cmpd ,y
+        bne ndraw
+        lda 2,u
+        cmpa 2,y
+        beq ndone
+ndraw   ldd ,u
+        std ,y
+        lda 2,u
+        sta 2,y
+        lda ,u+                     the first byte: its low digit only
+        stu nptr
+        anda #$0F
+        bsr digit
+        lda #2
+        sta ncount
+ndigit  lda [nptr]
+        lsra
+        lsra
+        lsra
+        lsra
+        bsr digit
+        ldu nptr
+        lda ,u+
+        stu nptr
+        anda #$0F
+        bsr digit
+        dec ncount
+        bne ndigit
+ndone   rts
+
+* digit: draw digit A at byte column nx, row DIGITY; nx moves on 4 bytes.
+digit   ldb #32
+        mul
+        addd #digits
+        tfr d,u
+        lda nx
+        sta rx
+        adda #4
+        sta nx
+        lda #DIGITY
+        sta ry
+        ldd #4*256+8
+        std rw
+        lbra blit
 
 * forget: mark 16 squares from Y as unknown ($FF is not a level).
 * forget8: mark B squares from Y.
@@ -783,6 +916,14 @@ squarecode fcb $10,WINCODE,LOSECODE,$10
 photo   fcb 20,100,44,100,68,100,92,100,116,100
         fcb 8,52,32,52,56,52,80,52,104,52,128,52
 
+* The points of a merge, by the new level: 2 to that power, as 3 BCD bytes.
+points  fcb 0,0,0,0,0,0                    levels 0 and 1: no merge makes them
+        fcb $00,$00,$04,$00,$00,$08         levels 2, 3: 4, 8
+        fcb $00,$00,$16,$00,$00,$32         levels 4, 5: 16, 32
+        fcb $00,$00,$64,$00,$01,$28         levels 6, 7: 64, 128
+        fcb $00,$02,$56,$00,$05,$12         levels 8, 9: 256, 512
+        fcb $00,$10,$24,$00,$20,$48         levels 10, 11: 1024, 2048
+
 * The 24 pairs of neighbouring cells: 12 across, then 12 down.
 pairs   fcb 0,1,1,2,2,3,4,5,5,6,6,7,8,9,9,10,10,11,12,13,13,14,14,15
         fcb 0,4,4,8,8,12,1,5,5,9,9,13,2,6,6,10,10,14,3,7,7,11,11,15
@@ -826,6 +967,11 @@ sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11
         endc
 
 zero    fcb 0                       a zero byte for the clear
+score   fcb 0,0,0                   BCD, most significant byte first
+best    fcb 0,0,0
+nx      fcb 0
+nptr    fdb 0
+ncount  fcb 0
 cells   rmb 16                      the level in each square; 0 is empty
 * The record of each screen: scene, banner (a phase), then 16 levels.
 desc    rmb DSIZE*2
