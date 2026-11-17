@@ -1,0 +1,22 @@
+{
+  "Contract": "game.contract.json",
+  "Role": "sprite",
+  "Canvas": {"size": "1024x1024"},
+  "Style": {"consistency": "the same outline weight, the same eye style, the same chibi proportions and the same scale for every creature"},
+  "Items": [
+    {"slug": "01-microbe", "name": "microbe", "description": "a round blob-shaped single cell in light green, with a darker green nucleus spot, a few short wiggly cilia around its edge, and a happy face"},
+    {"slug": "02-jellyfish", "name": "jellyfish", "description": "a dome-shaped jellyfish in sky blue with a cyan highlight, four short curly tentacles below, and a happy face on the dome"},
+    {"slug": "03-trilobite", "name": "trilobite", "description": "a trilobite seen from above at a slight angle: an oval segmented grey shell with dark grey grooves, small antennae, and a happy face on the head shield"},
+    {"slug": "04-fish", "name": "fish", "description": "a plump orange fish with a yellow belly, a forked tail fin, and a happy face; side view facing the viewer's left"},
+    {"slug": "05-frog", "name": "frog", "description": "a round green frog sitting upright, yellow belly, large eyes on top of its head, wide smile"},
+    {"slug": "06-lizard", "name": "lizard", "description": "a small green lizard standing on four legs, curled tail, yellow belly stripe, happy face"},
+    {"slug": "07-dinosaur", "name": "dinosaur", "description": "a friendly long-necked dinosaur in green with a yellow belly and darker green back spots, standing on four sturdy legs"},
+    {"slug": "08-bird", "name": "bird", "description": "a round sky blue songbird with a yellow beak, a white belly and small wings raised, standing"},
+    {"slug": "09-mouse", "name": "mouse", "description": "a round grey mouse sitting up, large round ears with red inner ears, a long thin tail, a pink-red nose"},
+    {"slug": "10-primate", "name": "primate", "description": "a small orange-brown monkey sitting, a tan face and tan belly, round ears, a curled tail"},
+    {"slug": "11-human", "name": "human", "description": "a cheerful cave-person child with tan skin, brown shaggy hair, and a simple orange one-shoulder tunic, waving one hand"}
+  ],
+  "Output": {"pattern": "{slug}.png"},
+  "Composition": {"framing": "the whole creature, centred", "view": "three-quarter front"},
+  "Context": {"game": "a sliding evolution puzzle on a 4 by 4 board", "why": "one picture for each level of the evolution chain; two equal creatures merge into the next"}
+}

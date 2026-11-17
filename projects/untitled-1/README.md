@@ -24,7 +24,7 @@ and art.
 
 ## The evolution chain
 
-This chain is a proposal. The owner has not confirmed it.
+The owner confirmed this chain.
 
 | Level | Creature |
 | --- | --- |
@@ -42,6 +42,20 @@ This chain is a proposal. The owner has not confirmed it.
 
 Two creatures of level `n` merge into one creature of level `n + 1`. A new
 creature is level 1 on most moves and level 2 on some moves.
+
+## The art
+
+The art comes from structured specs in [art/](art/), made with the
+[retro-art skill](../../.agents/skills/retro-art/SKILL.md):
+
+- `art/game.contract.json`: the shared style, the 16 colour codes for the
+  palette registers and the rules for every picture.
+- `art/creatures.spec.json`: one picture for each creature of the chain.
+
+The board has 4 by 4 squares. A square is 56 by 48 pixels, which looks square
+on the display. Each creature is 48 by 40 pixels inside its square, with a
+transparent background (agent-selected prototype choice). The owner agrees to
+each generation before it runs.
 
 ## How to run it
 
