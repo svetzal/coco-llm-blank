@@ -21,6 +21,21 @@ The program draws each change on a second screen that you do not see. Then
 it shows that screen between two video frames, so the whole change appears at
 once.
 
+### Speed
+
+The program reads the keys once in each video frame. It copies each row with
+the 6309 instruction `TFM`. Thus the program needs the 6309. In XRoar, from
+one stop of the check to the next (emulated time):
+
+| Step | Time |
+| --- | --- |
+| A scan with no change | 17 ms, one video frame |
+| A move | 83 to 117 ms |
+| Space on the title, and the first move after it | 280 ms each |
+
+Each of these times includes two waits for the vertical blank. The first
+move is slower because each screen must first be made black.
+
 ## The rules of a move
 
 - One press of one arrow key makes one move. A held arrow does not repeat.
@@ -151,7 +166,7 @@ defaults for the CoCo 3, not choices of the owner.
 - XRoar machine profile: `coco3` (target default)
 - RAM: 512 KiB (owner requirement)
 - CPU and clock: Hitachi 6309 (owner requirement) at the stock clock (target
-  default)
+  default). The program uses `TFM`, so it needs the 6309.
 - Video standard: NTSC (owner requirement)
 - Firmware: the CoCo 3 ROM, `coco3.rom` (target default)
 - Graphics: richer than the CoCo 1 and 2 (owner requirement). GIME 320×192
@@ -179,8 +194,8 @@ In order of importance:
 1. Sound: a short sound for a merge, and a larger sound for the first
    appearance of each creature.
 2. A score.
-3. Faster drawing, so that the next board is ready sooner after the key
-   press. The owner found the game responsive, so this is not urgent.
+3. A faster start: draw only the board's own area when a screen changes
+   from the title to the board.
 4. A board colour that is not grey, so that grey creatures stand out.
 
 ## Check
@@ -227,6 +242,7 @@ These faults were run once on a copy, and each failed the check:
 
 | Fault | Build | What failed |
 | --- | --- | --- |
+| `NO_PAGE_STEP`: a row that passes $8000 does not map the next page | `play` | screen B: 2416 bytes |
 | `ONE_SCREEN`: the program draws on the shown screen | `play` | screen A: 18262 bytes |
 | `KEEP_FRAME`: the banner frame stays after the banner goes | `win` | screen A: 70 bytes |
 | `WRONG_COLUMN`: Up is read from the wrong column | `rules` | screen B: 5010 bytes |
@@ -236,7 +252,6 @@ These faults were run once on a copy, and each failed the check:
 | `NO_SCAN_STEP`: the generator does not step at each scan | `play` | screen A: 1664 bytes |
 | `NO_JUDGE`: no win and no loss | `win` | screen A: 4382 bytes |
 | `$FF99` for 640×192 with 4 colours (board step) | main | rendered check only |
-| No page advance in the screen window (board step) | main | 119 screen bytes |
 
 The fault defines are only for the check. The game that you play has none of
 them.
@@ -257,7 +272,9 @@ time. Thus the program waits some fields after the mode change before the
 first stop.
 
 Memory: the program, the sprites, the words and the program's own stack are
-at CPU `$0E00-$5FFF`. CPU `$6000-$7FFF` is the window to a screen. Screen A is
+at CPU `$0E00-$5FFF`. CPU `$6000-$9FFF` is the window to two pages of a
+screen, so a row is never split. The program does not use BASIC, which is in
+`$8000-$9FFF`. Screen A is
 at physical `$00000` and screen B at `$08000`. The program masks IRQ and FIRQ,
 so nothing of BASIC runs after the start. It turns on the GIME's VBORD flag
 and reads it at `$FF92`.

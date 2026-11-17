@@ -20,6 +20,10 @@
 *     PDF 11: $FF92 bit 3 = VBORD.
 *   Tepolt, PDF 50: an $FF92 bit sets only if $FF90 enables IRQ (IEN); a
 *     read of $FF92 clears it.
+*   The 6309 Book (Burke & Burke): PDF 225: TFM moves W bytes between two
+*     of X, Y, U, S, D; W is 0 after it. PDF 231: TFM r0,r1+ repeats one
+*     source byte (a fill). HD63B09EP Technical Reference Guide, PDF 34:
+*     each TFM form takes 6+3n cycles.
 *   guidance/techniques/animation.md, "Flip pages in the GIME native modes",
 *     and examples/page-flip: write $FF9D after a new VBORD, then wait for
 *     one more VBORD before drawing into the old screen.
@@ -35,12 +39,13 @@
 *
 * Memory (CPU addresses, BASIC's MMU map):
 *   $0E00-$5FFF  this program, its sprites, its words and its own stack
-*   $6000-$7FFF  the window that shows one 8 KiB page of a screen
+*   $6000-$9FFF  the window that shows two 8 KiB pages of a screen, so a
+*                row is never split ($FFA3 and $FFA4). BASIC is not used.
 *   physical $00000-$077FF  screen A, 160 bytes x 192 rows (pages 0-3)
 *   physical $08000-$0F7FF  screen B (pages 4-7)
 
 WINDOW  equ $6000
-MMUWIN  equ $FFA3                   MMU task 0 entry for CPU $6000-$7FFF
+MMUWIN  equ $FFA3                   MMU task 0 entries for CPU $6000-$9FFF
 BPR     equ 160                     bytes in one screen row
 ROWS    equ 192
 * Board geometry, in bytes (two pixels each) and rows.
@@ -72,6 +77,9 @@ TSCENE  equ 1
 BSCENE  equ 2
 DSIZE   equ 18
 
+        ifndef H6309
+        error "Evolve uses 6309 instructions (TFM): build for a 6309 target"
+        endc
         org $0E00
 * Set our own stack. BASIC's stack could be in CPU $6000-$7FFF, which this
 * program maps to the screen.
@@ -156,7 +164,7 @@ pal     lda ,x+
         sta previous
 * The game loop. "ready" is where the check takes each snapshot. The pause
 * keeps the picture still for the capture and sets the scan rate.
-ready   lbsr pause
+ready   lbsr field
         lbsr sample
         ifndef NO_SCAN_STEP
 * NO_SCAN_STEP is a fault for the check only.
@@ -174,6 +182,13 @@ ready   lbsr pause
 pause   ldx #12000
 pwait   leax -1,x
         bne pwait
+        rts
+
+* field: wait for a new VBORD, so the keys are scanned once in each field.
+field   lda $FF92
+fwait   lda $FF92
+        bita #%00001000
+        beq fwait
         rts
 
 * sample: the keys into held. Up 1, Down 2, Left 4, Right 8, Space 16.
@@ -495,13 +510,11 @@ fwait2  lda $FF92
 * clear: make the four pages of the screen at bpage black.
 clear   lda bpage
         sta page
-cpage   lda page
-        sta MMUWIN
+cpage   lbsr mapwin
         ldx #WINDOW
-        ldd #0
-cword   std ,x++
-        cmpx #WINDOW+$2000
-        blo cword
+        ldy #zero
+        ldw #$2000
+        tfm y,x+
         inc page
         lda page
         suba bpage
@@ -620,65 +633,81 @@ bsq     ldx #cells
         sta ry
         lda #CELLW
         sta rw
-        lda #CELLH
-        sta rh
         lda #GREY
         sta rval
-        lbsr fill
         ldx #cells                  the creature, if the square has one
         lda square
         lda a,x
-        beq bnext
-        deca
+        bne bsprite
+        lda #CELLH                  an empty square: all grey
+        sta rh
+        lbsr fill
+        bra bnext
+* A creature: 2 grey rows, 40 rows of grey byte, creature, grey byte, then
+* 2 grey rows. The creature is SPRX-CELLX = 1 byte and SPRY-CELLY = 2 rows
+* into the cell, and 24 + 2 = CELLW bytes wide.
+bsprite deca
         lsla
         ldx #sprites
         ldu a,x
-        lda sqx
-        adda #SPRX
-        sta rx
-        lda sqy
-        adda #SPRY
-        sta ry
-        lda #c01_bpr
-        sta rw
-        lda #c01_rows
+        lda #SPRY-CELLY
         sta rh
-        lbsr blit
+        lbsr fill                   X: the row below, mapped
+        lda #c01_rows
+        sta count
+bsrow   pshs x
+        lda #GREY
+        sta ,x+
+        ldw #c01_bpr
+        tfm u+,x+
+        sta ,x
+        puls x
+        lbsr down
+        dec count
+        bne bsrow
+        lda #CELLH-(SPRY-CELLY)-c01_rows
+        sta rh
+        lbsr fillx
 bnext   inc square
         lda square
         cmpa #16
         lblo bsq
         rts
 
-* fill: rh rows of rw bytes of rval, from byte rx of row ry.
-fill    lda rh
+* fill: rh rows of rw bytes of rval, from byte rx of row ry. Returns X at
+* the same byte of the row below, with its pages mapped.
+* fillx: the same from X.
+fill    lbsr rowat
+fillx   lda rh
         sta count
-frow    lbsr rowat
+frow    pshs x
+        clra
         ldb rw
-fbyte   lda rval
-        bsr put
-        decb
-        bne fbyte
-        inc ry
+        tfr d,w
+        ldy #rval
+        tfm y,x+
+        puls x
+        bsr down
         dec count
         bne frow
         rts
 
 * blit: rh rows of rw bytes from U, to byte rx of row ry.
-blit    lda rh
+blit    lbsr rowat
+        lda rh
         sta count
-brow    lbsr rowat
+brow    pshs x
+        clra
         ldb rw
-bbyte   lda ,u+
-        bsr put
-        decb
-        bne bbyte
-        inc ry
+        tfr d,w
+        tfm u+,x+
+        puls x
+        bsr down
         dec count
         bne brow
         rts
 
-* rowat: map the page that holds byte rx of row ry; X = its CPU address.
+* rowat: map the pages that hold byte rx of row ry; X = its CPU address.
 rowat   lda ry
         ldb #BPR
         mul
@@ -693,24 +722,34 @@ rowat   lda ry
         lsrb
         addb bpage
         stb page
-        stb MMUWIN
+        bsr mapwin
         anda #$1F
         adda #WINDOW/256
         puls b
         tfr d,x
         rts
 
-* put: store A at X and advance. At the end of the window, map the next page.
-put     sta ,x+
+* mapwin: page at CPU $6000, the next page at $8000. Changes B only.
+mapwin  ldb page
+        stb MMUWIN
+        incb
+        stb MMUWIN+1
+        rts
+
+* down: X to the same byte one row lower. A row starts below $8000, so it
+* ends below $A000. When X passes $8000, map the next page at $6000.
+down    leax BPR,x
+        ifndef NO_PAGE_STEP
+* NO_PAGE_STEP is a fault for the check only.
         cmpx #WINDOW+$2000
-        blo put1
-        pshs a
+        blo down1
+        leax -$2000,x
         inc page
-        lda page
-        sta MMUWIN
-        puls a
-        ldx #WINDOW
-put1    rts
+        pshs b
+        bsr mapwin
+        puls b
+        endc
+down1   rts
 
 * For the check only: fixed layouts, row by row; 0 is empty.
         ifdef RULES
@@ -786,6 +825,7 @@ sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11
         error "c01.asm: a sprite must be 40 rows"
         endc
 
+zero    fcb 0                       a zero byte for the clear
 cells   rmb 16                      the level in each square; 0 is empty
 * The record of each screen: scene, banner (a phase), then 16 levels.
 desc    rmb DSIZE*2
