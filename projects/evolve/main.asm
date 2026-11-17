@@ -81,6 +81,50 @@ WINCODE equ $12                     square colour code after a win (green)
 LOSECODE equ $07                    square colour code after a loss (red)
 REST    equ $80                     the DAC level between sounds
 SPACE   equ 16                      the held bit of Space
+* For the 6809, which has no TFM: copy24 copies a row of a creature (24
+* bytes) from U to X and moves U past it; X stays. fill24 writes D to 24
+* bytes at X; X stays.
+copy24  macro
+        ldd ,u
+        std ,x
+        ldd 2,u
+        std 2,x
+        ldd 4,u
+        std 4,x
+        ldd 6,u
+        std 6,x
+        ldd 8,u
+        std 8,x
+        ldd 10,u
+        std 10,x
+        ldd 12,u
+        std 12,x
+        ldd 14,u
+        std 14,x
+        ldd 16,u
+        std 16,x
+        ldd 18,u
+        std 18,x
+        ldd 20,u
+        std 20,x
+        ldd 22,u
+        std 22,x
+        leau 24,u
+        endm
+fill24  macro
+        std ,x
+        std 2,x
+        std 4,x
+        std 6,x
+        std 8,x
+        std 10,x
+        std 12,x
+        std 14,x
+        std 16,x
+        std 18,x
+        std 20,x
+        std 22,x
+        endm
 GSTEPS  equ 4                       steps of a slide (lerp divides by 4)
 * A creature that moves: level, cell column and row from (1, 2) and to
 * (3, 4), the column that screens A and B show (5, 6), the row that they
@@ -121,9 +165,6 @@ BESTX   equ 138                     5 digits: pixels 276-315
 DIGITY  equ 20
 LABELY  equ 8
 
-        ifndef H6309
-        error "Evolve uses 6309 instructions (TFM): build for a 6309 target"
-        endc
         org $0E00
 * Set our own stack. BASIC's stack could be in CPU $6000-$7FFF, which this
 * program maps to the screen.
@@ -131,10 +172,12 @@ start   lds #stacktop
 * Mask IRQ and FIRQ. Nothing of BASIC runs after this point, so its IRQ
 * handler cannot read the PIA while the direction register is selected.
         orcc #$50
-* The fast rate and the 6309 Native Mode, so that the creatures can slide
-* (owner choice). FIRQ stays 6809-like: it saves only CC and PC.
+* The fast rate, and on the 6309 its Native Mode, so that the creatures
+* can slide (owner choice). FIRQ stays 6809-like: it saves only CC and PC.
         sta $FFD9
+        ifdef H6309
         ldmd #$01
+        endc
 * Rows (port A) are inputs and columns (port B) are outputs. Control bit 2
 * clear selects the direction register; set selects the data register.
         lda $FF01
@@ -900,11 +943,16 @@ ehfill  pshs u
         std rww
         ldd #BPR
         subd rww
-        tfr d,v                     V: from the end of a row to the next
+        std rstep                   from the end of a row to the next
 ehrow   tfr u,y
+        ifdef H6309
         ldw rww
         tfm y+,x+
-        tfr v,d
+        else
+        ldb rw
+        lbsr copyw
+        endc
+        ldd rstep
         leax d,x
         cmpx #WINDOW+$2000
         blo eh2
@@ -932,9 +980,16 @@ evrow   ldy #greyb
         cmpa #CELLY+CELLH
         blo evr
 evz     ldy #zero
+        ifdef H6309
 evr     ldw #24
         tfm y,x+
         leax BPR-24,x
+        else
+evr     lda ,y
+        tfr a,b
+        fill24
+        leax BPR,x
+        endc
         cmpx #WINDOW+$2000
         blo ev2
         leax -$2000,x
@@ -957,9 +1012,14 @@ gtile   lbsr sprat
         lbsr rowat
         lda #c01_rows
         sta count
+        ifdef H6309
 gtrow   ldw #c01_bpr
         tfm u+,x+
         leax BPR-c01_bpr,x
+        else
+gtrow   copy24
+        leax BPR,x
+        endc
         cmpx #WINDOW+$2000
         blo gt2
         leax -$2000,x
@@ -968,6 +1028,32 @@ gtrow   ldw #c01_bpr
 gt2     dec count
         bne gtrow
         rts
+
+        ifndef H6309
+* The 6809 has no TFM. copyw: B bytes (1 to 255) from Y to X, both moved
+* past them. fillw: B bytes of A at X, X moved past them.
+copyw   lsrb
+        bcc cw1
+        lda ,y+
+        sta ,x+
+cw1     stb wcnt
+        beq cw9
+cw2     ldd ,y++
+        std ,x++
+        dec wcnt
+        bne cw2
+cw9     rts
+fillw   lsrb
+        bcc fw1
+        sta ,x+
+fw1     stb wcnt
+        beq fw9
+        tfr a,b
+fw2     std ,x++
+        dec wcnt
+        bne fw2
+fw9     rts
+        endc
 
 * sprat: U = the first byte of the creature of level A, with its page
 * mapped at CPU $4000 (MMU task 0, $FFA2). Changes A and B.
@@ -1523,9 +1609,17 @@ cpage   lbsr mapwin
 * Clear in blocks of 256 bytes (774 cycles, 0.87 ms). Sources disagree
 * whether an interrupt can stop a TFM, so no TFM is long enough to delay
 * the next sound edge by much.
+        ifdef H6309
 cblock  ldy #zero
         ldw #256
         tfm y,x+
+        else
+        ldd #0
+cblock  std ,x++
+        std ,x++
+        std ,x++
+        std ,x++
+        endc
         cmpx #WINDOW+$2000
         blo cblock
         inc page
@@ -1666,10 +1760,16 @@ bsprite lbsr sprat
         sta count
 bsrow   pshs x
         lda #GREY
+        ifdef H6309
         sta ,x+
         ldw #c01_bpr
         tfm u+,x+
         sta ,x
+        else
+        sta ,x+
+        sta c01_bpr,x
+        copy24
+        endc
         puls x
         lbsr down
         dec count
@@ -1690,11 +1790,17 @@ fill    lbsr rowat
 fillx   lda rh
         sta count
 frow    pshs x
+        ifdef H6309
         clra
         ldb rw
         tfr d,w
         ldy #rval
         tfm y,x+
+        else
+        lda rval
+        ldb rw
+        lbsr fillw
+        endc
         puls x
         bsr down
         dec count
@@ -1706,10 +1812,17 @@ blit    lbsr rowat
         lda rh
         sta count
 brow    pshs x
+        ifdef H6309
         clra
         ldb rw
         tfr d,w
         tfm u+,x+
+        else
+        tfr u,y
+        ldb rw
+        lbsr copyw
+        tfr y,u
+        endc
         puls x
         bsr down
         dec count
@@ -2006,6 +2119,8 @@ gox     fcb 0                       the place that this screen shows
 goy     fcb 0
 gm      fcb 0                       a row's place in its square row
 rww     fdb 0
+rstep   fdb 0                       from the end of a trail row to the next
+wcnt    fcb 0                       6809: pairs of bytes left to copy
 tcount  fcb 0
 empty   fcb 0
 seed    fdb $7A35                   the generator's state: never 0

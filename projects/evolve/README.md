@@ -31,18 +31,21 @@ once.
 
 ### Speed
 
-The program reads the keys once in each video frame. It copies each row with
-the 6309 instruction `TFM`. Thus the program needs the 6309. It runs the CPU
-at the fast rate, in the 6309's Native Mode (owner choice, for the slide).
-In XRoar, from one stop of the check to the next (emulated time, measured in
-the `play` build):
+Evolve has two builds from one source: one for the 6309 and one for the
+6809 (owner request). The 6309 build copies each row with the 6309
+instruction `TFM` and runs in the 6309's Native Mode. The 6809 build copies
+with `LDD` and `STD`. Both run the CPU at the fast rate (owner choice, for the
+slide).
 
-| Step | Time |
-| --- | --- |
-| A scan with no change | 17 ms, one video frame |
-| Space on the title | 167 ms |
-| A move, with its slide | 234 to 301 ms |
-| The first move after Space | 335 ms |
+The program reads the keys once in each video frame. In XRoar, from one stop
+of the check to the next (emulated time, measured in the `play` build):
+
+| Step | 6309 | 6809 |
+| --- | --- | --- |
+| A scan with no change | 17 ms, one video frame | 17 ms |
+| Space on the title | 167 ms | 268 ms |
+| A move, with its slide | 234 to 301 ms | 268 to 419 ms |
+| The first move after Space | 335 ms | 469 ms |
 
 The first move is slower because the hidden screen still shows the title.
 The program must first draw the board on it. A sound uses CPU time while it
@@ -50,9 +53,10 @@ plays, so a move can take one or two more video frames.
 
 ## The slide
 
-The creatures slide in 4 steps (agent choice). Each step takes 2 to 4 video
-frames, which depends on the number of creatures that move. A lab measured
-the method. Read
+The creatures slide in 4 steps (agent choice). On the 6309, each step takes
+2 to 4 video frames, which depends on the number of creatures that move. On
+the 6809, a step of the demo's moves takes 3 to 5 video frames (counted in a
+recording). A lab measured the method. Read
 [slide tiles between squares](../../guidance/techniques/slide-tiles.md).
 
 1. The hidden screen first gets the board before the move.
@@ -259,15 +263,34 @@ to its command (the owner chose this).
 Commands start in the starter folder:
 
 ```sh
+# The 6309 build
 uv run python scripts/coco.py run projects/evolve
-uv run python scripts/coco.py check projects/evolve
+# The 6809 build, for a CoCo 3 with its stock CPU
+uv run python scripts/coco.py run projects/evolve --target coco3-6809
 ```
 
 The `run` command opens XRoar. Close the window to stop it.
 
+To make a disk for each CPU:
+
+```sh
+uv run python scripts/coco.py disk projects/evolve --target coco3
+uv run python scripts/coco.py disk projects/evolve --target coco3-6809
+```
+
+The 6309 disk is `build/evolve/main-6309.dsk`, and the 6809 disk is
+`build/evolve/main.dsk`. On the CoCo, type `LOADM"EVOLVE":EXEC`.
+
+The check:
+
+```sh
+uv run python scripts/coco.py check projects/evolve
+```
+
 ## Contract
 
-The owner chose the CoCo 3, 512 KiB, the 6309 and NTSC.
+The owner chose the CoCo 3, 512 KiB, the 6309 and NTSC. The owner then
+asked for a second build for the stock 6809.
 
 The other values come from the `coco3` table in
 [the target tables](../../guidance/starter/toolchain.md#target-tables). They are
@@ -277,9 +300,10 @@ defaults for the CoCo 3, not choices of the owner.
   (target default)
 - XRoar machine profile: `coco3` (target default)
 - RAM: 512 KiB (owner requirement)
-- CPU and clock: Hitachi 6309 (owner requirement) at the fast rate, `$FFD9`,
-  in Native Mode (owner choice, for the slide). The program uses `TFM`, so it
-  needs the 6309.
+- CPU and clock: Hitachi 6309 (owner requirement), in Native Mode, and the
+  stock 6809 (owner request, target `coco3-6809`). Both at the fast rate,
+  `$FFD9` (owner choice, for the slide). Each 6309 instruction has a 6809
+  form under `ifdef H6309`.
 - Video standard: NTSC (owner requirement)
 - Firmware: the CoCo 3 ROM, `coco3.rom` (target default)
 - Graphics: richer than the CoCo 1 and 2 (owner requirement). GIME 320×192
@@ -324,7 +348,11 @@ In order of importance:
 uv run python scripts/coco.py check projects/evolve
 ```
 
-The check runs seven builds. Each build stops at `ready` at scans 1 to 40,
+The check runs seven builds on each of the two targets, `coco3` (the 6309)
+and `coco3-6809`. The model is the same for both: the two CPUs must make the
+same screens and the same sounds.
+
+Each build stops at `ready` at scans 1 to 40,
 and at scans 300 and 301. The program comes to `ready` once for each scan of
 the keyboard.
 
@@ -459,4 +487,4 @@ Sources disagree whether an interrupt can stop a `TFM`. The HD63B09EP
 Technical Reference Guide, PDF 12, says that it can. The 6309 Book, PDF 230,
 says that the interrupt waits until the transfer ends. The program keeps
 each `TFM` to 256 bytes or fewer, so either way a sound edge waits at most
-0.87 ms. This question is open.
+0.87 ms. This question is open. The 6809 build has no `TFM`.

@@ -15,6 +15,19 @@ extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
 disk = "disk11.rom"
 keyboard = "coco3"        # the key script uses the CoCo 3 keyboard layout
 
+# The same CoCo 3 with its stock 6809 (owner request: a version for more
+# machines). The build has no TFM and no Native Mode.
+[targets.coco3-6809]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 512
+extended = "coco3.rom"
+disk = "disk11.rom"
+keyboard = "coco3"
+
 [memory]
 at = { start = 0x0E00 }
 below = { ends = 0x4000 }   # the creatures are at CPU $4000 and $6000
