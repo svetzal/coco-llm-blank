@@ -286,6 +286,9 @@ defaults for the CoCo 3, not choices of the owner.
 
 ## Next steps
 
+Open lab: sliding-tiles. The lab measures how fast the creatures can slide
+to their new squares in a move (owner request).
+
 In order of importance:
 
 1. A faster start: draw only the board's own area when a screen changes
