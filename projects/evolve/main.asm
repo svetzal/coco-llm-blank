@@ -27,6 +27,9 @@
 *   guidance/techniques/animation.md, "Flip pages in the GIME native modes",
 *     and examples/page-flip: write $FF9D after a new VBORD, then wait for
 *     one more VBORD before drawing into the old screen.
+*   The fast rate: Tepolt, PDF 62: a write to $FFD9 selects the high MPU
+*     speed, twice the low speed; $FFD8 selects the low speed. The 6309 Book,
+*     PDF 209: LDMD #$01 selects Native Mode with 6809-like FIRQ handling.
 *   Laurence A. Tepolt, Assembly Language Programming for the CoCo3:
 *     PDF 38-39: byte formats, leftmost pixel in the high bits.
 *     PDF 41-42 Table 4-10: HRES 111, CRES 10 is 320 pixels, 16 colours.
@@ -75,6 +78,11 @@ WINCODE equ $12                     square colour code after a win (green)
 LOSECODE equ $07                    square colour code after a loss (red)
 REST    equ $80                     the DAC level between sounds
 SPACE   equ 16                      the held bit of Space
+GSTEPS  equ 4                       steps of a slide (lerp divides by 4)
+* A creature that moves: level, cell column and row from (1, 2) and to
+* (3, 4), the column that screens A and B show (5, 6), the row that they
+* show (7, 8), the square from (9) and to (10).
+MVSIZE  equ 11
 * $FF9D = physical address bits 18..11; $FF9E = bits 10..3 stays 0.
 VIEWA   equ $00                     $00000 / 2048
 VIEWB   equ $10                     $08000 / 2048
@@ -120,6 +128,10 @@ start   lds #stacktop
 * Mask IRQ and FIRQ. Nothing of BASIC runs after this point, so its IRQ
 * handler cannot read the PIA while the direction register is selected.
         orcc #$50
+* The fast rate and the 6309 Native Mode, so that the creatures can slide
+* (owner choice). FIRQ stays 6809-like: it saves only CC and PC.
+        sta $FFD9
+        ldmd #$01
 * Rows (port A) are inputs and columns (port B) are outputs. Control bit 2
 * clear selects the direction register; set selects the data register.
         lda $FF01
@@ -215,11 +227,17 @@ ready   lbsr field
         clr dirty
         lbsr render
         lbsr flip
+        tst again                   after a slide, both screens get the
+        beq ready                   new picture
+        clr again
+        lbsr render
+        lbsr flip
         bra ready
 
-* pause: about 96000 cycles, 6 fields at the normal clock.
-pause   ldx #12000
-pwait   leax -1,x
+* pause: 6 fields.
+pause   ldb #6
+pwait   lbsr field
+        decb
         bne pwait
         rts
 
@@ -305,6 +323,7 @@ ufound  andb ,x
         tst moved
         beq unew                    nothing changed: not a move
         endc
+        lbsr glide
         lbsr spawn
         ifndef NO_JUDGE
 * NO_JUDGE is a fault for the check only.
@@ -392,6 +411,7 @@ dkey    lda darg
 * nothing, and the square is always empty (the model checks both).
 dmove   ldb darg
         lbsr slide
+        lbsr glide
         ldx #cells
         ldb darg+1
         lda #1
@@ -523,6 +543,15 @@ rshift  lslb
 * again in the same move.
 slide   clr moved
         clr mtop
+        clr nmv
+        ldx #mvs
+        stx mvptr
+        ldx #cells
+        ldu #before
+sbefore lda ,x+
+        sta ,u+
+        cmpx #cells+16
+        blo sbefore
         lda #16
         mul
         ldx #lines
@@ -550,6 +579,12 @@ smerge  lda ,u+
         beq snext
         cmpa last
         bne sput
+        pshs a,b
+        tfr y,d
+        subd #vout+1
+        stb mto                     the index that the creature goes to
+        puls a,b
+        lbsr addmv
         inca
         sta -1,y
         cmpa mtop
@@ -562,7 +597,13 @@ smax    lbsr addpts
         sta last
         endc
         bra snext
-sput    sta ,y+
+sput    pshs a,b
+        tfr y,d
+        subd #vout
+        stb mto
+        puls a,b
+        lbsr addmv
+        sta ,y+
         sta last
 snext   decb
         bne smerge
@@ -581,8 +622,368 @@ ssame
         dec count
         bne swrite
         dec lcount
-        bne sline
+        lbne sline
         rts
+
+* addmv: the creature of level A at line index (U - vin - 1) goes to line
+* index mto. If the index changes, add level, from square, to square to
+* the list of creatures that move. Keeps A, B, X, Y and U.
+addmv   pshs a,b,x,y
+        tfr u,d
+        subd #vin+1
+        cmpb mto
+        beq amdone                  it stays where it is
+        ldx lptr
+        lda b,x
+        sta mfrom
+        ldb mto
+        lda b,x
+        ldx mvptr
+        sta 2,x
+        lda mfrom
+        sta 1,x
+        lda ,s
+        sta ,x
+        leax MVSIZE,x
+        stx mvptr
+        inc nmv
+amdone  puls a,b,x,y,pc
+
+* glide: the creatures of the move slide to their new squares in GSTEPS
+* steps (owner request). Each step draws into the screen that is not
+* shown, then flips. The position of a creature is linear from its old
+* square to its new one, so two creatures never overlap, except a merge
+* pair at the end. In each step, first erase the trail of each creature:
+* the part of the creature on this screen, from the step before, that its
+* new place does not cover. Then draw each creature at its new place.
+* At the end, both screens show the board after the slide, before the
+* merges and the new microbe. The main loop then draws the new picture on
+* both screens. The method was measured in a lab: about 4 fields for each
+* step of a move of 7 creatures at the fast rate.
+glide   tst nmv
+        lbeq gdone
+* The hidden screen shows the board before the last move, or another
+* scene. Bring it to the board before this move: render with "before".
+        lbsr gswap
+        lbsr render
+        lbsr gswap
+* Each creature that moves: its cell's byte column and row, from and to.
+* Both screens show it at the start.
+        ldu #mvs
+        lda nmv
+        sta tcount
+gset    lda 1,u                     keep the squares in bytes 9 and 10
+        sta 9,u
+        lda 2,u
+        sta 10,u
+        lda 9,u
+        lbsr sqxy
+        stb 1,u
+        sta 2,u
+        stb 5,u                     the place that screen A shows
+        stb 6,u                     the place that screen B shows
+        sta 7,u
+        sta 8,u
+        lda 10,u
+        lbsr sqxy
+        stb 3,u
+        sta 4,u
+        leau MVSIZE,u
+        dec tcount
+        bne gset
+        lda #1
+        sta gk
+gloop   lbsr gstep
+        lbsr flip
+        lda gk
+        cmpa #GSTEPS
+        beq gend
+        inc gk
+        bra gloop
+* The last step on the other screen too, without a flip.
+gend    lbsr gstep
+* Each screen's record: the board after the slide, before the merges.
+        ldx #before
+        ldu #gboard
+gcopy   lda ,x+
+        sta ,u+
+        cmpx #before+16
+        blo gcopy
+        ldx #gboard
+        ldu #mvs
+        lda nmv
+        sta tcount
+gfrom   ldb 9,u                     the "from" square, kept in byte 9
+        clr b,x
+        leau MVSIZE,u
+        dec tcount
+        bne gfrom
+        ldu #mvs
+        lda nmv
+        sta tcount
+gto     ldb 10,u                    the "to" square, kept in byte 10
+        lda ,u
+        sta b,x
+        leau MVSIZE,u
+        dec tcount
+        bne gto
+        ldx #gboard
+        ldu #desc+2
+        ldy #desc+DSIZE+2
+grec    lda ,x+
+        sta ,u+
+        sta ,y+
+        cmpx #gboard+16
+        blo grec
+        inc again
+gdone   rts
+
+* gswap: exchange cells and before.
+gswap   ldx #cells
+        ldu #before
+gsw1    lda ,x
+        ldb ,u
+        sta ,u+
+        stb ,x+
+        cmpx #cells+16
+        blo gsw1
+        rts
+
+* gstep: step gk of the slide, on the screen that is not shown.
+gstep   lda back
+        lsla
+        lsla
+        sta bpage
+        ldu #mvs
+        lda nmv
+        sta tcount
+gs1     lbsr gwhere
+        ifndef NO_TRAIL
+* NO_TRAIL is a fault for the check only: the trail stays.
+        lbsr erase
+        endc
+        leau MVSIZE,u
+        dec tcount
+        bne gs1
+        ldu #mvs
+        lda nmv
+        sta tcount
+gs2     lbsr gwhere
+        lda gx
+        sta rx
+        lda gy
+        sta ry
+        lda ,u
+        pshs u
+        lbsr gtile
+        puls u
+        ldb back                    this screen now shows the creature here
+        leay 5,u
+        lda gx
+        sta b,y
+        leay 7,u
+        lda gy
+        sta b,y
+        leau MVSIZE,u
+        dec tcount
+        bne gs2
+        rts
+
+* gwhere: gx, gy of the creature at U for step gk.
+gwhere  lda 1,u
+        ldb 3,u
+        bsr lerp
+        sta gx
+        lda 2,u
+        ldb 4,u
+        bsr lerp
+        sta gy
+        rts
+* lerp: A (from) + (B (to) - A) * gk / GSTEPS, in unsigned bytes. GSTEPS
+* is 4.
+lerp    pshs a
+        cmpb ,s
+        bhs lup
+        lda ,s                      to < from: from - (from - to) * gk / 4
+        pshs b
+        suba ,s+
+        ldb gk
+        mul
+        lsra
+        rorb
+        lsra
+        rorb
+        lda ,s+
+        pshs b
+        suba ,s+
+        rts
+lup     subb ,s                     to >= from: from + (to - from) * gk / 4
+        lda gk
+        mul
+        lsra
+        rorb
+        lsra
+        rorb
+        addb ,s+
+        tfr b,a
+        rts
+
+* erase: the trail of the creature at U on this screen: from the place
+* that this screen shows (gox, goy) to gx, gy, on the side that the
+* creature leaves. The creature is 24 bytes by 40 rows, 1 byte and 2 rows
+* into its cell. Paint it with the empty board.
+erase   ldb back
+        leay 5,u
+        lda b,y
+        sta gox
+        leay 7,u
+        lda b,y
+        sta goy
+        lda gx
+        cmpa gox
+        beq ever
+        blo eleft
+        lda gox                     to the right: columns gox+1 .. gx
+        inca
+        sta rx
+        lda gx
+        suba gox
+        bra ehor
+eleft   lda gx                      to the left: gx+25 .. gox+24
+        adda #25
+        sta rx
+        lda gox
+        suba gx
+ehor    sta rw
+        lda goy
+        adda #2
+        sta ry
+        lda #40
+        sta rh
+        bra ehfill
+ever    lda gy
+        cmpa goy
+        beq enone
+        blo eup
+        lda goy                     down: rows goy+2 .. gy+1
+        adda #2
+        sta ry
+        lda gy
+        suba goy
+        bra ever2
+eup     lda gy                      up: rows gy+42 .. goy+41
+        adda #42
+        sta ry
+        lda goy
+        suba gy
+ever2   sta rh
+        lda gox
+        inca
+        sta rx
+        bra evfill
+enone   rts
+
+* ehfill: rh rows of rw bytes from byte rx of row ry, all inside one row
+* of cells, so each row is the same part of emptyrow.
+ehfill  pshs u
+        lbsr rowat
+        clra
+        ldb rx
+        subb #BOARDX
+        addd #emptyrow
+        tfr d,u
+        clra
+        ldb rw
+        std rww
+        ldd #BPR
+        subd rww
+        tfr d,v                     V: from the end of a row to the next
+ehrow   tfr u,y
+        ldw rww
+        tfm y+,x+
+        tfr v,d
+        leax d,x
+        cmpx #WINDOW+$2000
+        blo eh2
+        leax -$2000,x
+        inc page
+        lbsr mapwin
+eh2     dec rh
+        bne ehrow
+        puls u,pc
+
+* evfill: rh rows of 24 bytes from byte rx of row ry, inside one column of
+* cells. Rows CELLY .. CELLY+CELLH-1 of a square are grey; the others are
+* black.
+evfill  lbsr rowat
+        lda ry
+evm     cmpa #SQH
+        blo evm1
+        suba #SQH
+        bra evm
+evm1    sta gm
+evrow   ldy #greyb
+        lda gm
+        cmpa #CELLY
+        blo evz
+        cmpa #CELLY+CELLH
+        blo evr
+evz     ldy #zero
+evr     ldw #24
+        tfm y,x+
+        leax BPR-24,x
+        cmpx #WINDOW+$2000
+        blo ev2
+        leax -$2000,x
+        inc page
+        lbsr mapwin
+ev2     inc gm
+        lda gm
+        cmpa #SQH
+        blo ev3
+        clr gm
+ev3     dec rh
+        bne evrow
+        rts
+
+* gtile: the creature of level A at byte rx+1, row ry+2 (cell rx, ry).
+gtile   deca
+        lsla
+        ldx #sprites
+        ldu a,x
+        inc rx
+        inc ry
+        inc ry
+        lbsr rowat
+        lda #c01_rows
+        sta count
+gtrow   ldw #c01_bpr
+        tfm u+,x+
+        leax BPR-c01_bpr,x
+        cmpx #WINDOW+$2000
+        blo gt2
+        leax -$2000,x
+        inc page
+        lbsr mapwin
+gt2     dec count
+        bne gtrow
+        rts
+
+* sqxy: square A to B, the byte column of its cell, and A, the row.
+sqxy    pshs a
+        anda #3
+        ldb #SQW
+        mul
+        addb #BOARDX+CELLX
+        puls a
+        pshs b
+        lsra
+        lsra
+        ldb #SQH
+        mul
+        addb #CELLY
+        tfr b,a
+        puls b,pc
 
 * seen: topseen is the highest level on the board.
 seen    clr topseen
@@ -1540,6 +1941,18 @@ step    macro
         endc
 
 zero    fcb 0                       a zero byte for the clear
+greyb   fcb GREY                    a grey byte for a slide's trail
+* emptyrow: one row of the empty board inside a row of cells, from byte
+* BOARDX: for each square, black, 26 bytes of grey, black.
+emptyrow
+        fcb 0,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY
+        fcb GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,0
+        fcb 0,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY
+        fcb GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,0
+        fcb 0,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY
+        fcb GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,0
+        fcb 0,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY
+        fcb GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,GREY,0
 mtop    fcb 0                       the highest level made by this move
 topseen fcb 0                       the highest level seen in this game
 snote   fdb 0                       the next note of the sound
@@ -1583,6 +1996,22 @@ gcount  fcb 0
 gcount2 fcb 0
 gbuf    rmb 128                     one glyph, ready to copy to the screen
 moved   fcb 0                       squares changed by the last slide
+before  rmb 16                      the board before the move
+gboard  rmb 16                      the board at the end of the slide
+mvs     rmb MVSIZE*16               the creatures that move
+mvptr   fdb 0
+nmv     fcb 0                       how many creatures move
+mto     fcb 0
+mfrom   fcb 0
+again   fcb 0                       1: draw the new picture on both screens
+gk      fcb 0                       the step of the slide, 1 to GSTEPS
+gx      fcb 0                       a creature's cell column in this step
+gy      fcb 0                       and row
+gox     fcb 0                       the place that this screen shows
+goy     fcb 0
+gm      fcb 0                       a row's place in its square row
+rww     fdb 0
+tcount  fcb 0
 empty   fcb 0
 seed    fdb $7A35                   the generator's state: never 0
 previous fcb 0
@@ -1596,7 +2025,7 @@ page    fcb 0
 square  fcb 0
 sqx     fcb 0
 sqy     fcb 0
-stack   rmb 256
+stack   rmb 128                     at most 26 bytes used (measured)
 stacktop
 ends    fcb 0
         end start

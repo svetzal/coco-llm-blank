@@ -192,6 +192,7 @@ class Game:
         self.seed = SEED
         self.previous = ""
         self.changed = False
+        self.slid = False  # this scan's change was a move: the creatures slid
         self.score = self.best = 0
         self.sounds: list[tuple[tuple[int, int], ...]] = []  # each sound started
         if layout is None:
@@ -224,7 +225,7 @@ class Game:
             self.phase = "L"
 
     def scan(self, keys: str, first: bool) -> None:
-        self.changed = False
+        self.changed = self.slid = False
         held = "" if keys == "-" else keys
         pressed = "".join(k for k in held if k not in self.previous)
         self.previous = held
@@ -249,7 +250,7 @@ class Game:
                 self.spawn()
                 self.judge()
                 self.best = max(self.best, self.score)
-                self.changed = True
+                self.changed = self.slid = True
                 self.chime(top)
 
     def demo_scan(self, pressed: str) -> None:
@@ -314,6 +315,7 @@ class Game:
             self.board = after
             self.score += points
             self.judge()
+            self.slid = True
             self.chime(top)
         elif action == "end":
             self.end_demo()
@@ -356,7 +358,10 @@ def states(variant: str) -> tuple[Screens, ...]:
     """The screens at each checkpoint, one for each scan.
 
     The program draws a new picture into the screen that is not shown, then
-    shows it. It does this once at the start and after each change. Scans
+    shows it. It does this once at the start and after each change. After a
+    move, the creatures slide in 4 steps, one flip each, and then both
+    screens get the new picture, one flip each. That is an even number of
+    flips, so the screen that was shown is shown again. Scans
     after the end of the script hold no keys. Where the script gives a board
     and a phase written by hand, the model must agree with them.
     """
@@ -375,7 +380,9 @@ def states(variant: str) -> tuple[Screens, ...]:
     result = []
     for number, words in enumerate(lines, start=1):
         game.scan(words[0], first=number == 1)
-        if game.changed:
+        if game.slid:
+            held = [game.scene(), game.scene()]
+        elif game.changed:
             shown = 1 - shown
             held[shown] = game.scene()
         if layout is not None:
@@ -596,13 +603,18 @@ def heard_notes(edges: Edges, notes, rate: int, short: bool) -> tuple[list, list
 
 
 def burst_notes(burst: Edges, sounds, rate: int, playing: bool) -> tuple[list, list] | None:
-    """One burst of edges: one sound, or a sound that the next sound cut short.
+    """One burst of edges: one sound, or two sounds with no silence between.
 
-    The last sound in the burst may still play at the end of the recording.
+    The first of two sounds is complete, or the next sound cut it short. Try
+    the complete sound first: its last edge goes to rest, and the next sound
+    can start less than 10 ms after it. The last sound in the burst may still
+    play at the end of the recording.
     """
     if len(sounds) == 1:
         return heard_notes(burst, sounds[0], rate, short=playing)
-    for cut in range(1, len(burst.at)):
+    complete = sum(timer_note(*n)[1] for n in sounds[0])
+    cuts = [complete] if complete < len(burst.at) else []
+    for cut in cuts + list(range(1, len(burst.at))):
         before = heard_notes(Edges(burst.at[:cut], burst.size[:cut]), sounds[0], rate, True)
         if before is None:
             continue

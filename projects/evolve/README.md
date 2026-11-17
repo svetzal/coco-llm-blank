@@ -18,7 +18,11 @@ creatures. When you win, the squares turn green and the words "YOU WIN!"
 appear. When you lose, the squares turn red and the words "GAME OVER" appear.
 Then press Space for a new game.
 
-Each merge plays a short note. A creature that appears for the first time in
+In a move, the creatures slide to their new squares (owner request). Two
+equal creatures slide onto each other. Then the merged creature and the new
+microbe appear.
+
+Each merge plays a short note when the creatures meet. A creature that appears for the first time in
 a game plays three rising notes. A win and a loss each have their own sound.
 
 The program draws each change on a second screen that you do not see. Then
@@ -28,21 +32,40 @@ once.
 ### Speed
 
 The program reads the keys once in each video frame. It copies each row with
-the 6309 instruction `TFM`. Thus the program needs the 6309. In XRoar, from
-one stop of the check to the next (emulated time):
+the 6309 instruction `TFM`. Thus the program needs the 6309. It runs the CPU
+at the fast rate, in the 6309's Native Mode (owner choice, for the slide).
+In XRoar, from one stop of the check to the next (emulated time, measured in
+the `play` build):
 
 | Step | Time |
 | --- | --- |
 | A scan with no change | 17 ms, one video frame |
-| A move | 100 to 168 ms |
-| Space on the title, and the first move after it | 300 to 335 ms each |
+| Space on the title | 167 ms |
+| A move, with its slide | 234 to 301 ms |
+| The first move after Space | 335 ms |
 
-Each of these times includes two waits for the vertical blank. The first
-move is slower because each screen must first be made black.
+The first move is slower because the hidden screen still shows the title.
+The program must first draw the board on it. A sound uses CPU time while it
+plays, so a move can take one or two more video frames.
 
-A sound uses CPU time while it plays. With the sounds, some moves take one or
-two more video frames than without them (measured in the `rules` and `play`
-builds).
+## The slide
+
+The creatures slide in 4 steps (agent choice). Each step takes 2 to 4 video
+frames, which depends on the number of creatures that move. A lab measured
+the method. Read the
+[animation guide](../../guidance/techniques/animation.md).
+
+1. The hidden screen first gets the board before the move.
+2. In each step, a creature moves a quarter of the way from its old square
+   to its new square. All creatures of a move start and stop together.
+3. In each step, the program draws on the hidden screen, then shows it. For
+   each creature, it paints the empty board on the part that the creature
+   left since that screen showed it. Then it draws the creature at its new
+   place. It draws only the creature, without the grey around it.
+4. After the last step, both screens show the slide's end. Then the program
+   draws the merges, the new microbe and the score on both screens.
+
+A press of a key during a slide has no effect.
 
 ## The rules of a move
 
@@ -254,8 +277,9 @@ defaults for the CoCo 3, not choices of the owner.
   (target default)
 - XRoar machine profile: `coco3` (target default)
 - RAM: 512 KiB (owner requirement)
-- CPU and clock: Hitachi 6309 (owner requirement) at the stock clock (target
-  default). The program uses `TFM`, so it needs the 6309.
+- CPU and clock: Hitachi 6309 (owner requirement) at the fast rate, `$FFD9`,
+  in Native Mode (owner choice, for the slide). The program uses `TFM`, so it
+  needs the 6309.
 - Video standard: NTSC (owner requirement)
 - Firmware: the CoCo 3 ROM, `coco3.rom` (target default)
 - Graphics: richer than the CoCo 1 and 2 (owner requirement). GIME 320×192
@@ -267,6 +291,8 @@ defaults for the CoCo 3, not choices of the owner.
 - Board: 4 by 4 squares (agent-selected prototype choice)
 - Display: two screens, and a switch in the vertical blank, so that a change
   appears at once (owner requirement)
+- Slide: the creatures slide to their new squares in each move (owner
+  request), in 4 steps (agent choice)
 - Controls: the keyboard (owner requirement). The four arrow keys slide the
   creatures, one move for each press. Space starts a game on the title
   screen, and a new game after a win or a loss (agent-selected prototype
@@ -312,6 +338,11 @@ the hidden screen the picture before it. The check also compares XRoar's
 rendered picture of the shown screen. The rendered picture shows the colour
 of the squares.
 
+After a move, both screens must hold the new picture. The slide flips the
+screens 6 times, so the screen that was shown is shown again. A trail that
+the slide leaves on either screen fails the check. The check does not see
+the steps of a slide.
+
 At each stop, the check also records XRoar's mixer output from the start.
 The model gives each sound that started up to that scan. The check finds the
 DAC edges and compares each note: its number of edges, and its pitch within
@@ -322,7 +353,8 @@ the edges.
 The model calculates the pitch from the timer: a period is the reload
 value plus 2 counts of 279.365 ns on the 1986 GIME. A sound can still play at
 a stop, so the last sound can end early in the recording. A sound that the
-next move stops is also accepted. The `play` build has one.
+next move stops is also accepted. So is a sound that ends less than 10 ms
+before the next sound starts. The `demo` build has one: the loss and the win.
 
 | Build | Defines | Keys | What it checks |
 | --- | --- | --- | --- |
@@ -381,6 +413,7 @@ These faults were run once on a copy, and each failed the check:
 | `NO_ENVELOPE`: each note stays at its first step | `play` | scan 6: an edge differs from the envelope by 150% |
 | `IDLE_KEEP`: a held key does not stop the count on the title | `demoexit` | scan 10: the demo shows, not the title |
 | `DARK_KEYS`: no key lights in the demo | `demo` | screen B: 50 bytes |
+| `NO_TRAIL`: a slide does not paint the board where a creature was | `play` | screen A: 832 bytes |
 | `$FF99` for 640×192 with 4 colours (board step) | main | rendered check only |
 
 The fault defines are only for the check. The game that you play has none of
@@ -410,6 +443,10 @@ at CPU `$0E00-$5FFF`. CPU `$6000-$9FFF` is the window to two pages of a
 screen, so a row is never split. The program does not use BASIC, which is in
 `$8000-$9FFF`. Screen A is
 at physical `$00000` and screen B at `$08000`.
+
+The stack is 128 bytes. Up to scan 301, the `play` and `demo` builds used at
+most 26 bytes of it. A copy that filled the stack with a marker measured
+this once.
 
 The program masks IRQ, so
 nothing of BASIC runs after the start. It turns on the GIME's VBORD flag and
