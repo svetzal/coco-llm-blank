@@ -1,0 +1,26 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# The first target is the default. Firmware is checked against roms.json.
+# Record these values in the contract of the project README. The tables of the
+# standard targets are in guidance/starter/toolchain.md, under "Target tables".
+[targets.coco3]
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+disk = "disk11.rom"
+screen = 0x10400         # logical $0400 in the physical RAM snapshot
+
+[memory]
+at = { start = 0x3000 }
+
+# For the check: the label where the snapshot is taken, and a label that must
+# never run.
+[check]
+checkpoint = "done"
+frames = [1]
+unreachable = "done+1"
+emulated_seconds = 10
