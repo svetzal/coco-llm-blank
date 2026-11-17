@@ -52,7 +52,10 @@
 *     says an interrupt can stop a TFM; the 6309 Book, PDF 230, says not.
 *
 * Memory (CPU addresses, BASIC's MMU map):
-*   $0E00-$5FFF  this program, its sprites, its words and its own stack
+*   $0E00-$3FFF  this program, its words and its own stack
+*   $4000-$5FFF  the window for the creatures (sprat): page $3A holds
+*                c01-c08, page $3B holds c09-c11 (Tepolt, PDF 56: the
+*                reset program loads the MMU with $38-$3F)
 *   $6000-$9FFF  the window that shows two 8 KiB pages of a screen, so a
 *                row is never split ($FFA3 and $FFA4). BASIC is not used.
 *   physical $00000-$077FF  screen A, 160 bytes x 192 rows (pages 0-3)
@@ -947,10 +950,7 @@ ev3     dec rh
         rts
 
 * gtile: the creature of level A at byte rx+1, row ry+2 (cell rx, ry).
-gtile   deca
-        lsla
-        ldx #sprites
-        ldu a,x
+gtile   lbsr sprat
         inc rx
         inc ry
         inc ry
@@ -968,6 +968,18 @@ gtrow   ldw #c01_bpr
 gt2     dec count
         bne gtrow
         rts
+
+* sprat: U = the first byte of the creature of level A, with its page
+* mapped at CPU $4000 (MMU task 0, $FFA2). Changes A and B.
+sprat   pshs x
+        deca
+        ldx #sprpage
+        ldb a,x
+        stb $FFA2
+        lsla
+        ldx #sprites
+        ldu a,x
+        puls x,pc
 
 * sqxy: square A to B, the byte column of its cell, and A, the row.
 sqxy    pshs a
@@ -1541,10 +1553,9 @@ tpose   ldb square
         sta rx
         lda 1,x
         sta ry
-        ldx #sprites
-        ldb square
-        lslb
-        ldu b,x
+        lda square
+        inca
+        lbsr sprat
         lda #c01_bpr
         sta rw
         lda #c01_rows
@@ -1647,10 +1658,7 @@ bsq     ldx #cells
 * A creature: 2 grey rows, 40 rows of grey byte, creature, grey byte, then
 * 2 grey rows. The creature is SPRX-CELLX = 1 byte and SPRY-CELLY = 2 rows
 * into the cell, and 24 + 2 = CELLW bytes wide.
-bsprite deca
-        lsla
-        ldx #sprites
-        ldu a,x
+bsprite lbsr sprat
         lda #SPRY-CELLY
         sta rh
         lbsr fill                   X: the row below, mapped
@@ -1905,18 +1913,11 @@ columns
         endc
         fcb $EF,$DF,$BF,$7F
 
-sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11
-        include "c01.asm"
-        include "c02.asm"
-        include "c03.asm"
-        include "c04.asm"
-        include "c05.asm"
-        include "c06.asm"
-        include "c07.asm"
-        include "c08.asm"
-        include "c09.asm"
-        include "c10.asm"
-        include "c11.asm"
+* The address of each creature at CPU $4000-$5FFF, and the physical page
+* that sprat maps there for it (BASIC's map: CPU $4000 is page $3A, CPU
+* $6000 is page $3B).
+sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09-$2000,c10-$2000,c11-$2000
+sprpage fcb $3A,$3A,$3A,$3A,$3A,$3A,$3A,$3A,$3B,$3B,$3B
         include "c01-palette.asm"
         include "text.asm"
 * step: one step of the demo (demo.asm): wait, action, two arguments.
@@ -1933,12 +1934,6 @@ step    macro
         fcb \2,\3,\4
         endm
         include "demo.asm"
-        if c01_bpr-24
-        error "c01.asm: a sprite row must be 24 bytes"
-        endc
-        if c01_rows-40
-        error "c01.asm: a sprite must be 40 rows"
-        endc
 
 zero    fcb 0                       a zero byte for the clear
 greyb   fcb GREY                    a grey byte for a slide's trail
@@ -2028,4 +2023,39 @@ sqy     fcb 0
 stack   rmb 128                     at most 26 bytes used (measured)
 stacktop
 ends    fcb 0
+        if ends>$4000
+        error "the program must end below $4000: the creatures are there"
+        endc
+
+* The creatures, outside the program. LOADM puts them in physical pages
+* $3A and $3B, at CPU $4000 and $6000 in BASIC's map. While the program
+* runs, CPU $6000-$9FFF is the window to a screen, so sprat maps the page
+* of a creature at CPU $4000 to read it.
+        org $4000
+        include "c01.asm"
+        include "c02.asm"
+        include "c03.asm"
+        include "c04.asm"
+        include "c05.asm"
+        include "c06.asm"
+        include "c07.asm"
+        include "c08.asm"
+        if c01_bpr-24
+        error "c01.asm: a sprite row must be 24 bytes"
+        endc
+        if c01_rows-40
+        error "c01.asm: a sprite must be 40 rows"
+        endc
+sprlo
+        if sprlo>$6000
+        error "c01-c08 must fit in CPU $4000-$5FFF"
+        endc
+        org $6000
+        include "c09.asm"
+        include "c10.asm"
+        include "c11.asm"
+sprhi
+        if sprhi>$8000
+        error "c09-c11 must fit in CPU $6000-$7FFF"
+        endc
         end start

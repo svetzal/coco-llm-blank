@@ -435,9 +435,14 @@ XRoar sets its picture window once for each field, from the mode at that
 time. Thus the program waits some fields after the mode change before the
 first stop.
 
-Memory: the program, the sprites, the words and the program's own stack are
-at CPU `$0E00-$5FFF`. CPU `$6000-$9FFF` is the window to two pages of a
-screen, so a row is never split. The program does not use BASIC, which is in
+Memory: the program, the words and the program's own stack are at CPU
+`$0E00-$3FFF`. The creatures load at CPU `$4000-$5DFF` and `$6000-$6B3F`, in
+physical pages `$3A` and `$3B` of BASIC's map. The reset program loads the
+MMU with pages `$38` to `$3F` (Tepolt, PDF 56). While the program runs, it
+maps the page of a creature at CPU `$4000` to read it.
+
+CPU `$6000-$9FFF` is
+the window to two pages of a screen, so a row is never split. The program does not use BASIC, which is in
 `$8000-$9FFF`. Screen A is
 at physical `$00000` and screen B at `$08000`.
 
