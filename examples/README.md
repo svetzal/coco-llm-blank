@@ -32,7 +32,7 @@ Each example README gives the commands for that example.
 
 | Task | Example | Machines | Scope |
 | --- | --- | --- | --- |
-| Set up a graphics screen | [First screen](first-screen/README.md) | CoCo 1, 2, 2B, 3 | All eight VDG full-graphics modes, with the SAM and `$FF22` values and `PMODE` numbers. Rendered check of each mode. RG1, RG2 and RG3 are not checked on CoCo 3. |
+| Set up a graphics screen | [First screen](first-screen/README.md) | CoCo 1, 2, 2B, 3 | All eight VDG full-graphics modes, with the SAM and `$FF22` values and `PMODE` numbers. Rendered check of each mode. |
 | Select a colour set | [Palette swatches](palette-swatches/README.md) | CoCo 1, 2, 2B, 3 | `$FF22` CSS in CG6 and RG6, with the colour of each code. The evidence for the `xroar` and `xroar-coco3` palettes in `scripts/graphics.py`. |
 | Restore scenery under moving objects | [Moving objects](moving-objects/README.md) | CoCo 1, 2, 2B, 3 | Scenery buffer, save-under and full-redraw methods over a changing background. Rendered check of each method. |
 | Show only finished frames | [Page flip](page-flip/README.md) | CoCo 1, 2, 2B, 3 | Two moving rectangles, drawn into a hidden screen. SAM flip on every machine; GIME `$FF9D` flip (variant `coco3`) on CoCo 3 at 128 and 512 KiB. Rendered check of both screens at selected flips. |

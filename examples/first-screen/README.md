@@ -17,11 +17,11 @@ one bit for each pixel. Extended Color BASIC gives five modes a `PMODE` number.
 | Mode | PMODE | Pixels | Colours | Bytes per row | Screen bytes | SAM V2..V0 | `$FF22` bits 7..4 | Checked on |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | CG1 | | 64x64 | 4 | 16 | 1024 | `001` | `1000` | CoCo 1, 2, 2B, 3 |
-| RG1 | | 128x64 | 2 | 16 | 1024 | `001` | `1001` | CoCo 1, 2, 2B |
+| RG1 | | 128x64 | 2 | 16 | 1024 | `001` | `1001` | CoCo 1, 2, 2B, 3 |
 | CG2 | | 128x64 | 4 | 32 | 2048 | `010` | `1010` | CoCo 1, 2, 2B, 3 |
-| RG2 | 0 | 128x96 | 2 | 16 | 1536 | `011` | `1011` | CoCo 1, 2, 2B |
+| RG2 | 0 | 128x96 | 2 | 16 | 1536 | `011` | `1011` | CoCo 1, 2, 2B, 3 |
 | CG3 | 1 | 128x96 | 4 | 32 | 3072 | `100` | `1100` | CoCo 1, 2, 2B, 3 |
-| RG3 | 2 | 128x192 | 2 | 16 | 3072 | `101` | `1101` | CoCo 1, 2, 2B |
+| RG3 | 2 | 128x192 | 2 | 16 | 3072 | `101` | `1101` | CoCo 1, 2, 2B, 3 |
 | CG6 | 3 | 128x192 | 4 | 32 | 6144 | `110` | `1110` | CoCo 1, 2, 2B, 3 |
 | RG6 | 4 | 256x192 | 2 | 32 | 6144 | `110` | `1111` | CoCo 1, 2, 2B, 3 |
 
@@ -35,8 +35,6 @@ one bit for each pixel. Extended Color BASIC gives five modes a `PMODE` number.
 - The leftmost pixel of a byte is in the high bits: bit 7 in RG modes, bits 7
   and 6 in CG modes.
 - Tepolt names the CoCo 3 modes G1C, G1R, G2C, G2R, G3C, G3R, G6C and G6R.
-- Do not use RG1, RG2 or RG3 on a CoCo 3 until the open question in
-  [Machines](#machines) has an answer.
 
 ## Machines
 
@@ -52,23 +50,16 @@ no other setup.
   [Palette-swatches](../palette-swatches/README.md) gives both sets of RGB
   values. They are measured in XRoar.
 
-Open question: two sources give RG1, RG2 and RG3 on the CoCo 3, with the same
-values. They are Tepolt PDF 46 (G1R, G2R and G3R) and the *Color Computer 3
-Service Manual* PDF 18. But XRoar 1.13 shows these three modes in a different
-way. It shows only bits 6, 4, 2 and 0 of each byte. Each of these pixels is two
-pixels wide. This result is measured in XRoar.
+RG1, RG2 and RG3 on the CoCo 3: two sources give these modes with the same
+values as the VDG. They are Tepolt PDF 46 (G1R, G2R and G3R) and the *Color
+Computer 3 Service Manual* PDF 18. The rendered check on the CoCo 3 measures
+normal pixels in XRoar 1.13.1, which agrees with the two sources.
 
-XRoar does this on purpose. Ciaran Anscomb added it in XRoar commit 1c35e61f
-(2024-12-31, "gime: fix some VDG emulation resolutions"). The commit message
-calls it an observation and says that more work is necessary. The code is in
-`src/tcc1014/tcc1014.c` of XRoar 1.13, lines 1335-1341, 1436-1439 and
-1589-1598. MAME's `gime.cpp` (master, November 2026, PR #16698) shows these
-modes with normal pixels. It shows each bit as two pixels only when the GIME
-reads 32 bytes for each row.
-
-We know of no test on a physical CoCo 3. To get the answer, run the `rg3`
-variant on a physical CoCo 3. Until then, the `rg1`, `rg2` and `rg3` variants
-run only on the CoCo 1 and CoCo 2 targets.
+The negative control is XRoar 1.13.1 with upstream commit 4e862c46 reverted.
+That build shows each pixel two pixels wide, and the `rg3` check fails. XRoar
+1.13 and older show the modes with that double-width rendering. The `run`
+command uses the ordinary XRoar. On macOS that is Homebrew's XRoar, which can
+be older. We know of no test on a physical CoCo 3.
 
 ## Set up the screen
 

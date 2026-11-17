@@ -44,30 +44,23 @@ screen = 0x10400         # logical $0400 in the physical RAM snapshot
 at = { start = 0x3000 }
 
 # The plain build shows CG6 (PMODE 3). Each variant selects one other mode.
-# XRoar 1.13's CoCo 3 shows RG1, RG2 and RG3 with double-width pixels on
-# purpose (src/tcc1014/tcc1014.c, from XRoar commit 1c35e61f). No hardware
-# test confirms it. See the open question in the README. Thus those variants
-# run only on the CoCo 1 and 2 targets.
 [variants.rg6]
 defines = ["RG6"]
 
 [variants.rg3]
 defines = ["RG3"]
-targets = ["coco1", "coco2", "coco2b"]
 
 [variants.cg3]
 defines = ["CG3"]
 
 [variants.rg2]
 defines = ["RG2"]
-targets = ["coco1", "coco2", "coco2b"]
 
 [variants.cg2]
 defines = ["CG2"]
 
 [variants.rg1]
 defines = ["RG1"]
-targets = ["coco1", "coco2", "coco2b"]
 
 [variants.cg1]
 defines = ["CG1"]

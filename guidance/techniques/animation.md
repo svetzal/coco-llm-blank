@@ -102,13 +102,13 @@ settle these limits.
 the XRoar model only. No published source that we read gives this timing.
 The *Color Computer 3 Service Manual* says only that VSYNC is still a PIA
 interrupt source. [Tandy CoCo 3, PDF 37][coco3-37] We read the source of the
-pinned XRoar 1.13:
+pinned XRoar 1.13.1:
 
 - CoCo 1 and 2 (`src/mc6847/mc6847.h` lines 64-70, `src/mc6847/mc6847.c`
   lines 385-393): a frame has 262 lines. FS falls at line 230, the end of the
   active display. FS is low for 32 lines. The active display starts 70 lines
   after the fall.
-- CoCo 3 (`src/tcc1014/tcc1014.c` lines 1192-1257, at 60 Hz in the CoCo
+- CoCo 3 (`src/tcc1014/tcc1014.c` lines 1191-1256, at 60 Hz in the CoCo
   modes): a frame has 263 lines. FS falls at the start of vertical sync,
   about 28 lines after the end of the active display. Thus it falls about 28
   lines later than on the VDG. FS is low for 4 lines. The active display
@@ -221,7 +221,7 @@ changes or delays into assembly.
   information, PDF 15.
 - Tandy, *Color Computer 3 Service Manual*, PDF 11-18 and 37. Resource
   `coco3-service`.
-- XRoar 1.13 source, the pinned emulator: `src/mc6847/mc6847.h`,
+- XRoar 1.13.1 source, the pinned emulator: `src/mc6847/mc6847.h`,
   `src/mc6847/mc6847.c` and `src/tcc1014/tcc1014.c`. A model of the
   hardware, not a published hardware source.
 - Laurence A. Tepolt, *Assembly Language Programming for the CoCo3* (1987),

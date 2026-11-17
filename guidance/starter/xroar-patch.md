@@ -129,8 +129,7 @@ different.
    `git rebase --onto <commit> <tag> coco-capture`.
 5. Run the trial again with `--base <commit>`.
 
-[The current pin](#the-current-pin) is an example: its base is one commit
-after its tag.
+XRoar 1.13 was an example: its base was one commit after its tag.
 
 ## Fix a build failure
 
@@ -247,9 +246,9 @@ Do not commit `local/`. Make changes to `scripts/xroar_upstream.py` and
 
 ## The current pin
 
-XRoar 1.13: tag commit `af501b71`, base commit `1630182d`. The base is one
-commit after the tag, and the release archive matches it. The series has five
-patches. Its captures are the reference for the next trial.
+XRoar 1.13.1: tag commit and base commit `1182e4ee`. The release archive
+matches the tag. The series has five patches. Its captures are the reference
+for the next trial.
 
 ## Toward upstream
 
