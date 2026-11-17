@@ -73,6 +73,7 @@ GREY    equ $11                     two pixels of register 1 (dark grey $10)
 TOP     equ 11                      the last creature: it wins the game
 WINCODE equ $12                     square colour code after a win (green)
 LOSECODE equ $07                    square colour code after a loss (red)
+REST    equ $80                     the DAC level between sounds
 SPACE   equ 16                      the held bit of Space
 * $FF9D = physical address bits 18..11; $FF9E = bits 10..3 stays 0.
 VIEWA   equ $00                     $00000 / 2048
@@ -495,13 +496,13 @@ chime   ldx #losesnd
         cmpb topseen
         bls cblip
         stb topseen
-        ldb #16
+        ldb #22
         mul
         ldx #finds
         abx
         bra cplay
         endc
-cblip   ldb #8
+cblip   ldb #10
         mul
         ldx #blips
         abx
@@ -516,32 +517,60 @@ cplay   orcc #$40
         andcc #$BF
 cdone   rts
 
-* load: start the note at X. Write the reload value low byte first: the
-* write to $FF94 starts the timer. At the end of the sound, turn off the
-* timer FIRQ.
+* load: start the note at X, at the first step of the envelope. Write the
+* reload value low byte first: the write to $FF94 starts the timer. At the
+* end of the sound, turn off the timer FIRQ and put the DAC at rest.
 load    ldd 2,x
         beq lstop
         std edges
+        ldb 5,x
+        stb envper
+        stb envleft
+        ldd #env
+        std envptr
+        lda env
+        sta amp
         ldd ,x
         stb $FF95
         sta $FF94
-        leax 4,x
+        leax 6,x
         stx snote
         rts
 lstop   clr $FF93
+        lda #REST
+        ora lowbits
+        sta $FF20
         rts
 
 * firq: the GIME timer FIRQ. FIRQ saves only CC and PC, so save A, B and
-* X. Read $FF93 to release the request. Change the DAC level: one edge of
-* the square wave. After the last edge of the note, start the next note.
+* X. Read $FF93 to release the request. One edge of the square wave: the
+* DAC goes to the other side of the rest level, amp away from it. After
+* envper edges, amp takes the next step of the envelope. After the last
+* edge of the note, start the next note.
 firq    pshs a,b,x
         lda $FF93
-        lda dacval
-        eora #$40
-        sta dacval
+        lda amp
+        com high
+        bne fup
+        nega
+fup     adda #REST
         ora lowbits
         sta $FF20
-        ldd edges
+        dec envleft
+        bne fcount
+        lda envper
+        sta envleft
+        ldx envptr
+        ifndef NO_ENVELOPE
+* NO_ENVELOPE is a fault for the check only: the first step stays.
+        cmpx #env+7
+        bhs fcount
+        leax 1,x
+        stx envptr
+        lda ,x
+        sta amp
+        endc
+fcount  ldd edges
         subd #1
         std edges
         bne fdone
@@ -564,7 +593,7 @@ sound   lda $FF21                   $FF20 bits 7-2 are outputs
         lda $FF20
         anda #3
         sta lowbits
-        ora dacval
+        ora #REST
         sta $FF20                   the DAC at rest
         lda $FF01                   the audio mux selects the DAC
         anda #$F7
@@ -1088,14 +1117,21 @@ points  fcb 0,0,0,0,0,0                    levels 0 and 1: no merge makes them
 * timer reload value. A period of the timer is the reload value plus 2
 * counts of 279.365 ns, and each period is half a wave:
 * reload = 14318180 / 8 / f - 2. The second word is the number of DAC
-* edges: 2 * f * t / 1000. A sound ends with two zero words.
+* edges: 2 * f * t / 1000. The third word is the number of edges in each
+* step of the envelope: an eighth of the note. A sound ends with two zero
+* words.
 note    macro
-        fdb 1789773/\1-2,\1*\2/500
+        fdb 1789773/\1-2,\1*\2/500,\1*\2/4000
         endm
+
+* env: the amplitude of the square wave in each eighth of a note, in DAC
+* units ($04 is one step of the 6-bit DAC). A short rise, then a fade. The
+* last step lasts to the end of the note.
+env     fcb $18,$20,$1C,$18,$14,$10,$0C,$08
 
 * The C major scale from C5 (523 Hz) to B6 (1976 Hz). A merge to level L
 * uses note L-2: level 2 is C5 and level 11 is E6.
-* blips: one short note for a merge. 8 bytes for each level.
+* blips: one short note for a merge. 10 bytes for each level.
 blips   note 523,40
         fdb 0,0
         note 587,40
@@ -1117,7 +1153,7 @@ blips   note 523,40
         note 1319,40
         fdb 0,0
 * finds: a creature seen for the first time in this game. Three rising
-* notes of the scale: L-2, L and L+2. 16 bytes for each level.
+* notes of the scale: L-2, L and L+2. 22 bytes for each level.
 finds   note 523,40
         note 659,40
         note 784,80
@@ -1216,7 +1252,11 @@ mtop    fcb 0                       the highest level made by this move
 topseen fcb 0                       the highest level seen in this game
 snote   fdb 0                       the next note of the sound
 edges   fdb 0                       DAC edges left in this note
-dacval  fcb $80                     DAC bits 7-2 now
+amp     fcb 0                       the amplitude now, in DAC units
+high    fcb 0                       $FF: the wave is above the rest level
+envptr  fdb 0                       the step of the envelope now
+envper  fcb 0                       edges in each step of this note
+envleft fcb 0                       edges left in this step
 lowbits fcb 0                       $FF20 bits 1-0, kept as they were
 score   fcb 0,0,0                   BCD, most significant byte first
 best    fcb 0,0,0

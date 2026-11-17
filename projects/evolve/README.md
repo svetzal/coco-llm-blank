@@ -34,7 +34,7 @@ one stop of the check to the next (emulated time):
 | --- | --- |
 | A scan with no change | 17 ms, one video frame |
 | A move | 100 to 168 ms |
-| Space on the title, and the first move after it | 300 to 320 ms each |
+| Space on the title, and the first move after it | 300 to 335 ms each |
 
 Each of these times includes two waits for the vertical blank. The first
 move is slower because each screen must first be made black.
@@ -78,6 +78,15 @@ builds).
 The sound is a square wave from the 6-bit DAC. The GIME timer starts each
 edge of the wave (agent choice). The notes come from the C major scale, from
 C5 (523 Hz) to B6 (1976 Hz) (agent choice).
+
+Each note has an envelope, so that it sounds plucked, not like a beep (owner
+request). The envelope has eight equal steps. Each step sets the amplitude:
+how far the wave goes above and below the rest level. In DAC units, the
+amplitudes are `$18`, `$20`, `$1C`, `$18`, `$14`, `$10`, `$0C` and `$08`
+(agent choice). Thus the note rises in its first eighth. After that, it fades.
+
+One DAC step is `$04`. After a sound, the
+DAC goes back to the rest level, `$80`.
 
 | Event | Sound |
 | --- | --- |
@@ -257,7 +266,9 @@ of the squares.
 At each stop, the check also records XRoar's mixer output from the start.
 The model gives each sound that started up to that scan. The check finds the
 DAC edges and compares each note: its number of edges, and its pitch within
-1%.
+1%. The size of each edge inside a note must follow the envelope, within 10%.
+The mixer's scale is not known, so the check uses the median scale of all
+the edges.
 
 The model calculates the pitch from the timer: a period is the reload
 value plus 2 counts of 279.365 ns on the 1986 GIME. A sound can still play at
@@ -308,6 +319,7 @@ These faults were run once on a copy, and each failed the check:
 | `SILENT`: no timer FIRQ | `play` | scan 6: no sound |
 | `NO_FIND`: a new creature plays the merge note | `play` | scan 6: 41 edges, not three notes |
 | `FLAT`: each merge plays the note below | `play` | scan 6: the notes do not fit |
+| `NO_ENVELOPE`: each note stays at its first step | `play` | scan 6: an edge differs from the envelope by 150% |
 | `$FF99` for 640×192 with 4 colours (board step) | main | rendered check only |
 
 The fault defines are only for the check. The game that you play has none of

@@ -396,62 +396,92 @@ def expected_frame(frame: int, variant: str = "", target: str = "coco3") -> np.n
 COUNT_HZ = 14_318_180 / 4
 SILENCE_MS = 10  # a longer gap between edges ends a sound
 PITCH_TOLERANCE = 0.01
+# The envelope of the README: the amplitude in each eighth of a note, in DAC
+# units. The last step lasts to the end of the note.
+ENVELOPE = (0x18, 0x20, 0x1C, 0x18, 0x14, 0x10, 0x0C, 0x08)
+STEP_TOLERANCE = 0.1
 
 
-def timer_note(hz: int, ms: int) -> tuple[float, int]:
-    """The frequency that the timer makes for a note, and its number of edges."""
+def timer_note(hz: int, ms: int) -> tuple[float, int, int]:
+    """The frequency that the timer makes for a note, its number of edges, and
+    the number of edges in each step of the envelope."""
     reload = int(COUNT_HZ / 2 / hz) - 2
-    return COUNT_HZ / 2 / (reload + 2), 2 * hz * ms // 1000
+    return COUNT_HZ / 2 / (reload + 2), 2 * hz * ms // 1000, hz * ms // 4000
 
 
-def sound_edges(samples: np.ndarray) -> np.ndarray:
-    """The sample numbers of the DAC edges of the sounds.
+def amplitude(edge: int, per_step: int) -> int:
+    return ENVELOPE[min(edge // per_step, len(ENVELOPE) - 1)]
 
-    The first change is the program's setup, which puts the DAC at rest. It is
-    not part of a sound.
+
+class Edges(NamedTuple):
+    at: np.ndarray  # sample numbers
+    size: np.ndarray  # the change of the mixer output
+
+
+def sound_edges(samples: np.ndarray) -> Edges:
+    """The DAC edges of the sounds.
+
+    Changes at most 8 samples apart are one edge: the highest note has an
+    edge every 21 samples, and the end of a sound puts the DAC at rest just
+    after its last edge (4 samples after it, measured). The first edge is the program's setup, which puts
+    the DAC at rest. It is not part of a sound.
     """
-    change = np.abs(np.diff(samples.astype(int)))
-    return np.flatnonzero(change > 1000)[1:]
+    values = samples.astype(int)
+    changes = np.flatnonzero(np.diff(values))
+    if len(changes) == 0:
+        return Edges(changes, changes)
+    groups = np.split(changes, np.flatnonzero(np.diff(changes) > 8) + 1)
+    at = np.array([g[0] for g in groups])
+    size = np.array([abs(values[g[-1] + 1] - values[g[0]]) for g in groups])
+    return Edges(at[1:], size[1:])
 
 
-def heard_notes(edges: np.ndarray, notes, rate: int, short: bool) -> list[float] | None:
-    """The pitch of each note in edges, or None if the edges do not fit the notes.
+def heard_notes(edges: Edges, notes, rate: int, short: bool) -> tuple[list, list] | None:
+    """The pitch of each note, and the steps of the edges inside each note.
 
-    Each note must have its number of edges and its pitch within 1%. If short
-    is true, the sound may stop early: the edges may be only its start.
+    Give None if the edges do not fit the notes. Each note must have its number
+    of edges and its pitch within 1%. If short is true, the sound may stop
+    early: the edges may be only its start. A step is (the measured change,
+    the change that the envelope gives). The first edge of a note leaves the
+    note before it, and the last edge of a sound goes to rest. They are not
+    compared.
     """
-    heard = []
+    heard, steps = [], []
     first = 0
-    for hz, ms in notes:
-        pitch, count = timer_note(hz, ms)
-        part = edges[first : first + count]
+    for number, (hz, ms) in enumerate(notes):
+        pitch, count, per_step = timer_note(hz, ms)
+        part = edges.at[first : first + count]
         if len(part) > 2:
             hz_heard = rate / 2 / ((part[-1] - part[0]) / (len(part) - 1))
             if abs(hz_heard - pitch) > PITCH_TOLERANCE * pitch:
                 return None
             heard.append(round(float(hz_heard), 1))
+        inner = len(part) - 1 if number == len(notes) - 1 else len(part)
+        for edge in range(1, inner):
+            given = amplitude(edge - 1, per_step) + amplitude(edge, per_step)
+            steps.append((int(edges.size[first + edge]), given))
         first += len(part)
         if len(part) < count:
             break
-    if first != len(edges) or (not short and first != sum(timer_note(*n)[1] for n in notes)):
+    if first != len(edges.at) or (not short and first != sum(timer_note(*n)[1] for n in notes)):
         return None
-    return heard
+    return heard, steps
 
 
-def burst_notes(burst: np.ndarray, sounds, rate: int, playing: bool) -> list[float] | None:
+def burst_notes(burst: Edges, sounds, rate: int, playing: bool) -> tuple[list, list] | None:
     """One burst of edges: one sound, or a sound that the next sound cut short.
 
     The last sound in the burst may still play at the end of the recording.
     """
     if len(sounds) == 1:
         return heard_notes(burst, sounds[0], rate, short=playing)
-    for cut in range(1, len(burst)):
-        before = heard_notes(burst[:cut], sounds[0], rate, short=True)
+    for cut in range(1, len(burst.at)):
+        before = heard_notes(Edges(burst.at[:cut], burst.size[:cut]), sounds[0], rate, True)
         if before is None:
             continue
-        after = heard_notes(burst[cut:], sounds[1], rate, short=playing)
+        after = heard_notes(Edges(burst.at[cut:], burst.size[cut:]), sounds[1], rate, playing)
         if after is not None:
-            return before + after
+            return before[0] + after[0], before[1] + after[1]
     return None
 
 
@@ -462,15 +492,25 @@ def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
     a sound that the next move cut short and the sound of that move. Each note
     must have its number of edges and its pitch within 1%. The last sound may
     still play at the snapshot: the recording can end in it.
+
+    The size of each edge inside a note follows the envelope. The mixer's
+    scale is not known, so the check takes the median ratio of the measured
+    to the given change as the scale. Each edge must be within 10% of it.
     """
     expected = list(states(variant)[frame - 1].sounds)
     edges = sound_edges(sound.samples)
     gap = SILENCE_MS * sound.rate // 1000
-    bursts = np.split(edges, np.flatnonzero(np.diff(edges) > gap) + 1) if len(edges) else []
+    splits = np.flatnonzero(np.diff(edges.at) > gap) + 1
+    bursts = (
+        [Edges(a, z) for a, z in zip(np.split(edges.at, splits), np.split(edges.size, splits))]
+        if len(edges.at)
+        else []
+    )
     heard: list[float] = []
+    steps: list[tuple[int, int]] = []
     cuts = 0
     for number, burst in enumerate(bursts, start=1):
-        playing = number == len(bursts) and len(sound.samples) - burst[-1] < gap
+        playing = number == len(bursts) and len(sound.samples) - burst.at[-1] < gap
         for size in (1, 2):
             sounds = expected[:size]
             fit = burst_notes(burst, sounds, sound.rate, playing) if len(sounds) == size else None
@@ -478,14 +518,26 @@ def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
                 break
         else:
             raise ValueError(
-                f"Scan {frame}: sound {number} in the mixer output ({len(burst)} edges) "
+                f"Scan {frame}: sound {number} in the mixer output ({len(burst.at)} edges) "
                 f"does not fit the next expected sounds {expected[:2]}."
             )
-        heard += fit
+        heard += fit[0]
+        steps += fit[1]
         cuts += size - 1
         del expected[:size]
     if expected:
         raise ValueError(
             f"Scan {frame}: {len(expected)} expected sounds are not in the mixer output."
         )
-    return {"frame": frame, "sounds": len(bursts) + cuts, "cut_short": cuts, "notes_hz": heard}
+    result = {"frame": frame, "sounds": len(bursts) + cuts, "cut_short": cuts, "notes_hz": heard}
+    if not steps:
+        return result
+    ratios = np.array([measured / given for measured, given in steps])
+    scale = float(np.median(ratios))
+    worst = float(np.abs(ratios / scale - 1).max())
+    if worst > STEP_TOLERANCE:
+        raise ValueError(
+            f"Scan {frame}: an edge differs from the envelope by {worst:.0%} "
+            f"({len(steps)} edges, scale {scale:.1f} for each DAC unit)."
+        )
+    return result | {"envelope_edges": len(steps), "mixer_per_dac_unit": round(scale, 2)}
