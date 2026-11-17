@@ -23,16 +23,19 @@ The `run` command opens XRoar. Close the window to stop it.
 
 ## Contract
 
-The values come from the `coco3` table in
+The owner chose the CoCo 3, 512 KiB, the 6309 and NTSC.
+
+The other values come from the `coco3` table in
 [the target tables](../../guidance/starter/toolchain.md#target-tables). They are
 defaults for the CoCo 3, not choices of the owner.
 
 - CoCo model and revision: CoCo 3 (owner requirement) with the 1986 GIME
   (target default)
 - XRoar machine profile: `coco3` (target default)
-- RAM: 128 KiB (target default)
-- CPU and clock: 6809 at the stock clock (target default)
-- Video standard: NTSC (target default)
+- RAM: 512 KiB (owner requirement)
+- CPU and clock: Hitachi 6309 (owner requirement) at the stock clock (target
+  default)
+- Video standard: NTSC (owner requirement)
 - Firmware: the CoCo 3 ROM, `coco3.rom` (target default)
 - Graphics: richer than the CoCo 1 and 2 (owner requirement). The mode is not
   chosen yet.
