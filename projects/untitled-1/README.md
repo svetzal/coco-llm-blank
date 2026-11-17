@@ -54,8 +54,20 @@ The owner confirmed this chain.
 | 10 | Primate |
 | 11 | Human |
 
-Two creatures of level `n` merge into one creature of level `n + 1`. A new
-creature is level 1 on most moves and level 2 on some moves.
+Two creatures of level `n` merge into one creature of level `n + 1`.
+
+## New creatures
+
+The owner gave these rules:
+
+- The game starts with 2 creatures on the board.
+- A new creature is always the first creature of the chain, the microbe.
+- A new creature appears after every move.
+
+A press that changes nothing on the board is not a move, so no creature
+appears (agent default). Without this rule, the player can fill the board with
+presses that do nothing. New creatures appear in a random empty square
+(agent default).
 
 ## The art
 
@@ -118,7 +130,21 @@ defaults for the CoCo 3, not choices of the owner.
 - Disk: `coco.toml` names Disk BASIC, `disk11.rom`, for a disk image only.
   Read [disk images](../../guidance/starter/toolchain.md#disk-images).
 
-## Check
+## Next steps
+
+In order of importance:
+
+1. New creatures: 2 at the start, and a microbe in a random empty square
+   after every move. Add a fixed random seed for the check only.
+2. The end of the game: a win when the human appears, and the end when no
+   move can change the board. Add a fixed layout for the check only.
+3. No ripple on the screen. Draw the next board on a second screen that is
+   not shown, then show it in the vertical blank. Read the GIME display
+   address and the vertical sync sources first.
+4. Faster drawing, so that the next board is ready soon after the key press.
+5. Later: the game's name, a title screen, a score, sound, and a board
+   colour that is not grey, so that grey creatures stand out.
+
 
 ```sh
 uv run python scripts/coco.py check projects/untitled-1
