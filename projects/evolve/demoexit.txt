@@ -1,0 +1,18 @@
+# The quick demo build: defines QUICKDEMO, for the check only. The demo starts
+# after 2 scans on the title without a key, and each wait of the demo is 1 scan.
+# Keys purpose. Line 1 is the startup sample; line N is held at scan N.
+# U/D/L/R = arrows, F = Space, - = none.
+-    startup sample
+-    the title: 1 scan without a key
+-    2 scans: the demo starts
+-    the first key of the demo lights
+L    an arrow ends the demo: the title
+-    1 scan without a key
+-    2 scans: the demo starts again
+U    an arrow ends the demo: the title
+U    a held key on the title starts the count again
+-    1 scan without a key
+-    2 scans: the demo starts again
+F    Space in the demo starts a new game
+-    release
+L    a move of the new game

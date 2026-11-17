@@ -10,7 +10,8 @@ square. The player wins when the last creature of the chain appears. The game
 ends when no move can change the grid.
 
 The title screen shows the name and all eleven creatures, like a family
-that poses for a photo. Press Space to start.
+that poses for a photo. Press Space to start. If nobody presses a key for 5
+seconds, a demo shows how to play.
 
 The program draws the 4 by 4 board in 320×192 with 16 colours. The arrow keys slide and merge the
 creatures. When you win, the squares turn green and the words "YOU WIN!"
@@ -82,11 +83,12 @@ C5 (523 Hz) to B6 (1976 Hz) (agent choice).
 Each note has an envelope, so that it sounds plucked, not like a beep (owner
 request). The envelope has eight equal steps. Each step sets the amplitude:
 how far the wave goes above and below the rest level. In DAC units, the
-amplitudes are `$18`, `$20`, `$1C`, `$18`, `$14`, `$10`, `$0C` and `$08`
+amplitudes are `$10`, `$18`, `$14`, `$10`, `$0C`, `$08`, `$08` and `$04`
 (agent choice). Thus the note rises in its first eighth. After that, it fades.
 
-One DAC step is `$04`. After a sound, the
-DAC goes back to the rest level, `$80`.
+The owner asked for a softer sound than the first envelope. Thus the highest
+amplitude is `$18`, not `$20`, and the fade ends lower. One DAC step is
+`$04`. After a sound, the DAC goes back to the rest level, `$80`.
 
 | Event | Sound |
 | --- | --- |
@@ -106,12 +108,50 @@ DAC goes back to the rest level, `$80`.
 The squares change colour because palette register 1 changes. Grey parts of
 the creatures change colour too. Words on the screen come later.
 
+## The demo
+
+The demo teaches the game by cause and effect (owner request). It plays the
+real game from fixed boards, with the same creatures and the same sounds. An
+arrow key lights first. Then the creatures move.
+
+- On the title screen, 300 scans without a held key start the demo: 5
+  seconds (owner request). A held key starts the count again.
+- In the demo, Space starts a new game. An arrow key goes back to the title.
+  The program reads only these five keys.
+- At the end, the demo goes back to the title, and the count starts again.
+- The demo does not change the best score.
+
+The left margin shows "DEMO" and a caption. The right margin shows "SPACE TO
+PLAY" and the four arrow keys. The key of the next move turns yellow.
+
+| Lesson | Caption | What happens |
+| --- | --- | --- |
+| 1 | ARROWS PUSH ALL THAT WAY | Left, then Down: two creatures slide to the edge. |
+| 2 | AFTER EACH MOVE A NEW ONE COMES | Right: a microbe appears after the move. |
+| 3 | TWO ALIKE MERGE AND EVOLVE | Right: two microbes make the first jellyfish, with three notes. |
+| 4 | KEEP GOING UP THE CHAIN | Up: two jellyfish make a trilobite, with one note. Up: two trilobites make the first fish, with three notes. |
+| 5 | BOARD FULL AND STUCK GAME OVER | Right fills the board, and no two neighbours are equal: the loss. |
+| 6 | MAKE THE HUMAN TO WIN! | Left: two primates make the human: the win. |
+
+[demo.py](demo.py) holds the captions and the steps. The new microbe of each
+move goes in a square that the demo gives, so each lesson is always the
+same. The waits of the demo come to 1940 scans, about 32 seconds (calculated).
+The scans that draw take longer, so the demo lasts some seconds more. The
+captions and keys are agent choices. Their places are in
+[layout.py](layout.py).
+
 ## What the owner asked for
 
 > A CoCo 3 game with some richer graphics. Call it untitled-1 for now.
 
 > A sliding puzzle where matching tiles merge, with creatures that evolve:
 > fish, primates, dinosaurs, and so on. Keyboard controls.
+
+> I'd like the title screen to default to a demo after 5 seconds.
+
+The owner also asked that the demo teach the cause and effect of each
+action. The arrow keys push the tiles. Two equal creatures merge and evolve.
+A game can be lost and won. The demo uses the game's creatures and sounds.
 
 The game is original: it uses this kind of play, but its own name, creatures
 and art.
@@ -237,6 +277,9 @@ defaults for the CoCo 3, not choices of the owner.
   sounds, the square wave and the GIME timer are agent choices. Read
   [the sound guide](../../guidance/techniques/sound.md) and
   [timer sound](../../examples/timer-sound/README.md).
+- Demo: after 5 seconds on the title, a demo of moves, merges, a loss and
+  a win, with the game's creatures and sounds (owner requirement). The
+  lessons, captions, keys and timings are agent choices.
 - Loader: XRoar runs the DECB binary directly (starter default)
 - Disk: `coco.toml` names Disk BASIC, `disk11.rom`, for a disk image only.
   Read [disk images](../../guidance/starter/toolchain.md#disk-images).
@@ -255,8 +298,11 @@ In order of importance:
 uv run python scripts/coco.py check projects/evolve
 ```
 
-The check runs five builds. Each build stops at `ready` 21 times, once for
-each scan of the keyboard. At each stop, the check compares both screens,
+The check runs seven builds. Each build stops at `ready` at scans 1 to 40,
+and at scans 300 and 301. The program comes to `ready` once for each scan of
+the keyboard.
+
+At each stop, the check compares both screens,
 30720 bytes each at physical `$00000` and `$08000`, with
 [expected.py](expected.py). The shown screen must hold the new picture, and
 the hidden screen the picture before it. The check also compares XRoar's
@@ -282,6 +328,16 @@ next move stops is also accepted. The `play` build has one.
 | `rules` | `LAYOUT`, `RULES`, `FIRST_EMPTY` | [keys.txt](keys.txt) | The rules of a move, the score, and the keys. |
 | `win` | `LAYOUT`, `WIN`, `FIRST_EMPTY` | [win.txt](win.txt) | The human wins, with its banner. No moves after it. Space starts a new game, and the banner goes. The best score stays. |
 | `lose` | `LAYOUT`, `LOSE`, `FIRST_EMPTY` | [lose.txt](lose.txt) | A press that changes nothing. A full board with no pair loses, with its banner. No moves after it. Space. |
+| `demo` | `QUICKDEMO` | none | The full demo, each step at its own scan, and its sounds. Then the title, and the demo again. |
+| `demoexit` | `QUICKDEMO` | [demoexit.txt](demoexit.txt) | An arrow ends the demo. A held key on the title starts the count again. Space in the demo starts a game. |
+
+The main build shows the title at scan 300 and the demo at scan 301: 300
+scans without a key.
+
+`QUICKDEMO` is a test control. The demo starts after 2 scans, and each wait
+of the demo is 1 scan, so the stops show each step. The model plays the
+steps of [demo.py](demo.py) by the rules. It must agree with the board that
+`demo.py` gives by hand after each move.
 
 The keys go through XRoar's keyboard matrix and the program's own scanner.
 
@@ -320,6 +376,8 @@ These faults were run once on a copy, and each failed the check:
 | `NO_FIND`: a new creature plays the merge note | `play` | scan 6: 41 edges, not three notes |
 | `FLAT`: each merge plays the note below | `play` | scan 6: the notes do not fit |
 | `NO_ENVELOPE`: each note stays at its first step | `play` | scan 6: an edge differs from the envelope by 150% |
+| `IDLE_KEEP`: a held key does not stop the count on the title | `demoexit` | scan 10: the demo shows, not the title |
+| `DARK_KEYS`: no key lights in the demo | `demo` | screen B: 50 bytes |
 | `$FF99` for 640×192 with 4 colours (board step) | main | rendered check only |
 
 The fault defines are only for the check. The game that you play has none of

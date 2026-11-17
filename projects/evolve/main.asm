@@ -88,9 +88,22 @@ TITLE   equ 3
 NOSCENE equ 0
 TSCENE  equ 1
 BSCENE  equ 2
+DSCENE  equ 3                       the board of the demo
+WHITE   equ 3                       palette register of the demo's words
+KEYOFF  equ 2                       an arrow key that is not pressed: grey
+KEYON   equ 7                       a pressed arrow key: yellow
+        ifdef QUICKDEMO
+* For the check only: the demo starts after 2 scans, and each wait of the
+* demo is 1 scan.
+IDLE    equ 2
+        else
+IDLE    equ IDLESCANS
+        endc
 DSCORE  equ 18
 DBEST   equ 21
-DSIZE   equ 24
+DCAP    equ 24                      the caption that a demo screen shows
+DLIT    equ 25                      the keys that a demo screen shows lit
+DSIZE   equ 26
 * The scores, in the black margins beside the board: byte column and row.
 SCOREX  equ 2                       5 digits: pixels 4-43
 BESTX   equ 138                     5 digits: pixels 276-315
@@ -251,11 +264,28 @@ update  ldb previous
 * A fault for the check only: a held arrow moves at every sample.
         tfr a,b
         endc
+        tst demo
+        lbne udemo
         tst phase
         beq uplay
         bitb #SPACE                 title, won or lost: Space starts a game
-        beq uend
-        lbsr newgame
+        lbne newgame
+        lda phase
+        cmpa #TITLE
+        bne uend
+* On the title, count the scans without a held key. A held key starts the
+* count again. At IDLE scans, start the demo.
+        ldd #0
+        ifndef IDLE_KEEP
+* IDLE_KEEP is a fault for the check only: a held key does not stop the count.
+        tst held
+        bne uidle
+        endc
+        ldd idle
+        addd #1
+uidle   std idle
+        cmpd #IDLE
+        lbhs dstart
 uend    rts
 uplay   anda #15
         ldx #arrows
@@ -287,6 +317,98 @@ ufound  andb ,x
         lbsr chime
         inc dirty
 unew    rts
+
+* udemo: in the demo, Space starts a game and an arrow goes back to the
+* title. Without a new press, the demo goes on.
+udemo   bitb #SPACE
+        beq udother
+        clr demo
+        lbra newgame
+udother tstb
+        beq dtick
+        lbra dend
+
+* dstart: start the demo at its first step.
+dstart  lda #1
+        sta demo
+        clr lit
+        ldx #dsteps
+        stx dstep
+        clr dwait
+* dtick: one scan of the demo. When the wait of the next step ends, do it,
+* and each step after it with a wait of 0. A step is 4 bytes: the wait
+* before it (in scans), the action and two arguments.
+dtick   lda dwait
+        beq dexec
+        dec dwait
+        bne ddone
+dexec   ldx dstep
+        leay 4,x
+        sty dstep
+        ldd 2,x
+        std darg                    darg and darg+1
+        lda 1,x
+        lsla
+        ldx #dops
+        jsr [a,x]
+        tst demo
+        beq ddone                   the demo ended
+        ldx dstep
+        lda ,x
+        beq dexec
+        sta dwait
+ddone   rts
+dops    fdb dboard,dcap,dkey,dmove,dend
+
+* dboard: a new board from the table dboards. The demo game starts again.
+dboard  lda darg
+        ldb #16
+        mul
+        addd #dboards
+        tfr d,x
+        ldu #cells
+dbcopy  lda ,x+
+        sta ,u+
+        cmpu #cells+16
+        blo dbcopy
+        clr phase
+        inc dirty
+        lbra seen
+* dcap: the caption at the left.
+dcap    lda darg
+        sta caption
+        inc dirty
+        rts
+* dkey: the arrow keys that are lit at the right (held bits).
+dkey    lda darg
+        ifdef DARK_KEYS
+        clra                        a fault for the check only: no key lights
+        endc
+        sta lit
+        inc dirty
+        rts
+* dmove: one move in direction darg, as a press of an arrow in play. The
+* microbe goes in square darg+1. The demo never makes a press that changes
+* nothing, and the square is always empty (the model checks both).
+dmove   ldb darg
+        lbsr slide
+        ldx #cells
+        ldb darg+1
+        lda #1
+        sta b,x
+        lbsr judge
+        lbsr chime
+        inc dirty
+        rts
+* dend: back to the title, and the count to the next demo starts again.
+dend    clr demo
+        clr lit
+        lda #TITLE
+        sta phase
+        ldd #0
+        std idle
+        inc dirty
+        rts
 
 * record: the best score is the highest score since the program started.
 record  ldd score
@@ -648,20 +770,29 @@ render  lda back
         sta ,x
         clr 1,x
 rdone   rts
-rboard  lda ,x
-        cmpa #BSCENE
+rboard  lda #BSCENE                  the game, or the demo
+        tst demo
+        beq rscene
+        lda #DSCENE
+rscene  sta want
+        cmpa ,x
         beq rbanner
         lbsr clear                  a new scene: every square must be drawn
         ldx dptr
-        lda #BSCENE
+        lda want
         sta ,x
         clr 1,x
         leay 2,x
-        lbsr forget                 Y: the scores of the record
-        ldb #6
+        lbsr forget                 Y: the scores, caption and keys
+        ldb #8
         lbsr forget8
+        lda want
+        cmpa #DSCENE
+        beq rdlab
         lbsr labels
-        ldx dptr
+        bra rlab
+rdlab   lbsr dlabels
+rlab    ldx dptr
 rbanner lda 1,x                     a banner that must go: make its area
         beq rsq                     black, then draw squares 4-11 again
         cmpa phase
@@ -680,14 +811,161 @@ rbanner lda 1,x                     a banner that must go: make its area
         lbsr fill
         endc
 rsq     lbsr board
+        tst demo
+        bne rmarg
         lbsr scores
-        ldx dptr
+        bra rphase
+rmarg   lbsr margins
+rphase        ldx dptr
         lda phase
         beq rdone
         cmpa 1,x
         beq rdone
         sta 1,x
         lbra banner
+
+* dlabels: the words at the top of the demo's margins.
+dlabels lda #WHITE
+        lbsr inkset
+        ldx #dtop
+        lbra sayall
+
+* margins: the demo's caption and arrow keys, where they differ from what
+* the screen shows.
+margins ldx dptr
+        lda caption
+        cmpa DCAP,x
+        beq mkeys
+        sta DCAP,x
+        ldd #0*256+CAPY             make the caption area black
+        std rx
+        ldd #24*256+CAPH
+        std rw
+        clr rval
+        lbsr fill
+        lda #WHITE
+        lbsr inkset
+        lda caption
+        lsla
+        ldx #captions
+        ldx a,x
+        lbsr sayall
+mkeys   ldx dptr
+        lda lit
+        cmpa DLIT,x
+        beq mdone
+        sta DLIT,x
+        ldy #keys
+mkey    lda #KEYOFF                 keys: glyph, byte column, row, held bit
+        ldb 3,y
+        bitb lit
+        beq mink
+        lda #KEYON
+mink    lbsr inkset
+        ldd 1,y
+        sta rx
+        stb ry
+        lda ,y
+        pshs y
+        lbsr bigc
+        puls y
+        leay 4,y
+        cmpy #keys+16
+        blo mkey
+mdone   rts
+
+* inkset: the bytes for ink A. inkpair: two pixels (none, right, left, both).
+* solid: both pixels.
+inkset  clr inkpair
+        sta inkpair+1
+        tfr a,b
+        lslb
+        lslb
+        lslb
+        lslb
+        stb inkpair+2
+        ora inkpair+2
+        sta inkpair+3
+        sta solid
+        rts
+
+* sayall: lines of words from X. Each line: byte column, row, glyph
+* numbers, $FF. $FE ends the lines.
+sayall  lda ,x+
+        cmpa #$FE
+        beq sadone
+        sta rx
+        lda ,x+
+        sta ry
+sachar  lda ,x+
+        cmpa #$FF
+        beq sayall
+        pshs x
+        bsr glyph
+        ldu #gbuf
+        ldd #4*256+8
+        std rw
+        lbsr blit
+        lda rx
+        adda #4
+        sta rx
+        puls x
+        bra sachar
+sadone  rts
+
+* glyph: glyph A of font, in the ink of inkpair, into gbuf: 8 rows of
+* 4 bytes. Each two bits of a glyph row make one byte.
+glyph   ldb #8
+        mul
+        addd #font
+        tfr d,y
+        ldu #gbuf
+        lda #8
+        sta gcount
+grow    ldb ,y+
+        lda #4
+        sta gcount2
+gpair   clra
+        lslb
+        rola
+        lslb
+        rola
+        ldx #inkpair
+        lda a,x
+        sta ,u+
+        dec gcount2
+        bne gpair
+        dec gcount
+        bne grow
+        rts
+
+* bigc: glyph A at twice the size, in the ink of solid, at byte rx of row
+* ry: 16 rows of 8 bytes. Each bit makes one byte, and each row two rows.
+bigc    ldb #8
+        mul
+        addd #font
+        tfr d,y
+        ldu #gbuf
+        lda #8
+        sta gcount
+bgrow   ldb ,y+
+        lda #8
+        sta gcount2
+bgbit   clra
+        lslb
+        bcc bgset
+        lda solid
+bgset   sta 8,u
+        sta ,u+
+        dec gcount2
+        bne bgbit
+        leau 8,u
+        dec gcount
+        bne bgrow
+        ldu #gbuf
+        ldd #8*256+16
+        std rw
+        lbra blit
 
 * addpts: add the points of a merge to the score: 2 to the power of the new
 * level A, from the table "points" (3 BCD bytes for each level).
@@ -1127,7 +1405,7 @@ note    macro
 * env: the amplitude of the square wave in each eighth of a note, in DAC
 * units ($04 is one step of the 6-bit DAC). A short rise, then a fade. The
 * last step lasts to the end of the note.
-env     fcb $18,$20,$1C,$18,$14,$10,$0C,$08
+env     fcb $10,$18,$14,$10,$0C,$08,$08,$04
 
 * The C major scale from C5 (523 Hz) to B6 (1976 Hz). A merge to level L
 * uses note L-2: level 2 is C5 and level 11 is E6.
@@ -1240,6 +1518,20 @@ sprites fdb c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11
         include "c11.asm"
         include "c01-palette.asm"
         include "text.asm"
+* step: one step of the demo (demo.asm): wait, action, two arguments.
+step    macro
+        ifdef QUICKDEMO
+        if \1
+        fcb 1
+        else
+        fcb 0
+        endc
+        else
+        fcb \1
+        endc
+        fcb \2,\3,\4
+        endm
+        include "demo.asm"
         if c01_bpr-24
         error "c01.asm: a sprite row must be 24 bytes"
         endc
@@ -1276,7 +1568,20 @@ lptr    fdb 0
 lcount  fcb 0
 last    fcb 0
 held    fcb 0
-phase   fcb 0                       0 play, 1 won, 2 lost
+phase   fcb 0                       0 play, 1 won, 2 lost, 3 title
+demo    fcb 0                       1: the demo plays
+idle    fdb 0                       scans on the title without a key
+dstep   fdb 0                       the next step of the demo
+dwait   fcb 0                       scans before the next step
+darg    fcb 0,0                     the arguments of the step
+caption fcb 0                       the demo's caption
+lit     fcb 0                       the demo's lit keys (held bits)
+want    fcb 0                       the scene to draw
+inkpair fcb 0,0,0,0
+solid   fcb 0
+gcount  fcb 0
+gcount2 fcb 0
+gbuf    rmb 128                     one glyph, ready to copy to the screen
 moved   fcb 0                       squares changed by the last slide
 empty   fcb 0
 seed    fdb $7A35                   the generator's state: never 0

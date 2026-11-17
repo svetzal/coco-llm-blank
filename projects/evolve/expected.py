@@ -25,7 +25,19 @@ from PIL import Image
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
+from demo import CAPTIONS, IDLE_SCANS, STEPS
 from font import DIGIT_INK, GLYPHS, WORDS
+from layout import (
+    CAPTION_ROW,
+    KEYS,
+    LINE_PITCH,
+    MARGIN_LEFT,
+    MARGIN_RIGHT,
+    MARGIN_TOP_LEFT,
+    MARGIN_TOP_RIGHT,
+    MARGIN_TOP_ROW,
+    centred,
+)
 
 WIDTH, ROWS = 320, 192
 SQUARE_W, SQUARE_H = 56, 48  # pixels; square on the display
@@ -51,16 +63,22 @@ LABEL_ROW, DIGIT_ROW = 8, 20
 TOP = 11  # the human: it wins the game
 ARROWS = "UDLR"
 SEED = 0x7A35
-FRAMES = 21
-# Each build: its fixed layout (None: a new game) and whether a new microbe
-# goes in the first empty square (True) or where the generator says.
+FRAMES = 301  # the last checkpoint of coco.toml
+# Each build: its key script, its fixed layout (None: a new game; a new
+# microbe then goes where the generator says, not in the first empty square)
+# and whether it is a quick demo (QUICKDEMO: the demo starts after 2 scans,
+# and each wait of the demo is 1 scan).
 BUILDS = {
-    "": ("", None),
-    "play": ("play.txt", None),
-    "rules": ("keys.txt", [1, 1, 1, 1, 1, 1, 2, 0, 0, 3, 0, 3, 0, 2, 2, 2]),
-    "win": ("win.txt", [0] * 12 + [10, 10, 0, 0]),
-    "lose": ("lose.txt", [1, 2, 1, 2, 2, 1, 2, 1, 3, 4, 3, 4, 3, 1, 3, 0]),
+    "": ("", None, False),
+    "play": ("play.txt", None, False),
+    "rules": ("keys.txt", [1, 1, 1, 1, 1, 1, 2, 0, 0, 3, 0, 3, 0, 2, 2, 2], False),
+    "win": ("win.txt", [0] * 12 + [10, 10, 0, 0], False),
+    "lose": ("lose.txt", [1, 2, 1, 2, 2, 1, 2, 1, 3, 4, 3, 4, 3, 1, 3, 0], False),
+    "demo": ("", None, True),
+    "demoexit": ("demoexit.txt", None, True),
 }
+# The demo's words and keys: palette registers.
+WORD_INK, KEY_OFF, KEY_ON = WHITE, 2, 7
 
 # The contract's codes in register order, and their gime-composite colours as
 # `graphics.py palettes` lists them (measured in XRoar 1.13.1).
@@ -163,8 +181,14 @@ def step(seed: int) -> int:
 class Game:
     """The game as the README states it, one scan at a time."""
 
-    def __init__(self, layout: list[int] | None, first_empty: bool) -> None:
+    def __init__(self, layout: list[int] | None, first_empty: bool, quick: bool = False) -> None:
         self.first_empty = first_empty
+        self.idle_scans = 2 if quick else IDLE_SCANS
+        self.quick = quick
+        self.idle = 0  # scans on the title without a held key
+        self.demo = False
+        self.step = self.wait = 0
+        self.caption, self.lit = "", ""
         self.seed = SEED
         self.previous = ""
         self.changed = False
@@ -207,9 +231,14 @@ class Game:
         if first:
             return  # the startup sample only seeds the history
         self.seed = step(self.seed)
+        if self.demo:
+            self.demo_scan(pressed)
+            return
         if self.phase != "P":
             if "F" in pressed:
                 self.new_game()
+            elif self.phase == "T":
+                self.title_scan(held)
             return
         arrows = "".join(k for k in held if k in ARROWS)
         if len(arrows) == 1 and arrows in pressed:
@@ -222,6 +251,72 @@ class Game:
                 self.best = max(self.best, self.score)
                 self.changed = True
                 self.chime(top)
+
+    def demo_scan(self, pressed: str) -> None:
+        """In the demo, Space starts a game and an arrow goes back to the title."""
+        if "F" in pressed:
+            self.demo = False
+            self.new_game()
+        elif pressed:
+            self.end_demo()
+        else:
+            self.tick()
+
+    def title_scan(self, held: str) -> None:
+        """Count the scans without a held key. At idle_scans, the demo starts."""
+        self.idle = 0 if held else self.idle + 1
+        if self.idle >= self.idle_scans:
+            self.demo, self.lit, self.step, self.wait = True, "", 0, 0
+            self.tick()
+
+    def end_demo(self) -> None:
+        self.demo, self.phase, self.idle, self.lit = False, "T", 0, ""
+        self.changed = True
+
+    def step_wait(self, number: int) -> int:
+        wait = STEPS[number][0]
+        return min(wait, 1) if self.quick else wait
+
+    def tick(self) -> None:
+        """One scan of the demo: the steps whose wait ends in this scan."""
+        if self.wait:
+            self.wait -= 1
+            if self.wait:
+                return
+        while True:
+            self.demo_step(*STEPS[self.step][1:])
+            self.step += 1
+            if not self.demo:
+                return
+            self.wait = self.step_wait(self.step)
+            if self.wait:
+                return
+
+    def demo_step(self, action: str, *args) -> None:
+        self.changed = True
+        if action == "board":
+            self.board, self.phase = parse_board(args[0]), "P"
+            self.seen = max(self.board)
+        elif action == "caption":
+            self.caption = args[0]
+        elif action == "key":
+            self.lit = "" if args[0] == "-" else args[0]
+        elif action == "move":
+            arrow, square, given = args
+            after, points, top = move(self.board, arrow)
+            if after == self.board or after[square]:
+                raise ValueError(
+                    f"demo.py: the move {arrow} must change the board and leave square {square} empty"
+                )
+            after[square] = 1
+            if after != parse_board(given):
+                raise ValueError(f"demo.py: the rules give {after} after {arrow}, not {given}")
+            self.board = after
+            self.score += points
+            self.judge()
+            self.chime(top)
+        elif action == "end":
+            self.end_demo()
 
     def chime(self, top: int) -> None:
         """The sound of a move: a loss, a win, a new creature, a merge or none."""
@@ -238,6 +333,8 @@ class Game:
         if self.phase == "T":
             return ("T",)
         banner = self.phase if self.phase in "WL" else ""
+        if self.demo:
+            return ("D", tuple(self.board), banner, self.caption, self.lit)
         return ("B", tuple(self.board), banner, self.score, self.best)
 
 
@@ -263,7 +360,7 @@ def states(variant: str) -> tuple[Screens, ...]:
     after the end of the script hold no keys. Where the script gives a board
     and a phase written by hand, the model must agree with them.
     """
-    script, layout = BUILDS[variant]
+    script, layout, quick = BUILDS[variant]
     lines: list[list[str]] = []
     if script:
         lines = [
@@ -272,7 +369,7 @@ def states(variant: str) -> tuple[Screens, ...]:
             if line.strip() and not line.startswith("#")
         ]
     lines += [["-"]] * (FRAMES - len(lines))
-    game = Game(layout, first_empty=layout is not None)
+    game = Game(layout, first_empty=layout is not None, quick=quick)
     held: list[tuple | None] = [None, game.scene()]  # the start draws screen B
     shown = 1
     result = []
@@ -320,6 +417,32 @@ def put_number(screen: np.ndarray, value: int, x: int) -> None:
         screen[DIGIT_ROW : DIGIT_ROW + 8, left : left + 8] = marks * DIGIT_INK
 
 
+def put_text(screen: np.ndarray, text: str, x: int, y: int, ink: int, scale: int = 1) -> None:
+    """Letters of font.py from pixel x of row y, at a scale."""
+    for place, letter in enumerate(text):
+        marks = np.array([[c == "#" for c in row] for row in GLYPHS[letter]], dtype=np.uint8)
+        big = np.kron(marks, np.ones((scale, scale), dtype=np.uint8))
+        left = x + 8 * scale * place
+        screen[y : y + 8 * scale, left : left + 8 * scale] = big * ink
+
+
+def demo_margins(screen: np.ndarray, caption: str, lit: str) -> None:
+    """The demo: its words at the top of each margin, the caption at the left
+    and the four arrow keys at the right."""
+    for margin, texts in ((MARGIN_LEFT, MARGIN_TOP_LEFT), (MARGIN_RIGHT, MARGIN_TOP_RIGHT)):
+        for number, text in enumerate(texts):
+            put_text(
+                screen, text, centred(text, margin), MARGIN_TOP_ROW + number * LINE_PITCH, WORD_INK
+            )
+    for number, text in enumerate(CAPTIONS.get(caption, [])):
+        put_text(
+            screen, text, centred(text, MARGIN_LEFT), CAPTION_ROW + number * LINE_PITCH, WORD_INK
+        )
+    for arrow, glyph in zip("UDLR", "^v<>", strict=True):
+        x, y = KEYS[arrow]
+        put_text(screen, glyph, x, y, KEY_ON if arrow in lit else KEY_OFF, scale=2)
+
+
 def box(screen: np.ndarray, area: tuple[int, int, int, int], value: int) -> None:
     x, y, w, h = area
     screen[y : y + h, x : x + w] = value
@@ -338,11 +461,15 @@ def picture(scene: tuple | None) -> np.ndarray:
         put_word(screen, "evolve", TITLE_ROW)
         put_word(screen, "press", PRESS_ROW)
         return screen
-    _, board, banner, score, best = scene
-    put_word(screen, "score", LABEL_ROW, SCORE_LABEL)
-    put_word(screen, "best", LABEL_ROW, BEST_LABEL)
-    put_number(screen, score, SCORE_DIGITS)
-    put_number(screen, best, BEST_DIGITS)
+    kind, board, banner, *margins = scene
+    if kind == "B":
+        score, best = margins
+        put_word(screen, "score", LABEL_ROW, SCORE_LABEL)
+        put_word(screen, "best", LABEL_ROW, BEST_LABEL)
+        put_number(screen, score, SCORE_DIGITS)
+        put_number(screen, best, BEST_DIGITS)
+    else:
+        demo_margins(screen, *margins)
     for square, level in enumerate(board):
         x0 = BOARD_X + (square % 4) * SQUARE_W
         y0 = (square // 4) * SQUARE_H
@@ -398,7 +525,7 @@ SILENCE_MS = 10  # a longer gap between edges ends a sound
 PITCH_TOLERANCE = 0.01
 # The envelope of the README: the amplitude in each eighth of a note, in DAC
 # units. The last step lasts to the end of the note.
-ENVELOPE = (0x18, 0x20, 0x1C, 0x18, 0x14, 0x10, 0x0C, 0x08)
+ENVELOPE = (0x10, 0x18, 0x14, 0x10, 0x0C, 0x08, 0x08, 0x04)
 STEP_TOLERANCE = 0.1
 
 

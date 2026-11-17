@@ -49,10 +49,19 @@ defines = ["LAYOUT", "WIN", "FIRST_EMPTY"]
 keys = "lose.txt"
 defines = ["LAYOUT", "LOSE", "FIRST_EMPTY"]
 
+# For the check only: the demo starts after 2 scans, and each wait of the
+# demo is 1 scan, so that the snapshots show each step.
+[variants.demo]
+defines = ["QUICKDEMO"]
+
+[variants.demoexit]
+keys = "demoexit.txt"
+defines = ["QUICKDEMO"]
+
 # For the check: the label where each snapshot is taken (once for each scan,
 # so once for each key-script line), and a data label that must never run.
 [check]
 checkpoint = "ready"
-frames = ["1-21"]
+frames = ["1-40", "300-301"]   # 300-301: the demo starts after 5 seconds
 unreachable = "lines"
 emulated_seconds = 60
