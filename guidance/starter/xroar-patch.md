@@ -22,7 +22,7 @@ items:
 
 The build applies the series to the checksum-pinned archive, not to a git
 checkout. The archive needs no clone, and it holds the generated `configure`
-script. It is also the archive that the Ubuntu install builds.
+script.
 
 Each patch names the git blob of every file before and after the change. The
 build refuses a file whose bytes do not match.
@@ -47,7 +47,6 @@ The report shows these items:
 - the newest git tag
 - the newest archive on the download page
 - how many releases the pin is behind
-- the version of the ordinary XRoar
 
 ## Move to a new release
 
@@ -86,9 +85,8 @@ decision there.
    uv run pytest --cov
    ```
 
-9. Do the steps in [keep the ordinary XRoar consistent](#keep-the-ordinary-xroar-consistent).
-10. Commit as [what to commit](#what-to-commit) describes.
-11. Delete `local/system/xroar-<version>/`.
+9. Commit as [what to commit](#what-to-commit) describes.
+10. Delete `local/system/xroar-<version>/`.
 
 The trial clones upstream once into `local/toolchain-sources/xroar.git` and
 fetches tags after that. It treats the clone and the archive as untrusted data.
@@ -188,29 +186,6 @@ For each different file, do these steps:
 
 Do not adopt a release if one difference has no explanation. Report what
 blocked it, and keep the old pin.
-
-## Keep the ordinary XRoar consistent
-
-The ordinary XRoar runs `build`, `run` and plain `check`. The instrumented
-XRoar runs every check that uses frames, sound or keys.
-
-- Ubuntu: `scripts/native.py` builds the ordinary XRoar from the same pin.
-  A new install gets the pinned version, and an existing install keeps its
-  version. To change it, delete `local/toolchain/bin/xroar` and run
-  `uv run python scripts/native.py`.
-
-- macOS: Homebrew supplies the ordinary XRoar, and nothing pins it. Its
-  version can be older or newer than the pin. Upgrade it with
-  `brew upgrade xroar` only when the owner agrees.
-
-`report` shows the version of the ordinary XRoar and the pin. The two can be
-different, because plain checks compare only RAM at checkpoints. A difference
-is important only when an upstream change alters behavior that a plain check
-measures.
-
-To find out, run the plain checks with `XROAR` set to the trial's executable.
-If a plain check gives a different result on two hosts, compare their
-`report` output first.
 
 ## Change the equipment
 

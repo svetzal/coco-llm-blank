@@ -23,10 +23,12 @@ every rendered frame and the mixer sound as an HEVC video. The frame rate and
 the sound's alignment come from the emulator's clock. It needs ffmpeg with
 libx265 (FFMPEG names another executable).
 
-Rendered frames (--video, record), mixer sound (--audio, record) and scripted
-keys ([keys] in coco.toml) need the instrumented XRoar, which is built once
-into local/ on first use; it needs a C compiler, make and autotools.
-Everything else uses the installed XRoar.
+Every command that starts XRoar uses one XRoar: the pinned release with the
+patch series in scripts/xroar_patches/, built into local/ by bootstrap or on
+first use (XROAR names a substitute). Its patches add rendered frames (--video,
+record), mixer sound (--audio, record) and scripted keys ([keys] in coco.toml).
+Runs for evidence have no window, no host sound and no joystick, so a gamepad
+plugged into the host cannot change them; run keeps XRoar's default joystick.
 """
 
 import argparse
@@ -71,6 +73,10 @@ MODEL_FUNCTIONS = (
     "expected_frame",
     "verify_sound",
 )
+# Evidence runs: no window, no host sound, and both joystick ports on an empty profile, which
+# reads as centred with no button pressed whatever the host has plugged in.
+HEADLESS_OPTIONS = ["-ui", "null", "-ao", "null"]
+JOYSTICK_OPTIONS = ["-joy", "none", "-joy-right", "none", "-joy-left", "none"]
 # Rendered frames: S-video palette without cross-colour, active area only.
 VIDEO_OPTIONS = ["-tv-input", "svideo", "-ccr", "none", "-vo-picture", "zoomed", "-fskip", "0"]
 # Emulated seconds after the checkpoint: two complete video frames and a full audio buffer.
@@ -279,7 +285,7 @@ class Build(BaseModel):
 
 
 class Equipment(BaseModel):
-    """What one emulator run records besides RAM; none of it means the installed XRoar."""
+    """What one emulator run records besides RAM through the patch series' hooks."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -289,7 +295,7 @@ class Equipment(BaseModel):
     script: str = ""
 
     @property
-    def instrumented(self) -> bool:
+    def uses_hooks(self) -> bool:
         return self.video or self.audio or self.keys is not None
 
 
@@ -317,9 +323,9 @@ class Host:
             raise ProjectError(f"Missing {name}; run uv run python scripts/native.py first.")
         return path
 
-    def instrumented(self) -> str:
-        """XROAR_INSTRUMENTED if set, else the verified instrumented XRoar, built on first use."""
-        if override := os.environ.get("XROAR_INSTRUMENTED"):
+    def xroar(self) -> str:
+        """XROAR if set, else the verified instrumented XRoar, built on first use."""
+        if override := os.environ.get(instrumented_xroar.OVERRIDE):
             return override
         return str(instrumented_xroar.ensure(say=lambda text: print(text, file=sys.stderr)))
 
@@ -562,10 +568,8 @@ def capture_options(
     """
     options = VIDEO_OPTIONS.copy() if equipment.video else []
     options += [
-        "-ui",
-        "null",
-        "-ao",
-        "null",
+        *HEADLESS_OPTIONS,
+        *JOYSTICK_OPTIONS,
         "-ram-init",
         "set",
         "-no-ratelimit",
@@ -614,10 +618,8 @@ def record_options(
     """
     options = [
         *VIDEO_OPTIONS,
-        "-ui",
-        "null",
-        "-ao",
-        "null",
+        *HEADLESS_OPTIONS,
+        *JOYSTICK_OPTIONS,
         "-ram-init",
         "set",
         "-no-ratelimit",
@@ -904,9 +906,7 @@ def target_machine(project: Project, target: str | None) -> tuple[str, Machine]:
     return name, project.settings.targets[name]
 
 
-def emulator(
-    project: Project, host: Host, target: str | None, xroar: str | None = None, disk: bool = False
-) -> list[str]:
+def emulator(project: Project, host: Host, target: str | None, disk: bool = False) -> list[str]:
     """Validate the actual firmware bytes before producing any launch command."""
     name, machine = target_machine(project, target)
     names = firmware_names(machine)
@@ -918,7 +918,7 @@ def emulator(
             )
         names += (machine.disk,)
     roms = host.firmware(machine.firmware or name, names)
-    return xroar_command(xroar or host.executable("xroar"), machine, roms, disk)
+    return xroar_command(host.xroar(), machine, roms, disk)
 
 
 def make_disk(project: Project, host: Host, built: Build) -> Path:
@@ -1017,9 +1017,8 @@ def capture(
     for path in (*paths.values(), unreachable):
         path.unlink(missing_ok=True)
     keys = project.settings.keys
-    xroar = host.instrumented() if equipment.instrumented else None
     extra = DISK_SECONDS if disk else 0
-    command = emulator(project, host, target, xroar, disk=disk is not None) + capture_options(
+    command = emulator(project, host, target, disk=disk is not None) + capture_options(
         check, built.symbols, frame, paths["ram"], unreachable, equipment, keys, extra
     )
     if disk:
@@ -1027,7 +1026,7 @@ def capture(
     else:
         command += ["-run", str(built.binary)]
     environment = None
-    if equipment.instrumented:
+    if equipment.uses_hooks:
         if equipment.keys is not None:
             paths["keys"].write_text(recording.key_lines(equipment.keys))
         inherited = {k: v for k, v in os.environ.items() if not k.startswith("COCO_")}
@@ -1043,7 +1042,7 @@ def capture(
             f"{target} did not reach {check.checkpoint!r} {frame} times{loaded} within "
             f"{check.emulated_seconds + extra:g} emulated seconds."
         )
-    picture, sound, delivered = collect(paths, equipment) if equipment.instrumented else (None,) * 3
+    picture, sound, delivered = collect(paths, equipment) if equipment.uses_hooks else (None,) * 3
     return Evidence(
         ram=paths["ram"].read_bytes(),
         log=paths["log"],
@@ -1074,7 +1073,7 @@ def record(
         path.unlink(missing_ok=True)
     keys = project.settings.keys
     check = project.settings.check
-    command = emulator(project, host, target, host.instrumented()) + record_options(
+    command = emulator(project, host, target) + record_options(
         built.symbols, seconds, unreachable, check, equipment, keys
     )
     command += ["-run", str(built.binary)]
@@ -1101,7 +1100,7 @@ def record(
         if "COCO_FRAMES_START" not in log:
             raise ProjectError(
                 f"XRoar wrote no frames to the stream; read {paths['log']}. An emulator named "
-                "by XROAR_INSTRUMENTED must include every patch in scripts/xroar_patches/."
+                "by XROAR must include every patch in scripts/xroar_patches/."
             ) from None
         raise
     if unreachable.exists():
@@ -1179,9 +1178,8 @@ def check_variant(
         "binary_sha256": digest(built.binary),
         "screen_bytes_each": screen_bytes,
         **equipment_record(project, equipment, evidence, rendered, sounds),
+        "emulator": host.xroar(),
     }
-    if equipment.instrumented:
-        record["emulator"] = host.instrumented()
     if check.trace_from and model and hasattr(model, "verify_trace"):
         trace = evidence[-1].log.read_text()
         record["trace"] = model_call(
@@ -1390,12 +1388,8 @@ COMMANDS = {
 
 
 def add_equipment(command: argparse.ArgumentParser, name: str) -> None:
-    command.add_argument(
-        "--video", action="store_true", help="save XRoar's rendered frame as PNG (instrumented)"
-    )
-    command.add_argument(
-        "--audio", action="store_true", help="record XRoar's mixer output as WAV (instrumented)"
-    )
+    command.add_argument("--video", action="store_true", help="save XRoar's rendered frame as PNG")
+    command.add_argument("--audio", action="store_true", help="record XRoar's mixer output as WAV")
     if name == "snapshot":
         add_keys(command)
 
@@ -1405,7 +1399,7 @@ def add_keys(command: argparse.ArgumentParser) -> None:
         "--keys",
         type=Path,
         metavar="SCRIPT",
-        help="key script to inject at the [keys] label (instrumented)",
+        help="key script to inject at the [keys] label",
     )
 
 

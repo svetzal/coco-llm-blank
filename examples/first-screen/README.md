@@ -58,8 +58,8 @@ normal pixels in XRoar 1.13.1, which agrees with the two sources.
 The negative control is XRoar 1.13.1 with upstream commit 4e862c46 reverted.
 That build shows each pixel two pixels wide, and the `rg3` check fails. XRoar
 1.13 and older show the modes with that double-width rendering. The `run`
-command uses the ordinary XRoar. On macOS that is Homebrew's XRoar, which can
-be older. We know of no test on a physical CoCo 3.
+command uses the same pinned XRoar as the check. We know of no test on a
+physical CoCo 3.
 
 ## Set up the screen
 

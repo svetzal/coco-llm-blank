@@ -442,8 +442,9 @@ It checks every firmware file that the target names before it starts XRoar.
 It ignores personal XRoar configuration.
 If firmware fails, run the recovery command that the tool prints.
 
-`run` always opens the installed XRoar. Only key scripts and captures use the
-instrumented one.
+Every command uses the [instrumented XRoar](toolchain.md#instrumented-xroar).
+`run` opens it in a window with sound and the default joystick. Checks,
+snapshots and recordings run it without a window, host sound or a joystick.
 
 `expected.py` and `coco.py check` are the test of a project. Do not write a
 spec that tests `expected.py` or `coco.py`. If the check could pass a wrong

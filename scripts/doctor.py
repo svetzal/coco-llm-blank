@@ -11,7 +11,6 @@ TOOLS = {
     "lwasm": "LWTOOLS assembler",
     "lwlink": "LWTOOLS linker",
     "decb": "ToolShed Disk BASIC disk utility",
-    "xroar": "XRoar machine emulator",
 }
 
 
@@ -28,7 +27,7 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
         "--profile",
         choices=("all", "demo"),
         default="all",
-        help="demo checks assembly and emulator tools; all also requires disk tools",
+        help="demo checks the assembler and XRoar; all also requires disk tools",
     )
     parser.add_argument(
         "--target",
@@ -49,10 +48,10 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
                 print("  Optional for this demo; only needed to build disk images.")
             else:
                 missing.append(command)
-    print(
-        "Instrumented XRoar (optional; screen, key and sound capture): "
-        + instrumented_xroar.status(ROOT)
-    )
+    xroar_ready, xroar = instrumented_xroar.status(ROOT)
+    print(f"xroar: {xroar}")
+    if not xroar_ready:
+        missing.append("xroar")
     firmware_ok = True
     if options.target:
         try:
@@ -72,8 +71,10 @@ def main(argv: list[str] | None = None, *, executables: ExecutableGateway | None
     if missing:
         print("Setup is incomplete. Ask your agent to install: " + ", ".join(missing))
         print(
-            "Run uv run python scripts/native.py. It installs LWTOOLS and XRoar, and builds "
-            "ToolShed from a pinned source release into local/toolchain/."
+            "Run uv run python scripts/native.py, then uv run python scripts/instrumented_xroar.py "
+            "build. The first installs LWTOOLS and what the XRoar build needs, and builds "
+            "ToolShed from a pinned source release into local/toolchain/. The second builds "
+            "XRoar from its pinned release."
         )
     print("Read guidance/starter/toolchain.md for installation and verification.")
     return 1 if missing or not firmware_ok else 0

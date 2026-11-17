@@ -11,8 +11,9 @@ import pytest
 @pytest.fixture
 def tool_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("PATH", str(tmp_path))
-    for command in doctor.TOOLS:
-        monkeypatch.setenv(doctor.VARIABLES[command], str(tmp_path / command))
+    variables = {command: doctor.VARIABLES[command] for command in doctor.TOOLS}
+    for command, variable in (variables | {"xroar": "XROAR"}).items():
+        monkeypatch.setenv(variable, str(tmp_path / command))
         executable = tmp_path / command
         executable.write_text("#!/bin/sh\nexit 99\n")
         executable.chmod(0o755)
@@ -102,12 +103,27 @@ class DescribeToolchainDoctor:
         assert doctor.main(["--profile", "demo", "--target", "coco2"]) == 1
         assert "checksum mismatch" in capsys.readouterr().out
 
-    def should_report_the_optional_instrumented_xroar_without_failing(
+    def should_require_the_xroar_build(
         self, tool_directory: Path, monkeypatch: pytest.MonkeyPatch, capsys
     ) -> None:
         monkeypatch.setattr(doctor, "ROOT", tool_directory)
+        monkeypatch.delenv("XROAR")
 
+        assert doctor.main(["--profile", "demo"]) == 1
+
+        output = capsys.readouterr().out
+        line = next(text for text in output.splitlines() if text.startswith("xroar:"))
+        assert "not built yet" in line and "missing cc" in line
+        assert "scripts/instrumented_xroar.py build" in line
+        assert "Setup is incomplete. Ask your agent to install: xroar" in output
+
+    def should_report_an_xroar_named_by_the_override(
+        self, tool_directory: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         assert doctor.main(["--profile", "demo"]) == 0
 
-        line = next(text for text in capsys.readouterr().out.splitlines() if "Instrumented" in text)
-        assert "not built yet" in line and "missing cc, make" in line
+        assert f"xroar: {tool_directory / 'xroar'} (named by XROAR" in capsys.readouterr().out
+
+        (tool_directory / "xroar").unlink()
+
+        assert doctor.main(["--profile", "demo"]) == 1

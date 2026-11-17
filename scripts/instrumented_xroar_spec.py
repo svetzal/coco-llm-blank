@@ -1,4 +1,5 @@
-"""The instrumented XRoar applies its series only to the exact bytes it names, and rebuilds on drift."""
+"""The instrumented XRoar applies its series only to the exact bytes it names, has a window, and
+rebuilds on drift."""
 
 import difflib
 import io
@@ -8,7 +9,6 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import instrumented_xroar as ix
-import native
 import pytest
 from instrumented_xroar import BuildHost, Upstream
 from native import ROOT
@@ -16,6 +16,8 @@ from native import ROOT
 PRISTINE = b"int main(void) {\n\treturn 0;\n}\n"
 PATCHED = b"int main(void) {\n\treturn 7;\n}\n"
 HEADER = b"int answer(void);\n"
+WINDOWED = "\tmacosx     Mac OS X+ SDL2 UI\n\tnull       No UI\n"
+HEADLESS = "\tnull       No UI\n"
 PIN = Upstream(
     version="9.9",
     tag="9.9",
@@ -74,8 +76,11 @@ def archive_with(path: Path, files: dict[str, bytes], top: str = PIN.tree) -> Pa
 def compiling_host() -> Mock:
     """A host whose make writes an executable, as a real build would."""
     host = Mock(spec=BuildHost)
+    host.system.return_value = "Darwin"
     host.which.side_effect = lambda name: f"/usr/bin/{name}"
+    host.has_library.return_value = True
     host.version.side_effect = lambda name: f"{name} (fixture) 1.0"
+    host.ui_help.return_value = WINDOWED
 
     def run(command: list[str], cwd: Path, log: Path) -> None:
         log.write_text("ok\n")
@@ -177,7 +182,6 @@ class DescribeSeries:
 
         assert [p.name[:4] for p in series.patches] == ["0001", "0002", "0003", "0004", "0005"]
         assert pin.tree == f"xroar-{pin.version}"
-        assert native.SOURCES["xroar"] == (pin.version, pin.archive_url, pin.archive_sha256)
 
     def should_read_key_names_from_the_series(self) -> None:
         names = ix.key_names(ix.load_series())
@@ -191,7 +195,8 @@ class DescribeProvenance:
     def root(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         archive = archive_with(tmp_path / "xroar.tar.gz", {"src/main.c": PRISTINE})
         pin = PIN.model_copy(update={"archive_sha256": ix.sha256(archive.read_bytes())})
-        monkeypatch.setattr(ix, "cached_source", lambda name, root, download: archive)
+        monkeypatch.setattr(ix, "cached_archive", lambda *source: archive)
+        monkeypatch.delenv(ix.OVERRIDE, raising=False)
         monkeypatch.setattr(ix, "load_pin", lambda: pin)
         monkeypatch.setattr(ix, "load_series", lambda: SERIES)
         return tmp_path
@@ -247,7 +252,52 @@ class DescribeProvenance:
             moved = ix.load_pin().model_copy(update={"version": "9.9.1"})
             monkeypatch.setattr(ix, "load_pin", lambda: moved)
 
-        assert reason in ix.stale_reason(home, ix.load_pin(), ix.load_series())
+        commands = ix.build_commands("Darwin")
+        assert reason in ix.stale_reason(home, ix.load_pin(), ix.load_series(), commands)
+
+    def should_rebuild_a_build_configured_with_other_options(self, root: Path) -> None:
+        ix.ensure(root, compiling_host(), print)
+        host = compiling_host()
+        host.system.return_value = "Linux"
+        said = []
+
+        ix.ensure(root, host, said.append)
+
+        assert "configured with different options" in said[0]
+        configure = host.run.call_args_list[1].args[0]
+        assert configure == ix.build_commands("Linux")["configure"]
+        record = ix.Provenance.model_validate_json((root / ix.HOME / ix.RECORD).read_text())
+        assert record.commands["configure"] == configure
+
+    def should_refuse_a_build_without_a_window_and_keep_the_old_one(self, root: Path) -> None:
+        old = ix.ensure(root, compiling_host(), print)
+        host = compiling_host()
+        host.system.return_value = "Linux"
+        host.ui_help.return_value = HEADLESS
+
+        with pytest.raises(ValueError, match="has no window") as error:
+            ix.ensure(root, host, print)
+
+        assert "brew install autoconf automake pkgconf sdl2" in str(error.value)
+        assert host.ui_help.call_args.args[0].parts[-3:] == (PIN.tree, "src", "xroar")
+        commands = ix.build_commands("Darwin")
+        assert ix.stale_reason(root / ix.HOME, ix.load_pin(), SERIES, commands) is None
+        assert old.read_bytes() == b"executable"
+
+    def should_download_the_archive_that_the_pin_names(
+        self, root: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sources = []
+        monkeypatch.setattr(
+            ix,
+            "cached_archive",
+            lambda *source: sources.append(source[:5]) or root / "xroar.tar.gz",
+        )
+
+        ix.ensure(root, compiling_host(), print)
+
+        pin = ix.load_pin()
+        assert sources == [("xroar", "9.9", pin.archive_url, pin.archive_sha256, root)]
 
     def should_rebuild_a_damaged_build_on_next_use(self, root: Path) -> None:
         ix.ensure(root, compiling_host(), print)
@@ -263,14 +313,14 @@ class DescribeProvenance:
         archive = archive_with(root / "other.tar.gz", {"src/main.c": PATCHED})
 
         with pytest.raises(ValueError, match="does not match the pinned XRoar 9.9 checksum"):
-            ix.build(compiling_host(), ix.load_pin(), SERIES, archive, root / "home")
+            ix.build(compiling_host(), ix.load_pin(), SERIES, archive, root / "home", {})
 
     def should_refuse_an_archive_for_a_different_release(self, root: Path) -> None:
         archive = archive_with(root / "other.tar.gz", {"src/main.c": PRISTINE}, top="xroar-1.0")
         pin = PIN.model_copy(update={"archive_sha256": ix.sha256(archive.read_bytes())})
 
         with pytest.raises(ValueError, match="does not unpack to xroar-9.9/"):
-            ix.build(compiling_host(), pin, SERIES, archive, root / "home")
+            ix.build(compiling_host(), pin, SERIES, archive, root / "home", {})
 
     def should_explain_missing_build_tools_before_any_download(self, root: Path) -> None:
         host = Mock(spec=BuildHost)
@@ -279,9 +329,15 @@ class DescribeProvenance:
         with pytest.raises(ValueError, match="needs automake, pkg-config, which are not") as error:
             ix.ensure(root, host, print)
 
-        assert "brew install autoconf automake pkgconf" in str(error.value)
+        assert "brew install autoconf automake pkgconf sdl2" in str(error.value)
         assert not host.download.called and not host.run.called
         assert not (root / ix.HOME).exists()
+
+    def should_need_sdl2_for_a_window(self) -> None:
+        host = compiling_host()
+        host.has_library.side_effect = lambda name: name != "sdl2"
+
+        assert ix.missing_prerequisites(host) == ["sdl2"]
 
     def should_honour_compiler_overrides(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("CC", "clang-19")
@@ -302,13 +358,50 @@ class DescribeProvenance:
     def should_report_status_for_the_doctor(self, root: Path) -> None:
         host = compiling_host()
 
-        assert "not built yet" in ix.status(root, host)
-        assert "build tools found" in ix.status(root, host)
+        ready, line = ix.status(root, host)
+        assert not ready and "not built yet" in line and "build tools found" in line
+        assert "scripts/instrumented_xroar.py build" in line
         ix.ensure(root, host, print)
-        assert ix.status(root, host).startswith("built and verified")
+        executable = root / ix.HOME / PIN.tree / "src/xroar"
+        verified = f"{executable} (XRoar 9.9 with the patch series, built and verified)"
+        assert ix.status(root, host) == (True, verified)
         host.which.side_effect = lambda name: None
         (root / ix.HOME / ix.RECORD).unlink()
-        assert "missing cc, make, autoreconf" in ix.status(root, host)
+        assert "missing cc, make, autoreconf" in ix.status(root, host)[1]
+
+    def should_report_an_executable_named_by_the_override(
+        self, root: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(ix.OVERRIDE, "trial-xroar")
+        host = compiling_host()
+
+        assert ix.status(root, host) == (
+            True,
+            "/usr/bin/trial-xroar (named by XROAR; not checked against the pin)",
+        )
+        host.which.side_effect = lambda name: None
+        assert ix.status(root, host) == (False, "trial-xroar, named by XROAR, is not an executable")
+
+
+class DescribeBuildOptions:
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def should_keep_the_window_and_sound_modules_on_every_host(self, system: str) -> None:
+        configure = ix.build_commands(system)["configure"]
+
+        assert configure[:4] == [
+            "./configure",
+            "--without-gtk3",
+            "--without-gtk2",
+            "--without-sdl3",
+        ]
+        assert not {"--without-sdl2", "--without-cocoa", "--without-coreaudio"} & set(configure)
+        assert ("--enable-ui-sdl" in configure) == (system == "Linux")
+
+    def should_read_window_modules_from_the_ui_help(self) -> None:
+        assert ix.window_modules(WINDOWED) == ["macosx"]
+        assert ix.window_modules("\tsdl        SDL2 UI\n\tnull       No UI\n") == ["sdl"]
+        assert ix.window_modules(HEADLESS) == []
+        assert ix.window_modules("") == []
 
 
 class DescribeCommandLine:
@@ -333,7 +426,7 @@ class DescribeCommandLine:
         assert "FAIL: needs cc" in capsys.readouterr().err
 
     def should_print_status(self, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
-        monkeypatch.setattr(ix, "status", lambda root, host: "not built yet")
+        monkeypatch.setattr(ix, "status", lambda root, host: (False, "not built yet"))
 
         assert ix.main(["status"], Mock(spec=BuildHost)) == 0
 

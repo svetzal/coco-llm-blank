@@ -13,7 +13,8 @@ Do not infer RAM, video standard, or firmware from whatever is installed.
 | XRoar | `xroar` | CoCo machine emulation |
 
 These are host executables, separate from the uv Python environment. Check
-availability with `uv run python scripts/doctor.py`.
+availability with `uv run python scripts/doctor.py`. The starter builds its
+XRoar from source. Read [Instrumented XRoar](#instrumented-xroar).
 
 For an emulator demo that you launch directly, use `--profile demo`.
 This profile treats ToolShed as optional. Bootstrap installs ToolShed all the
@@ -31,7 +32,9 @@ Do not copy a developer's private paths into defaults.
 
 ## Installation sources
 
-Bootstrap runs `uv run python scripts/native.py` to install missing tools.
+Bootstrap runs `uv run python scripts/native.py` to install missing tools and
+the packages that the XRoar build needs. Then it runs
+`uv run python scripts/instrumented_xroar.py build` to build XRoar.
 macOS support is limited to Apple Silicon (arm64). Intel Macs are unsupported.
 
 Bootstrap and the native installer reject non-arm64 macOS before they install
@@ -42,7 +45,8 @@ process under Rosetta.
 Use Ubuntu 24.04 for the supported installation path on Linux.
 
 On Apple Silicon macOS the installer uses Homebrew. If needed, it installs
-Homebrew from its official source.
+Homebrew from its official source. Homebrew supplies LWTOOLS, Autoconf,
+Automake, `pkg-config` and SDL2.
 
 System permissions may need the owner's help. Failures stop with an
 explanation.
@@ -52,8 +56,10 @@ On native Apple Silicon macOS, tool discovery also checks `/opt/homebrew/bin`
 when PATH does not include it.
 It does this check after it checks overrides, project-local tools and PATH.
 
-On Ubuntu 24.04, it installs build dependencies with apt. It builds verified
-LWTOOLS and XRoar release archives into `local/toolchain/`.
+On Ubuntu 24.04, it installs build dependencies with apt. These include
+Autoconf, Automake, `pkg-config`, and the SDL2, ALSA and PulseAudio development
+files for XRoar. It builds a verified LWTOOLS release archive into
+`local/toolchain/`.
 
 A non-root account needs sudo permission for apt. The installer uses
 non-interactive sudo and stops if permission is unavailable.
@@ -282,7 +288,8 @@ works.
 
 Do not require ToolShed for a direct launch of a DECB binary.
 Disk work needs ToolShed.
-Read the installed XRoar help for other machine profiles and ROM options.
+For other machine profiles and ROM options, read the help of the
+instrumented XRoar.
 
 ## Disk images
 
@@ -356,23 +363,45 @@ Extended BASIC first. Then make the disk.
 
 ## Instrumented XRoar
 
-Scripted keys, rendered frames, mixer sound and videos need a second XRoar.
-This is the pinned XRoar release built from source with the patch series in
-`scripts/xroar_patches/` applied.
+The starter uses one XRoar, the instrumented XRoar. It is the pinned XRoar
+release, built from source with the patch series in `scripts/xroar_patches/`
+applied. Every `scripts/coco.py` command that starts XRoar uses it: `run`,
+`check`, `snapshot`, `disk` and `record`. The patches add scripted keys,
+rendered frames, mixer sound and the frame stream for videos.
 
-`scripts/coco.py` builds it the first time that a project asks for one of
-those abilities. The build goes into ignored
-`local/toolchain/xroar-instrumented/`. The tool reuses it afterwards.
-
-Bootstrap does not build it. `build`, `run` and a plain `check` keep using the
-installed XRoar. Thus the beginner path needs no C compiler.
-The doctor reports its state as an optional line that never changes its exit
-code.
+Bootstrap builds it into ignored `local/toolchain/xroar-instrumented/`. If the
+build is missing or out of date, `scripts/coco.py` builds it before it starts
+XRoar. The doctor reports it as a required tool.
 
 ```sh
 uv run python scripts/instrumented_xroar.py status
 uv run python scripts/instrumented_xroar.py build
 ```
+
+### Window, sound and joystick
+
+The build has a window and host sound. SDL2 supplies the window on both hosts.
+The configure step leaves out GTK and SDL3. On Ubuntu it adds
+`--enable-ui-sdl`, because no GTK window is available.
+
+After the build, the tool runs `xroar -ui help`. This command lists the window
+modules and starts no window. If the list holds only the `null` module, the
+tool stops and tells you what to install. The previous build stays in place.
+
+Each check, snapshot, disk check and recording runs without a window and
+without host sound, with `-ui null -ao null`. It also connects both joystick
+ports to an empty joystick profile:
+
+```sh
+-joy none -joy-right none -joy-left none
+```
+
+Thus a gamepad on the host cannot change the evidence. Each port reads as a
+joystick in the center position, with no button pushed. `run` and
+`disk --run` keep the default joystick of XRoar. Thus a person can play with a
+gamepad.
+
+### Build tools
 
 The build needs these tools (set `CC` or `MAKE` to choose others):
 
@@ -381,27 +410,29 @@ The build needs these tools (set `CC` or `MAKE` to choose others):
 - Autoconf
 - Automake
 - `pkg-config`
+- The SDL2 development files
+
+`scripts/native.py` installs all of them except the C compiler. To install
+them yourself:
+
+- macOS: `xcode-select --install`, then
+  `brew install autoconf automake pkgconf sdl2`.
+- Ubuntu 24.04: `sudo apt-get install build-essential pkg-config autoconf
+  automake libsdl2-dev libasound2-dev libpulse-dev`.
+
+If a tool is missing, the build stops before it downloads anything and says
+what to install.
 
 The series adds its own source files to XRoar's `src/Makefile.am`. Thus the
 build regenerates XRoar's build files with `autoreconf -fi` before it
 configures.
 
-It is configured without any window, audio driver or GUI toolkit, so it needs
-no SDL, GTK or other library.
-If a tool is missing, the build stops before it downloads anything and says
-what to install:
-
-- macOS: `xcode-select --install`, then `brew install autoconf automake pkgconf`.
-- Ubuntu 24.04: `sudo apt-get install build-essential pkg-config autoconf automake`.
+### Pin and build record
 
 `scripts/xroar_patches/upstream.json` is the one XRoar pin.
 [The XRoar patch procedure](xroar-patch.md#what-the-series-is) lists what it
-holds.
-
-The native installer's Ubuntu build of the ordinary XRoar reads the same file.
-On macOS, Homebrew supplies the ordinary XRoar, so its version can differ from
-the pin. `uv run python scripts/xroar_upstream.py report` shows both versions.
-When the pin moves, run `brew upgrade xroar`.
+holds. Run `uv run python scripts/xroar_upstream.py report` to see how far the
+pin is behind upstream.
 
 In guidance and example READMEs, write "the pinned XRoar" for a current claim.
 Name a release only where the claim depends on that release, such as a line
@@ -414,17 +445,22 @@ refuses a file whose bytes differ from that blob. Thus a different XRoar
 release fails with a plain message instead of a silently wrong patch.
 
 `build.json` beside the build records what the tool built and from which
-sources. Each use checks that record. When the pin, the series, a patched
-file or the executable no longer match, the tool says why and rebuilds.
+sources. Each use checks that record. The tool rebuilds when one of these
+items no longer matches, and it says which:
 
-Set `XROAR_INSTRUMENTED` to an executable path to make `scripts/coco.py` use
-that instrumented XRoar instead. The tool does not check it.
-The XRoar patch procedure uses it to run the same checks against a trial build.
+- the pin
+- the series
+- the configure options
+- a patched file
+- the executable
+
+Set `XROAR` to an executable path to make `scripts/coco.py` use that XRoar
+instead. The tool does not check it. It must hold every patch in the series.
+The XRoar patch procedure uses it to run the same checks against a trial
+build.
 
 To move the series to a new XRoar release, or to change the equipment, obey
-[the XRoar patch procedure](xroar-patch.md). Run
-`uv run python scripts/xroar_upstream.py report` to see how far the pin is
-behind upstream.
+[the XRoar patch procedure](xroar-patch.md).
 
 ## Record a video
 

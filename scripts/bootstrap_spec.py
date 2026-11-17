@@ -113,6 +113,7 @@ class DescribeBootstrap:
             "sync --locked",
             f"run python scripts/setup.py --target {target} --guidance-only",
             "run python scripts/native.py",
+            "run python scripts/instrumented_xroar.py build",
             f"run python scripts/setup.py --target {target} --roms-only",
             f"run python scripts/doctor.py --profile demo --target {target}",
         ]
@@ -135,6 +136,27 @@ class DescribeBootstrap:
         assert "firmware unavailable" in result.stderr
         assert "Tools and firmware are ready" not in result.stdout
         assert "doctor.py" not in Path(env["BOOTSTRAP_LOG"]).read_text()
+
+    def should_stop_before_firmware_when_the_xroar_build_fails(
+        self, bootstrap_workspace: tuple[Path, dict[str, str]]
+    ) -> None:
+        project, env = bootstrap_workspace
+        commands = Path(env["PATH"].split(":")[0])
+        uv = commands / "uv"
+        uv.write_text(
+            '#!/bin/sh\nprintf "%s\\n" "$*" >> "$BOOTSTRAP_LOG"\n'
+            'case "$*" in *instrumented_xroar.py*) echo "no SDL2" >&2; exit 1;; esac\n'
+        )
+        uv.chmod(0o755)
+
+        result = run_bootstrap(project, env, "coco1")
+
+        assert result.returncode == 1
+        assert "no SDL2" in result.stderr
+        assert "Tools and firmware are ready" not in result.stdout
+        assert Path(env["BOOTSTRAP_LOG"]).read_text().splitlines()[-1] == (
+            "run python scripts/instrumented_xroar.py build"
+        )
 
     def should_stop_before_readiness_when_final_validation_fails(
         self, bootstrap_workspace: tuple[Path, dict[str, str]]

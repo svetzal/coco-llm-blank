@@ -72,13 +72,11 @@ class DescribeReleases:
         assert xu.archives_listed(PAGE) == ["1.12.1", "1.13"]
 
     def should_say_how_far_behind_the_pin_is(self) -> None:
-        lines = xu.report_lines(
-            PIN, ["1.12.1", "1.13", "1.14"], ["1.13"], ("/bin/xroar", "XRoar 1.13")
-        )
+        lines = xu.report_lines(PIN, ["1.12.1", "1.13", "1.14"], ["1.13"])
 
         assert "Behind by 2 releases: 1.13, 1.14" in lines[4]
         assert lines[4].endswith("trial 1.14")
-        assert lines[5] == "Ordinary XRoar: /bin/xroar is 1.13; it differs from the pin 1.12.1."
+        assert len(lines) == 5
 
     @pytest.mark.parametrize(
         "tags,archives,status",
@@ -90,17 +88,10 @@ class DescribeReleases:
         ],
     )
     def should_report_each_source_and_survive_one_failing(self, tags, archives, status) -> None:
-        lines = xu.report_lines(PIN, tags, archives, None)
+        lines = xu.report_lines(PIN, tags, archives)
 
         assert status in lines[4]
         assert ("unavailable" in lines[2]) == (tags is None)
-        assert lines[5].startswith("Ordinary XRoar: not found")
-
-    def should_say_when_the_ordinary_xroar_matches_the_pin(self) -> None:
-        line = xu.stock_line(PIN, ("/opt/homebrew/bin/xroar", "XRoar 1.12.1"))
-
-        assert line.endswith("is 1.12.1; it matches the pin.")
-        assert "is unknown" in xu.stock_line(PIN, ("/x", "something else"))
 
 
 class DescribeComparison:
@@ -180,7 +171,6 @@ class DescribeReport:
         host = Mock(spec=UpstreamHost)
         host.git.return_value = LS_REMOTE
         host.fetch_text.return_value = PAGE
-        host.stock_xroar.return_value = None
         said = []
 
         assert xu.report(host, said.append) == 0
@@ -193,7 +183,6 @@ class DescribeReport:
         host = Mock(spec=UpstreamHost)
         host.git.side_effect = subprocess.CalledProcessError(128, "git")
         host.fetch_text.side_effect = OSError("offline")
-        host.stock_xroar.return_value = None
 
         assert xu.report(host, print) == 1
 

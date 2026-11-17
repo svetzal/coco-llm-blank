@@ -61,8 +61,10 @@ echo 'Preparing the project Python environment. The first run can take a while.'
 uv sync --locked
 echo 'Preparing the local reference index without converting books or downloading firmware.'
 uv run python scripts/setup.py --target "$target" --guidance-only
-echo 'Installing missing assembly, disk and emulator tools.'
+echo 'Installing missing assembly and disk tools, and what the XRoar build needs.'
 uv run python scripts/native.py
+echo 'Building XRoar from its pinned release. The first build takes a minute or two.'
+uv run python scripts/instrumented_xroar.py build
 echo 'Downloading and verifying firmware for the selected machine.'
 uv run python scripts/setup.py --target "$target" --roms-only
 echo 'Checking tools and firmware for a directly launched emulator demo.'

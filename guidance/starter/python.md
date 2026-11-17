@@ -67,7 +67,8 @@ example and its negative controls.
 
 Setup for a selected target prepares the demo, not the whole test suite of the
 starter. The suite also runs emulator checks for CoCo 1, CoCo 2, and CoCo 3.
-Install native tools using [toolchain.md](toolchain.md). Then provision the ROM
+Install native tools using [toolchain.md](toolchain.md), and build XRoar with
+`uv run python scripts/instrumented_xroar.py build`. Then provision the ROM
 profile of each standard target without changing any project:
 
 ```sh

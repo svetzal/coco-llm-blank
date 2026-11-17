@@ -24,8 +24,10 @@ jobs:
         run: |
           uv run ruff check .
           uv run ruff format --check .
-      - name: Install assembly and emulator tools
+      - name: Install assembly and disk tools, and what the XRoar build needs
         run: uv run python scripts/native.py
+      - name: Build XRoar from its pinned release
+        run: uv run python scripts/instrumented_xroar.py build
       - name: Prepare local firmware for the emulator check
         run: |
           uv run python scripts/setup.py --target coco1 --roms-only

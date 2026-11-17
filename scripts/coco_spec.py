@@ -122,6 +122,11 @@ def recorded(env: dict[str, str], frame: int, picture: np.ndarray | None) -> str
     return "\n".join(lines) + "\n"
 
 
+def contains(items: list[str], run: list[str]) -> bool:
+    """Whether run appears in items as consecutive entries."""
+    return any(items[index : index + len(run)] == run for index in range(len(items)))
+
+
 def emulated(
     ram: bytes | None = None,
     unreachable: bool = False,
@@ -131,7 +136,7 @@ def emulated(
     """A host whose assembler writes symbols and whose emulator writes snapshots."""
     host = Mock(spec=Host)
     host.executable.side_effect = lambda name: f"/tools/{name}"
-    host.instrumented.return_value = "/tools/xroar-instrumented"
+    host.xroar.return_value = "/tools/xroar"
     host.firmware.side_effect = lambda profile, names: {n: Path("/roms") / n for n in names}
 
     def run(command, log, timeout, cwd=None, env=None):
@@ -427,10 +432,25 @@ class DescribeCapture:
         assert evidence.log.name == "main-coco1-3.log"
         assert evidence.picture is None and evidence.sound is None
         assert host.run.call_args.kwargs["env"] is None
-        assert not host.instrumented.called
         command = host.run.call_args.args[0]
         assert command[:4] == ["/tools/xroar", "-no-c", "-machine", "cocous"]
         assert command[-2:] == ["-run", str(built.binary)]
+
+    @pytest.mark.parametrize("equipment", [coco.NO_EQUIPMENT, coco.Equipment(video=True)])
+    def should_run_evidence_without_a_window_sound_or_joystick(
+        self, project: coco.Project, equipment: coco.Equipment
+    ) -> None:
+        options = coco.capture_options(
+            project.settings.check,
+            coco.parse_symbols(SYMBOLS),
+            1,
+            Path("s.ram"),
+            Path("u.ram"),
+            equipment,
+        )
+
+        assert contains(options, ["-ui", "null", "-ao", "null"])
+        assert contains(options, ["-joy", "none", "-joy-right", "none", "-joy-left", "none"])
 
     def should_reject_an_unreachable_checkpoint_that_fires(self, project: coco.Project) -> None:
         host = emulated(ram=bytes(32768), unreachable=True)
@@ -603,6 +623,8 @@ class DescribeDiskImages:
             "-cart-rom",
             "/roms/disk11.rom",
         ]
+        assert command[0] == "/tools/xroar"
+        assert not {"-ui", "-ao", "-joy", "-joy-right", "-joy-left"} & set(command)
         assert command[-5:] == [
             "-ratelimit",
             "-load-fd0",
@@ -727,8 +749,10 @@ class DescribeCommandLine:
         assert coco.main(["run", str(folder), "--target", "coco2"], host) == 0
 
         command = host.launch.call_args.args[0]
+        assert command[0] == "/tools/xroar"
         assert command[3] == "coco2bus"
         assert command[-3:] == ["-ratelimit", "-run", str(project.output / "main.bin")]
+        assert not {"-ui", "-ao", "-joy", "-joy-right", "-joy-left"} & set(command)
 
     def should_not_launch_when_firmware_is_invalid(self, folder: Path, project, capsys) -> None:
         host = emulated()
@@ -811,6 +835,8 @@ class DescribeRecording:
 
         assert options[: len(coco.VIDEO_OPTIONS)] == coco.VIDEO_OPTIONS
         assert "-fskip" in options and options[options.index("-fskip") + 1] == "0"
+        assert contains(options, ["-ui", "null", "-ao", "null"])
+        assert contains(options, ["-joy", "none", "-joy-right", "none", "-joy-left", "none"])
         assert options[options.index("-timeout") + 1] == "12.5"
         assert options[options.index("-trap") + 1] == "pc=0x3020"
         assert "pc=0x3010" not in options  # no checkpoint: the run ends on time
@@ -826,7 +852,7 @@ class DescribeRecording:
         assert capsys.readouterr().out.splitlines() == [str(video)]
         command, _, _, env, stream, encoder, _ = host.record.call_args.args
         assert command[1:4] == ["-no-c", "-machine", "cocous"]
-        assert command[0] == "/tools/xroar-instrumented"
+        assert command[0] == "/tools/xroar"
         assert env["COCO_FRAMES"] == str(stream) and stream.suffix == ".frames"
         assert encoder[encoder.index("-i") + 1] == str(stream)
         final = host.run.call_args.args[0]
@@ -1038,7 +1064,7 @@ class DescribeEquipmentSettings:
 
         assert (plain.video, plain.audio, plain.keys) == (True, True, None)
         assert played.keys == (("space",), (), ("left", "space"))
-        assert played.script == "play.txt" and played.instrumented
+        assert played.script == "play.txt" and played.uses_hooks
 
     def should_let_a_command_line_script_replace_the_variant_script(
         self, folder: Path, tmp_path: Path
@@ -1124,7 +1150,7 @@ class DescribeEquipmentRuns:
 
         command = host.run.call_args.args[0]
         env = host.run.call_args.kwargs["env"]
-        assert command[0] == "/tools/xroar-instrumented"
+        assert command[0] == "/tools/xroar"
         assert env["COCO_VIDEO"].endswith("play-coco1-3.ppm") and "PATH" in env
         assert (project.output / "play-coco1-3.keys").read_text() == "space\nleft\n"
         assert evidence.picture.pixels.shape == (2, 3, 3)
@@ -1171,7 +1197,7 @@ class DescribeRenderedAndSoundChecks:
         assert main["rendered"]["compared_samples_each"] == 6
         assert main["rendered"]["images"] == [f"main-coco1-{f}.png" for f in (1, 3, 4)]
         assert main["sound"]["model"][0] == {"frame": 1, "samples": 44100}
-        assert main["emulator"] == "/tools/xroar-instrumented"
+        assert main["emulator"] == "/tools/xroar"
         assert record["rendered_display"] == "matched expected_frame"
         assert record["sound"] == "accepted by verify_sound"
         lines = coco.report(capturing, record)
@@ -1274,26 +1300,22 @@ class DescribeHost:
         with pytest.raises(ProjectError, match=r"uv run python scripts/native\.py"):
             Host().executable("lwasm")
 
-    def should_build_the_instrumented_emulator_on_demand(
-        self, monkeypatch: pytest.MonkeyPatch, capsys
-    ) -> None:
+    def should_build_the_emulator_on_demand(self, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
         def ensure(say):
             say("Building the instrumented XRoar once")
             return Path("/local/xroar")
 
-        monkeypatch.delenv("XROAR_INSTRUMENTED", raising=False)
+        monkeypatch.delenv("XROAR", raising=False)
         monkeypatch.setattr(coco.instrumented_xroar, "ensure", ensure)
 
-        assert Host().instrumented() == "/local/xroar"
+        assert Host().xroar() == "/local/xroar"
         assert "Building" in capsys.readouterr().err
 
-    def should_use_an_explicitly_named_instrumented_emulator(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("XROAR_INSTRUMENTED", "/lab/xroar")
+    def should_use_an_explicitly_named_emulator(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("XROAR", "/lab/xroar")
         monkeypatch.setattr(coco.instrumented_xroar, "ensure", Mock(side_effect=AssertionError))
 
-        assert Host().instrumented() == "/lab/xroar"
+        assert Host().xroar() == "/lab/xroar"
 
     def should_explain_a_missing_encoder(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(coco.shutil, "which", lambda name: None)
@@ -1336,9 +1358,13 @@ class DescribeHost:
         assert log.read_text() == "evidence\n"
 
 
-def native_ready(*profiles: str) -> bool:
-    tools = all(tool_path(name) for name in ("lwasm", "xroar"))
-    return tools and all((ROOT / "local/roms" / p).is_dir() for p in profiles)
+def emulator_ready(*profiles: str) -> bool:
+    """LWTOOLS, the firmware profiles, and an XRoar that is built or can be built."""
+    host = instrumented_xroar.BuildHost()
+    xroar = instrumented_xroar.status(ROOT, host)[0]
+    xroar = xroar or not instrumented_xroar.missing_prerequisites(host)
+    tools = tool_path("lwasm") and xroar
+    return bool(tools) and all((ROOT / "local/roms" / p).is_dir() for p in profiles)
 
 
 def firmware_profiles(directory: Path) -> set[str]:
@@ -1346,25 +1372,12 @@ def firmware_profiles(directory: Path) -> set[str]:
     return {m.firmware or name for name, m in project.settings.targets.items()}
 
 
-def uses_equipment(directory: Path) -> bool:
-    settings = coco.load_project(directory).settings
-    capture = settings.capture.video or settings.capture.audio
-    return capture or any(variant.keys for variant in settings.variants.values())
-
-
-def instrumented_ready(*profiles: str) -> bool:
-    build_tools = not instrumented_xroar.missing_prerequisites(instrumented_xroar.BuildHost())
-    return native_ready(*profiles) and build_tools
-
-
 @pytest.mark.integration
 class DescribeExamplesInXRoar:
     @pytest.mark.parametrize("example", EXAMPLES, ids=lambda path: path.name)
     def should_pass_the_real_check(self, example: Path, capsys) -> None:
-        if not native_ready(*firmware_profiles(example)):
+        if not emulator_ready(*firmware_profiles(example)):
             pytest.skip("Native tools or firmware are not installed")
-        if uses_equipment(example) and not instrumented_ready():
-            pytest.skip("Build tools are needed for the instrumented XRoar")
 
         assert coco.main(["check", str(example)]) == 0
 
@@ -1372,7 +1385,7 @@ class DescribeExamplesInXRoar:
 
     @pytest.fixture
     def copy(self, tmp_path: Path) -> Path:
-        if not native_ready(*firmware_profiles(ROOT / "examples/first-screen")):
+        if not emulator_ready(*firmware_profiles(ROOT / "examples/first-screen")):
             pytest.skip("Native tools or first-screen firmware are not installed")
         directory = tmp_path / "first-screen-copy"
         shutil.copytree(ROOT / "examples/first-screen", directory)
@@ -1405,7 +1418,7 @@ class DescribeExamplesInXRoar:
     def should_enforce_ntsc_despite_conflicting_user_configuration(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        if not native_ready("coco1"):
+        if not emulator_ready("coco1"):
             pytest.skip("Native tools or CoCo 1 firmware are not installed")
         (tmp_path / "xroar.conf").write_text("machine cocous\n tv-type pal\n")
         monkeypatch.setenv("XROAR_CONF_PATH", str(tmp_path))
@@ -1434,7 +1447,7 @@ class DescribeExamplesInXRoar:
         ],
     )
     def should_reject_each_broken_turn_queue(self, target: str, control: str, step: int) -> None:
-        if not native_ready(target):
+        if not emulator_ready(target):
             pytest.skip(f"Native tools or {target} firmware are not installed")
         example = ROOT / "examples/turn-queue"
         project = coco.load_project(example)
@@ -1492,6 +1505,7 @@ class DescribeFirmwareBoundary:
         )
         host = Host()
         monkeypatch.setattr(host, "executable", lambda name: name)
+        monkeypatch.setattr(host, "xroar", lambda: "xroar")
         launched = []
         monkeypatch.setattr(host, "launch", launched.append)
 
@@ -1512,7 +1526,7 @@ class DescribeFirmwareBoundary:
 class DescribeEquipmentInXRoar:
     @pytest.fixture
     def first_screen(self, tmp_path: Path) -> Path:
-        if not instrumented_ready(*firmware_profiles(ROOT / "examples/first-screen")):
+        if not emulator_ready(*firmware_profiles(ROOT / "examples/first-screen")):
             pytest.skip("Native tools, first-screen firmware or instrumented tools are missing")
         directory = tmp_path / "first-screen-copy"
         shutil.copytree(ROOT / "examples/first-screen", directory)
@@ -1566,7 +1580,7 @@ class DescribeEquipmentInXRoar:
     def should_reject_a_wrong_coco2_display_mode_that_memory_accepts(
         self, tmp_path: Path, capsys
     ) -> None:
-        if not instrumented_ready("coco2"):
+        if not emulator_ready("coco2"):
             pytest.skip("Native tools, CoCo 2 firmware or instrumented build tools are missing")
         directory = tmp_path / "palette-swatches-copy"
         shutil.copytree(ROOT / "examples/palette-swatches", directory)
@@ -1581,7 +1595,7 @@ class DescribeEquipmentInXRoar:
     def should_show_partial_erasure_when_the_shown_screen_is_redrawn(
         self, tmp_path: Path, capsys
     ) -> None:
-        if not instrumented_ready("coco1"):
+        if not emulator_ready("coco1"):
             pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
         directory = tmp_path / "page-flip-copy"
         shutil.copytree(ROOT / "examples/page-flip", directory)
@@ -1602,7 +1616,7 @@ class DescribeEquipmentInXRoar:
     def should_reject_a_wrong_coco3_display_base_that_memory_accepts(
         self, tmp_path: Path, capsys
     ) -> None:
-        if not instrumented_ready("coco3"):
+        if not emulator_ready("coco3"):
             pytest.skip("Native tools, CoCo 3 firmware or instrumented build tools are missing")
         directory = tmp_path / "page-flip-copy"
         shutil.copytree(ROOT / "examples/page-flip", directory)
@@ -1633,7 +1647,7 @@ class DescribeEquipmentInXRoar:
     def should_reject_a_coco3_text_screen_that_only_the_128k_alias_accepts(
         self, tmp_path: Path, capsys, line: str, wrong: str, error: str
     ) -> None:
-        if not instrumented_ready("coco3"):
+        if not emulator_ready("coco3"):
             pytest.skip("Native tools, CoCo 3 firmware or instrumented build tools are missing")
         directory = tmp_path / "text-addressing-copy"
         shutil.copytree(ROOT / "examples/text-addressing", directory)
@@ -1658,7 +1672,7 @@ class DescribeEquipmentInXRoar:
         assert "first at x=0, y=1" in capsys.readouterr().err
 
     def should_reject_a_journey_with_a_wrong_key(self, tmp_path: Path) -> None:
-        if not instrumented_ready("coco1"):
+        if not emulator_ready("coco1"):
             pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
         example = ROOT / "examples/collect-room"
         project = coco.load_project(example)
@@ -1686,7 +1700,7 @@ class DescribeEquipmentInXRoar:
     def should_reject_each_broken_collect_room_build(
         self, target: str, control: str, message: str
     ) -> None:
-        if not instrumented_ready("coco1", "coco2", "coco2b", "coco3"):
+        if not emulator_ready("coco1", "coco2", "coco2b", "coco3"):
             pytest.skip("Native tools, CoCo 1/2/3 firmware or instrumented build tools are missing")
         example = ROOT / "examples/collect-room"
         project = coco.load_project(example)
@@ -1704,7 +1718,7 @@ class DescribeEquipmentInXRoar:
     def should_reject_a_wrong_collect_room_display_mode_that_memory_accepts(
         self, tmp_path: Path, capsys
     ) -> None:
-        if not instrumented_ready("coco1"):
+        if not emulator_ready("coco1"):
             pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
         directory = tmp_path / "collect-room-copy"
         shutil.copytree(ROOT / "examples/collect-room", directory)
@@ -1723,7 +1737,7 @@ class DescribeEquipmentInXRoar:
 
     @pytest.fixture
     def keyboard_controls(self) -> Path:
-        if not instrumented_ready("coco1", "coco2", "coco2b", "coco3"):
+        if not emulator_ready("coco1", "coco2", "coco2b", "coco3"):
             pytest.skip("Native tools, CoCo 1/2/3 firmware or instrumented build tools are missing")
         return ROOT / "examples/keyboard-controls"
 
@@ -1750,7 +1764,7 @@ class DescribeEquipmentInXRoar:
 
     @pytest.fixture
     def sound_slots(self, tmp_path: Path) -> Path:
-        if not instrumented_ready("coco1", "coco2", "coco2b", "coco3"):
+        if not emulator_ready("coco1", "coco2", "coco2b", "coco3"):
             pytest.skip("Native tools, CoCo firmware or instrumented build tools are missing")
         directory = tmp_path / "sound-slots-copy"
         shutil.copytree(ROOT / "examples/sound-slots", directory)
@@ -1804,7 +1818,7 @@ class DescribeEquipmentInXRoar:
 
     @pytest.fixture
     def timer_sound(self, tmp_path: Path) -> Path:
-        if not instrumented_ready("coco3"):
+        if not emulator_ready("coco3"):
             pytest.skip("Native tools, CoCo 3 firmware or instrumented build tools are missing")
         directory = tmp_path / "timer-sound-copy"
         shutil.copytree(ROOT / "examples/timer-sound", directory)
@@ -1843,7 +1857,7 @@ class DescribeEquipmentInXRoar:
 
     @pytest.fixture
     def tile_room(self, tmp_path: Path) -> Path:
-        if not instrumented_ready("coco1"):
+        if not emulator_ready("coco1"):
             pytest.skip("Native tools, CoCo 1 firmware or instrumented build tools are missing")
         directory = tmp_path / "tile-room-copy"
         shutil.copytree(ROOT / "examples/tile-room", directory)
@@ -1908,7 +1922,7 @@ class DescribeDisksInXRoar:
 
     @pytest.fixture
     def template(self, tmp_path: Path) -> Path:
-        if not (native_ready("coco1") and tool_path("decb")):
+        if not (emulator_ready("coco1") and tool_path("decb")):
             pytest.skip("Native tools, ToolShed or firmware are not installed")
         directory = tmp_path / "disk-demo"
         shutil.copytree(ROOT / "template", directory)
@@ -1940,7 +1954,7 @@ class DescribeDisksInXRoar:
     def should_load_the_template_from_a_disk_on_each_other_target(
         self, template: Path, target: str, table: str
     ) -> None:
-        if not native_ready(target):
+        if not emulator_ready(target):
             pytest.skip(f"{target} firmware is not installed")
         ram = 128 if target == "coco3" else 32
         settings = template / "coco.toml"

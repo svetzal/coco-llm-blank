@@ -25,7 +25,7 @@ from typing import Literal
 
 import instrumented_xroar as ix
 from instrumented_xroar import BuildHost, Upstream
-from native import ROOT, tool_path
+from native import ROOT
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 DOWNLOADS = "https://www.6809.org.uk/xroar/dl/"
@@ -122,22 +122,7 @@ def source_line(label: str, versions: list[str] | None) -> str:
     return f"  {label}: newest {versions[-1]}" if versions else f"  {label}: no releases found"
 
 
-def stock_line(pin: Upstream, stock: tuple[str, str] | None) -> str:
-    if stock is None:
-        return "Ordinary XRoar: not found; run uv run python scripts/native.py."
-    path, banner = stock
-    found = re.search(r"\d+(?:\.\d+)+", banner)
-    version = found[0] if found else "unknown"
-    match = "matches the pin" if version == pin.version else f"differs from the pin {pin.version}"
-    return f"Ordinary XRoar: {path} is {version}; it {match}."
-
-
-def report_lines(
-    pin: Upstream,
-    tags: list[str] | None,
-    archives: list[str] | None,
-    stock: tuple[str, str] | None,
-) -> list[str]:
+def report_lines(pin: Upstream, tags: list[str] | None, archives: list[str] | None) -> list[str]:
     known = [*(tags or []), *(archives or [])]
     ahead = newer_than(pin.version, known)
     if ahead:
@@ -158,7 +143,6 @@ def report_lines(
         source_line(f"git tags at {pin.git_url}", tags),
         source_line(f"archives at {DOWNLOADS}", archives),
         status,
-        stock_line(pin, stock),
     ]
 
 
@@ -237,7 +221,7 @@ def summary(trial: Trial) -> list[str]:
 
 
 class UpstreamHost:
-    """Gateway for git, downloads, the ordinary XRoar and coco.py check processes."""
+    """Gateway for git, downloads and coco.py check processes."""
 
     def git(self, arguments: list[str], cwd: Path | None = None) -> str:
         done = subprocess.run(
@@ -259,17 +243,9 @@ class UpstreamHost:
         with urllib.request.urlopen(url, timeout=120) as response:
             destination.write_bytes(response.read())
 
-    def stock_xroar(self) -> tuple[str, str] | None:
-        if not (path := tool_path("xroar")):
-            return None
-        done = subprocess.run(
-            [path, "-version"], capture_output=True, text=True, check=False, timeout=30
-        )
-        return path, (done.stdout.splitlines() or ["unknown"])[0]
-
     def check(self, example: Path, arguments: list[str], xroar: Path, log: Path) -> int:
         command = [sys.executable, "scripts/coco.py", "check", str(example), *arguments]
-        environment = os.environ | {"XROAR_INSTRUMENTED": str(xroar)}
+        environment = os.environ | {ix.OVERRIDE: str(xroar)}
         with log.open("w") as stream:
             done = subprocess.run(
                 command,
@@ -292,7 +268,7 @@ def report(host: UpstreamHost, say: Callable[[str], None] = print) -> int:
         archives = archives_listed(host.fetch_text(DOWNLOADS))
     except OSError:
         archives = None
-    for line in report_lines(pin, tags, archives, host.stock_xroar()):
+    for line in report_lines(pin, tags, archives):
         say(line)
     return 1 if tags is None and archives is None else 0
 

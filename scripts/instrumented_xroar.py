@@ -1,11 +1,12 @@
-"""Build the one instrumented XRoar that coco.py uses to capture screens, keys and sound.
+"""Build the one XRoar that coco.py uses for every run, check, snapshot, disk and record.
 
 It is the pinned XRoar release archive with the patch series in
-scripts/xroar_patches/ applied. It is built once, into ignored
-local/toolchain/xroar-instrumented/, the first time a project asks for one of
-those abilities, and rebuilt when the pinned release, the series or the build
-output no longer match the recorded provenance. Ordinary build, run and check
-keep using the installed XRoar and need no C compiler.
+scripts/xroar_patches/ applied: the instrumented XRoar. It has a window and
+host sound through SDL2, and the series adds the screen, key and sound
+equipment that checks use without a window. It is built into ignored
+local/toolchain/xroar-instrumented/ by bootstrap or on first use, and rebuilt
+when the pinned release, the series, the configure options or the build output
+no longer match the recorded provenance. Set XROAR to use another executable.
 
 The series is carried forward to new XRoar releases with
 scripts/xroar_upstream.py; see guidance/starter/xroar-patch.md.
@@ -25,7 +26,13 @@ import urllib.request
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
-from native import ROOT, cached_source
+from native import (
+    ROOT,
+    XROAR_COMMANDS,
+    XROAR_LIBRARIES,
+    cached_archive,
+    host_path,
+)
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 PATCHES = Path(__file__).resolve().parent / "xroar_patches"
@@ -34,26 +41,22 @@ HOME = Path("local/toolchain/xroar-instrumented")
 RECORD = "build.json"
 # The series adds source files to src/Makefile.am, so the build files are regenerated.
 AUTORECONF = ["autoreconf", "-fi"]
-# No window, no host audio: only the null UI and null audio modules are needed.
-CONFIGURE = ["./configure"] + [
-    f"--without-{name}"
-    for name in ("gtk3", "gtk2", "sdl3", "sdl2", "cocoa", "coreaudio", "alsa", "oss", "pulse")
-]
+# SDL2 gives the window on every host (with Cocoa on macOS), so GTK and SDL3 stay out.
+# Without GTK, Linux needs SDL2's own UI enabled. Checks select the null UI and audio.
+CONFIGURE = ["./configure", "--without-gtk3", "--without-gtk2", "--without-sdl3"]
+LINUX_CONFIGURE = ["--enable-ui-sdl"]
 MAKE = ["make", "-j4"]
+# The environment variable that names a substitute for the executable.
+OVERRIDE = "XROAR"
 # Each tool, and the environment variable that names a substitute for it.
-PREREQUISITES = {
-    "cc": "CC",
-    "make": "MAKE",
-    "autoreconf": None,
-    "automake": None,
-    "pkg-config": None,
-}
+PREREQUISITES = {"cc": "CC", "make": "MAKE"} | dict.fromkeys(XROAR_COMMANDS)
 INSTALL_HINT = (
-    "Install a C compiler, make, Autoconf, Automake and pkg-config, then rerun. "
+    "Install a C compiler, make, Autoconf, Automake, pkg-config and SDL2, then rerun. "
+    "`uv run python scripts/native.py` installs all but the compiler. "
     "On Apple Silicon macOS run `xcode-select --install` and "
-    "`brew install autoconf automake pkgconf`; on Ubuntu 24.04 run "
-    "`sudo apt-get install build-essential pkg-config autoconf automake`. "
-    "See guidance/starter/toolchain.md#instrumented-xroar."
+    "`brew install autoconf automake pkgconf sdl2`; on Ubuntu 24.04 run "
+    "`sudo apt-get install build-essential pkg-config autoconf automake libsdl2-dev "
+    "libasound2-dev libpulse-dev`. See guidance/starter/toolchain.md#instrumented-xroar."
 )
 EMPTY_BLOB = "0" * 40
 HUNK = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
@@ -311,7 +314,21 @@ def key_names(series: Series) -> tuple[str, ...]:
     return tuple(dict.fromkeys(re.findall(r'\{ "(\w+)", DSCAN_\w+ \}', series.text)))
 
 
-def stale_reason(home: Path, pin: Upstream, series: Series) -> str | None:
+def build_commands(system: str) -> dict[str, list[str]]:
+    """The commands that regenerate, configure and make XRoar on this host system."""
+    configure = CONFIGURE + (LINUX_CONFIGURE if system == "Linux" else [])
+    return {"autoreconf": AUTORECONF, "configure": configure, "make": MAKE}
+
+
+def window_modules(help_text: str) -> list[str]:
+    """The UI modules that `xroar -ui help` lists, except the windowless null module."""
+    modules = re.findall(r"^\s+(\S+)", help_text, re.MULTILINE)
+    return [module for module in modules if module != "null"]
+
+
+def stale_reason(
+    home: Path, pin: Upstream, series: Series, commands: dict[str, list[str]]
+) -> str | None:
     """Why the recorded build cannot be used, or None when every hash still matches."""
     try:
         record = Provenance.model_validate_json((home / RECORD).read_text())
@@ -323,6 +340,8 @@ def stale_reason(home: Path, pin: Upstream, series: Series) -> str | None:
         return "the pinned XRoar release changed"
     if record.series_sha256 != series.digest:
         return "the patch series changed"
+    if record.commands.get("configure") != commands["configure"]:
+        return "it was configured with different options"
     for name, expected in {
         **record.patched_sha256,
         record.executable: record.executable_sha256,
@@ -347,10 +366,22 @@ def load_series(patches: Path = PATCHES) -> Series:
 
 
 class BuildHost:
-    """Gateway for executable discovery, downloads and build processes."""
+    """Gateway for executable discovery, downloads and build processes.
+
+    Processes see PATH with Apple Silicon Homebrew added, as native.py's tools do.
+    """
+
+    def system(self) -> str:
+        return platform.system()
 
     def which(self, name: str) -> str | None:
-        return shutil.which(name)
+        return shutil.which(name, path=host_path())
+
+    def has_library(self, name: str) -> bool:
+        found = subprocess.run(
+            ["pkg-config", "--exists", name], env=self.environment(), check=False
+        )
+        return found.returncode == 0
 
     def download(self, url: str, destination: Path) -> None:
         with urllib.request.urlopen(url, timeout=60) as response:
@@ -359,20 +390,42 @@ class BuildHost:
     def run(self, command: list[str], cwd: Path, log: Path) -> None:
         with log.open("w") as stream:
             subprocess.run(
-                command, cwd=cwd, stdout=stream, stderr=subprocess.STDOUT, check=True, timeout=900
+                command,
+                cwd=cwd,
+                env=self.environment(),
+                stdout=stream,
+                stderr=subprocess.STDOUT,
+                check=True,
+                timeout=900,
             )
 
     def version(self, name: str) -> str:
-        result = subprocess.run([name, "--version"], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            [name, "--version"], env=self.environment(), capture_output=True, text=True, check=True
+        )
         return result.stdout.splitlines()[0]
+
+    def ui_help(self, executable: Path) -> str:
+        """What `xroar -ui help` prints; it lists the UI modules and exits without a window."""
+        result = subprocess.run(
+            [str(executable), "-ui", "help"], capture_output=True, text=True, check=True, timeout=30
+        )
+        return result.stdout
+
+    def environment(self) -> dict[str, str]:
+        return os.environ | {"PATH": host_path()}
 
 
 def missing_prerequisites(host: BuildHost) -> list[str]:
-    return [
+    """Missing tools, then missing libraries; a library is checked only with pkg-config."""
+    tools = [
         name
         for name, variable in PREREQUISITES.items()
         if not host.which(os.environ.get(variable, name) if variable else name)
     ]
+    if "pkg-config" in tools:
+        return tools
+    return tools + [name for name in XROAR_LIBRARIES if not host.has_library(name)]
 
 
 def extract(archive: Path, pin: Upstream, series: Series, work: Path) -> dict[str, str]:
@@ -394,8 +447,18 @@ def extract(archive: Path, pin: Upstream, series: Series, work: Path) -> dict[st
     return hashes
 
 
-def build(host: BuildHost, pin: Upstream, series: Series, archive: Path, home: Path) -> Provenance:
-    """Patch, regenerate, configure and make in a fresh folder, then replace the old build."""
+def build(
+    host: BuildHost,
+    pin: Upstream,
+    series: Series,
+    archive: Path,
+    home: Path,
+    commands: dict[str, list[str]],
+) -> Provenance:
+    """Patch, regenerate, configure and make in a fresh folder, then replace the old build.
+
+    A build without a window module is refused before it replaces the old build.
+    """
     if sha256(archive.read_bytes()) != pin.archive_sha256:
         raise ValueError(f"{archive} does not match the pinned XRoar {pin.version} checksum.")
     work = home.with_name(home.name + ".building")
@@ -403,10 +466,14 @@ def build(host: BuildHost, pin: Upstream, series: Series, archive: Path, home: P
     work.mkdir(parents=True)
     patched = extract(archive, pin, series, work)
     tree = work / pin.tree
-    commands = {"autoreconf": AUTORECONF, "configure": CONFIGURE, "make": MAKE}
     for step, command in commands.items():
         host.run(command, tree, work / f"{step}.log")
     executable = f"{pin.tree}/src/xroar"
+    if not window_modules(host.ui_help(work / executable)):
+        raise ValueError(
+            f"The XRoar build in {work} has no window, so `run` cannot open it. Its configure "
+            f"found no SDL2; read {work / 'configure.log'}. {INSTALL_HINT}"
+        )
     record = Provenance(
         upstream_version=pin.version,
         tag=pin.tag,
@@ -438,7 +505,8 @@ def build_verified(
     say: Callable[[str], None],
 ) -> Path:
     """Return the executable built from this pin and series, building it when needed."""
-    if (reason := stale_reason(home, pin, series)) is None:
+    commands = build_commands(host.system())
+    if (reason := stale_reason(home, pin, series, commands)) is None:
         return home / pin.tree / "src/xroar"
     if missing := missing_prerequisites(host):
         raise ValueError(
@@ -446,8 +514,8 @@ def build_verified(
             f"{'is' if len(missing) == 1 else 'are'} not installed. {INSTALL_HINT}"
         )
     say(f"Building the instrumented XRoar {pin.version} ({reason}); this takes a minute or two.")
-    build(host, pin, series, archive(), home)
-    if (reason := stale_reason(home, pin, series)) is not None:
+    build(host, pin, series, archive(), home, commands)
+    if (reason := stale_reason(home, pin, series, commands)) is not None:
         raise ValueError(f"The instrumented XRoar build did not verify: {reason}.")
     return home / pin.tree / "src/xroar"
 
@@ -457,25 +525,38 @@ def ensure(
 ) -> Path:
     """Return the verified instrumented executable, building it first when needed."""
     host = host or BuildHost()
+    pin = load_pin()
     return build_verified(
         host,
-        load_pin(),
+        pin,
         load_series(),
-        lambda: cached_source("xroar", root, host.download),
+        lambda: cached_archive(
+            "xroar", pin.version, pin.archive_url, pin.archive_sha256, root, host.download
+        ),
         root / HOME,
         say,
     )
 
 
-def status(root: Path = ROOT, host: BuildHost | None = None) -> str:
-    """One line for doctor.py: built and verified, or what building it needs."""
+def status(root: Path = ROOT, host: BuildHost | None = None) -> tuple[bool, str]:
+    """For doctor.py: whether XRoar is ready, and one line that says which and why.
+
+    An executable named by XROAR is used as it is, so only its presence is checked.
+    """
     host = host or BuildHost()
+    if override := os.environ.get(OVERRIDE):
+        if found := host.which(override):
+            return True, f"{found} (named by {OVERRIDE}; not checked against the pin)"
+        return False, f"{override}, named by {OVERRIDE}, is not an executable"
     home, pin = root / HOME, load_pin()
-    if (reason := stale_reason(home, pin, load_series())) is None:
-        return f"built and verified: {home / pin.tree / 'src/xroar'}"
+    commands = build_commands(host.system())
+    if (reason := stale_reason(home, pin, load_series(), commands)) is None:
+        executable = home / pin.tree / "src/xroar"
+        return True, f"{executable} (XRoar {pin.version} with the patch series, built and verified)"
     missing = missing_prerequisites(host)
     needs = f"missing {', '.join(missing)}. {INSTALL_HINT}" if missing else "build tools found"
-    return f"{reason}; scripts/coco.py builds it on first use ({needs})"
+    command = "uv run python scripts/instrumented_xroar.py build"
+    return False, f"{reason}; build it with `{command}` ({needs})"
 
 
 def main(argv: list[str] | None = None, host: BuildHost | None = None) -> int:
@@ -486,7 +567,7 @@ def main(argv: list[str] | None = None, host: BuildHost | None = None) -> int:
     arguments = parser.parse_args(argv)
     try:
         if arguments.action == "status":
-            print(status(ROOT, host))
+            print(status(ROOT, host)[1])
         else:
             print(ensure(ROOT, host))
     except (OSError, ValueError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:

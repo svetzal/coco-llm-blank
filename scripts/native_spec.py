@@ -68,7 +68,7 @@ class DescribeNativeInstallation:
     def should_reuse_existing_tools_without_system_changes(
         self, isolated_tools: Path, system: str, machine: str
     ) -> None:
-        provide(isolated_tools, "lwasm", "lwlink", "decb", "xroar")
+        provide(isolated_tools, "lwasm", "lwlink", "decb")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = system
         host.machine.return_value = machine
@@ -77,7 +77,7 @@ class DescribeNativeInstallation:
         host.dependencies.assert_not_called()
 
     def should_install_only_missing_mac_packages(self, isolated_tools: Path) -> None:
-        provide(isolated_tools, "decb", "xroar")
+        provide(isolated_tools, "decb")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Darwin"
         host.machine.return_value = "arm64"
@@ -96,7 +96,7 @@ class DescribeNativeInstallation:
         self, isolated_tools: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         system_path(monkeypatch, isolated_tools)
-        provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        provide(isolated_tools, "lwasm", "lwlink")
         data = source_archive("toolshed", "decb")
         pin_source(monkeypatch, "toolshed", data)
         host = Mock(spec=native.HostGateway)
@@ -116,7 +116,6 @@ class DescribeNativeInstallation:
     def should_explain_missing_compilers_without_stopping_setup(
         self, isolated_tools: Path, capsys
     ) -> None:
-        provide(isolated_tools, "xroar")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Darwin"
         host.machine.return_value = "arm64"
@@ -135,7 +134,7 @@ class DescribeNativeInstallation:
     def should_report_a_failed_toolshed_build_without_stopping_setup(
         self, isolated_tools: Path, capsys
     ) -> None:
-        provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        provide(isolated_tools, "lwasm", "lwlink")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Linux"
         host.machine.return_value = "x86_64"
@@ -151,7 +150,7 @@ class DescribeNativeInstallation:
         self, isolated_tools: Path, monkeypatch: pytest.MonkeyPatch, capsys
     ) -> None:
         system_path(monkeypatch, isolated_tools)
-        provide(isolated_tools, "lwasm", "lwlink", "xroar")
+        provide(isolated_tools, "lwasm", "lwlink")
         data = source_archive("toolshed", "os9")
         pin_source(monkeypatch, "toolshed", data)
         host = Mock(spec=native.HostGateway)
@@ -175,7 +174,7 @@ class DescribeNativeInstallation:
         for name, data in archives.items():
             pin_source(monkeypatch, name, data)
         system_path(monkeypatch, isolated_tools)
-        provide(isolated_tools, "lwlink", "xroar")
+        provide(isolated_tools, "lwlink")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Linux"
         host.machine.return_value = "x86_64"
@@ -197,7 +196,7 @@ class DescribeNativeInstallation:
         self, isolated_tools: Path, machine: str, tools_present: bool
     ) -> None:
         if tools_present:
-            provide(isolated_tools, "lwasm", "lwlink", "decb", "xroar")
+            provide(isolated_tools, "lwasm", "lwlink", "decb")
         host = Mock(spec=native.HostGateway)
         host.system.return_value = "Darwin"
         host.machine.return_value = machine
@@ -214,10 +213,69 @@ class DescribeNativeInstallation:
     def should_not_hide_a_broken_override(
         self, isolated_tools: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        provide(isolated_tools, "lwasm", "lwlink", "decb", "xroar")
+        provide(isolated_tools, "lwasm", "lwlink", "decb")
         monkeypatch.setenv("LWASM", "/missing/assembler")
         with pytest.raises(ValueError, match="LWASM"):
             native.install(isolated_tools, Mock(spec=native.HostGateway))
+
+    def should_install_what_the_xroar_build_lacks_with_homebrew(self, isolated_tools: Path) -> None:
+        provide(isolated_tools, "lwasm", "lwlink", "decb")
+        present = {"autoreconf", "pkg-config"}
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
+        host.brew.return_value = "brew"
+        host.has_command.side_effect = lambda name: name in present
+        host.has_library.side_effect = lambda name: name in present
+        host.run.side_effect = lambda command: present.update({"automake", "sdl2"})
+
+        native.install(isolated_tools, host)
+
+        host.run.assert_called_once_with(["brew", "install", "automake", "sdl2"])
+
+    def should_install_lwtools_and_the_xroar_build_needs_in_one_homebrew_call(
+        self, isolated_tools: Path
+    ) -> None:
+        provide(isolated_tools, "decb")
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
+        host.brew.return_value = "brew"
+        host.has_command.return_value = True
+        host.has_library.side_effect = [False, True]
+        host.run.side_effect = lambda command: provide(isolated_tools, "lwasm", "lwlink")
+
+        native.install(isolated_tools, host)
+
+        host.run.assert_called_once_with(["brew", "install", "lwtools", "sdl2"])
+
+    def should_install_ubuntu_packages_when_only_the_xroar_build_lacks_something(
+        self, isolated_tools: Path
+    ) -> None:
+        provide(isolated_tools, "lwasm", "lwlink", "decb")
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Linux"
+        host.machine.return_value = "x86_64"
+        host.ubuntu_supported.return_value = True
+        host.has_command.side_effect = [False, True, True, True, True, True]
+        host.has_library.return_value = True
+
+        native.install(isolated_tools, host)
+
+        host.dependencies.assert_called_once()
+        host.download.assert_not_called()
+
+    def should_stop_when_the_xroar_build_still_lacks_something(self, isolated_tools: Path) -> None:
+        provide(isolated_tools, "lwasm", "lwlink", "decb")
+        host = Mock(spec=native.HostGateway)
+        host.system.return_value = "Darwin"
+        host.machine.return_value = "arm64"
+        host.brew.return_value = "brew"
+        host.has_command.return_value = True
+        host.has_library.return_value = False
+
+        with pytest.raises(ValueError, match="the XRoar build still lacks sdl2"):
+            native.install(isolated_tools, host)
 
     def should_reject_unsupported_hosts(self, isolated_tools: Path) -> None:
         host = Mock(spec=native.HostGateway)
@@ -259,7 +317,7 @@ class DescribeNativeInstallation:
 
 
 class DescribeVerifiedSourceBuild:
-    @pytest.mark.parametrize("name", ["lwtools", "xroar", "toolshed"])
+    @pytest.mark.parametrize("name", ["lwtools", "toolshed"])
     def should_build_verified_sources_and_reuse_the_download(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
     ) -> None:
@@ -322,6 +380,20 @@ class DescribeHostGateway:
         monkeypatch.setenv("PATH", str(tmp_path))
         assert native.HostGateway().brew() == str(brew)
 
+    def should_install_every_ubuntu_package_the_xroar_build_needs(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(native.os, "geteuid", lambda: 0)
+        host = native.HostGateway()
+        host.run = Mock()
+
+        host.dependencies()
+
+        installed = host.run.call_args_list[-1].args[0]
+        for package in ("build-essential", "autoconf", "automake", "pkg-config", "libsdl2-dev"):
+            assert package in installed
+        assert {"libasound2-dev", "libpulse-dev"} <= set(installed)
+
     @pytest.mark.parametrize("uid, prefix", [(0, []), (1000, ["sudo", "-n"])])
     def should_fail_fast_when_system_installation_is_denied(
         self, monkeypatch: pytest.MonkeyPatch, uid, prefix
@@ -378,13 +450,50 @@ class DescribeBuildToolDiscovery:
         assert native.HostGateway().has_build_tools() is True
 
 
+class DescribeXRoarBuildDiscovery:
+    @pytest.fixture
+    def commands(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+        monkeypatch.setenv("PATH", str(tmp_path))
+        monkeypatch.setattr(native.platform, "system", lambda: "Linux")
+        return tmp_path
+
+    def should_find_commands_and_ask_pkg_config_for_libraries(self, commands: Path) -> None:
+        host = native.HostGateway()
+
+        assert not host.has_command("automake")
+        assert not host.has_library("sdl2")
+
+        pkg_config = commands / "pkg-config"
+        pkg_config.write_text('#!/bin/sh\n[ "$2" = sdl2 ]\n')
+        pkg_config.chmod(0o755)
+
+        assert host.has_command("pkg-config")
+        assert host.has_library("sdl2")
+        assert not host.has_library("gtk+-3.0")
+
+    @pytest.mark.parametrize(
+        "path,system,machine,expected",
+        [
+            ("/usr/bin", "Darwin", "arm64", "/usr/bin:/opt/homebrew/bin"),
+            ("/opt/homebrew/bin:/usr/bin", "Darwin", "arm64", "/opt/homebrew/bin:/usr/bin"),
+            ("", "Darwin", "arm64", "/opt/homebrew/bin"),
+            ("/usr/bin", "Linux", "aarch64", "/usr/bin"),
+            ("/usr/bin", "Darwin", "x86_64", "/usr/bin"),
+        ],
+    )
+    def should_add_apple_silicon_homebrew_to_the_search_path(
+        self, path: str, system: str, machine: str, expected: str
+    ) -> None:
+        assert native.search_path(path, system, machine) == expected
+
+
 class DescribeHomebrewDiscovery:
     def should_discover_new_homebrew_tools_without_shell_reload(self, isolated_tools, monkeypatch):
         monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
         monkeypatch.setattr(native.platform, "machine", lambda: "arm64")
         assert native.tool_path("lwasm", isolated_tools) is None
         native.HOMEBREW_BIN.mkdir(parents=True)
-        for name in ("lwasm", "lwlink", "decb", "xroar"):
+        for name in ("lwasm", "lwlink", "decb"):
             executable = native.HOMEBREW_BIN / name
             executable.write_text("#!/bin/sh\nexit 0\n")
             executable.chmod(0o755)

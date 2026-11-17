@@ -32,6 +32,11 @@ If permissions or installation fail, use
 [toolchain.md](toolchain.md). Its
 [supported hosts](toolchain.md#supported-hosts) section gives the limits.
 
+Bootstrap builds XRoar from its pinned source release. This build needs a C
+compiler. On macOS, install the Xcode Command Line Tools with
+`xcode-select --install` if bootstrap asks for them. Read
+[Instrumented XRoar](toolchain.md#instrumented-xroar).
+
 Bootstrap also builds ToolShed. Directly launched demos do not need it. The
 `disk` command of `scripts/coco.py` needs it to make disk images.
 
@@ -115,15 +120,15 @@ derived content stays outside Git.
 
 ## Native CoCo tools
 
-LWTOOLS, ToolShed, and XRoar are separate host installations:
+LWTOOLS and ToolShed are separate host installations. XRoar is built from
+source into ignored `local/toolchain/`. Check all three with:
 
 ```sh
 uv run python scripts/doctor.py
 ```
 
 Read [toolchain](toolchain.md) for executable overrides, installation
-sources, firmware requirements, and build verification. This starter uses
-assembly. A C compiler is not part of the baseline.
+sources, firmware requirements, and build verification.
 
 ## Checks of the starter
 
