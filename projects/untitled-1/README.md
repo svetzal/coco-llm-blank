@@ -57,6 +57,16 @@ on the display. Each creature is 48 by 40 pixels inside its square, with a
 transparent background (agent-selected prototype choice). The owner agrees to
 each generation before it runs.
 
+Convert each creature with the 16 codes of the contract, in register order:
+
+```sh
+uv run python scripts/graphics.py convert projects/untitled-1/art/creatures/05-frog.png --mode gime-320x16 --size 48x40 --codes 00,10,20,30,05,15,25,24,0E,12,21,0B,1C,2D,07,16 --mask --out build/untitled-1/art/05-frog
+```
+
+The trilobite is wide and low. Crop it to the creature first, so that its face
+is as large as the faces of the other creatures. Add `--box 90,133,849,826`
+to its command (the owner chose this).
+
 ## How to run it
 
 Commands start in the starter folder:
