@@ -1,5 +1,6 @@
 # Settings for scripts/coco.py. Paths are relative to this folder.
 source = "main.asm"
+prepare = "prepare.py"   # converts art/creatures/*.png into sprite includes
 
 # The first target is the default. Firmware is checked against roms.json.
 # Record these values in the contract of the project README. The tables of the
@@ -12,15 +13,20 @@ vdg = "gime1986"
 ram_kib = 512
 extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
 disk = "disk11.rom"
-screen = 0x70400         # logical $0400 in the physical RAM snapshot
 
 [memory]
-at = { start = 0x3000 }
+at = { start = 0x2000 }
+below = { ends = 0x6000 }   # CPU $6000-$7FFF is the screen window
+
+# The rendered picture is the evidence for the display.
+[capture]
+video = true
 
 # For the check: the label where the snapshot is taken, and a label that must
 # never run.
 [check]
-checkpoint = "done"
+checkpoint = "ready"
 frames = [1]
-unreachable = "done+1"
-emulated_seconds = 10
+unreachable = "ready+1"
+screen = 0x00000         # physical $00000 is this snapshot offset
+emulated_seconds = 60

@@ -9,8 +9,9 @@ the evolution chain. After each move, a new simple creature appears in an empty
 square. The player wins when the last creature of the chain appears. The game
 ends when no move can change the grid.
 
-The program in this folder is still the template: it prints `HELLO, WORLD!`
-and returns to BASIC.
+The program draws the 4 by 4 board in 320×192 with 16 colours. It shows a
+fixed showcase of all eleven creatures. Input and the game rules are not
+written yet.
 
 ## What the owner asked for
 
@@ -105,5 +106,20 @@ defaults for the CoCo 3, not choices of the owner.
   Read [disk images](../../guidance/starter/toolchain.md#disk-images).
 
 ## Check
+
+`check` compares the 30720 screen bytes at physical `$00000` and XRoar's
+rendered picture with [expected.py](expected.py). The model converts the
+creature pictures by its own route. It does not read bytes from the build or
+the emulator. Two faults were run once, and each failed the check:
+
+- a wrong display mode (`$FF99` for 640×192 with 4 colours): the rendered
+  check fails, and the screen bytes still match
+- no page advance in the screen window: 119 screen bytes differ
+
+The capture shows the middle 512 of the 640 samples of each line. It shows
+all of the board, but not the outer 17 pixels at each side of the screen.
+
+Memory: the program, the sprites and the program's own stack are at CPU
+`$2000-$5FFF`. CPU `$6000-$7FFF` is the window to the screen.
 
 `coco.toml` names the label where the check takes its snapshot.
