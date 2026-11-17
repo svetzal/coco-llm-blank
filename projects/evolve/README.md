@@ -52,8 +52,8 @@ plays, so a move can take one or two more video frames.
 
 The creatures slide in 4 steps (agent choice). Each step takes 2 to 4 video
 frames, which depends on the number of creatures that move. A lab measured
-the method. Read the
-[animation guide](../../guidance/techniques/animation.md).
+the method. Read
+[slide tiles between squares](../../guidance/techniques/slide-tiles.md).
 
 1. The hidden screen first gets the board before the move.
 2. In each step, a creature moves a quarter of the way from its old square
@@ -311,9 +311,6 @@ defaults for the CoCo 3, not choices of the owner.
   Read [disk images](../../guidance/starter/toolchain.md#disk-images).
 
 ## Next steps
-
-Open lab: sliding-tiles. The lab measures how fast the creatures can slide
-to their new squares in a move (owner request).
 
 In order of importance:
 
