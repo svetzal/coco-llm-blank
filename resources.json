@@ -36,6 +36,18 @@
     "sha256": "070e4ac0ad8e59fc1a19b73966c7b55658456cc7ab59af2e3f559ad4791ea3ff"
   },
   {
+    "id": "super-extended-basic-unravelled",
+    "title": "Super Extended Basic Unravelled II (Spectral Associates; revised by Walter K. Zydhek, 1999)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Books/Unravelled%20Series/super-extended-basic-unravelled.pdf",
+    "sha256": "257dde8f9ab599bde32b84f2441a15ce6535d99ee0cc6a1e4357387d992ed416"
+  },
+  {
+    "id": "coco3-extended-basic",
+    "title": "Color Computer 3 Extended Basic (Tandy)",
+    "url": "https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%203%20Extended%20Basic%20(Tandy).pdf",
+    "sha256": "26d4ca51f3477263f3e85269091104079ae88ad83c842cef0e3bc531324e7f5e"
+  },
+  {
     "id": "coco2-service",
     "title": "Color Computer 2 NTSC Service Manual (26-3134 & 26-3136) (Tandy)",
     "url": "https://colorcomputerarchive.com/repo/Documents/Manuals/Hardware/Color%20Computer%202%20NTSC%20Service%20Manual%20(26-3134%20&%2026-3136)%20(Tandy).pdf",

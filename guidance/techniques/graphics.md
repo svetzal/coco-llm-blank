@@ -22,7 +22,8 @@ Other guides cover the next steps:
   conversion at each build.
 - [Moving objects](moving-objects.md): how to draw pictures over scenery.
 
-CoCo 3 GIME modes are not in this guide, and the tool rejects them.
+CoCo 3 GIME modes are not in this guide, and the tool rejects them. Read
+[the GIME graphics guide](gime-graphics.md) for them.
 
 ## Choose a mode
 

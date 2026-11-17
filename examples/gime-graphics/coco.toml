@@ -1,0 +1,112 @@
+# Settings for scripts/coco.py. Paths are relative to this folder.
+source = "main.asm"
+
+# NTSC CoCo 3, 6809 at the normal low rate. The tables differ only in the GIME
+# revision and the RAM size. The 512 KiB table catches a screen that works only
+# through the 128 KiB alias.
+[targets.coco3]
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+
+[targets.coco3-1987]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1987"
+ram_kib = 128
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+
+[targets.coco3-512]
+firmware = "coco3"
+machine = "coco3"
+cpu = "6809"
+tv = "ntsc"
+vdg = "gime1986"
+ram_kib = 512
+extended = "coco3.rom"   # XRoar loads the single CoCo 3 ROM as -extbas
+
+[memory]
+at = { first = 0x3000 }   # part 2 comes first; the program starts at "start"
+below = { value = 0x4000 }   # the last byte; CPU $4000-$5FFF is the screen window
+
+# The plain build shows 320x192 with 16 colours. Each variant selects one other
+# mode. l200 and l225 show the plain mode with 200 or 225 rows.
+[variants.g256x16]
+defines = ["G256X16"]
+
+[variants.g160x16]
+defines = ["G160X16"]
+
+[variants.g128x16]
+defines = ["G128X16"]
+
+[variants.g640x4]
+defines = ["G640X4"]
+
+[variants.g512x4]
+defines = ["G512X4"]
+
+[variants.g320x4]
+defines = ["G320X4"]
+
+[variants.g256x4]
+defines = ["G256X4"]
+
+[variants.g160x4]
+defines = ["G160X4"]
+
+[variants.g128x4]
+defines = ["G128X4"]
+
+[variants.g640x2]
+defines = ["G640X2"]
+
+[variants.g512x2]
+defines = ["G512X2"]
+
+[variants.g320x2]
+defines = ["G320X2"]
+
+[variants.g256x2]
+defines = ["G256X2"]
+
+[variants.g160x2]
+defines = ["G160X2"]
+
+[variants.g128x2]
+defines = ["G128X2"]
+
+[variants.g80x16]
+defines = ["G80X16"]
+
+[variants.g64x16]
+defines = ["G64X16"]
+
+[variants.g80x4]
+defines = ["G80X4"]
+
+[variants.g64x4]
+defines = ["G64X4"]
+
+[variants.l200]
+defines = ["L200"]
+
+[variants.l225]
+defines = ["L225"]
+
+# The practice is what the display shows, so check the rendered frame too.
+[capture]
+video = true
+
+# For the check only: where to take the snapshot and compare the screen.
+[check]
+checkpoint = "ready"       # reached once the screen is shown
+frames = [1]               # snapshot at the first time it is reached
+unreachable = "ready+1"    # mid-instruction: must never execute
+screen = 0x00000           # physical $00000 is this snapshot offset at both sizes
+emulated_seconds = 60

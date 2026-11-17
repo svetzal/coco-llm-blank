@@ -1712,6 +1712,46 @@ class DescribeEquipmentInXRoar:
 
         assert error in capsys.readouterr().err
 
+    @pytest.mark.parametrize(
+        "target, variant, file, right, wrong",
+        [
+            ("coco3", "", "main.asm", "palette fcb $00,$30", "palette fcb $00,$31"),
+            (
+                "coco3",
+                "g512x4",
+                "main.asm",
+                "WIDTH   equ 512\nBPP     equ 2\nHRES    equ %110",
+                "WIDTH   equ 512\nBPP     equ 2\nHRES    equ %100",
+            ),
+            ("coco3", "l225", "main.asm", "LPF     equ %11", "LPF     equ %01"),
+            (
+                "coco3-1987",
+                "g256x16",
+                "expected.py",
+                'LATE_SHORT_LINE = {"coco3-1987": 2}',
+                "LATE_SHORT_LINE = {}",
+            ),
+        ],
+        ids=["palette-code", "hres", "lines-per-field", "1987-left-border"],
+    )
+    def should_reject_a_gime_mode_that_only_memory_accepts(
+        self, tmp_path: Path, target: str, variant: str, file: str, right: str, wrong: str
+    ) -> None:
+        if not emulator_ready("coco3"):
+            pytest.skip("Native tools, CoCo 3 firmware or instrumented build tools are missing")
+        directory = tmp_path / "gime-graphics-copy"
+        shutil.copytree(ROOT / "examples/gime-graphics", directory)
+        changed = directory / file
+        assert right in changed.read_text()
+        changed.write_text(changed.read_text().replace(right, wrong))
+        project = coco.load_project(directory)
+        model = coco.load_expected(directory)
+
+        with pytest.raises(ProjectError, match="Frame 1: rendered display:"):
+            coco.check_variant(
+                project, Host(), model, target, variant, coco.equipment_for(project, variant)
+            )
+
     def should_reject_an_expected_frame_with_reversed_bit_order(
         self, first_screen: Path, capsys
     ) -> None:

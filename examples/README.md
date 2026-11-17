@@ -43,6 +43,7 @@ Each example README gives the commands for that example.
 | Queue turns and reject bad commands | [Turn queue](turn-queue/README.md) | CoCo 1, 2, 2B, 3 | Scheduled journeys, phases and a turn limit. RAM only. |
 | Play a tone from the main loop | [Sound slots](sound-slots/README.md) | CoCo 1, 2, 2B, 3 | Cooperative DAC tone; sawtooth and square. |
 | Play sound from a timer interrupt | [Timer sound](timer-sound/README.md) | CoCo 3 | GIME timer FIRQ, with cooperative builds for comparison. |
+| Set up a CoCo 3 graphics screen | [GIME graphics](gime-graphics/README.md) | CoCo 3 | Twenty GIME graphics modes and 192, 200 or 225 rows, at one physical address. 1986 and 1987 GIME, 128 and 512 KiB. Rendered check of each mode. |
 | Set up a CoCo 3 text screen | [Text addressing](text-addressing/README.md) | CoCo 3 | 32, 40, 64 and 80 columns at one physical address on 128 and 512 KiB. Rendered check of each width. |
 
 Most examples run unchanged on all three machines, because the CoCo 3 keeps
