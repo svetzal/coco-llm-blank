@@ -70,7 +70,7 @@ can reuse your projects and the references.
 
 ## Building, and solving problems in a lab
 
-Your agent works in one of two modes. The first line of each reply tells you
+Your agent usually works in one of two modes. The first line of each reply tells you
 which mode, for example:
 
 ```text
@@ -111,6 +111,10 @@ If you stop partway, your project notes record the open lab. Next time, the
 agent asks whether to continue the lab or to continue building. The
 improvements a lab makes stay in your copy of the starter unless you choose to
 share them.
+
+A third mode, **SYSTEM**, changes the starter itself: its tools and its
+guides. It is for people who maintain the starter. The agent starts it only
+when you ask for SYSTEM mode by name.
 
 ## What to expect today
 

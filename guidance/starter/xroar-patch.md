@@ -32,7 +32,7 @@ commands and makes no changes. It never commits, pushes or contacts anyone.
 
 ## When to run the procedure
 
-- Run `report` at the start of lab work on capture, and when the owner asks
+- Run `report` at the start of SYSTEM work on capture, and when the owner asks
   about XRoar versions.
 - Do a trial for each new XRoar release that `report` shows.
 - Do a trial on the pinned release before you change the equipment.
@@ -51,14 +51,14 @@ The report shows these items:
 
 ## Move to a new release
 
-A version bump is a short lab. Obey [the lab guide](lab.md): the trial makes
-`local/lab/xroar-<version>/LAB.md`. Log each command, result and decision
-there.
+A version bump is SYSTEM work. Obey [the system guide](system.md): the trial
+makes `local/system/xroar-<version>/NOTES.md`. Log each command, result and
+decision there.
 
 1. Get the archive's SHA-256 from a source other than the download. XRoar does
    not publish checksums. The Homebrew formula records one. Run
    `brew info --json=v2 xroar` and read `urls.stable.checksum`. Record the
-   source in `LAB.md`.
+   source in `NOTES.md`.
 2. Start the trial:
 
    ```sh
@@ -88,13 +88,13 @@ there.
 
 9. Do the steps in [keep the ordinary XRoar consistent](#keep-the-ordinary-xroar-consistent).
 10. Commit as [what to commit](#what-to-commit) describes.
-11. Close the lab: delete `local/lab/xroar-<version>/`.
+11. Delete `local/system/xroar-<version>/`.
 
 The trial clones upstream once into `local/toolchain-sources/xroar.git` and
 fetches tags after that. It treats the clone and the archive as untrusted data.
 It runs only XRoar's `autoreconf`, `configure` and `make` from them.
 
-The lab clone commits as a neutral identity and turns off your git hooks. Thus
+The trial clone commits as a neutral identity and turns off your git hooks. Thus
 the patches carry only their own messages.
 
 ## Resolve a conflict
@@ -103,8 +103,8 @@ The trial applies the series to the pinned base. Then it runs
 `git rebase --onto <new base> <pinned base>`. A three-way merge is therefore
 available for every file, also for files that an earlier patch changed.
 
-1. Read the files that the message names. Run `git status` in the lab clone,
-   `local/lab/xroar-<version>/xroar`.
+1. Read the files that the message names. Run `git status` in the trial clone,
+   `local/system/xroar-<version>/xroar`.
 2. Read the upstream change to each file:
    `git log -p <pinned base>..<new base> -- <file>`.
 3. Keep the upstream version of the upstream code.
@@ -120,12 +120,12 @@ A release archive can contain commits made after its tag. Then the archive
 does not match the tag, and the build refuses the first patched file that is
 different.
 
-1. Unpack the archive into a new folder under the lab.
+1. Unpack the archive into a new folder in the trial folder.
 2. Compare it with the tag: `git archive <tag> | tar -x -C <folder>`, then
    `diff -rq`. The archive alone holds the generated build files.
 3. Find the commit whose files match, usually a commit just after the tag.
    Do the comparison again for that commit.
-4. In the lab clone, run
+4. In the trial clone, run
    `git rebase --onto <commit> <tag> coco-capture`.
 5. Run the trial again with `--base <commit>`.
 
@@ -133,8 +133,8 @@ XRoar 1.13 was an example: its base was one commit after its tag.
 
 ## Fix a build failure
 
-1. Read `local/lab/xroar-<version>/build.building/make.log`.
-2. Fix the code in the lab clone on branch `coco-capture`.
+1. Read `local/system/xroar-<version>/build.building/make.log`.
+2. Fix the code in the trial clone on branch `coco-capture`.
 3. Commit the fix with `git commit --fixup=<commit of the patch it fixes>`.
 4. Merge it into that patch with `git rebase --autosquash <base>`.
 5. Run the trial again.
@@ -166,7 +166,7 @@ byte. It compares these files:
 - Result records
 
 The comparison ignores the emulator path in a result record.
-The files of each run stay in `local/lab/xroar-<version>/captures/`.
+The files of each run stay in `local/system/xroar-<version>/captures/`.
 
 - `identical`, exit code 0: adopt the release.
 - `different`, exit code 3: every check passed, but some files are different.
@@ -180,11 +180,11 @@ For each different file, do these steps:
 1. Find the kind and size of the difference. Examples are bytes in a RAM
    snapshot or ticks in a log line.
 2. Find the upstream change in the ChangeLog and in `git log <old>..<new>`.
-3. Prove the cause with a control. Revert that upstream commit in a lab
+3. Prove the cause with a control. Revert that upstream commit in a trial
    branch. Build the series and the revert, run the same checks, and compare
    with the pinned captures.
 4. Record the difference, the upstream change and the control result in
-   `LAB.md` and in the commit message.
+   `NOTES.md` and in the commit message.
 
 Do not adopt a release if one difference has no explanation. Report what
 blocked it, and keep the old pin.
@@ -215,10 +215,10 @@ If a plain check gives a different result on two hosts, compare their
 ## Change the equipment
 
 1. Run a trial on the pinned release, for example
-   `trial 1.13 --base <base commit>`. This makes the lab clone with the
+   `trial 1.13 --base <base commit>`. This makes the trial clone with the
    series as commits.
 
-2. Change the code in `local/lab/xroar-<version>/xroar` on branch
+2. Change the code in `local/system/xroar-<version>/xroar` on branch
    `coco-capture`. Use the steps in [fix a build failure](#fix-a-build-failure)
    to change a patch.
 

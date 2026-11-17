@@ -3,7 +3,7 @@
 Read this when a session switches to LAB mode. A lab answers one technical
 question that the guides and examples do not settle yet. Examples are crackly
 audio, slow graphics, unreliable input, a mode nobody has tried. A lab ends by
-improving the starter's guides, examples or tools. Then you remove the lab.
+improving the starter's technique guides or examples. Then you remove the lab.
 
 ## Open a lab
 
@@ -41,10 +41,9 @@ between sessions until the lab is closed.
   what the result showed. Failed experiments are findings. Keep them in the log.
 - `scripts/coco.py` already presses scripted keys and captures XRoar's rendered
   screen and mixer sound ([evidence methods](development.md#check-the-feature-you-claim)).
-  If an experiment needs equipment it lacks, building that ability is part of
-  the lab. Add the ability to `coco.py` with tests. Do not add it as a script
-  in the lab. Put an emulator hook in the patch series of the
-  [instrumented XRoar](toolchain.md#instrumented-xroar).
+  If an experiment needs equipment that it does not have, do not make a tool
+  in the lab. Explain the limit to the owner in plain words. Equipment changes
+  only in [SYSTEM mode](system.md), which the owner starts by name.
 
 Keep the evidence honest:
 
@@ -70,7 +69,6 @@ Turn the answer into lasting, committed changes:
   inline.
 - Add or update an example in `examples/<name>/` when code shows the answer
   better than prose. Its `coco.py check` is the reproducible evidence.
-- Commit any new `coco.py` ability with its tests.
 
 Do not commit lab notes, experiment folders, logs or captures. You delete the
 lab folder, so nothing that you commit can cite it.
@@ -90,7 +88,7 @@ as an open question, not as a fact.
 1. Delete `local/lab/<topic>/`.
 2. Remove the `Open lab` line from the project's `README.md`.
 3. Tell the owner, in plain words, what was found and what changed in the
-   guides, examples or tools.
+   guides or examples.
 4. Return to BUILD mode on the project that raised the question. Apply the
    answer there.
 

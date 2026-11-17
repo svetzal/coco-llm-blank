@@ -270,20 +270,20 @@ class DescribeTrial:
         monkeypatch.setattr(ix, "ensure", lambda root, builder, say: root / "pinned-xroar")
         return tmp_path
 
-    def should_rebase_build_and_compare_in_the_lab(self, root: Path) -> None:
+    def should_rebase_build_and_compare_in_the_work_folder(self, root: Path) -> None:
         host, fake = trial_host()
 
         trial = xu.run_trial(root, "1.13", host, Mock(spec=BuildHost), say=print)
 
-        lab = root / "local/lab/xroar-1.13"
+        work = root / "local/system/xroar-1.13"
         assert trial.verdict == "identical" and trial.application == "clean"
         assert trial.pin.tag_commit == "e" * 40
         assert trial.pin.archive_sha256 == ix.sha256(b"archive")
         assert trial.pin.archive_url.endswith("/xroar/dl/xroar-1.13.tar.gz")
         assert [c.example for c in trial.checks] == [e for e, _ in xu.EQUIVALENCE]
-        assert Trial.model_validate_json((lab / "trial.json").read_text()) == trial
-        assert "XRoar 1.13" in (lab / "LAB.md").read_text()
-        assert (lab / "captures/1.13/first-screen/main-coco1-1.png").read_bytes() == b"old"
+        assert Trial.model_validate_json((work / "trial.json").read_text()) == trial
+        assert "XRoar 1.13" in (work / "NOTES.md").read_text()
+        assert (work / "captures/1.13/first-screen/main-coco1-1.png").read_bytes() == b"old"
         am = next(c for c in fake.commands if c[0] == "am")
         assert all(a.endswith(".patch") for a in am[2:])
         assert ["checkout", "--quiet", "-b", xu.BRANCH, f"{'d' * 40}^{{commit}}"] in fake.commands
@@ -309,8 +309,8 @@ class DescribeTrial:
         ):
             xu.run_trial(root, "1.13", host, Mock(spec=BuildHost), say=print)
 
-        lab = root / "local/lab/xroar-1.13"
-        (lab / "xroar/.git/rebase-merge").rmdir()
+        work = root / "local/system/xroar-1.13"
+        (work / "xroar/.git/rebase-merge").rmdir()
         trial = xu.run_trial(root, "1.13", host, Mock(spec=BuildHost), say=print)
         assert trial.application == "resolved by hand"
         assert sum(c[0] == "rebase" for c in fake.commands) == 1
@@ -346,7 +346,7 @@ class DescribeTrial:
         export = next(c for c in fake.commands if c[0] == "format-patch")
         assert export[-1] == f"{'b' * 40}..{xu.BRANCH}"
 
-    def should_refuse_a_lab_branch_not_on_the_named_base(self, root: Path) -> None:
+    def should_refuse_a_trial_branch_not_on_the_named_base(self, root: Path) -> None:
         host, fake = trial_host()
         xu.run_trial(root, "1.13", host, Mock(spec=BuildHost), say=print)
         fake.based = False
@@ -368,10 +368,10 @@ class DescribeTrial:
 class DescribeAdopt:
     @pytest.fixture
     def root(self, tmp_path: Path) -> Path:
-        lab = tmp_path / "local/lab/xroar-1.13"
-        (lab / "series").mkdir(parents=True)
-        (lab / "series/0001-rebased.patch").write_bytes(PATCH)
-        (lab / "xroar-1.13.tar.gz").write_bytes(b"archive")
+        work = tmp_path / "local/system/xroar-1.13"
+        (work / "series").mkdir(parents=True)
+        (work / "series/0001-rebased.patch").write_bytes(PATCH)
+        (work / "xroar-1.13.tar.gz").write_bytes(b"archive")
         patches = tmp_path / "patches"
         patches.mkdir()
         (patches / "0001-old.patch").write_text("old")
@@ -379,19 +379,19 @@ class DescribeAdopt:
         return tmp_path
 
     def write_trial(self, root: Path, verdict: str = "identical") -> Trial:
-        lab = root / "local/lab/xroar-1.13"
+        work = root / "local/system/xroar-1.13"
         trial = Trial(
             pin=PIN.model_copy(
                 update={"version": "1.13", "tag": "1.13", "archive_sha256": ix.sha256(b"archive")}
             ),
             application="clean",
             series=["0001-rebased.patch"],
-            series_sha256=ix.load_series(lab / "series").digest,
+            series_sha256=ix.load_series(work / "series").digest,
             build=provenance(),
             checks=[check()],
             verdict=verdict,
         )
-        (lab / "trial.json").write_text(trial.model_dump_json())
+        (work / "trial.json").write_text(trial.model_dump_json())
         return trial
 
     def should_write_the_tested_series_and_pin(self, root: Path) -> None:
@@ -427,12 +427,12 @@ class DescribeAdopt:
     )
     def should_refuse_what_was_not_tested(self, root: Path, damage: str, message: str) -> None:
         trial = self.write_trial(root, "failed" if damage == "failed" else "identical")
-        lab = root / "local/lab/xroar-1.13"
+        work = root / "local/system/xroar-1.13"
         confirmed = "0" * 64 if damage == "checksum" else trial.pin.archive_sha256
         if damage == "no trial":
-            (lab / "trial.json").unlink()
+            (work / "trial.json").unlink()
         if damage == "series":
-            (lab / "series/0001-rebased.patch").write_bytes(PATCH.replace(b"null:", b"Null:"))
+            (work / "series/0001-rebased.patch").write_bytes(PATCH.replace(b"null:", b"Null:"))
 
         with pytest.raises(ValueError, match=message):
             xu.adopt(root, "1.13", confirmed, False, root / "patches", print)
@@ -501,7 +501,7 @@ class DescribeCommandLine:
         assert "FAIL: The XRoar 1.13 trial failed" in capsys.readouterr().err
 
 
-class DescribeLabFiles:
+class DescribeTrialFiles:
     def should_keep_only_files_a_check_wrote(self, tmp_path: Path) -> None:
         (tmp_path / "stale.ram").write_bytes(b"old")
         before = {"stale.ram": (tmp_path / "stale.ram").stat().st_mtime_ns}
@@ -509,11 +509,11 @@ class DescribeLabFiles:
 
         assert xu.captured(tmp_path, before) == {"main-coco1-1.ram": b"new"}
 
-    def should_give_lab_clones_a_neutral_identity_without_owner_hooks(self, tmp_path: Path) -> None:
+    def should_give_trial_clones_a_neutral_identity_without_hooks(self, tmp_path: Path) -> None:
         host = Mock(spec=UpstreamHost)
         (tmp_path / ".git").mkdir()
 
-        xu.configure_lab_clone(tmp_path, host)
+        xu.configure_trial_clone(tmp_path, host)
 
         settings = {call.args[0][1]: call.args[0][2] for call in host.git.call_args_list}
         assert settings["core.hooksPath"] == str(tmp_path / ".git/no-hooks")

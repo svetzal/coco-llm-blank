@@ -24,6 +24,7 @@ work.
 - [Find source pages and inspect diagrams](starter/references.md).
 - [Choose extracted text or page images](starter/conversion-quality.md).
 - [Work in a lab: answer a technical question, then codify it](starter/lab.md).
+- [Change the starter itself in SYSTEM mode](starter/system.md).
 
 ## Game and demo techniques
 

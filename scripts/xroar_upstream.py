@@ -1,7 +1,7 @@
 """Track XRoar releases and carry the instrumented XRoar's patch series forward.
 
   report   compare the pin with upstream's git tags and download page
-  trial    rebase the series onto a release in local/lab/xroar-<version>/ with
+  trial    rebase the series onto a release in local/system/xroar-<version>/ with
            git am -3, build it, and compare capture checks with the pinned build
   adopt    write a passing trial's series and pin into scripts/xroar_patches/
 
@@ -30,8 +30,8 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 DOWNLOADS = "https://www.6809.org.uk/xroar/dl/"
 CLONE = Path("local/toolchain-sources/xroar.git")
-LABS = Path("local/lab")
-# Lab clones commit as a neutral identity, without the owner's git hooks.
+WORK = Path("local/system")
+# Trial clones commit as a neutral identity, without the owner's git hooks.
 IDENTITY = {"user.name": "CoCo starter", "user.email": "coco-starter@example.invalid"}
 EXPORT = ["format-patch", "--quiet", "--full-index", "--no-signature", "--zero-commit"]
 BRANCH = "coco-capture"
@@ -44,7 +44,7 @@ EQUIVALENCE = (
 )
 PINNED, AGAIN = "pinned", "pinned-again"
 RELEASE = re.compile(r"\d+(?:\.\d+)+")
-LAB_NOTE = """# Lab: XRoar {version}
+NOTE = """# System: XRoar {version}
 
 - Question: does the instrumented XRoar patch series carry forward to XRoar
   {version} with captures identical to the pinned {pinned} build?
@@ -297,10 +297,10 @@ def report(host: UpstreamHost, say: Callable[[str], None] = print) -> int:
     return 1 if tags is None and archives is None else 0
 
 
-def lab_for(root: Path, version: str) -> Path:
+def work_for(root: Path, version: str) -> Path:
     if not RELEASE.fullmatch(version):
         raise ValueError(f"{version!r} is not an XRoar release number such as 1.13.")
-    return root / LABS / f"xroar-{version}"
+    return root / WORK / f"xroar-{version}"
 
 
 def update_clone(root: Path, host: UpstreamHost, url: str) -> Path:
@@ -313,7 +313,7 @@ def update_clone(root: Path, host: UpstreamHost, url: str) -> Path:
     return clone
 
 
-def configure_lab_clone(repository: Path, host: UpstreamHost) -> None:
+def configure_trial_clone(repository: Path, host: UpstreamHost) -> None:
     hooks = repository / ".git/no-hooks"
     hooks.mkdir(exist_ok=True)
     for key, value in {**IDENTITY, "core.hooksPath": str(hooks)}.items():
@@ -330,7 +330,7 @@ def start_rebase(
     commits, so the rebase can merge every file three ways.
     """
     host.git(["clone", "--quiet", str(clone), str(repository)])
-    configure_lab_clone(repository, host)
+    configure_trial_clone(repository, host)
     host.git(["checkout", "--quiet", "-b", BRANCH, f"{pinned}^{{commit}}"], repository)
     files = [str(path) for path in sorted(patches.glob("*.patch"))]
     if not host.git_succeeds(["am", "--quiet", *files], repository):
@@ -356,13 +356,13 @@ def conflict_message(repository: Path, host: UpstreamHost, version: str) -> str:
 
 
 def rebased_series(
-    lab: Path, release: Upstream, pinned: Upstream, root: Path, host: UpstreamHost, fresh: bool
+    work: Path, release: Upstream, pinned: Upstream, root: Path, host: UpstreamHost, fresh: bool
 ) -> tuple[Upstream, str]:
     """The release with its tag and base resolved to commits, and how the series applied."""
-    repository = lab / "xroar"
+    repository = work / "xroar"
     if fresh:
         shutil.rmtree(repository, ignore_errors=True)
-    state = lab / "application"
+    state = work / "application"
     if not repository.is_dir():
         clone = update_clone(root, host, pinned.git_url)
         base = release.base_commit
@@ -381,21 +381,21 @@ def rebased_series(
         ["merge-base", "--is-ancestor", resolved.base_commit, BRANCH], repository
     ):
         raise ValueError(
-            f"The lab branch {BRANCH} is not based on {release.base_commit}. Rebase it in "
+            f"The trial branch {BRANCH} is not based on {release.base_commit}. Rebase it in "
             f"{repository} with git rebase --onto {release.base_commit} <old base> {BRANCH}."
         )
     return resolved, state.read_text()
 
 
-def export_series(lab: Path, base: str, host: UpstreamHost) -> Path:
-    series = lab / "series"
+def export_series(work: Path, base: str, host: UpstreamHost) -> Path:
+    series = work / "series"
     shutil.rmtree(series, ignore_errors=True)
-    host.git([*EXPORT, "-o", str(series), f"{base}..{BRANCH}"], lab / "xroar")
+    host.git([*EXPORT, "-o", str(series), f"{base}..{BRANCH}"], work / "xroar")
     return series
 
 
-def release_archive(lab: Path, pin: Upstream, host: UpstreamHost, expected: str | None) -> Path:
-    archive = lab / f"{pin.tree}.tar.gz"
+def release_archive(work: Path, pin: Upstream, host: UpstreamHost, expected: str | None) -> Path:
+    archive = work / f"{pin.tree}.tar.gz"
     if not archive.is_file():
         host.download(pin.archive_url, archive)
     found = ix.sha256(archive.read_bytes())
@@ -420,14 +420,14 @@ def run_check(
     builds: dict[str, Path],
     host: UpstreamHost,
 ) -> CheckRun:
-    """Run one check against each build, keeping what each run wrote under the lab."""
-    lab = lab_for(root, next(label for label in builds if label not in (PINNED, AGAIN)))
+    """Run one check against each build, keeping what each run wrote under the work folder."""
+    work = work_for(root, next(label for label in builds if label not in (PINNED, AGAIN)))
     output = root / "build" / Path(example).name
     captures, codes = {}, {}
     for label, xroar in builds.items():
         output.mkdir(parents=True, exist_ok=True)
         before = {p.name: p.stat().st_mtime_ns for p in output.glob("*") if p.is_file()}
-        keep = lab / "captures" / label / Path(example).name
+        keep = work / "captures" / label / Path(example).name
         shutil.rmtree(keep, ignore_errors=True)
         keep.mkdir(parents=True)
         codes[label] = host.check(root / example, list(arguments), xroar, keep / "check.log")
@@ -449,12 +449,12 @@ def run_trial(
     base: str | None = None,
     say: Callable[[str], None] = print,
 ) -> Trial:
-    """Rebase, build and compare in the lab; the result is also written to trial.json."""
-    lab = lab_for(root, version)
-    lab.mkdir(parents=True, exist_ok=True)
+    """Rebase, build and compare in the work folder; the result is also written to trial.json."""
+    work = work_for(root, version)
+    work.mkdir(parents=True, exist_ok=True)
     pinned = ix.load_pin()
-    if not (lab / "LAB.md").exists():
-        (lab / "LAB.md").write_text(LAB_NOTE.format(version=version, pinned=pinned.version))
+    if not (work / "NOTES.md").exists():
+        (work / "NOTES.md").write_text(NOTE.format(version=version, pinned=pinned.version))
     release = Upstream(
         version=version,
         tag=version,
@@ -464,12 +464,12 @@ def run_trial(
         archive_url=f"{DOWNLOADS}xroar-{version}.tar.gz",
         archive_sha256="0" * 64,
     )
-    trial_pin, application = rebased_series(lab, release, pinned, root, host, fresh)
-    series_dir = export_series(lab, trial_pin.base_commit, host)
-    archive = release_archive(lab, trial_pin, host, expected)
+    trial_pin, application = rebased_series(work, release, pinned, root, host, fresh)
+    series_dir = export_series(work, trial_pin.base_commit, host)
+    archive = release_archive(work, trial_pin, host, expected)
     trial_pin = trial_pin.model_copy(update={"archive_sha256": ix.sha256(archive.read_bytes())})
     series = ix.load_series(series_dir)
-    executable = ix.build_verified(builder, trial_pin, series, lambda: archive, lab / "build", say)
+    executable = ix.build_verified(builder, trial_pin, series, lambda: archive, work / "build", say)
     baseline = ix.ensure(root, builder, say)
     builds = {PINNED: baseline, AGAIN: baseline, version: executable}
     checks = [run_check(root, example, args, builds, host) for example, args in EQUIVALENCE]
@@ -478,11 +478,11 @@ def run_trial(
         application=application,
         series=[patch.name for patch in series.patches],
         series_sha256=series.digest,
-        build=ix.Provenance.model_validate_json((lab / "build" / ix.RECORD).read_text()),
+        build=ix.Provenance.model_validate_json((work / "build" / ix.RECORD).read_text()),
         checks=checks,
         verdict=verdict(checks),
     )
-    (lab / "trial.json").write_text(trial.model_dump_json(indent=2) + "\n")
+    (work / "trial.json").write_text(trial.model_dump_json(indent=2) + "\n")
     return trial
 
 
@@ -495,9 +495,9 @@ def adopt(
     say: Callable[[str], None] = print,
 ) -> None:
     """Write a trial's tested series and pin into the repository; nothing is committed."""
-    lab = lab_for(root, version)
+    work = work_for(root, version)
     try:
-        trial = Trial.model_validate_json((lab / "trial.json").read_text())
+        trial = Trial.model_validate_json((work / "trial.json").read_text())
     except (FileNotFoundError, ValidationError) as error:
         raise ValueError(f"No readable trial for XRoar {version}; run trial first.") from error
     if trial.verdict == "failed":
@@ -511,17 +511,17 @@ def adopt(
             "The trial's captures differ from the pinned build. Explain each difference "
             "from the upstream ChangeLog, then rerun with --accept-differences."
         )
-    if ix.load_series(lab / "series").digest != trial.series_sha256:
-        raise ValueError(f"{lab / 'series'} changed after the trial; run trial again.")
+    if ix.load_series(work / "series").digest != trial.series_sha256:
+        raise ValueError(f"{work / 'series'} changed after the trial; run trial again.")
     for old in patches.glob("*.patch"):
         old.unlink()
-    for new in sorted((lab / "series").glob("*.patch")):
+    for new in sorted((work / "series").glob("*.patch")):
         shutil.copyfile(new, patches / new.name)
     (patches / ix.PIN).write_text(trial.pin.model_dump_json(indent=2) + "\n")
     cache = root / "local/toolchain-sources" / f"{trial.pin.tree}.tar.gz"
     if not cache.exists():
         cache.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(lab / f"{trial.pin.tree}.tar.gz", cache)
+        shutil.copyfile(work / f"{trial.pin.tree}.tar.gz", cache)
     say(
         f"Wrote {len(trial.series)} patches and the XRoar {version} pin to {patches}. "
         "Rebuild with uv run python scripts/instrumented_xroar.py build, run the checks, "
@@ -535,10 +535,10 @@ def parser() -> argparse.ArgumentParser:
     )
     commands = parse.add_subparsers(dest="command", required=True)
     commands.add_parser("report", help="compare the pin with upstream releases")
-    trial = commands.add_parser("trial", help="rebase, build and compare a release in the lab")
+    trial = commands.add_parser("trial", help="rebase, build and compare a release")
     trial.add_argument("version", help="an XRoar release tag, such as 1.13")
     trial.add_argument(
-        "--fresh", action="store_true", help="discard the lab clone and rebase again"
+        "--fresh", action="store_true", help="discard the trial clone and rebase again"
     )
     trial.add_argument("--sha256", help="require the release archive to have this SHA-256")
     trial.add_argument(

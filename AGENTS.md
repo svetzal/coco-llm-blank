@@ -172,22 +172,23 @@ reference
 text or write build outputs. Keep those paths ignored. Check
 that a write succeeded before relying on the recorded project contract.
 
-## Two modes: BUILD and LAB
+## Three modes: BUILD, LAB and SYSTEM
 
-Every session is in one of two modes. Begin every reply with a line naming it,
-so the owner always knows which one is active:
+Every session is in one of three modes. Begin every reply with a line naming
+it, so the owner always knows which one is active:
 
 - `BUILD · <project>` (or `BUILD · new project` before it has a name)
 - `LAB · <topic> (from <project>)`
+- `SYSTEM · <topic>` (add `(from <project or lab>)` when one raised it)
 
 **BUILD** is the default. The owner and you define a game or demo and build it
 in `projects/<name>/` from the existing guides and examples, as described
 above. The project is persistent and committed.
 
-**LAB** answers one technical question the guides and examples do not settle,
-such as crackly audio, slow graphics or unreliable input. It runs in ignored
-`local/lab/<topic>/`, converges on an answer, codifies it as a technique guide,
-an example or a `scripts/coco.py` ability, and is then removed. Follow
+**LAB** answers one technical question about CoCo programming that the guides
+and examples do not settle, such as crackly audio, slow graphics or unreliable
+input. It runs in ignored `local/lab/<topic>/`, converges on an answer,
+codifies it as a technique guide or an example, and is then removed. Follow
 [the lab guide](guidance/starter/lab.md) from opening to closing.
 
 Switch to LAB only when the owner asks or agrees. When a BUILD problem is not
@@ -196,5 +197,11 @@ The owner can end a lab at any time. Close it as the lab guide describes and
 return to BUILD on the project that raised it. If a project's README has an
 `Open lab` line, ask whether to resume that lab or continue building.
 
+**SYSTEM** changes the starter itself: `scripts/`, the instrumented XRoar,
+dependencies, `AGENTS.md` and the guides in `guidance/starter/`. Start it only
+when the owner asks for SYSTEM mode by name. Never offer it. When the starter
+has a limit, explain the limit in plain words instead. Follow
+[the system guide](guidance/starter/system.md).
+
 Never add research notes, validation reports or experiment packages to tracked
-folders. Keep them in the lab folder under ignored `local/lab/`.
+folders. Keep them under ignored `local/lab/` or `local/system/`.
