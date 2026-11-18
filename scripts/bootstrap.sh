@@ -22,10 +22,18 @@ fi
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$project_dir"
 
+next_uv=uv
+if ! command -v uv >/dev/null 2>&1; then
+    PATH="$PATH:$HOME/.local/bin"
+    export PATH
+    next_uv='"$HOME/.local/bin/uv"'
+fi
+
 if ! command -v uv >/dev/null 2>&1; then
     if command -v brew >/dev/null 2>&1; then
         echo 'Installing uv with Homebrew.'
         brew install uv
+        next_uv=uv
     else
         if ! command -v curl >/dev/null 2>&1; then
             if ! command -v apt-get >/dev/null 2>&1; then
@@ -51,8 +59,6 @@ if ! command -v uv >/dev/null 2>&1; then
         trap 'rm -f "$installer"' EXIT HUP INT TERM
         curl --fail --location --silent --show-error https://astral.sh/uv/install.sh -o "$installer"
         UV_INSTALL_DIR="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 sh "$installer"
-        PATH="$HOME/.local/bin:$PATH"
-        export PATH
     fi
 fi
 
@@ -69,4 +75,9 @@ echo 'Downloading and verifying firmware for the selected machine.'
 uv run python scripts/setup.py --target "$target" --roms-only
 echo 'Checking tools and firmware for a directly launched emulator demo.'
 uv run python scripts/doctor.py --profile demo --target "$target"
-echo 'Tools and firmware are ready. Run the selected example check before its GUI launch.'
+echo 'Tools and firmware are ready. To check the first-screen example, run this from the starter folder:'
+printf '%s run python scripts/coco.py check examples/first-screen --target %s\n' "$next_uv" "$target"
+if [ "$next_uv" != uv ]; then
+    echo 'To use the uv commands in the guides, run this once in each new terminal:'
+    echo 'export PATH="$PATH:$HOME/.local/bin"'
+fi

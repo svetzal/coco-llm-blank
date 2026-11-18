@@ -1,6 +1,6 @@
 [project]
 name = "retro-explorer-coco"
-version = "0.4.0"
+version = "0.4.1"
 description = "Local references and Python support tools for CoCo development"
 requires-python = ">=3.12"
 dependencies = [

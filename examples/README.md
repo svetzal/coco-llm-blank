@@ -18,11 +18,18 @@ do in your own code.
 
 ## Try one now
 
-Open a terminal in the starter folder. Paste this line to see the
+Open a terminal in the starter folder. Prepare the tools and CoCo 1 firmware once:
+
+```sh
+sh scripts/bootstrap.sh coco1
+```
+
+Run these commands in the starter folder to see the
 [first-screen](first-screen/README.md) example in XRoar. Close the window to
 stop it.
 
 ```sh
+export PATH="$PATH:$HOME/.local/bin"
 uv run python scripts/coco.py run examples/first-screen
 ```
 

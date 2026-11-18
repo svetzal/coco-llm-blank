@@ -8,6 +8,15 @@ ends. [The system guide](guidance/starter/system.md) gives the procedure.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-17
+
+### Fixed
+
+- The setup instructions give the command to start the first example after installation.
+- The guide links in a project README work after you copy the template.
+- CI runs style checks and emulator tests in separate jobs.
+- CI checks setup in a clean checkout and prepares firmware for all four targets.
+
 ## [0.4.0] - 2026-11-17
 
 ### Added

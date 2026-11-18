@@ -59,7 +59,7 @@ specs and fixtures.
 
 The root pytest configuration in `pyproject.toml` collects the `*_spec.py`
 files under `scripts/`, including the emulator integrations.
-CI runs `uv run pytest --cov`, Ruff and Ruff's format check.
+CI runs Ruff in a separate job. Each test job lists its skipped tests in its summary.
 Keep test evidence that must survive a rerun under ignored `local/` or
 `build/`. Do not keep it in a pytest temporary directory.
 
@@ -69,18 +69,16 @@ example and its negative controls.
 ### Complete starter validation environment
 
 Setup for a selected target prepares the demo, not the whole test suite of the
-starter. The suite also runs emulator checks for CoCo 1, CoCo 2, and CoCo 3.
+starter. The suite also runs emulator checks for CoCo 1, CoCo 2, CoCo 2B, and CoCo 3.
 Install native tools using [toolchain.md](toolchain.md), and build XRoar with
 `uv run python scripts/instrumented_xroar.py build`. Then provision the ROM
 profile of each standard target without changing any project:
 
 ```sh
 uv sync --locked
-uv run python - <<'PY'
-import sys
+PYTHONPATH=scripts uv run python - <<'PY'
 from pathlib import Path
 
-sys.path.insert(0, str(Path("scripts").resolve()))
 from roms import TARGETS, provision, verify_installed
 
 root = Path.cwd()

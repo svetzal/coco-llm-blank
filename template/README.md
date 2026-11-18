@@ -37,7 +37,7 @@ the owner.
 - Controls: none yet
 - Loader: XRoar runs the DECB binary directly (starter default)
 - Disk: `coco.toml` names Disk BASIC, `disk11.rom`, for a disk image only.
-  Read [disk images](../guidance/starter/toolchain.md#disk-images).
+  See “Disk images” in the [toolchain guide][toolchain].
 
 ## Check
 
@@ -45,5 +45,9 @@ the owner.
 
 Add `expected.py` with an independent model of the result when the program draws
 or stores something that you can check. Read
-[development practice](../guidance/starter/development.md) for the files and
-the commands.
+[development practice][development] for the files and commands.
+
+Both guides are in `guidance/starter/` in the starter folder.
+
+[toolchain]: https://github.com/svetzal/retro-explorer-coco/blob/main/guidance/starter/toolchain.md#disk-images
+[development]: https://github.com/svetzal/retro-explorer-coco/blob/main/guidance/starter/development.md

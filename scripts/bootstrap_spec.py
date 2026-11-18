@@ -34,7 +34,7 @@ def bootstrap_workspace(tmp_path: Path) -> tuple[Path, dict[str, str]]:
         '-m) echo "${TEST_MACHINE:-x86_64}";;\nesac\n'
     )
     uname.chmod(0o755)
-    home = tmp_path / "home"
+    home = tmp_path / "home with spaces"
     home.mkdir()
     env = {**os.environ, "PATH": str(commands), "HOME": str(home), "BOOTSTRAP_LOG": str(log)}
     return project, env
@@ -243,9 +243,10 @@ class DescribeBootstrap:
         curl = commands / "curl"
         installer = commands / "installer"
         env["BOOTSTRAP_BIN"] = str(commands)
+        (Path(env["HOME"]) / ".local/bin").mkdir(parents=True)
         installer.write_text(
-            '#!/bin/sh\ncp "$BOOTSTRAP_BIN/uv-template" "$BOOTSTRAP_BIN/uv"\n'
-            'chmod +x "$BOOTSTRAP_BIN/uv"\n'
+            '#!/bin/sh\ncp "$BOOTSTRAP_BIN/uv-template" "$UV_INSTALL_DIR/uv"\n'
+            'chmod +x "$UV_INSTALL_DIR/uv"\n'
         )
         curl.write_text(
             "#!/bin/sh\n"
@@ -259,6 +260,20 @@ class DescribeBootstrap:
         assert result.returncode == 0, result.stderr
         assert "Installing uv with its official installer" in result.stdout
         assert "--target coco3" in Path(env["BOOTSTRAP_LOG"]).read_text()
+
+        assert shutil.which("uv", path=env["PATH"]) is None
+        check_command, _, path_command = result.stdout.splitlines()[-3:]
+        subprocess.run(["/bin/sh", "-ec", check_command], cwd=project, env=env, check=True)
+        subprocess.run(
+            ["/bin/sh", "-ec", path_command + "\nuv --version"], cwd=project, env=env, check=True
+        )
+        assert Path(env["BOOTSTRAP_LOG"]).read_text().splitlines()[-2:] == [
+            "run python scripts/coco.py check examples/first-screen --target coco3",
+            "--version",
+        ]
+        rerun = run_bootstrap(project, env, "coco3")
+        assert rerun.returncode == 0, rerun.stderr
+        assert "Installing uv" not in rerun.stdout
 
     def should_stop_when_the_installer_download_fails(
         self, bootstrap_workspace: tuple[Path, dict[str, str]]

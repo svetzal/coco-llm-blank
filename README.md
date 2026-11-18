@@ -162,10 +162,17 @@ agent, one small increment at a time. It is in
 records each request and how the agent tested it.
 
 To play it, open a terminal in the starter folder. Prepare the tools and
-the CoCo 1 firmware one time, then start the game:
+the CoCo 1 firmware once:
 
 ```sh
 sh scripts/bootstrap.sh coco1
+```
+
+Start the game from the starter folder. The first line lets this terminal find
+a copy of `uv` in your home folder.
+
+```sh
+export PATH="$PATH:$HOME/.local/bin"
 uv run python scripts/coco.py run projects/arena-blaster
 ```
 

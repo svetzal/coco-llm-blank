@@ -6,6 +6,17 @@ on:
 permissions:
   contents: read
 jobs:
+  style:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: Check Python style
+        run: |
+          uv run --locked --only-group dev ruff check .
+          uv run --locked --only-group dev ruff format --check .
   check:
     strategy:
       fail-fast: false
@@ -20,23 +31,38 @@ jobs:
           enable-cache: true
       - name: Prepare locked Python environment
         run: uv sync --locked
-      - name: Check Python style
+      - name: Check guidance setup in a fresh checkout
         run: |
-          uv run ruff check .
-          uv run ruff format --check .
+          test ! -e local
+          uv run python scripts/setup.py --target coco1 --guidance-only
+          test -s local/INDEX.md
+          test "$(find local -type f)" = local/INDEX.md
+          git check-ignore local/INDEX.md
+          test -z "$(git status --porcelain --untracked-files=all)"
       - name: Install assembly and disk tools, and what the XRoar build needs
         run: uv run python scripts/native.py
       - name: Build XRoar from its pinned release
         run: uv run python scripts/instrumented_xroar.py build
-      - name: Prepare local firmware for the emulator check
+      - name: Install and check firmware for every target
         run: |
-          uv run python scripts/setup.py --target coco1 --roms-only
-          PYTHONPATH=scripts uv run python -c "from native import ROOT; from roms import provision; provision(ROOT, 'coco2'); provision(ROOT, 'coco3')"
-      - name: Test setup and real document conversion
-        run: uv run pytest --cov
-      - name: Initialize a project without downloaded books or ROMs
+          PYTHONPATH=scripts uv run python - <<'PYTHON'
+          from pathlib import Path
+          from roms import TARGETS, provision, verify_installed
+
+          root = Path.cwd()
+          for target in TARGETS:
+              provision(root, target)
+              verify_installed(root, target)
+          PYTHON
+      - name: Test setup, emulation and document conversion
+        shell: bash
         run: |
-          uv run python scripts/setup.py --target coco1 --guidance-only
-          test -f local/INDEX.md
-          git check-ignore local/INDEX.md
-          test -z "$(git status --porcelain --untracked-files=all)"
+          uv run pytest --cov -ra | tee "$RUNNER_TEMP/pytest.log"
+      - name: List skipped tests in the job summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/pytest.log" ]; then
+            echo '### Skipped tests' >> "$GITHUB_STEP_SUMMARY"
+            awk '/^SKIPPED / { print "- " $0; count++ } END { if (!count) print "Pytest reported no skips." }' \
+              "$RUNNER_TEMP/pytest.log" >> "$GITHUB_STEP_SUMMARY"
+          fi
