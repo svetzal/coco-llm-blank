@@ -39,8 +39,17 @@ MOVE = {"W": (0, -1), "S": (0, 1), "A": (-1, 0), "D": (1, 0)}
 SHOOT = {"O": (0, -1), "L": (0, 1), "K": (-1, 0), ";": (1, 0)}
 # (row, column) of each script key in the matrix: Tandy PDF 75. C is the
 # wrong-key control.
-MATRIX = {"A": (0, 1), "D": (0, 4), "C": (0, 3), "K": (1, 3), "L": (1, 4), "O": (1, 7),
-          "S": (2, 3), "W": (2, 7), ";": (5, 3)}
+MATRIX = {
+    "A": (0, 1),
+    "D": (0, 4),
+    "C": (0, 3),
+    "K": (1, 3),
+    "L": (1, 4),
+    "O": (1, 7),
+    "S": (2, 3),
+    "W": (2, 7),
+    ";": (5, 3),
+}
 # The scanner's labels in RAM that the check compares.
 STATE_FIELDS = ("px", "py", "delay")
 SLOT_SIZE = 11  # on, x, y, vx, vy, sprite (2), maxx, maxy, w, h
@@ -95,19 +104,44 @@ START_LEVEL = {"level3": 3, "level5": 5, "level10": 10, "pickups": 4, "level8": 
 # Things to collect (README.md "Things to collect").
 PK_POINTS, PK_DOUBLE, PK_SPREAD, PK_STAR, PK_BOMB = 1, 2, 3, 4, 5
 PK_SLOW, PK_HEAVY, PK_BLITZ = 6, 7, 8  # jinxes
-PICKUP_SPRITE = {1: "pk_points", 2: "pk_double", 3: "pk_spread", 4: "pk_star", 5: "pk_bomb",
-                 6: "pk_slow", 7: "pk_heavy", 8: "pk_blitz"}
+PICKUP_SPRITE = {
+    1: "pk_points",
+    2: "pk_double",
+    3: "pk_spread",
+    4: "pk_star",
+    5: "pk_bomb",
+    6: "pk_slow",
+    7: "pk_heavy",
+    8: "pk_blitz",
+}
 PICKUP_W, PICKUP_H = 6, 7
 PICKUP_LEVEL, BOMB_LEVEL = 4, 6
 PICKUP_FRAMES, BLINK_FRAMES = 150, 60
 BOMB_X, BOMB_Y = 40, 60
-DROP_ORDER = [PK_POINTS, PK_DOUBLE, PK_SLOW, PK_BOMB, PK_SPREAD, PK_HEAVY, PK_POINTS, PK_STAR,
-              PK_BOMB, PK_BLITZ, PK_DOUBLE]
+DROP_ORDER = [
+    PK_POINTS,
+    PK_DOUBLE,
+    PK_SLOW,
+    PK_BOMB,
+    PK_SPREAD,
+    PK_HEAVY,
+    PK_POINTS,
+    PK_STAR,
+    PK_BOMB,
+    PK_BLITZ,
+    PK_DOUBLE,
+]
 JINX_LEVEL, JINX_TIME, BLITZ_FRAMES, BLITZ_HUNTERS = 8, 150, 60, 3
 JINX_HINT = ("SOME GIFTS BITE", 8)
 # The band: the names at byte columns 8 and 17, bars of 6 bytes on rows 9-10.
-NAME = {PK_DOUBLE: "DOUBLE", PK_SPREAD: "SPREAD", PK_STAR: "STAR", PK_SLOW: "SLOW",
-        PK_HEAVY: "HEAVY", PK_BLITZ: "BLITZ"}
+NAME = {
+    PK_DOUBLE: "DOUBLE",
+    PK_SPREAD: "SPREAD",
+    PK_STAR: "STAR",
+    PK_SLOW: "SLOW",
+    PK_HEAVY: "HEAVY",
+    PK_BLITZ: "BLITZ",
+}
 NAME_GIFT, NAME_JINX, BAR_ROW, BAR_BYTES, GIFT_STEP, JINX_STEP = 8, 17, 9, 6, 50, 25
 # The 8 directions in turn from up, clockwise, as (dx, dy).
 RING = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
@@ -126,16 +160,36 @@ EXTRA_EVERY = 1000
 LIVES = 3
 DYING_FRAMES, OVER_FRAMES = 45, 90
 HUD_ROW, ICONS = 3, 6
-SCRIPTS = {"moves": "moves.txt", "hit": "hit.txt", "scores": "scores.txt",
-           "shooter": "shooter.txt", "pickups": "pickups.txt", "bomb": "bomb.txt",
-           "jinxdrop": "pickups.txt",
-           "double": "powers.txt", "spread": "powers.txt", "star": "powers.txt",
-           "slow": "jinxes.txt", "heavy": "jinxes.txt", "blitz": "blitz.txt",
-           "demoshoot": "demoshoot.txt"}
+SCRIPTS = {
+    "moves": "moves.txt",
+    "hit": "hit.txt",
+    "scores": "scores.txt",
+    "shooter": "shooter.txt",
+    "pickups": "pickups.txt",
+    "bomb": "bomb.txt",
+    "jinxdrop": "pickups.txt",
+    "double": "powers.txt",
+    "spread": "powers.txt",
+    "star": "powers.txt",
+    "slow": "jinxes.txt",
+    "heavy": "jinxes.txt",
+    "blitz": "blitz.txt",
+    "demoshoot": "demoshoot.txt",
+}
 # Title and high scores (README.md "Title and high scores").
 TITLE, PLAY, ENTRY = 0, 1, 2
-TABLE = [(10000, "ZAP"), (9000, "ACE"), (8000, "MAX"), (7000, "JET"), (6000, "SKY"),
-         (5000, "REX"), (4000, "ION"), (3000, "VOX"), (2000, "KIT"), (1000, "DOT")]
+TABLE = [
+    (10000, "ZAP"),
+    (9000, "ACE"),
+    (8000, "MAX"),
+    (7000, "JET"),
+    (6000, "SKY"),
+    (5000, "REX"),
+    (4000, "ION"),
+    (3000, "VOX"),
+    (2000, "KIT"),
+    (1000, "DOT"),
+]
 REPEAT_FIRST, REPEAT_NEXT = 12, 4
 NO_RANK = 0xFF
 # The first levels (README.md "Levels and enemies"): grunts, frames until the first
@@ -180,52 +234,147 @@ class Scene:
 
 
 SCENES = {
-    "grunt": Scene("GRUNT", 11, "SLOW  10 POINTS", 8, (61, 150),
-                   [(1, 61, 30), (1, 21, 50), (1, 101, 50)],
-                   [("", 4), ("O", 8), ("A", 10), ("O", 8), ("D", 18), ("O", 8), ("", 16)]),
+    "grunt": Scene(
+        "GRUNT",
+        11,
+        "SLOW  10 POINTS",
+        8,
+        (61, 150),
+        [(1, 61, 30), (1, 21, 50), (1, 101, 50)],
+        [("", 4), ("O", 8), ("A", 10), ("O", 8), ("D", 18), ("O", 8), ("", 16)],
+    ),
 }
-SCENES["hunter"] = Scene("HUNTER", 10, "FAST  50 POINTS", 8, (61, 95), [],
-                         [("", 18), (";", 6), ("", 50), ("K", 8), ("", 16)],
-                         first=10, wait=50, seed=0x1234)
-SCENES["shooter"] = Scene("SHOOTER", 9, "FIRES BACK  30 POINTS", 5, (61, 150),
-                          [(3, 61, 30)],
-                          [("", 12), ("D", 8), ("", 14), ("A", 8), ("O", 10), ("", 16)],
-                          fire=20)
-SCENES["points"] = Scene("POINTS", 10, "COLLECT FOR 100", 8, (40, 92), [],
-                         [("", 6), ("D", 22), ("", 14)], pickup=(PK_POINTS, 80, 94))
-SCENES["double"] = Scene("DOUBLE", 10, "SHOTS GO TWO WAYS", 7, (52, 95),
-                         [(1, 8, 95), (1, 114, 95)],
-                         [("", 4), ("D", 4), ("", 10), (";", 6), ("", 30)],
-                         pickup=(PK_DOUBLE, 64, 96))
-SCENES["spread"] = Scene("SPREAD", 10, "SHOTS GO FOUR WAYS", 7, (61, 95),
-                         [(1, 61, 20), (1, 61, 170), (1, 8, 95), (1, 114, 95)],
-                         [("", 4), ("S", 4), ("", 10), ("O", 6), ("", 30)],
-                         pickup=(PK_SPREAD, 60, 108))
-SCENES["star"] = Scene("STAR", 12, "SHOTS GO EIGHT WAYS", 6, (49, 95),
-                       [(1, 61, 15), (1, 61, 175), (1, 5, 95), (1, 117, 95),
-                        (1, 23, 19), (1, 99, 19), (1, 23, 171), (1, 99, 171)],
-                       [("", 4), ("D", 6), ("", 10), ("O", 6), ("", 30)],
-                       pickup=(PK_STAR, 60, 96))
-SCENES["bomb"] = Scene("BOMB", 12, "CLEARS THE AREA", 8, (61, 95),
-                       [(1, 30, 60), (1, 92, 60), (1, 30, 130), (1, 92, 130), (1, 61, 50),
-                        (1, 61, 140)],
-                       [("", 10), ("D", 4), ("", 30)], pickup=(PK_BOMB, 72, 96))
-SCENES["slow"] = Scene("SLOW", 12, "JINX  SLOWER SHOTS", 7, (49, 150),
-                       [(1, 61, 15), (1, 61, 40), (1, 61, 65)],
-                       [("", 4), ("D", 6), ("", 6), ("O", 40), ("", 16)],
-                       pickup=(PK_SLOW, 60, 151))
-SCENES["heavy"] = Scene("HEAVY", 11, "JINX  SLOWER STEPS", 7, (49, 95), [(1, 117, 30)],
-                        [("", 4), ("D", 6), ("", 4), ("A", 32), (";", 8), ("", 16)],
-                        pickup=(PK_HEAVY, 60, 96))
-SCENES["blitz"] = Scene("BLITZ", 11, "JINX  HUNTERS RUSH IN", 5, (49, 95), [],
-                        [("", 4), ("D", 4), ("", 4), ("O;", 14), ("K", 14), (";", 10),
-                         ("", 16)], pickup=(PK_BLITZ, 60, 96), seed=0x2718)
-PARTS = [["grunt", "hunter", "shooter"], ["points", "double", "spread"], ["star", "bomb"],
-         ["slow", "heavy", "blitz"]]
-FIRST_PART = {"demopoints": 1, "demodouble": 1, "demospread": 1, "demostar": 2,
-              "demobomb": 2, "demoslow": 3, "demoheavy": 3, "demoblitz": 3}
-FIRST_SCENE.update({"demodouble": 1, "demospread": 2, "demobomb": 1, "demoheavy": 1,
-                    "demoblitz": 2})
+SCENES["hunter"] = Scene(
+    "HUNTER",
+    10,
+    "FAST  50 POINTS",
+    8,
+    (61, 95),
+    [],
+    [("", 18), (";", 6), ("", 50), ("K", 8), ("", 16)],
+    first=10,
+    wait=50,
+    seed=0x1234,
+)
+SCENES["shooter"] = Scene(
+    "SHOOTER",
+    9,
+    "FIRES BACK  30 POINTS",
+    5,
+    (61, 150),
+    [(3, 61, 30)],
+    [("", 12), ("D", 8), ("", 14), ("A", 8), ("O", 10), ("", 16)],
+    fire=20,
+)
+SCENES["points"] = Scene(
+    "POINTS",
+    10,
+    "COLLECT FOR 100",
+    8,
+    (40, 92),
+    [],
+    [("", 6), ("D", 22), ("", 14)],
+    pickup=(PK_POINTS, 80, 94),
+)
+SCENES["double"] = Scene(
+    "DOUBLE",
+    10,
+    "SHOTS GO TWO WAYS",
+    7,
+    (52, 95),
+    [(1, 8, 95), (1, 114, 95)],
+    [("", 4), ("D", 4), ("", 10), (";", 6), ("", 30)],
+    pickup=(PK_DOUBLE, 64, 96),
+)
+SCENES["spread"] = Scene(
+    "SPREAD",
+    10,
+    "SHOTS GO FOUR WAYS",
+    7,
+    (61, 95),
+    [(1, 61, 20), (1, 61, 170), (1, 8, 95), (1, 114, 95)],
+    [("", 4), ("S", 4), ("", 10), ("O", 6), ("", 30)],
+    pickup=(PK_SPREAD, 60, 108),
+)
+SCENES["star"] = Scene(
+    "STAR",
+    12,
+    "SHOTS GO EIGHT WAYS",
+    6,
+    (49, 95),
+    [
+        (1, 61, 15),
+        (1, 61, 175),
+        (1, 5, 95),
+        (1, 117, 95),
+        (1, 23, 19),
+        (1, 99, 19),
+        (1, 23, 171),
+        (1, 99, 171),
+    ],
+    [("", 4), ("D", 6), ("", 10), ("O", 6), ("", 30)],
+    pickup=(PK_STAR, 60, 96),
+)
+SCENES["bomb"] = Scene(
+    "BOMB",
+    12,
+    "CLEARS THE AREA",
+    8,
+    (61, 95),
+    [(1, 30, 60), (1, 92, 60), (1, 30, 130), (1, 92, 130), (1, 61, 50), (1, 61, 140)],
+    [("", 10), ("D", 4), ("", 30)],
+    pickup=(PK_BOMB, 72, 96),
+)
+SCENES["slow"] = Scene(
+    "SLOW",
+    12,
+    "JINX  SLOWER SHOTS",
+    7,
+    (49, 150),
+    [(1, 61, 15), (1, 61, 40), (1, 61, 65)],
+    [("", 4), ("D", 6), ("", 6), ("O", 40), ("", 16)],
+    pickup=(PK_SLOW, 60, 151),
+)
+SCENES["heavy"] = Scene(
+    "HEAVY",
+    11,
+    "JINX  SLOWER STEPS",
+    7,
+    (49, 95),
+    [(1, 117, 30)],
+    [("", 4), ("D", 6), ("", 4), ("A", 32), (";", 8), ("", 16)],
+    pickup=(PK_HEAVY, 60, 96),
+)
+SCENES["blitz"] = Scene(
+    "BLITZ",
+    11,
+    "JINX  HUNTERS RUSH IN",
+    5,
+    (49, 95),
+    [],
+    [("", 4), ("D", 4), ("", 4), ("O;", 14), ("K", 14), (";", 10), ("", 16)],
+    pickup=(PK_BLITZ, 60, 96),
+    seed=0x2718,
+)
+PARTS = [
+    ["grunt", "hunter", "shooter"],
+    ["points", "double", "spread"],
+    ["star", "bomb"],
+    ["slow", "heavy", "blitz"],
+]
+FIRST_PART = {
+    "demopoints": 1,
+    "demodouble": 1,
+    "demospread": 1,
+    "demostar": 2,
+    "demobomb": 2,
+    "demoslow": 3,
+    "demoheavy": 3,
+    "demoblitz": 3,
+}
+FIRST_SCENE.update(
+    {"demodouble": 1, "demospread": 2, "demobomb": 1, "demoheavy": 1, "demoblitz": 2}
+)
 # Sound effects from README.md "Sound": (mode, period, volume, fields) records. Each
 # field plays one record, so each frame plays two.
 SQUARE, NOISE = 0, 0x80
@@ -237,25 +386,80 @@ def square(*notes: tuple[int, int, int]) -> list[tuple[int, int, int, int]]:
 
 EFFECTS = {
     "shot": (1, square((8, 24, 1), (10, 22, 1), (13, 18, 1), (17, 14, 1), (22, 10, 1))),
-    "boom": (2, [(NOISE, p, v, 1) for p, v in
-                 ((2, 44), (2, 40), (3, 34), (3, 28), (4, 22), (4, 16), (5, 10), (6, 6))]),
+    "boom": (
+        2,
+        [
+            (NOISE, p, v, 1)
+            for p, v in ((2, 44), (2, 40), (3, 34), (3, 28), (4, 22), (4, 16), (5, 10), (6, 6))
+        ],
+    ),
     "hunter": (3, square((10, 26, 2), (14, 26, 2), (10, 26, 2), (14, 26, 2))),
-    "level": (4, square((30, 28, 3), (22, 28, 3), (16, 28, 3), (11, 28, 3), (11, 20, 1),
-                        (11, 12, 1))),
+    "level": (
+        4,
+        square((30, 28, 3), (22, 28, 3), (16, 28, 3), (11, 28, 3), (11, 20, 1), (11, 12, 1)),
+    ),
     "extra": (4, square(*[(15, 30, 2), (10, 30, 2)] * 3, (10, 20, 2))),
     "pickup": (4, square((31, 26, 2), (23, 26, 2), (16, 26, 3), (16, 14, 2))),
     "jinx": (4, square((16, 26, 3), (23, 26, 3), (31, 26, 3), (40, 26, 4), (40, 14, 2))),
-    "bomb": (5, [(NOISE, p, v, 2) for p, v in
-                 ((1, 62), (1, 58), (2, 54), (2, 50), (3, 44), (4, 38), (5, 32), (6, 26),
-                  (8, 20), (10, 14), (12, 8))]),
+    "bomb": (
+        5,
+        [
+            (NOISE, p, v, 2)
+            for p, v in (
+                (1, 62),
+                (1, 58),
+                (2, 54),
+                (2, 50),
+                (3, 44),
+                (4, 38),
+                (5, 32),
+                (6, 26),
+                (8, 20),
+                (10, 14),
+                (12, 8),
+            )
+        ],
+    ),
     "zap": (1, square((12, 22, 1), (16, 18, 1), (20, 14, 1))),
-    "death": (5, [(NOISE, p, v, 1) for p, v in
-                  ((1, 60), (1, 56), (2, 52), (2, 48), (3, 44), (3, 40), (4, 36), (4, 32),
-                   (5, 28), (6, 24), (7, 20), (8, 16), (9, 12), (10, 8))]),
-    "start": (6, square((48, 28, 4), (38, 28, 4), (31, 28, 4), (23, 28, 6), (31, 28, 3),
-                        (23, 28, 12), (23, 18, 4), (23, 10, 4))),
-    "over": (6, square((32, 28, 20), (40, 28, 20), (43, 28, 20), (48, 28, 30), (48, 20, 15),
-                       (48, 12, 15))),
+    "death": (
+        5,
+        [
+            (NOISE, p, v, 1)
+            for p, v in (
+                (1, 60),
+                (1, 56),
+                (2, 52),
+                (2, 48),
+                (3, 44),
+                (3, 40),
+                (4, 36),
+                (4, 32),
+                (5, 28),
+                (6, 24),
+                (7, 20),
+                (8, 16),
+                (9, 12),
+                (10, 8),
+            )
+        ],
+    ),
+    "start": (
+        6,
+        square(
+            (48, 28, 4),
+            (38, 28, 4),
+            (31, 28, 4),
+            (23, 28, 6),
+            (31, 28, 3),
+            (23, 28, 12),
+            (23, 18, 4),
+            (23, 10, 4),
+        ),
+    ),
+    "over": (
+        6,
+        square((32, 28, 20), (40, 28, 20), (43, 28, 20), (48, 28, 30), (48, 20, 15), (48, 12, 15)),
+    ),
 }
 SAFE_X, SAFE_Y = 28, 45
 
@@ -401,6 +605,16 @@ class Game:
         return MIN_Y + r
 
 
+def spawn_level_enemies(game: Game, grunts: int, shooters: int) -> None:
+    for slot in range(grunts + shooters):
+        while True:
+            x = game.random_x()
+            y = game.random_y()
+            if not (abs(x - START[0]) <= SAFE_X and abs(y - START[1]) <= SAFE_Y):
+                break
+        game.enemies[slot] = Enemy(GRUNT if slot < grunts else SHOOTER, x, y, slot % 2 + 1)
+
+
 def start_level(game: Game) -> None:
     game.x, game.y = START
     clear_arena(game)
@@ -431,13 +645,7 @@ def start_level(game: Game) -> None:
     if "NO_ENEMIES" in game.controls:
         game.fire_wait = 0
         return
-    for slot in range(grunts + shooters):
-        while True:
-            x = game.random_x()
-            y = game.random_y()
-            if not (abs(x - START[0]) <= SAFE_X and abs(y - START[1]) <= SAFE_Y):
-                break
-        game.enemies[slot] = Enemy(GRUNT if slot < grunts else SHOOTER, x, y, slot % 2 + 1)
+    spawn_level_enemies(game, grunts, shooters)
 
 
 def clear_arena(game: Game) -> None:
@@ -453,7 +661,7 @@ def start_demo(game: Game) -> None:
     """The next part: the arena, one life that cannot end, level 1, score 0."""
     game.phase, game.demo, game.setup = PLAY, True, True
     game.lives, game.level, game.score, game.next_extra = 1, 1, 0, EXTRA_EVERY
-    game.scenes = list(PARTS[game.part])[game.skip:]
+    game.scenes = list(PARTS[game.part])[game.skip :]
     game.skip = 0
     game.part = (game.part + 1) % len(PARTS)
     start_scene(game)
@@ -494,9 +702,18 @@ def power_on(variant: str) -> Game:
     """The program clears its state, then shows the title (or starts a game at once)."""
     if "SKIP_TITLE" in CONTROLS[variant]:
         return new_game(variant)
-    return Game(x=0, y=0, level=0, lives=0, next_extra=0, phase=TITLE,
-                controls=frozenset(CONTROLS[variant]), variant=variant,
-                part=FIRST_PART.get(variant, 0), skip=FIRST_SCENE.get(variant, 0))
+    return Game(
+        x=0,
+        y=0,
+        level=0,
+        lives=0,
+        next_extra=0,
+        phase=TITLE,
+        controls=frozenset(CONTROLS[variant]),
+        variant=variant,
+        part=FIRST_PART.get(variant, 0),
+        skip=FIRST_SCENE.get(variant, 0),
+    )
 
 
 def game_end(game: Game) -> None:
@@ -697,6 +914,41 @@ def inside(x: int, y: int, name: str) -> bool:
     return MIN_X <= x and x + w <= END_X and MIN_Y <= y and y + h <= END_Y
 
 
+def advance_death(game: Game) -> None:
+    game.dying -= 1
+    if game.dying == 0:
+        game.lives -= 1
+        if game.lives == 0:
+            game.start_sound("over")
+            game.over = OVER_FRAMES
+        else:
+            game.power = game.jinx = 0
+            start_level(game)
+
+
+def advance_demo(game: Game) -> None:
+    demo = demo_keys(game)
+    if demo is not None:
+        play(game, demo)
+    elif len(game.scenes) > 1:
+        game.scenes.pop(0)
+        start_scene(game)
+    else:
+        setup_title(game)
+
+
+def advance_title(game: Game, keys: str, variant: str) -> None:
+    if game.fire_new:
+        game.phase, game.setup, game.demo = PLAY, True, False
+        new_game(variant, game)
+    elif any(k in MOVE or k in SHOOT for k in keys):
+        game.idle = 0
+    else:
+        game.idle += 1
+        if game.idle == (IDLE_SOON if "DEMO_SOON" in game.controls else IDLE_FRAMES):
+            start_demo(game)
+
+
 def step(game: Game, keys: str, variant: str) -> None:
     """One frame of the rules in README.md."""
     game.rand_step()
@@ -709,15 +961,7 @@ def step(game: Game, keys: str, variant: str) -> None:
     fire = frozenset(k for k in keys if k in SHOOT)
     game.fire_new, game.old_fire = fire - game.old_fire, fire
     if game.phase == TITLE:
-        if game.fire_new:
-            game.phase, game.setup, game.demo = PLAY, True, False
-            new_game(variant, game)
-        elif any(k in MOVE or k in SHOOT for k in keys):
-            game.idle = 0
-        else:
-            game.idle += 1
-            if game.idle == (IDLE_SOON if "DEMO_SOON" in game.controls else IDLE_FRAMES):
-                start_demo(game)
+        advance_title(game, keys, variant)
     elif game.demo and game.fire_new:
         game.phase, game.setup, game.demo = PLAY, True, False
         new_game(variant, game)
@@ -728,26 +972,11 @@ def step(game: Game, keys: str, variant: str) -> None:
         if game.over == 0:
             game_end(game)
     elif game.dying:
-        game.dying -= 1
-        if game.dying == 0:
-            game.lives -= 1
-            if game.lives == 0:
-                game.start_sound("over")
-                game.over = OVER_FRAMES
-            else:
-                game.power = game.jinx = 0
-                start_level(game)
+        advance_death(game)
     elif game.ready:
         game.ready -= 1
     elif game.demo:
-        demo = demo_keys(game)
-        if demo is not None:
-            play(game, demo)
-        elif len(game.scenes) > 1:
-            game.scenes.pop(0)
-            start_scene(game)
-        else:
-            setup_title(game)
+        advance_demo(game)
     else:
         play(game, keys)
     game.sound_frame()  # the first field of the frame
@@ -797,7 +1026,8 @@ def read_keys(held: str) -> str:
                 reach[r] |= more
                 changed = True
     return "".join(
-        k for k, (r, c) in MATRIX.items()
+        k
+        for k, (r, c) in MATRIX.items()
         if r in rows and any((rr, c) in pressed for rr in reach[r])
     )
 
@@ -828,8 +1058,9 @@ def fire(game: Game, keys: str) -> None:
             continue
         name = shot_sprite(dx, dy)
         w, h = size(name)
-        shot = Shot(game.x + (PLAYER_W - w) // 2, game.y + (PLAYER_H - h) // 2, 6 * dx, 12 * dy,
-                    name)
+        shot = Shot(
+            game.x + (PLAYER_W - w) // 2, game.y + (PLAYER_H - h) // 2, 6 * dx, 12 * dy, name
+        )
         game.slots[game.slots.index(None)] = shot
         fired = True
     if fired:
@@ -857,6 +1088,15 @@ def drop_pickup(game: Game, enemy: Enemy) -> None:
     game.pickup = [kind, enemy.x & ~3, enemy.y + (ENEMY_H - PICKUP_H) // 2, PICKUP_FRAMES]
 
 
+def detonate_bomb(game: Game) -> None:
+    for i, e in enumerate(game.enemies):
+        if e and abs(e.x - game.x) < BOMB_X and abs(e.y - game.y) < BOMB_Y:
+            game.enemies[i] = None
+            game.add_score(POINTS[e.kind])
+    game.bullets = [None] * BULLET_SLOTS
+    game.start_sound("bomb")
+
+
 def update_pickup(game: Game) -> None:
     if not game.pickup:
         return
@@ -871,12 +1111,7 @@ def update_pickup(game: Game) -> None:
         game.add_score(50)
         game.add_score(50)
     elif kind == PK_BOMB:
-        for i, e in enumerate(game.enemies):
-            if e and abs(e.x - game.x) < BOMB_X and abs(e.y - game.y) < BOMB_Y:
-                game.enemies[i] = None
-                game.add_score(POINTS[e.kind])
-        game.bullets = [None] * BULLET_SLOTS
-        game.start_sound("bomb")
+        detonate_bomb(game)
         return
     elif kind >= PK_SLOW:
         game.jinx, game.jinx_timer = kind, JINX_TIME
@@ -959,6 +1194,19 @@ def stamp(codes: np.ndarray, name: str, left: int, top: int) -> None:
                 codes[top + y, left + x] = CODES[char]
 
 
+def draw_ready_banner(codes: np.ndarray, game: Game) -> None:
+    if game.ready and game.demo:
+        scene = SCENES[game.scenes[0]]
+        text(codes, scene.name, 60, scene.name_column, big=True)
+        text(codes, scene.line, 76, scene.line_column, "G")
+    elif game.ready:
+        text(codes, f"LEVEL {game.level}", 60, 9, big=True)
+        if game.level in TEACH:
+            text(codes, TEACH[game.level][3], 76, TEACH[game.level][4], "G")
+        elif game.level == JINX_LEVEL:
+            text(codes, JINX_HINT[0], 76, JINX_HINT[1], "G")
+
+
 def picture(game: Game | None, frame: int = 0) -> np.ndarray:
     """Pixel codes: the arena, then the shots and the enemies in slot order, then the player."""
     codes = arena()
@@ -977,16 +1225,7 @@ def picture(game: Game | None, frame: int = 0) -> np.ndarray:
             if enemy:
                 stamp(codes, SPRITE[enemy.kind], enemy.x, enemy.y)
         stamp(codes, "player", game.x, game.y)
-        if game.ready and game.demo:
-            scene = SCENES[game.scenes[0]]
-            text(codes, scene.name, 60, scene.name_column, big=True)
-            text(codes, scene.line, 76, scene.line_column, "G")
-        elif game.ready:
-            text(codes, f"LEVEL {game.level}", 60, 9, big=True)
-            if game.level in TEACH:
-                text(codes, TEACH[game.level][3], 76, TEACH[game.level][4], "G")
-            elif game.level == JINX_LEVEL:
-                text(codes, JINX_HINT[0], 76, JINX_HINT[1], "G")
+        draw_ready_banner(codes, game)
         hud(codes, game, frame)
     return codes
 
@@ -994,10 +1233,12 @@ def picture(game: Game | None, frame: int = 0) -> np.ndarray:
 def hud(codes: np.ndarray, game: Game, frame: int = 0) -> None:
     """The 6-digit score at pixels 4-27 and the reserve lives from pixel 120 to the
     left, on rows HUD_ROW to HUD_ROW + 4. Glyphs from font.txt cover every pixel."""
+
     def glyph(name: str, left: int) -> None:
         for y, row in enumerate(FONT[name]):
             for x, char in enumerate(row):
                 codes[HUD_ROW + y, left + x] = CODES[char]
+
     if game.demo:  # the prompt flashes at the rate of the title prompt; no names
         text(codes, "SHOOT TO START" if (frame - 1) & 16 == 0 else "", HUD_ROW, PROMPT_COL)
         return
@@ -1008,16 +1249,18 @@ def hud(codes: np.ndarray, game: Game, frame: int = 0) -> None:
     # The gift name in yellow and the jinx name in red, each with a bar of the time
     # that is left: one byte (4 pixels) for each step of frames, rounded up.
     for kind, timer, column, colour, step in (
-            (game.power, game.power_timer, NAME_GIFT, "Y", GIFT_STEP),
-            (game.jinx, game.jinx_timer, NAME_JINX, "R", JINX_STEP)):
+        (game.power, game.power_timer, NAME_GIFT, "Y", GIFT_STEP),
+        (game.jinx, game.jinx_timer, NAME_JINX, "R", JINX_STEP),
+    ):
         if kind:
             text(codes, NAME[kind], HUD_ROW, column, colour)
             bar = min(BAR_BYTES, -(-timer // step))
             codes[BAR_ROW : BAR_ROW + 2, 4 * column : 4 * (column + bar)] = CODES[colour]
 
 
-def text(codes: np.ndarray, words: str, row: int, column: int, colour: str = "Y",
-         big: bool = False) -> None:
+def text(
+    codes: np.ndarray, words: str, row: int, column: int, colour: str = "Y", big: bool = False
+) -> None:
     """Characters from font.txt at a pixel row and a byte column (4 pixels). The
     glyphs are yellow on blue; another colour takes the place of yellow. A big
     character shows each pixel as 2x2 pixels."""
@@ -1028,8 +1271,10 @@ def text(codes: np.ndarray, words: str, row: int, column: int, colour: str = "Y"
         for y, line in enumerate(glyph):
             for x, c in enumerate(line):
                 code = CODES[colour] if c == "Y" else CODES[c]
-                codes[row + scale * y : row + scale * (y + 1),
-                      left + scale * x : left + scale * (x + 1)] = code
+                codes[
+                    row + scale * y : row + scale * (y + 1),
+                    left + scale * x : left + scale * (x + 1),
+                ] = code
 
 
 def blank() -> np.ndarray:
@@ -1045,8 +1290,13 @@ def still(game: Game) -> np.ndarray:
         text(codes, "ARENA BLASTER", 10, 3, big=True)
         text(codes, "HIGH SCORES", 28, 10)
         for i, (score, name) in enumerate(game.table):
-            text(codes, f"{i + 1:2d} {name} {score:06d}", 40 + 9 * i, 9,
-                 "G" if i == game.new_rank else "Y")
+            text(
+                codes,
+                f"{i + 1:2d} {name} {score:06d}",
+                40 + 9 * i,
+                9,
+                "G" if i == game.new_rank else "Y",
+            )
         stamp(codes, "grunt", 20, 136)
         text(codes, "10", 138, 7)
         stamp(codes, "hunter", 52, 136)
@@ -1083,33 +1333,28 @@ def pack(codes: np.ndarray) -> bytes:
     return (c[:, 0::4] << 6 | c[:, 1::4] << 4 | c[:, 2::4] << 2 | c[:, 3::4]).tobytes()
 
 
-def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) -> None:
-    bufs = screens(frame, variant)
-    for which in (0, 1):
-        at = SCREENS[which]
-        if ram[at : at + SCREEN_BYTES] != pack(bufs[which]):
-            raise ValueError(f"Frame {frame}: the screen at ${at:04X} differs.")
-    game = games(frame, variant)[frame]
+def verify_high_scores(ram: bytes, symbols: dict[str, int], frame: int, game: Game) -> None:
     got = (ram[symbols["phase"]], ram[symbols["new_rank"]])
     if got != (game.phase, game.new_rank):
-        raise ValueError(f"Frame {frame}: phase, new_rank = {got}, expected "
-                         f"{(game.phase, game.new_rank)}.")
+        raise ValueError(
+            f"Frame {frame}: phase, new_rank = {got}, expected {(game.phase, game.new_rank)}."
+        )
     table = ram[symbols["table"] : symbols["table"] + 60]
     want = b"".join(bytes.fromhex(f"{s:06d}") + n.encode() for s, n in game.table)
     if table != want:
         raise ValueError(f"Frame {frame}: the high-score table differs.")
     if game.phase == ENTRY:
-        got = (bytes(ram[symbols["initials"] : symbols["initials"] + 3]).decode("latin-1"),
-               ram[symbols["pos"]], ram[symbols["rpt"]])
+        got = (
+            bytes(ram[symbols["initials"] : symbols["initials"] + 3]).decode("latin-1"),
+            ram[symbols["pos"]],
+            ram[symbols["rpt"]],
+        )
         want = ("".join(game.initials), game.pos, game.rpt)
         if got != want:
             raise ValueError(f"Frame {frame}: initials, pos, rpt = {got}, expected {want}.")
-    actual = tuple(ram[symbols[name]] for name in STATE_FIELDS)
-    if actual != (game.x, game.y, game.delay):
-        raise ValueError(f"Frame {frame}: px, py, delay = {actual}, expected "
-                         f"{(game.x, game.y, game.delay)}.")
-    if int.from_bytes(ram[symbols["frames"] : symbols["frames"] + 2], "big") != frame - 1:
-        raise ValueError(f"Frame {frame}: the frame counter differs.")
+
+
+def verify_shots(ram: bytes, symbols: dict[str, int], frame: int, game: Game) -> None:
     for i, shot in enumerate(game.slots):
         base = symbols["shots"] + i * SLOT_SIZE
         if bool(ram[base]) != bool(shot):
@@ -1119,22 +1364,15 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
             want = (shot.x, shot.y, shot.vx & 0xFF, shot.vy & 0xFF)
             if got != want:
                 raise ValueError(f"Frame {frame}: shot slot {i} is {got}, expected {want}.")
-    bcd = int(ram[symbols["score"] : symbols["score"] + 3].hex())
-    got = (bcd, ram[symbols["lives"]], ram[symbols["dying"]], ram[symbols["over"]],
-           ram[symbols["ready"]])
-    want = (game.score, game.lives, game.dying, game.over, game.ready)
-    if got != want:
-        raise ValueError(f"Frame {frame}: score, lives, dying, over, ready = {got}, "
-                         f"expected {want}.")
-    for i, b in enumerate(game.bullets):
-        base = symbols["bullets"] + i * BULLET_SIZE
-        got = tuple(ram[base + 1 : base + 5]) if ram[base] else None
-        want = (b[0], b[1], b[2] & 0xFF, b[3] & 0xFF) if b else None
-        if got != want:
-            raise ValueError(f"Frame {frame}: bullet slot {i} is {got}, expected {want}.")
+
+
+def verify_pickup(ram: bytes, symbols: dict[str, int], frame: int, game: Game) -> None:
     p = game.pickup
-    got = (ram[symbols["pk_type"]], ram[symbols["power"]],
-           int.from_bytes(ram[symbols["power_timer"] : symbols["power_timer"] + 2], "big"))
+    got = (
+        ram[symbols["pk_type"]],
+        ram[symbols["power"]],
+        int.from_bytes(ram[symbols["power_timer"] : symbols["power_timer"] + 2], "big"),
+    )
     want = (p[0] if p else 0, game.power, game.power_timer)
     if game.phase == PLAY and (got[0], got[1]) != want[:2]:
         raise ValueError(f"Frame {frame}: pk_type, power = {got[:2]}, expected {want[:2]}.")
@@ -1147,6 +1385,9 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
         raise ValueError(f"Frame {frame}: jinx_timer {got[1]}, expected {game.jinx_timer}.")
     if p and tuple(ram[symbols[n]] for n in ("pk_x", "pk_y", "pk_timer")) != tuple(p[1:]):
         raise ValueError(f"Frame {frame}: the pickup differs: expected {p}.")
+
+
+def verify_arena_state(ram: bytes, symbols: dict[str, int], frame: int, game: Game) -> None:
     if ram[symbols["shooter_turn"]] != game.shooter_turn and game.phase == PLAY:
         raise ValueError(f"Frame {frame}: shooter_turn differs.")
     got = (ram[symbols["demo"]], ram[symbols["part"]])
@@ -1160,6 +1401,45 @@ def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) ->
         want = (enemy.kind, enemy.x, enemy.y, enemy.tick) if enemy else None
         if got != want:
             raise ValueError(f"Frame {frame}: enemy slot {i} is {got}, expected {want}.")
+
+
+def verify_ram(ram: bytes, symbols: dict[str, int], frame: int, variant: str) -> None:
+    bufs = screens(frame, variant)
+    for which in (0, 1):
+        at = SCREENS[which]
+        if ram[at : at + SCREEN_BYTES] != pack(bufs[which]):
+            raise ValueError(f"Frame {frame}: the screen at ${at:04X} differs.")
+    game = games(frame, variant)[frame]
+    verify_high_scores(ram, symbols, frame, game)
+    actual = tuple(ram[symbols[name]] for name in STATE_FIELDS)
+    if actual != (game.x, game.y, game.delay):
+        raise ValueError(
+            f"Frame {frame}: px, py, delay = {actual}, expected {(game.x, game.y, game.delay)}."
+        )
+    if int.from_bytes(ram[symbols["frames"] : symbols["frames"] + 2], "big") != frame - 1:
+        raise ValueError(f"Frame {frame}: the frame counter differs.")
+    verify_shots(ram, symbols, frame, game)
+    bcd = int(ram[symbols["score"] : symbols["score"] + 3].hex())
+    got = (
+        bcd,
+        ram[symbols["lives"]],
+        ram[symbols["dying"]],
+        ram[symbols["over"]],
+        ram[symbols["ready"]],
+    )
+    want = (game.score, game.lives, game.dying, game.over, game.ready)
+    if got != want:
+        raise ValueError(
+            f"Frame {frame}: score, lives, dying, over, ready = {got}, expected {want}."
+        )
+    for i, b in enumerate(game.bullets):
+        base = symbols["bullets"] + i * BULLET_SIZE
+        got = tuple(ram[base + 1 : base + 5]) if ram[base] else None
+        want = (b[0], b[1], b[2] & 0xFF, b[3] & 0xFF) if b else None
+        if got != want:
+            raise ValueError(f"Frame {frame}: bullet slot {i} is {got}, expected {want}.")
+    verify_pickup(ram, symbols, frame, game)
+    verify_arena_state(ram, symbols, frame, game)
 
 
 def expected_frame(frame: int, variant: str) -> np.ndarray:
@@ -1194,7 +1474,7 @@ def steps(samples: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
     game = games(frame, variant)[frame]
     record = game.sound
-    window = sound.samples[-int(WINDOW_S * sound.rate):]
+    window = sound.samples[-int(WINDOW_S * sound.rate) :]
     where, sizes = steps(window)
     if record is None or record[2] == 0:
         if len(where):
@@ -1205,13 +1485,16 @@ def verify_sound(sound, frame: int, variant: str) -> dict[str, object]:
     if len(where) < 3 or not np.all(np.abs(sizes - want) < 0.1 * want):
         raise ValueError(
             f"Frame {frame}: {len(where)} steps of {sizes.tolist()[:4]}, expected volume "
-            f"{volume} ({want:.0f}) for {game.effect}.")
+            f"{volume} ({want:.0f}) for {game.effect}."
+        )
     gaps = np.diff(where)
     if mode == SQUARE:
         hz = (len(where) - 1) / (2 * (where[-1] - where[0]) / sound.rate)
         if abs(hz / square_hz(period) - 1) > 0.05:
-            raise ValueError(f"Frame {frame}: {hz:.0f} Hz, expected {square_hz(period):.0f} Hz "
-                             f"for {game.effect}.")
+            raise ValueError(
+                f"Frame {frame}: {hz:.0f} Hz, expected {square_hz(period):.0f} Hz "
+                f"for {game.effect}."
+            )
         return {"frame": frame, "sound": game.effect, "hz": round(hz)}
     if gaps.min() == gaps.max():
         raise ValueError(f"Frame {frame}: regular steps, expected noise for {game.effect}.")

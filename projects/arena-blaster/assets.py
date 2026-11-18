@@ -113,9 +113,13 @@ def pairs(used: list[tuple[int, int, int]]) -> list[list[tuple[int, int, int]]]:
     groups: list[list[tuple[int, int, int]]] = []
     for cell in used:
         last = groups[-1] if groups else None
-        if (last and len(last) == 1 and last[0][0] + 1 == cell[0]
-                and last[0][0] // 32 == cell[0] // 32
-                and (last[0][1] == 0) == (cell[1] == 0)):
+        if (
+            last
+            and len(last) == 1
+            and last[0][0] + 1 == cell[0]
+            and last[0][0] // 32 == cell[0] // 32
+            and (last[0][1] == 0) == (cell[1] == 0)
+        ):
             last.append(cell)
         else:
             groups.append([cell])
@@ -126,17 +130,17 @@ def draw_code(name: str, used: list[tuple[int, int, int]]) -> list[str]:
     code = Code(name)
     for group in pairs(used):
         at = group[0][0]
-        if group[0][1] == 0 and len(group) == 2:      # two full bytes
+        if group[0][1] == 0 and len(group) == 2:  # two full bytes
             code.add(f"ldd #${group[0][2]:02x}{group[1][2]:02x}")
             code.add("std", at)
-        elif group[0][1] == 0:                       # one full byte
+        elif group[0][1] == 0:  # one full byte
             code.add(f"lda #${group[0][2]:02x}")
             code.add("sta", at)
-        else:                                        # edge bytes: keep the floor
+        else:  # edge bytes: keep the floor
             for i, (_, mask, picture) in enumerate(group):
                 code.add("lda", at + i)
                 code.add(f"anda #${mask:02x}")
-                if picture:                          # green (code 0) needs no OR
+                if picture:  # green (code 0) needs no OR
                     code.add(f"ora #${picture:02x}")
                 code.add("sta", at + i)
     code.add("rts")
@@ -167,9 +171,13 @@ def assembly(sprites: dict[str, list[str]]) -> str:
     lines = []
     for name, rows in sprites.items():
         shifts = [0] if name.startswith(ALIGNED) else list(range(4))
-        lines.append(f"{name} fdb " + ",".join(
-            f"{name}_draw_{s if s in shifts else 0},{name}_erase_{s if s in shifts else 0}"
-            for s in range(4)))
+        lines.append(
+            f"{name} fdb "
+            + ",".join(
+                f"{name}_draw_{s if s in shifts else 0},{name}_erase_{s if s in shifts else 0}"
+                for s in range(4)
+            )
+        )
         for shift in shifts:
             used = cells(rows, shift)
             lines += draw_code(f"{name}_draw_{shift}", used)
@@ -210,5 +218,7 @@ def font_assembly(glyphs: dict[str, list[str]]) -> str:
 
 def prepare(output: Path) -> None:
     include = output / "assets.inc"
-    include.write_text(assembly(read_sprites(HERE / "sprites.txt"))
-                       + font_assembly(read_sprites(HERE / "font.txt")))
+    include.write_text(
+        assembly(read_sprites(HERE / "sprites.txt"))
+        + font_assembly(read_sprites(HERE / "font.txt"))
+    )
