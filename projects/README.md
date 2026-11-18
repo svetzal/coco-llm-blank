@@ -1,5 +1,12 @@
 # Projects
 
+- [Arena Blaster (CoCo 1)](arena-blaster/README.md#how-to-run-it) is an arena shooter.
+  Use W, A, S and D to move. See the [shooting controls](arena-blaster/README.md#how-to-play).
+- [Evolve (CoCo 3)](evolve/README.md#how-to-run-it) is a sliding puzzle.
+  Press Space to start. Use the arrow keys to slide and merge creatures.
+
+## Start a project
+
 Each project the owner builds is in its own folder here. The folder name is the
 idea in a few lowercase words joined by hyphens, such as `bouncing-lines`.
 
@@ -21,5 +28,4 @@ a reference.
 
 Build, run and check it with `uv run python scripts/coco.py <command> projects/<name>`.
 [Development practice](../guidance/starter/development.md#reusable-launchers)
-describes every setting and command. The starter keeps only this file here.
-Your projects are yours.
+describes every setting and command.

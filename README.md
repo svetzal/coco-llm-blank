@@ -9,9 +9,12 @@ before you start. Ask your agent to handle setup as part of building your
 project.
 
 You can try the result on your current computer using XRoar, an emulator that
-acts like a Colour Computer. You do not need the original hardware. For now it
-works on Macs with Apple silicon and on Ubuntu Linux 24.04. It does not support
-Windows or older Intel Macs yet.
+acts like a Colour Computer. You do not need the original hardware.
+
+The starter supports Macs with Apple silicon and PCs running Ubuntu 24.04.
+Automated checks run on both platforms. A full first-time setup on a freshly
+installed desktop still needs testing on each platform. Windows and Intel Macs
+are outside the supported platforms. See [supported hosts](guidance/starter/toolchain.md#supported-hosts).
 
 ## Start with your agent
 
@@ -155,8 +158,7 @@ computing field.
 
 ## Play Arena Blaster
 
-This copy of the starter includes one finished project: Arena Blaster, an
-original arena shooter for the CoCo 1. An owner built it with a coding
+Arena Blaster is an original arena shooter for the CoCo 1. An owner built it with a coding
 agent, one small increment at a time. It is in
 [`projects/arena-blaster`](projects/arena-blaster/README.md). Its README
 records each request and how the agent tested it.
@@ -207,6 +209,7 @@ You can start without reading these pages. Choose one when you need it:
 
 - [Play collect-room](examples/collect-room/README.md), a complete small game
   for the documented emulator configurations of CoCo 1 and CoCo 2B.
+- [Projects](projects/README.md) for the games you can play in this copy.
 - [Examples](examples/README.md) for smaller programs to build and study.
 - [Agent guidance](guidance/README.md): how your agent uses this starter, and the
   game and demo techniques it uses.

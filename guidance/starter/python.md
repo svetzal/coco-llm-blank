@@ -52,11 +52,6 @@ another spec. Separate setup, action, and assertions with blank lines.
 Test outcomes, not private methods, call order, or elapsed time. Test
 interrupted work and its later resumption together.
 
-Run `uv run pytest --cov` before you complete a change. Combined statement and
-branch coverage must reach 90%. But the threshold does not replace checking the
-behavior changed. The coverage report includes production scripts and excludes
-specs and fixtures.
-
 The root pytest configuration in `pyproject.toml` collects the `*_spec.py`
 files under `scripts/`, including the emulator integrations.
 CI runs Ruff in a separate job. Each test job lists its skipped tests in its summary.
@@ -65,6 +60,12 @@ Keep test evidence that must survive a rerun under ignored `local/` or
 
 Examples have no specs. `scripts/coco_spec.py` runs the real check of each
 example and its negative controls.
+
+### Checks during development
+
+Run the spec for the behavior you change. To skip Docling conversion during
+development, run `uv run pytest -m 'not integration'`. For conversion work,
+run `uv run pytest -m integration` to exercise the real models.
 
 ### Complete starter validation environment
 
@@ -92,14 +93,16 @@ Stop if provisioning fails. Provisioning uses `roms.json` checksums and keeps
 firmware under ignored `local/roms/`. It does not change the application's
 target.
 
-Then run:
+Before you finish a change, check the tools, run the full suite, and check the Python style:
 
 ```sh
 uv run python scripts/doctor.py --profile demo --target coco1 &&
 uv run python scripts/doctor.py --profile demo --target coco2 &&
 uv run python scripts/doctor.py --profile demo --target coco2b &&
 uv run python scripts/doctor.py --profile demo --target coco3 &&
-uv run pytest --cov -ra
+uv run pytest --cov -ra &&
+uv run ruff check . &&
+uv run ruff format --check .
 ```
 
 The full run includes real Docling conversion. Its first run can download model
@@ -107,8 +110,8 @@ weights. Inspect the exit status, coverage result, and skip reasons. Passing
 tests with missing-machine integrations skipped do not establish a complete
 validation pass.
 
-Keep the 90% gate and the full measured scope. Provisioning removes an
-environment gap but does not guarantee enough coverage.
+Combined statement and branch coverage must reach 90%. The report covers
+production code and excludes specs and fixtures.
 
 ### Other checks
 
@@ -124,15 +127,6 @@ uv pip list --outdated
 ```
 
 Do not audit only the temporary environment containing pip-audit.
-
-After changes, run:
-
-- `uv run pytest -m 'not integration'`
-- `uv run ruff check .`
-- `uv run ruff format --check .`
-
-For changes to document conversion, also run `uv run pytest -m integration`.
-This command loads real Docling models.
 
 For CoCo binaries and emulator checks, load [toolchain.md](toolchain.md).
 For books and OCR, load [references.md](references.md).

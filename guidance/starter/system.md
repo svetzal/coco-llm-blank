@@ -58,7 +58,7 @@ folder. The XRoar trial makes `local/system/xroar-<version>/` with its own
 
 ## Finish
 
-1. Run the full suite: `uv run pytest --cov`. Every test must pass.
+1. Follow the [final checks](python.md#complete-starter-validation-environment). Every test must pass.
 2. Add the changes to `CHANGELOG.md` under a new section,
    `## [x.y.z] - YYYY-MM-DD`. Write for a person who uses the starter: what
    they can do now, and what they must do differently. Use the headings

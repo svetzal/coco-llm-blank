@@ -144,7 +144,8 @@ It does not convert books.
 Reruns validate the cache. A mismatch stops without replacing existing
 firmware. Inspect a damaged file before you remove it and try again.
 
-Before every new launch workflow, run:
+Bootstrap runs the demo doctor as its final step. To check a prepared
+installation after you change tools or firmware, run:
 
 ```sh
 uv run python scripts/doctor.py --profile demo --target coco1

@@ -8,6 +8,14 @@ ends. [The system guide](guidance/starter/system.md) gives the procedure.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-17
+
+### Changed
+
+- The setup guide explains which checks bootstrap runs. The Python guide gives one procedure for final checks.
+- The project index links to Arena Blaster and Evolve.
+- The README describes platform support and the limits of first-run testing.
+
 ## [0.4.1] - 2026-11-17
 
 ### Fixed

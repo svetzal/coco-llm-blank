@@ -85,16 +85,9 @@ No ROM bytes ship in Git.
 Bootstrap already does this step. For an existing checkout, `--roms-only`
 prepares firmware without reinstalling tools or converting books.
 
-Before you launch XRoar, validate the files again:
-
-```sh
-uv run python scripts/doctor.py --profile demo --target coco1
-```
-
-Use the selected target. A successful doctor check of executables only is not
-firmware validation. `scripts/coco.py` also verifies the ROMs that a project
-names before it starts XRoar. Do not launch XRoar manually to bypass a
-checksum error.
+Bootstrap checks the installed firmware for the selected target.
+`scripts/coco.py` checks the ROMs in the project settings before each launch.
+If a checksum fails, correct the firmware before you launch XRoar.
 See [toolchain](toolchain.md#firmware-and-launching) for launch options.
 
 ## Reference conversion
